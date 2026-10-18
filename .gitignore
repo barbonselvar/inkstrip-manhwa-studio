@@ -8,3 +8,7 @@ dist/
 .vercel/
 .nitro/
 .node_modules.lock
+
+.vercel/
+node_modules/
+build-error.log
