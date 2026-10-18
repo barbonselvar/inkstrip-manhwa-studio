@@ -11,17 +11,37 @@ assert.ok(existsSync(join(server, functionConfig.handler)), "Missing server hand
 assert.match(functionConfig.runtime, /^nodejs(?:22|24)\.x$/, "Unsupported Node runtime");
 assert.ok(existsSync(join(output, "static/__grok/icon-180.png")), "Missing PWA icon");
 const assets = readdirSync(join(output, "static/assets"));
-assert.ok(assets.some((file) => file.endsWith(".js")), "Missing browser JavaScript");
-assert.ok(assets.some((file) => file.endsWith(".css")), "Missing browser styles");
+assert.ok(
+  assets.some((file) => file.endsWith(".js")),
+  "Missing browser JavaScript",
+);
+assert.ok(
+  assets.some((file) => file.endsWith(".css")),
+  "Missing browser styles",
+);
+assert.ok(
+  assets.some((file) => file.startsWith("worker-") && file.endsWith(".js")),
+  "Missing AI worker",
+);
+assert.ok(
+  assets.some((file) => file.endsWith(".wasm")),
+  "Missing AI WebAssembly runtime",
+);
+assert.ok(
+  assets.some((file) => file.startsWith("ort-wasm-") && file.endsWith(".mjs")),
+  "Missing AI runtime loader",
+);
 
 // A bare tslib import would need a separately packaged dependency at runtime.
 for (const file of readdirSync(server, { recursive: true })) {
   if (!file.endsWith(".mjs") && !file.endsWith(".js")) continue;
   const code = readFileSync(join(server, file), "utf8");
   assert.equal(
-    /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s*)["']tslib(?:\/[^"']*)?["']/.test(code),
+    /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s*)["']tslib(?:\/[^"']*)?["']/.test(
+      code,
+    ),
     false,
     `Unbundled tslib import in ${file}`,
   );
 }
-console.log("Vercel server, browser assets, PWA icon, and tslib bundling verified.");
+console.log("Vercel server, browser/AI runtime assets, PWA icon, and tslib bundling verified.");

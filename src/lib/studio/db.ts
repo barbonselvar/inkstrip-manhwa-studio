@@ -140,3 +140,41 @@ export function storageMessage(error: unknown) {
   if (error instanceof Error && error.message) return error.message;
   return "Something went wrong while saving.";
 }
+
+/** Commit a media revision and its blobs together; a failed write leaves the old panel intact. */
+export async function commitPanelMedia(
+  panel: Panel,
+  expectedBlobId: string,
+  blobs: { id: string; blob: Blob }[],
+  obsolete: string[],
+) {
+  const db = await openDb();
+  const tx = db.transaction(["panels", "blobs", "chapters", "projects"], "readwrite");
+  const done = transactionDone(tx);
+  try {
+    const current = await request<Panel | undefined>(tx.objectStore("panels").get(panel.id));
+    if (!current || current.blobId !== expectedBlobId)
+      throw new Error("This panel changed. Reopen enhancement to try again.");
+    const chapter = await request<Chapter | undefined>(
+      tx.objectStore("chapters").get(panel.chapterId),
+    );
+    if (!chapter) throw new Error("This chapter is no longer available.");
+    const project = await request<Project | undefined>(
+      tx.objectStore("projects").get(chapter.projectId),
+    );
+    for (const { id, blob } of blobs) tx.objectStore("blobs").put(blob, id);
+    tx.objectStore("panels").put(panel);
+    tx.objectStore("chapters").put({ ...chapter, updatedAt: Date.now() });
+    if (project) tx.objectStore("projects").put({ ...project, updatedAt: Date.now() });
+    for (const id of obsolete) tx.objectStore("blobs").delete(id);
+    await done;
+  } catch (error) {
+    try {
+      tx.abort();
+    } catch {
+      /* The transaction may already have aborted. */
+    }
+    await done.catch(() => {});
+    throw error;
+  }
+}

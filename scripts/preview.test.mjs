@@ -1,3 +1,4 @@
+import { isRunningStat } from "./preview.mjs";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -254,4 +255,10 @@ test("terminatePids on a free port signals nothing", async () => {
   const result = await terminatePids([], fake);
   assert.deepEqual(result, { signalled: [], killed: [], stubborn: [] });
   assert.deepEqual(fake.signals, []);
+});
+
+test("preview liveness rejects zombie processes, including unusual command names", () => {
+  assert.equal(isRunningStat("123 (npm run preview) S 1 123"), true);
+  assert.equal(isRunningStat("123 (npm run preview) Z 1 123"), false);
+  assert.equal(isRunningStat("123 (nested ) command) X 1 123"), false);
 });

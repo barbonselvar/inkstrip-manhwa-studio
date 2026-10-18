@@ -44,6 +44,8 @@ export type Panel = {
   height: number;
   blobId: string;
   thumbId: string;
+  original?: Pick<Panel, "blobId" | "thumbId" | "mime" | "width" | "height">;
+  mediaUpdatedAt?: number;
   order: number;
   createdAt: number;
 };

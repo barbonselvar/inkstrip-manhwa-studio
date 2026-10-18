@@ -37,7 +37,12 @@ export function Banner({ text, onDismiss }: { text: string; onDismiss: () => voi
   return (
     <div className="flex items-start justify-between gap-3 border-b border-border bg-bg-elevated px-4 py-3">
       <p className="text-sm text-fg">{text}</p>
-      <button type="button" className="press focus-ring shrink-0 rounded-sm p-1 text-muted" onClick={onDismiss} aria-label="Dismiss">
+      <button
+        type="button"
+        className="press focus-ring shrink-0 rounded-sm p-1 text-muted"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+      >
         <X className="size-4" />
       </button>
     </div>
@@ -174,7 +179,7 @@ export function Segment<T extends string | number>({
               type="button"
               aria-pressed={active}
               className={cn(
-                "press focus-ring h-9 rounded-sm text-sm",
+                "press focus-ring h-11 rounded-sm text-sm",
                 active ? "bg-bg-elevated text-fg" : "text-muted hover:text-fg",
               )}
               onClick={() => onChange(option.value)}

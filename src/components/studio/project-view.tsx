@@ -3,7 +3,15 @@ import { ConfirmButton, InlineTitle, Wordmark } from "@/components/studio/chrome
 import { useStudio } from "@/lib/studio/store";
 import { countLabel } from "@/lib/utils";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import {
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  Layers3,
+  Plus,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 export function ProjectView({ projectId }: { projectId: string }) {
@@ -37,9 +45,12 @@ export function ProjectView({ projectId }: { projectId: string }) {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-5 pt-6 pb-16">
+    <main className="project-workspace mx-auto flex min-h-dvh w-full max-w-4xl flex-col px-5 pt-6 pb-16">
       <div className="flex items-center justify-between gap-3">
-        <Link to="/" className="press focus-ring inline-flex h-11 items-center gap-1 rounded-sm text-sm text-muted">
+        <Link
+          to="/"
+          className="press focus-ring inline-flex h-11 items-center gap-1 rounded-sm text-sm text-muted"
+        >
           <ChevronLeft className="size-4" />
           Projects
         </Link>
@@ -57,12 +68,31 @@ export function ProjectView({ projectId }: { projectId: string }) {
         </ConfirmButton>
       </div>
 
-      <InlineTitle
-        value={project.title}
-        onSave={(value) => void renameProject(project.id, value)}
-        className="mt-4 font-display text-4xl text-fg"
-      />
-      <p className="mt-2 text-sm text-muted">Chapters are stitched separately, then read top to bottom.</p>
+      <div className="project-heading rise">
+        <div className="project-icon mb-6 inline-flex">
+          <BookOpen className="size-7" />
+        </div>
+        <p className="eyebrow mb-2">Your story / chapter library</p>
+        <InlineTitle
+          value={project.title}
+          onSave={(value) => void renameProject(project.id, value)}
+          className="mt-4 font-display text-4xl text-fg"
+        />
+        <p className="mt-3 max-w-md text-sm text-muted">
+          Every chapter, a world of its own. Arrange your panels, restore the details, and find your
+          story’s rhythm.
+        </p>
+      </div>
+      <div className="project-summary">
+        <span>
+          <Layers3 className="size-4" />
+          {chapters.length} chapters
+        </span>
+        <span>
+          <ShieldCheck className="size-4" />
+          Saved on this device
+        </span>
+      </div>
 
       <div className="mt-8">
         <Button
@@ -85,7 +115,9 @@ export function ProjectView({ projectId }: { projectId: string }) {
       </div>
 
       {chapters.length === 0 ? (
-        <p className="mt-10 text-muted">No chapters yet. Start with one and add photos inside it.</p>
+        <p className="mt-10 text-muted">
+          No chapters yet. Start with one and add photos inside it.
+        </p>
       ) : (
         <ol className="mt-8 flex flex-col gap-3">
           {chapters.map((chapter, index) => {
@@ -95,13 +127,15 @@ export function ProjectView({ projectId }: { projectId: string }) {
                 <Link
                   to="/p/$projectId/c/$chapterId"
                   params={{ projectId: project.id, chapterId: chapter.id }}
-                  className="focus-ring flex min-w-0 flex-1 items-center gap-4 rounded-xl border border-border bg-bg-elevated p-4 hover:border-muted"
+                  className="chapter-card focus-ring flex min-w-0 flex-1 items-center gap-4 rounded-xl border border-border bg-bg-elevated p-5 hover:border-muted"
                 >
                   <span className="w-10 shrink-0 font-display text-2xl text-subtle tabular-nums">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-display text-xl text-fg">{chapter.title}</span>
+                    <span className="block truncate font-display text-xl text-fg">
+                      {chapter.title}
+                    </span>
                     <span className="mt-1 block text-sm text-muted">
                       {countLabel(count, "photo")}
                       {chapter.strip ? " · page ready" : " · not stitched"}

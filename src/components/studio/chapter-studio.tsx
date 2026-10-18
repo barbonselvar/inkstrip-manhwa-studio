@@ -1,12 +1,10 @@
+import { EnhanceDialog } from "@/components/studio/enhance-dialog";
+import { ReaderHeader } from "@/components/studio/reader-header";
+import type { Panel } from "@/lib/studio/types";
 import { Button, buttonClass } from "@/components/ui/button";
-import { ConfirmButton, InlineTitle, Segment } from "@/components/studio/chrome";
+import { ConfirmButton, InlineTitle, Segment, Wordmark } from "@/components/studio/chrome";
 import { FORMAT_HINT, IMAGE_ACCEPT } from "@/lib/studio/images";
-import {
-  extensionFor,
-  selectedIds,
-  stripFreshness,
-  useStudio,
-} from "@/lib/studio/store";
+import { extensionFor, selectedIds, stripFreshness, useStudio } from "@/lib/studio/store";
 import { PAGE_WIDTHS, SEAMS, type StripFormat } from "@/lib/studio/types";
 import { cn, countLabel, slugify } from "@/lib/utils";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -17,18 +15,15 @@ import {
   Download,
   ImagePlus,
   Trash2,
+  Sparkles,
+  Layers3,
+  ScanLine,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const emptyUrls: string[] = [];
 
-export function ChapterStudio({
-  projectId,
-  chapterId,
-}: {
-  projectId: string;
-  chapterId: string;
-}) {
+export function ChapterStudio({ projectId, chapterId }: { projectId: string; chapterId: string }) {
   const project = useStudio((state) => state.projects.find((item) => item.id === projectId));
   const chapter = useStudio((state) => state.chapters.find((item) => item.id === chapterId));
   const panels = useStudio((state) => state.panels);
@@ -51,6 +46,7 @@ export function ChapterStudio({
   const clearStrip = useStudio((state) => state.clearStrip);
   const navigate = useNavigate();
 
+  const [enhancePanels, setEnhancePanels] = useState<Panel[] | null>(null);
   const [pane, setPane] = useState<"panels" | "page">("panels");
   const [dragOver, setDragOver] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -139,8 +135,11 @@ export function ChapterStudio({
   const progress = job && job.total > 0 ? Math.round((job.done / job.total) * 100) : 8;
 
   return (
-    <div className="min-h-dvh" onDragEnter={() => setDragOver(true)}>
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-bg px-3 sm:px-5">
+    <div className="editor-shell min-h-dvh" onDragEnter={() => setDragOver(true)}>
+      <header className="editor-topbar relative z-20 flex h-14 items-center gap-3 border-b border-border bg-bg px-3 sm:px-5">
+        <div className="editor-wordmark">
+          <Wordmark />
+        </div>
         <Link
           to="/p/$projectId"
           params={{ projectId }}
@@ -157,28 +156,32 @@ export function ChapterStudio({
           />
           <p className="truncate text-xs text-subtle">{project.title}</p>
         </div>
+        <span className="status-pill">
+          <span className="status-dot" />
+          Studio
+        </span>
       </header>
 
-      <div className="sticky top-14 z-10 grid grid-cols-2 gap-1 border-b border-border bg-bg p-2 md:hidden">
+      <div className="editor-tabs sticky top-0 z-10 grid grid-cols-2 gap-1 border-b border-border bg-bg p-2 md:hidden">
         <button
           type="button"
           className={cn(
-            "press focus-ring h-10 rounded-sm text-sm",
+            "press focus-ring flex h-11 items-center justify-center gap-2 rounded-sm text-sm",
             pane === "panels" ? "bg-bg-subtle text-fg" : "text-muted",
           )}
           onClick={() => setPane("panels")}
         >
-          Panels
+          <Layers3 className="size-4" /> Panels
         </button>
         <button
           type="button"
           className={cn(
-            "press focus-ring h-10 rounded-sm text-sm",
+            "press focus-ring flex h-11 items-center justify-center gap-2 rounded-sm text-sm",
             pane === "page" ? "bg-bg-subtle text-fg" : "text-muted",
           )}
           onClick={() => setPane("page")}
         >
-          Display
+          <ScanLine className="size-4" /> Display
         </button>
       </div>
 
@@ -201,7 +204,16 @@ export function ChapterStudio({
           }}
         >
           <div className="flex flex-col gap-4 p-4">
-            <label className={buttonClass({ className: "w-full", variant: busy ? "secondary" : "primary" })}>
+            <div className="flex items-center justify-between">
+              <p className="eyebrow">Chapter workspace</p>
+              <span className="status-pill">Local storage</span>
+            </div>
+            <label
+              className={buttonClass({
+                className: "w-full",
+                variant: busy ? "secondary" : "primary",
+              })}
+            >
               <ImagePlus className="size-4" />
               Add images
               <input
@@ -218,9 +230,18 @@ export function ChapterStudio({
               />
             </label>
             <p className="text-sm text-muted">
-              Opens the photo library on a phone, or files on a computer. {FORMAT_HINT}. You can also drop or paste.
+              Opens the photo library on a phone, or files on a computer. {FORMAT_HINT}. You can
+              also drop or paste.
             </p>
 
+            <Button
+              variant="secondary"
+              disabled={busy || checked.length === 0}
+              onClick={() => setEnhancePanels(list.filter((panel) => checkedSet.has(panel.id)))}
+            >
+              <Sparkles className="size-4 text-accent" />
+              AI Enhance{checked.length ? ` · ${checked.length} selected` : ""}
+            </Button>
             <Segment
               label="Page width"
               value={chapter.width}
@@ -248,10 +269,18 @@ export function ChapterStudio({
                 {checked.length} of {list.length} checked
               </p>
               <div className="flex gap-2">
-                <button type="button" className="focus-ring rounded-sm text-fg" onClick={() => selectAll(chapter.id)}>
+                <button
+                  type="button"
+                  className="focus-ring rounded-sm text-fg"
+                  onClick={() => selectAll(chapter.id)}
+                >
                   All
                 </button>
-                <button type="button" className="focus-ring rounded-sm text-muted" onClick={() => selectNone(chapter.id)}>
+                <button
+                  type="button"
+                  className="focus-ring rounded-sm text-muted"
+                  onClick={() => selectNone(chapter.id)}
+                >
                   None
                 </button>
               </div>
@@ -332,10 +361,19 @@ export function ChapterStudio({
                         </span>
                       </span>
                     </button>
+                    <button
+                      type="button"
+                      className="focus-ring grid size-11 shrink-0 place-items-center rounded-sm text-accent hover:bg-accent/10"
+                      aria-label={`AI Enhance ${panel.name}`}
+                      disabled={busy}
+                      onClick={() => setEnhancePanels([panel])}
+                    >
+                      <Sparkles className="size-4" />
+                    </button>
                     <div className="flex shrink-0 flex-col">
                       <button
                         type="button"
-                        className="focus-ring grid size-8 place-items-center text-muted disabled:opacity-30"
+                        className="focus-ring grid size-11 place-items-center text-muted disabled:opacity-30"
                         aria-label="Move up"
                         disabled={index === 0 || busy}
                         onClick={() => void movePanel(panel.id, -1)}
@@ -344,7 +382,7 @@ export function ChapterStudio({
                       </button>
                       <button
                         type="button"
-                        className="focus-ring grid size-8 place-items-center text-muted disabled:opacity-30"
+                        className="focus-ring grid size-11 place-items-center text-muted disabled:opacity-30"
                         aria-label="Move down"
                         disabled={index === list.length - 1 || busy}
                         onClick={() => void movePanel(panel.id, 1)}
@@ -414,10 +452,14 @@ export function ChapterStudio({
 
         <section
           ref={pageRef}
-          className={cn("min-w-0 flex-1", pane === "page" ? "block" : "hidden md:block")}
+          className={cn(
+            "display-workspace min-w-0 flex-1",
+            pane === "page" ? "block" : "hidden md:block",
+          )}
         >
           <div className="flex flex-wrap items-center gap-3 px-4 py-4 sm:px-8">
             <div className="min-w-0 flex-1">
+              <p className="eyebrow mb-1">Live chapter preview</p>
               <h2 className="font-display text-2xl text-fg">Display</h2>
               {chapter.strip ? (
                 <p className="mt-1 text-sm text-muted tabular-nums">
@@ -432,7 +474,9 @@ export function ChapterStudio({
             {chapter.strip && stripUrls.length > 0 ? (
               <Button
                 variant="secondary"
-                onClick={() => downloadStrip(project.title, chapter.title, chapter.format, stripUrls)}
+                onClick={() =>
+                  downloadStrip(project.title, chapter.title, chapter.format, stripUrls)
+                }
               >
                 <Download className="size-4" />
                 Save
@@ -442,17 +486,14 @@ export function ChapterStudio({
 
           {freshness === "stale" ? (
             <p className="px-4 pb-4 text-sm text-muted sm:px-8">
-              Order or settings changed. Display again to update the page.
+              Images, order, or settings changed. Display again to update the page.
             </p>
           ) : null}
 
           {chapter.strip && stripUrls.length > 0 ? (
             <div className="bg-bg px-0 pb-16 md:px-8 md:pb-20">
-              <article className="mx-auto w-full max-w-md bg-paper text-ink md:sheet-shadow">
-                <header className="flex items-baseline justify-between gap-3 px-4 py-4">
-                  <h3 className="font-display text-xl">{chapter.title}</h3>
-                  <p className="truncate text-xs text-ink/60">{project.title}</p>
-                </header>
+              <article className="reader-sheet mx-auto w-full max-w-md md:sheet-shadow">
+                <ReaderHeader chapter={chapter.title} project={project.title} />
                 {stripUrls.map((url, index) => (
                   <img
                     key={chapter.strip?.parts[index]?.blobId ?? url}
@@ -460,7 +501,7 @@ export function ChapterStudio({
                     alt={`${chapter.title}, part ${index + 1} of ${stripUrls.length}`}
                     width={chapter.strip?.width}
                     height={chapter.strip?.parts[index]?.height}
-                    className="block h-auto w-full"
+                    className="manhwa-image block h-auto w-full"
                   />
                 ))}
               </article>
@@ -476,10 +517,10 @@ export function ChapterStudio({
             </div>
           ) : (
             <div className="px-4 pb-16 sm:px-8">
-              <div className="mx-auto flex min-h-80 w-full max-w-md flex-col justify-end bg-paper px-5 py-8 text-ink">
-                <p className="text-xs tracking-widest uppercase text-ink/50">Empty page</p>
+              <div className="empty-display mx-auto flex min-h-80 w-full max-w-md flex-col justify-end rounded-xl border border-dashed border-border px-5 py-8 text-fg">
+                <p className="text-xs tracking-widest uppercase text-subtle">Empty page</p>
                 <h3 className="mt-3 font-display text-3xl">Nothing stitched yet.</h3>
-                <p className="mt-3 max-w-xs text-sm text-ink/70">
+                <p className="mt-3 max-w-xs text-sm text-muted">
                   Check at least two photos, then press Display. Add more later and stitch them into
                   the same chapter.
                 </p>
@@ -488,6 +529,9 @@ export function ChapterStudio({
           )}
         </section>
       </div>
+      {enhancePanels ? (
+        <EnhanceDialog panels={enhancePanels} onClose={() => setEnhancePanels(null)} />
+      ) : null}
     </div>
   );
 }
@@ -496,7 +540,10 @@ function downloadStrip(project: string, chapter: string, format: StripFormat, ur
   const base = `${slugify(project)}-${slugify(chapter)}`;
   const ext = extensionFor(format);
   urls.forEach((url, index) => {
-    const name = urls.length === 1 ? `${base}.${ext}` : `${base}-part-${String(index + 1).padStart(2, "0")}.${ext}`;
+    const name =
+      urls.length === 1
+        ? `${base}.${ext}`
+        : `${base}-part-${String(index + 1).padStart(2, "0")}.${ext}`;
     window.setTimeout(() => {
       const anchor = document.createElement("a");
       anchor.href = url;

@@ -3,11 +3,24 @@ import { Modal } from "@/components/ui/modal";
 import { useStudio } from "@/lib/studio/store";
 import { countLabel, formatDay } from "@/lib/utils";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Plus } from "lucide-react";
+import {
+  ArrowUpRight,
+  BookOpen,
+  ChevronRight,
+  Plus,
+  Layers3,
+  Sparkles,
+  ShieldCheck,
+  Search,
+  PanelsTopLeft,
+  WandSparkles,
+} from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 export function Library() {
   const projects = useStudio((state) => state.projects);
+  const panels = useStudio((state) => state.panels);
+  const [search, setSearch] = useState("");
   const chapters = useStudio((state) => state.chapters);
   const createProject = useStudio((state) => state.createProject);
   const navigate = useNavigate();
@@ -15,7 +28,9 @@ export function Library() {
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const ordered = [...projects].sort((a, b) => b.updatedAt - a.updatedAt);
+  const ordered = [...projects]
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .filter((project) => project.title.toLowerCase().includes(search.toLowerCase()));
 
   async function onCreate(event: FormEvent) {
     event.preventDefault();
@@ -35,95 +50,201 @@ export function Library() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-5 pt-8 pb-16">
-      <p className="text-xs font-medium tracking-widest text-subtle uppercase">Studio</p>
-      <div className="mt-3 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-4xl text-fg sm:text-5xl">Inkstrip</h1>
-          <p className="mt-3 max-w-md text-muted">
-            Stitch photos into a tall vertical manhwa. Projects and chapters stay on this device.
+    <div className="studio-layout">
+      <aside className="library-rail">
+        <a href="#workspace" className="brand-lockup">
+          <span className="brand-symbol">
+            <Layers3 className="size-5" />
+          </span>
+          <span>
+            inkstrip<span className="brand-dot">.</span>
+          </span>
+        </a>
+        <p className="eyebrow mt-12">Workspace</p>
+        <a href="#workspace" className="rail-link active">
+          <PanelsTopLeft className="size-4" />
+          My projects<span>{projects.length}</span>
+        </a>
+        <a href="#workflow" className="rail-link">
+          <WandSparkles className="size-4" />
+          Studio workflow
+          <ArrowUpRight className="size-3" />
+        </a>
+        <div className="rail-note">
+          <ShieldCheck className="size-5 text-accent" />
+          <p className="mt-3 text-sm text-fg">Your art. Your device.</p>
+          <p className="mt-2 text-xs text-muted">
+            Projects and AI processing stay in your browser. Create without the cloud.
           </p>
         </div>
-        <Button className="w-full shrink-0 sm:w-auto" onClick={() => setOpen(true)}>
-          <Plus className="size-4" />
-          New project
-        </Button>
-      </div>
-
-      {ordered.length === 0 ? (
-        <section className="rise mt-14 rounded-xl border border-border bg-bg-elevated p-5">
-          <PageStack />
-          <h2 className="mt-6 font-display text-3xl text-fg">A long page, panel by panel.</h2>
-          <p className="mt-3 max-w-md text-muted">
-            Create a project, open Chapter 1, and stack as many photos as the chapter needs. Display
-            stitches only the ones you check.
-          </p>
+        <p className="rail-footer">INKSTRIP / MANHWA STUDIO</p>
+      </aside>
+      <main id="workspace" className="library-main">
+        <nav className="workspace-nav">
+          <span className="text-sm text-muted">
+            Workspace <span className="mx-2 text-subtle">/</span>
+            <span className="text-fg">My projects</span>
+          </span>
+          <span className="status-pill">
+            <span className="status-dot" />
+            On-device studio
+          </span>
+        </nav>
+        <section className="library-heading rise">
+          <div>
+            <p className="eyebrow flex items-center gap-2">
+              <span className="mini-line" />A new chapter starts here
+            </p>
+            <h1 className="mt-4 font-display text-4xl text-fg sm:text-5xl">
+              Stories worth
+              <br />
+              <span className="text-accent">scrolling for.</span>
+            </h1>
+            <p className="mt-4 max-w-md text-muted">
+              From raw panels to a seamless manhwa. Shape your story, restore the details, and make
+              every frame count.
+            </p>
+          </div>
+          <Button className="new-project-button" onClick={() => setOpen(true)}>
+            <Plus className="size-4" />
+            New project
+            <ArrowUpRight className="ml-3 size-4" />
+          </Button>
         </section>
-      ) : (
-        <ul className="mt-10 flex flex-col gap-3">
-          {ordered.map((project) => {
-            const count = chapters.filter((chapter) => chapter.projectId === project.id).length;
-            return (
-              <li key={project.id} className="rise">
-                <Link
-                  to="/p/$projectId"
-                  params={{ projectId: project.id }}
-                  className="focus-ring flex items-center gap-4 rounded-xl border border-border bg-bg-elevated p-4 hover:border-muted"
-                >
-                  <span className="hidden h-14 w-1 shrink-0 rounded-full bg-paper sm:block" aria-hidden />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-display text-2xl text-fg">{project.title}</span>
-                    <span className="mt-1 block text-sm text-muted tabular-nums">
-                      {countLabel(count, "chapter")} · Updated {formatDay(project.updatedAt)}
-                    </span>
-                  </span>
-                  <ChevronRight className="size-5 shrink-0 text-subtle" />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      <p className="mt-10 text-sm text-subtle">Photos never leave this browser.</p>
-
-      <Modal
-        open={open}
-        onOpenChange={setOpen}
-        title="New project"
-        description="Chapter 1 is created with it, ready for photos."
-      >
-        <form onSubmit={(event) => void onCreate(event)} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-2 text-sm text-muted">
-            Title
+        <div className="studio-stats">
+          <div>
+            <BookOpen className="size-4" />
+            <strong>{projects.length.toString().padStart(2, "0")}</strong>
+            <span>Projects</span>
+          </div>
+          <div>
+            <Layers3 className="size-4" />
+            <strong>{chapters.length.toString().padStart(2, "0")}</strong>
+            <span>Chapters</span>
+          </div>
+          <div>
+            <Sparkles className="size-4" />
+            <strong>{panels.length.toString().padStart(2, "0")}</strong>
+            <span>Panels</span>
+          </div>
+        </div>
+        <div className="projects-toolbar">
+          <h2 className="font-display text-xl">
+            Your projects <span className="ml-2 text-sm text-subtle">{projects.length}</span>
+          </h2>
+          <label className="project-search">
+            <Search className="size-4" />
             <input
-              autoFocus
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Night Market"
-              className="field"
-              maxLength={80}
+              aria-label="Search projects"
+              placeholder="Find a story…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </label>
-          <Button type="submit" disabled={saving}>
-            {saving ? "Creating…" : "Create chapter 1"}
-          </Button>
-        </form>
-      </Modal>
-    </main>
-  );
-}
+        </div>
+        {ordered.length === 0 ? (
+          <section className="empty-project rise">
+            <div className="empty-project-symbol">
+              <BookOpen className="size-8" />
+            </div>
+            <h2 className="mt-6 font-display text-3xl text-fg">Your next world is waiting.</h2>
+            <p className="mt-3 max-w-md text-muted">
+              {search
+                ? "No projects match your search. Try another title."
+                : "Start with a project. Add your panels, refine the details, and stitch a chapter that flows."}
+            </p>
+            {!search ? (
+              <Button variant="secondary" className="mt-6" onClick={() => setOpen(true)}>
+                <Plus className="size-4" />
+                Create your first project
+              </Button>
+            ) : null}
+          </section>
+        ) : (
+          <ul className="project-grid">
+            {ordered.map((project) => {
+              const count = chapters.filter((chapter) => chapter.projectId === project.id).length;
+              return (
+                <li key={project.id} className="rise">
+                  <Link
+                    to="/p/$projectId"
+                    params={{ projectId: project.id }}
+                    className="project-card focus-ring"
+                  >
+                    <span className="project-icon" aria-hidden>
+                      <BookOpen className="size-6" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-display text-2xl text-fg">
+                        {project.title}
+                      </span>
+                      <span className="mt-1 block text-sm text-muted tabular-nums">
+                        {countLabel(count, "chapter")} · Updated {formatDay(project.updatedAt)}
+                      </span>
+                    </span>
+                    <ChevronRight className="size-5 shrink-0 text-subtle" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
-function PageStack() {
-  return (
-    <div className="relative h-24 w-16" aria-hidden>
-      <div className="absolute top-2 left-3 h-20 w-14 rounded-sm bg-bg-subtle" />
-      <div className="absolute top-1 left-1.5 h-20 w-14 rounded-sm border border-border bg-bg" />
-      <div className="absolute top-0 left-0 flex h-20 w-14 flex-col gap-1 rounded-sm bg-paper p-1.5">
-        <span className="h-2 w-full bg-ink" />
-        <span className="h-6 w-full bg-ink/80" />
-        <span className="h-4 w-full bg-ink/70" />
-      </div>
+        <section id="workflow" className="workflow-section">
+          <p className="eyebrow">Made for your creative flow</p>
+          <div className="workflow-grid">
+            <div>
+              <span>01 / COMPOSE</span>
+              <Layers3 className="size-5" />
+              <h3>Panel by panel.</h3>
+              <p>Import, reorder, and select. Every frame in its right place.</p>
+            </div>
+            <div>
+              <span>02 / RESTORE</span>
+              <Sparkles className="size-5" />
+              <h3>Bring detail forward.</h3>
+              <p>Real on-device AI. Compare, enhance, or recover the original.</p>
+            </div>
+            <div>
+              <span>03 / DISPLAY</span>
+              <BookOpen className="size-5" />
+              <h3>One seamless story.</h3>
+              <p>Stitch your chapter. Read the full scroll. Export and share.</p>
+            </div>
+          </div>
+        </section>
+        <footer className="studio-footer">
+          <span>Built for the stories only you can tell.</span>
+          <span className="flex items-center gap-2">
+            <ShieldCheck className="size-3" />
+            Private by design
+          </span>
+        </footer>
+
+        <Modal
+          open={open}
+          onOpenChange={setOpen}
+          title="New project"
+          description="Chapter 1 is created with it, ready for photos."
+        >
+          <form onSubmit={(event) => void onCreate(event)} className="flex flex-col gap-4">
+            <label className="flex flex-col gap-2 text-sm text-muted">
+              Title
+              <input
+                autoFocus
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Night Market"
+                className="field"
+                maxLength={80}
+              />
+            </label>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Creating…" : "Create chapter 1"}
+            </Button>
+          </form>
+        </Modal>
+      </main>
     </div>
   );
 }

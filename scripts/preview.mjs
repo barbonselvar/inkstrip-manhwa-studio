@@ -158,10 +158,16 @@ export function stopOutcome({ signalled, stubborn, after }) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export function isRunningStat(stat) {
+  const end = stat.lastIndexOf(") ");
+  return end >= 0 && !["Z", "X"].includes(stat.slice(end + 2).split(/\s+/)[0]);
+}
+
 function isAlive(pid) {
   try {
     process.kill(pid, 0);
-    return true;
+    // A zombie still accepts kill(pid, 0), but cannot own a listening socket.
+    return isRunningStat(readFileSync(`/proc/${pid}/stat`, "utf8"));
   } catch (err) {
     return err?.code === "EPERM";
   }
