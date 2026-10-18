@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Inkstrip",
+      "hasCanvas": false,
+      "bodyTextLen": 298,
+      "bodyTextHash": "76cdb4d1bd597a49a9122ff957c109643b2d0b5c432c4a9347ca4ebbfe2dec71",
+      "bodyTextPrefix": "STUDIO Inkstrip Stitch photos into a tall vertical manhwa. Proje",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Inkstrip",
+      "hasCanvas": false,
+      "bodyTextLen": 298,
+      "bodyTextHash": "76cdb4d1bd597a49a9122ff957c109643b2d0b5c432c4a9347ca4ebbfe2dec71",
+      "bodyTextPrefix": "STUDIO Inkstrip Stitch photos into a tall vertical manhwa. Proje",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}
