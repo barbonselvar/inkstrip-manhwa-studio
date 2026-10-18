@@ -414,3 +414,24 @@ test("browser-smoke file I/O only touches guarded paths", () => {
   const stats = [...src.matchAll(/statSync\(\s*([A-Za-z_$][\w$.]*)/g)].map((m) => m[1]);
   assert.deepEqual(stats, ["baselinePath"]);
 });
+
+test("smoke readiness can wait for a control alongside a baseline", () => {
+  const result = parseSmokeArgs([
+    "http://127.0.0.1:8080/",
+    "--ready-selector",
+    "button:has-text('New project')",
+    "--baseline",
+    "/workspace/base.json",
+  ]);
+  assert.equal(result.readySelector, "button:has-text('New project')");
+  assert.equal(result.baseline, "/workspace/base.json");
+  assert.equal(parseSmokeArgs(["--ready-selector=main"]).readySelector, "main");
+});
+test("smoke readiness rejects empty and missing selectors instead of silently sampling startup", () => {
+  for (const args of [
+    ["--ready-selector"],
+    ["--ready-selector="],
+    ["--ready-selector", "--baseline", "/workspace/base.json"],
+  ])
+    assert.match(parseSmokeArgs(args).error, /requires/);
+});

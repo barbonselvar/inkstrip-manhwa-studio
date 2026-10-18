@@ -9,6 +9,8 @@ import {
 } from "react";
 import {
   ArrowLeft,
+  Brush,
+  WandSparkles,
   Check,
   Crop,
   FlipHorizontal2,
@@ -28,6 +30,10 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdjustmentControls } from "./adjustment-controls";
+import { LayoutControls } from "./layout-controls";
+import { MaskCanvas, type Brush as BrushSettings } from "./mask-canvas";
+import { NEUTRAL } from "@/lib/studio/editor/adjustments";
 import { NumberField } from "./number-field";
 import { getBlob, storageMessage } from "@/lib/studio/db";
 import { deviceLimits } from "@/lib/studio/images";
@@ -99,7 +105,16 @@ export function ImageEditor({
   const draft = history.present;
   const [temporary, setTemporary] = useState<EditRecipe | null>(null);
   const recipe = temporary ?? draft.recipe;
-  const [tool, setTool] = useState<"transform" | "crop">("transform");
+  const [tool, setTool] = useState<"transform" | "crop" | "adjust" | "select">("transform");
+  const [brush, setBrush] = useState<BrushSettings>({
+    mode: "add",
+    size: Math.max(1, Math.min(256, Math.round(Math.min(panel.width, panel.height) / 8))),
+    hardness: 0.8,
+    opacity: 1,
+  });
+  const [maskPan, setMaskPan] = useState(false);
+  const [showMask, setShowMask] = useState(true);
+  const [saveProgress, setSaveProgress] = useState(0);
   const [cropMode, setCropMode] = useState<"draw" | "move">("draw");
   const [ratio, setRatio] = useState(0);
   const [locked, setLocked] = useState(true);
@@ -109,6 +124,7 @@ export function ImageEditor({
   const [viewport, setViewport] = useState({ width: 400, height: 400 });
   const [loaded, setLoaded] = useState(false);
   const [rendering, setRendering] = useState(false);
+  const [previewVersion, setPreviewVersion] = useState(0);
   const [error, setError] = useState(initial.error);
   const [phase, setPhase] = useState<"idle" | "rendering" | "saving">("idle");
   const [discard, setDiscard] = useState(false);
@@ -127,8 +143,9 @@ export function ImageEditor({
   const restore = useStudio((state) => state.restorePanel);
   const dirty = !same(initial.draft, draft);
   const isRaw = tool === "crop" || before;
-  const viewWidth = isRaw ? draft.source.width : recipe.width,
-    viewHeight = isRaw ? draft.source.height : recipe.height;
+  const sourceView = tool === "select" || isRaw;
+  const viewWidth = sourceView ? draft.source.width : recipe.width,
+    viewHeight = sourceView ? draft.source.height : recipe.height;
   const fit = Math.min(
     Math.max(1, viewport.width - 36) / viewWidth,
     Math.max(1, viewport.height - 36) / viewHeight,
@@ -224,7 +241,7 @@ export function ImageEditor({
     setRendering(true);
     const timer = setTimeout(() => {
       void renderer
-        .current!.preview(recipe)
+        .current!.preview(recipe, tool === "select")
         .then((result) => {
           if (!active || id !== generation.current) {
             result.bitmap?.close();
@@ -244,7 +261,7 @@ export function ImageEditor({
       active = false;
       clearTimeout(timer);
     };
-  }, [recipe, loaded]);
+  }, [recipe, loaded, tool, previewVersion]);
 
   const close = useCallback(() => {
     if (phaseRef.current === "saving") return;
@@ -259,6 +276,7 @@ export function ImageEditor({
   async function save() {
     if (!loaded || phaseRef.current !== "idle" || !dirty || sizeError) return;
     setError("");
+    setSaveProgress(0);
     phaseRef.current = "rendering";
     setPhase("rendering");
     try {
@@ -272,7 +290,9 @@ export function ImageEditor({
         setPhase("saving");
         await restore(panel.id, panel.blobId);
       } else {
-        const result = await renderer.current!.save(draft.recipe);
+        const result = await renderer.current!.save(draft.recipe, (done, total) => {
+          if (mounted.current) setSaveProgress(Math.round((done / total) * 100));
+        });
         if (!mounted.current) return;
         if (!result.blob) throw new Error("The renderer did not return an image.");
         phaseRef.current = "saving";
@@ -288,6 +308,8 @@ export function ImageEditor({
         setError(storageMessage(problem));
     } finally {
       if (mounted.current) {
+        // A full render supersedes previews; resume them after a failed save too.
+        setPreviewVersion((value) => value + 1);
         phaseRef.current = "idle";
         setPhase("idle");
       }
@@ -641,6 +663,30 @@ export function ImageEditor({
                     role="img"
                     aria-label="Edited preview"
                   />
+                  {tool === "transform" && !before && (recipe.layout?.scale ?? 100) < 100 ? (
+                    <div className="editor-frame-guides" aria-hidden="true" />
+                  ) : null}
+                  {tool === "select" && loaded && !before && showMask ? (
+                    <MaskCanvas
+                      width={draft.source.width}
+                      height={draft.source.height}
+                      strokes={recipe.selective?.strokes ?? []}
+                      brush={brush}
+                      disabled={busy}
+                      pan={maskPan}
+                      shouldPan={() => space.current}
+                      onError={setError}
+                      onCommit={(strokes) =>
+                        change({
+                          ...recipe,
+                          selective: {
+                            adjustments: recipe.selective?.adjustments ?? { ...NEUTRAL },
+                            strokes,
+                          },
+                        })
+                      }
+                    />
+                  ) : null}
                   {tool === "crop" && loaded ? (
                     <div
                       className="image-crop-overlay"
@@ -683,7 +729,9 @@ export function ImageEditor({
                   <Hand className="size-3" />
                   {tool === "crop"
                     ? "Draw a crop or drag its corners. Hold Space to pan."
-                    : "Drag to pan. Zoom changes the view, never the output."}
+                    : tool === "select"
+                      ? "Paint in source view. Choose Pan view or hold Space to move."
+                      : "Drag to pan. Zoom changes the view, never the output."}
                 </span>
                 <span>
                   {recipe.width} × {recipe.height} px
@@ -691,29 +739,55 @@ export function ImageEditor({
               </div>
             </section>
             <aside className="image-properties" aria-label="Image properties">
-              <div className="image-tool-tabs">
-                <button
-                  type="button"
-                  aria-pressed={tool === "transform"}
-                  onClick={() => {
-                    setTool("transform");
-                    setBefore(false);
-                  }}
-                >
-                  <SlidersHorizontal className="size-4" />
-                  Transform
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={tool === "crop"}
-                  onClick={() => {
-                    setTool("crop");
-                    setBefore(false);
-                  }}
-                >
-                  <Crop className="size-4" />
-                  Crop
-                </button>
+              <div className="editor-tool-picker">
+                <div className="image-tool-tabs">
+                  <button
+                    type="button"
+                    aria-pressed={tool === "transform"}
+                    onClick={() => {
+                      setTool("transform");
+                      setBefore(false);
+                    }}
+                  >
+                    <SlidersHorizontal className="size-4" />
+                    Transform
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={tool === "crop"}
+                    onClick={() => {
+                      setTool("crop");
+                      setBefore(false);
+                    }}
+                  >
+                    <Crop className="size-4" />
+                    Crop
+                  </button>
+                </div>
+                <div className="image-tool-tabs">
+                  <button
+                    type="button"
+                    aria-pressed={tool === "adjust"}
+                    onClick={() => {
+                      setTool("adjust");
+                      setBefore(false);
+                    }}
+                  >
+                    <WandSparkles className="size-4" />
+                    Adjust
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={tool === "select"}
+                    onClick={() => {
+                      setTool("select");
+                      setBefore(false);
+                    }}
+                  >
+                    <Brush className="size-4" />
+                    Selective
+                  </button>
+                </div>
               </div>
               <fieldset disabled={busy || !loaded} className="image-property-fields">
                 {tool === "transform" ? (
@@ -885,7 +959,7 @@ export function ImageEditor({
                       Reset rotation & flips
                     </Button>
                   </>
-                ) : (
+                ) : tool === "crop" ? (
                   <>
                     <p className="text-xs text-muted">
                       Crop is measured in source pixels, before rotation. Outside pixels stay in the
@@ -976,7 +1050,122 @@ export function ImageEditor({
                       Reset crop
                     </Button>
                   </>
+                ) : tool === "adjust" ? (
+                  <AdjustmentControls
+                    value={recipe.adjustments ?? { ...NEUTRAL }}
+                    onEnd={endGroup}
+                    onChange={(adjustments, group) => change({ ...recipe, adjustments }, group)}
+                  />
+                ) : (
+                  <>
+                    <p className="text-xs text-muted">
+                      Paint where adjustments should apply. Erase mask removes selection, not
+                      artwork. The source view keeps selection aligned through crop, rotation and
+                      resizing.
+                    </p>
+                    <div className="editor-brush-modes">
+                      <Button
+                        variant={brush.mode === "add" && !maskPan ? "secondary" : "ghost"}
+                        aria-pressed={brush.mode === "add" && !maskPan}
+                        onClick={() => {
+                          setBrush({ ...brush, mode: "add" });
+                          setMaskPan(false);
+                          setShowMask(true);
+                        }}
+                      >
+                        Paint mask
+                      </Button>
+                      <Button
+                        variant={brush.mode === "subtract" && !maskPan ? "secondary" : "ghost"}
+                        aria-pressed={brush.mode === "subtract" && !maskPan}
+                        onClick={() => {
+                          setBrush({ ...brush, mode: "subtract" });
+                          setMaskPan(false);
+                          setShowMask(true);
+                        }}
+                      >
+                        Erase mask
+                      </Button>
+                      <Button
+                        variant={maskPan ? "secondary" : "ghost"}
+                        aria-pressed={maskPan}
+                        onClick={() => setMaskPan(!maskPan)}
+                      >
+                        Pan view
+                      </Button>
+                    </div>
+                    <NumberField
+                      label="Brush size"
+                      min={1}
+                      max={2048}
+                      value={brush.size}
+                      onChange={(size) => setBrush({ ...brush, size })}
+                    />
+                    <NumberField
+                      label="Brush hardness percent"
+                      min={0}
+                      max={100}
+                      value={Math.round(brush.hardness * 100)}
+                      onChange={(v) => setBrush({ ...brush, hardness: v / 100 })}
+                    />
+                    <NumberField
+                      label="Brush opacity percent"
+                      min={1}
+                      max={100}
+                      value={Math.round(brush.opacity * 100)}
+                      onChange={(v) => setBrush({ ...brush, opacity: v / 100 })}
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        aria-pressed={showMask}
+                        onClick={() => setShowMask(!showMask)}
+                      >
+                        {showMask ? "Hide mask" : "Show mask"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        disabled={!recipe.selective?.strokes.length}
+                        onClick={() =>
+                          change({
+                            ...recipe,
+                            selective: {
+                              adjustments: recipe.selective?.adjustments ?? { ...NEUTRAL },
+                              strokes: [],
+                            },
+                          })
+                        }
+                      >
+                        Clear mask
+                      </Button>
+                    </div>
+                    <p className="text-xs text-subtle" role="status">
+                      {recipe.selective?.strokes.length ?? 0} mask strokes ·{" "}
+                      {showMask ? "overlay visible" : "overlay hidden; changes still apply"}
+                    </p>
+                    <AdjustmentControls
+                      selective
+                      value={recipe.selective?.adjustments ?? { ...NEUTRAL }}
+                      onEnd={endGroup}
+                      onChange={(adjustments, group) =>
+                        change(
+                          {
+                            ...recipe,
+                            selective: { adjustments, strokes: recipe.selective?.strokes ?? [] },
+                          },
+                          group,
+                        )
+                      }
+                    />
+                  </>
                 )}
+                {tool === "transform" ? (
+                  <LayoutControls
+                    recipe={recipe}
+                    onEnd={endGroup}
+                    onChange={(layout, group) => change({ ...recipe, layout }, group)}
+                  />
+                ) : null}
                 <div className="editor-section-heading">
                   <h3>Source & recovery</h3>
                   <ShieldCheck className="size-4 text-accent" />
@@ -1018,7 +1207,7 @@ export function ImageEditor({
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted" role="status">
                 {phase === "rendering"
-                  ? "Rendering full-resolution PNG… Cancel to stop."
+                  ? `Rendering full-resolution PNG… ${saveProgress}% · Cancel to stop.`
                   : phase === "saving"
                     ? "Saving transaction…"
                     : dirty

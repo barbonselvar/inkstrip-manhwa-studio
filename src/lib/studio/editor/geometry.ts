@@ -1,9 +1,23 @@
+import { validateAdjustments, type Adjustments } from "./adjustments.ts";
+import { validateStrokes, type MaskStroke } from "./mask.ts";
 export type CropRect = { x: number; y: number; width: number; height: number };
+export type Layout = { scale: number; x: number; y: number };
+export const DEFAULT_LAYOUT: Readonly<Layout> = Object.freeze({ scale: 100, x: 0, y: 0 });
+export function layoutPlacement(width: number, height: number, layout: Layout = DEFAULT_LAYOUT) {
+  return {
+    scale: layout.scale / 100,
+    x: ((width * (1 - layout.scale / 100)) / 2) * layout.x,
+    y: ((height * (1 - layout.scale / 100)) / 2) * layout.y,
+  };
+}
 export type EditRecipe = {
   crop: CropRect;
   rotation: number;
   flipX: boolean;
   flipY: boolean;
+  adjustments?: Adjustments;
+  selective?: { adjustments: Adjustments; strokes: MaskStroke[] };
+  layout?: Layout;
   width: number;
   height: number;
 };
@@ -45,6 +59,33 @@ export function defaultRecipe(width: number, height: number): EditRecipe {
 }
 export function validateRecipe(recipe: EditRecipe, sourceWidth: number, sourceHeight: number) {
   assertSize(sourceWidth, sourceHeight, SOURCE_LIMITS);
+  validateAdjustments(recipe.adjustments);
+  if (recipe.selective !== undefined) {
+    if (
+      !recipe.selective ||
+      !recipe.selective.adjustments ||
+      !Array.isArray(recipe.selective.strokes)
+    )
+      throw new Error("Invalid selective adjustment.");
+    validateAdjustments(recipe.selective.adjustments);
+    validateStrokes(recipe.selective.strokes);
+  }
+  if (recipe.layout !== undefined) {
+    const { scale, x, y } = recipe.layout ?? {};
+    if (
+      !Number.isFinite(scale) ||
+      scale < 10 ||
+      scale > 100 ||
+      !Number.isFinite(x) ||
+      x < -1 ||
+      x > 1 ||
+      !Number.isFinite(y) ||
+      y < -1 ||
+      y > 1
+    )
+      throw new Error("Invalid artwork layout.");
+  }
+
   const { crop } = recipe;
   if (
     ![crop.x, crop.y, crop.width, crop.height, recipe.width, recipe.height].every(
@@ -133,5 +174,28 @@ export function previewSize(width: number, height: number, maxSide = 1400) {
   return {
     width: Math.max(1, Math.round(width * scale)),
     height: Math.max(1, Math.round(height * scale)),
+  };
+}
+
+/** Map retained source coordinates into output pixels, including crop, flips and frame placement. */
+export function sourceToOutput(recipe: EditRecipe, width = recipe.width, height = recipe.height) {
+  const bounds = rotatedBounds(recipe.crop.width, recipe.crop.height, recipe.rotation),
+    placement = layoutPlacement(width, height, recipe.layout);
+  const r = (recipe.rotation * Math.PI) / 180,
+    sx = (width / bounds.width) * placement.scale,
+    sy = (height / bounds.height) * placement.scale;
+  const a = sx * Math.cos(r) * (recipe.flipX ? -1 : 1),
+    b = sy * Math.sin(r) * (recipe.flipX ? -1 : 1),
+    c = -sx * Math.sin(r) * (recipe.flipY ? -1 : 1),
+    d = sy * Math.cos(r) * (recipe.flipY ? -1 : 1);
+  const cx = recipe.crop.x + recipe.crop.width / 2,
+    cy = recipe.crop.y + recipe.crop.height / 2;
+  return {
+    a,
+    b,
+    c,
+    d,
+    e: width / 2 + placement.x - a * cx - c * cy,
+    f: height / 2 + placement.y - b * cx - d * cy,
   };
 }

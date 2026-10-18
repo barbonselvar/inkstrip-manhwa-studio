@@ -17,6 +17,7 @@ export function bodyTextPrefix(text) {
 export function parseSmokeArgs(argv, env = {}) {
   const positional = [];
   let baseline = env.BROWSER_SMOKE_BASELINE || "";
+  let readySelector = "";
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--baseline") {
@@ -27,6 +28,11 @@ export function parseSmokeArgs(argv, env = {}) {
       const value = arg.slice("--baseline=".length);
       if (!value) return { error: "--baseline requires a path to a prior verdict JSON" };
       baseline = value;
+    } else if (arg === "--ready-selector" || arg.startsWith("--ready-selector=")) {
+      const value = arg === "--ready-selector" ? argv[++i] : arg.slice("--ready-selector=".length);
+      if (!value?.trim() || value.startsWith("--"))
+        return { error: "--ready-selector requires a visible-element selector" };
+      readySelector = value;
     } else if (arg.startsWith("--")) {
       return { error: `unknown flag: ${arg}` };
     } else {
@@ -37,6 +43,7 @@ export function parseSmokeArgs(argv, env = {}) {
     url: positional[0] || "http://127.0.0.1:8080/",
     outPng: positional[1] || "/workspace/screenshots/app-builder-preview.png",
     baseline,
+    ...(readySelector ? { readySelector } : {}),
   };
 }
 export function derivedPaths(outPng) {

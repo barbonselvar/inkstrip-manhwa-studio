@@ -87,6 +87,9 @@ try {
     await page.getByLabel(label, { exact: true }).fill(value);
     await page.getByLabel(label, { exact: true }).press("Tab");
   }
+  await page.getByRole("button", { name: "Adjust", exact: true }).click();
+  await page.getByLabel("Brightness", { exact: true }).fill("5");
+  await page.getByLabel("Brightness", { exact: true }).press("Tab");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await page.getByRole("dialog", { name: "Edit Image", exact: true }).waitFor({ state: "hidden" });
   const acceptedBeforeAI = await page.evaluate(async () => {
@@ -103,7 +106,7 @@ try {
   });
   await page.getByRole("button", { name: "AI Enhance page-1.png", exact: true }).click();
   await page.getByRole("button", { name: "Enhance image", exact: true }).click();
-  console.log("Running real Swin2SR inference on an accepted 16×24 crop…");
+  console.log("Running real Swin2SR inference on an adjusted 16×24 crop…");
   const timer = setInterval(async () => {
     try {
       console.log(

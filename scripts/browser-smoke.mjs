@@ -109,6 +109,11 @@ try {
     // networkidle never settles and would burn the whole timeout.
     const resp = await page.goto(url, { waitUntil: "domcontentloaded", timeout: timeoutMs });
     const status = resp?.status() ?? 0;
+    if (args.readySelector)
+      await page
+        .locator(args.readySelector)
+        .first()
+        .waitFor({ state: "visible", timeout: timeoutMs });
     await page.waitForTimeout(1000);
 
     const title = await page.title();
