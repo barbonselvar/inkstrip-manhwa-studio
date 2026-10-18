@@ -78,7 +78,7 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
       if (panels.length > 12) throw new Error("Select up to 12 images per batch.");
       let pixels = 0;
       for (const panel of panels) {
-        const source = panel.original ?? panel;
+        const source = panel;
         enhancementSize(source.width, source.height, options.scale);
         pixels += source.width * source.height;
       }
@@ -90,9 +90,9 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
         if (cancelled.current) break;
         const panel = panels[i]!;
         setCurrent(i + 1);
-        setProgress({ stage: "Reading original image", done: 0, total: 0 });
-        const before = await getBlob(panel.original?.blobId ?? panel.blobId);
-        if (!before) throw new Error(`Original missing: ${panel.name}. Current image unchanged.`);
+        setProgress({ stage: "Reading accepted image", done: 0, total: 0 });
+        const before = await getBlob(panel.blobId);
+        if (!before) throw new Error(`Image missing: ${panel.name}. Current image unchanged.`);
         if (cancelled.current) break;
         const after = await engine.current!.run(before, options, (value) => {
           if (mounted.current) setProgress(value);
@@ -130,7 +130,7 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
         const current = useStudio.getState().panels.find((panel) => panel.id === item.panel.id);
         if (!current || current.blobId !== item.panel.blobId)
           throw new Error("An image changed while previewing. Close and reopen enhancement.");
-        await replace(item.panel.id, item.after.blob);
+        await replace(item.panel.id, item.after.blob, { expectedBlobId: item.panel.blobId });
         applied++;
       }
       setPreviews([]);
@@ -240,8 +240,9 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
         </div>
       </fieldset>
       <p className="mt-3 text-xs text-subtle">
-        Neural 2× reconstruction with edge-aware noise/artifact cleanup and conservative sharpening.
-        Color boost is optional; no generative redraw.
+        Runs on the current accepted image, including saved crops. Neural 2× reconstruction with
+        edge-aware noise/artifact cleanup and conservative sharpening. Color boost is optional; no
+        generative redraw.
       </p>
       {running ? (
         <div className="ai-progress mt-5" role="status" aria-live="polite">

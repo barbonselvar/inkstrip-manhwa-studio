@@ -1,3 +1,5 @@
+import type { EditRecipe } from "./editor/geometry";
+
 export type StripFormat = "image/jpeg" | "image/png";
 
 export type StripPart = {
@@ -35,6 +37,15 @@ export type Chapter = {
   strip: Strip | null;
 };
 
+export type PanelMedia = {
+  blobId: string;
+  thumbId: string;
+  mime: string;
+  width: number;
+  height: number;
+};
+export type PanelEdit = { version: 1; source: PanelMedia; recipe: EditRecipe };
+
 export type Panel = {
   id: string;
   chapterId: string;
@@ -44,7 +55,8 @@ export type Panel = {
   height: number;
   blobId: string;
   thumbId: string;
-  original?: Pick<Panel, "blobId" | "thumbId" | "mime" | "width" | "height">;
+  original?: PanelMedia;
+  edit?: PanelEdit;
   mediaUpdatedAt?: number;
   order: number;
   createdAt: number;

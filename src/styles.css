@@ -781,3 +781,346 @@ button,
   min-height: 2.75rem;
   touch-action: manipulation;
 }
+
+/* Phase 2: isolated image workspace. Viewport gestures never affect chapter order. */
+.panel-image-target {
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.image-editor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: color-mix(in srgb, var(--color-bg) 85%, transparent);
+  backdrop-filter: blur(8px);
+}
+.image-editor {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  outline: none;
+}
+.image-editor-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  min-height: 4rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+}
+.editor-header-history {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.image-editor-body {
+  display: grid;
+  grid-template-rows: minmax(220px, 43dvh) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.image-editor-main {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--color-border);
+}
+.image-viewport-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+.image-viewport-tools output {
+  min-width: 3rem;
+  text-align: center;
+}
+.image-stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  background-color: var(--color-bg);
+  background-image:
+    linear-gradient(45deg, var(--color-bg-elevated) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--color-bg-elevated) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--color-bg-elevated) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--color-bg-elevated) 75%);
+  background-size: 1rem 1rem;
+  background-position:
+    0 0,
+    0 0.5rem,
+    0.5rem -0.5rem,
+    -0.5rem 0;
+}
+.pan-active {
+  cursor: grab;
+}
+.pan-active:active {
+  cursor: grabbing;
+}
+.crop-active {
+  cursor: crosshair;
+}
+.image-plane {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+  overflow: hidden;
+  touch-action: none;
+}
+.image-plane canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.image-plane .canvas-hidden {
+  display: none;
+}
+.image-stage-status {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max-content;
+  max-width: 85%;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-bg-elevated);
+  color: var(--color-muted);
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  pointer-events: none;
+  text-align: center;
+}
+.image-stage-rendering {
+  top: auto;
+  bottom: 0.5rem;
+  transform: translateX(-50%);
+  padding: 0.375rem 0.75rem;
+}
+.image-canvas-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.625rem;
+  color: var(--color-subtle);
+  background: var(--color-bg);
+}
+.image-canvas-caption > span:last-child {
+  white-space: nowrap;
+}
+.image-properties {
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--color-bg-elevated);
+}
+.image-tool-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.image-tool-tabs > button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+}
+.image-tool-tabs > button[aria-pressed="true"] {
+  color: var(--color-accent);
+  background: var(--color-bg-subtle);
+}
+.image-property-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  min-width: 0;
+}
+.image-property-fields:disabled {
+  opacity: 0.55;
+}
+.editor-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.75rem;
+  font-size: 0.8125rem;
+}
+.editor-section-heading:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.editor-section-heading > button {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  color: var(--color-accent);
+}
+.editor-field-label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+.editor-number-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.image-transform-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+.image-transform-buttons > button[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.image-crop-overlay {
+  position: absolute;
+  border: 1px solid var(--color-accent);
+  box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--color-bg) 65%, transparent);
+  pointer-events: none;
+}
+.crop-crosshair {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(
+      to right,
+      transparent 33%,
+      color-mix(in srgb, var(--color-fg) 35%, transparent) 33%,
+      transparent 34%,
+      transparent 66%,
+      color-mix(in srgb, var(--color-fg) 35%, transparent) 66%,
+      transparent 67%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 33%,
+      color-mix(in srgb, var(--color-fg) 35%, transparent) 33%,
+      transparent 34%,
+      transparent 66%,
+      color-mix(in srgb, var(--color-fg) 35%, transparent) 66%,
+      transparent 67%
+    );
+}
+.crop-handle {
+  position: absolute;
+  width: 2.75rem;
+  height: 2.75rem;
+  pointer-events: auto;
+  border: 2px solid var(--color-accent);
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--color-bg) 45%, transparent);
+  touch-action: none;
+}
+.crop-nw {
+  top: 0;
+  left: 0;
+}
+.crop-ne {
+  top: 0;
+  right: 0;
+}
+.crop-sw {
+  bottom: 0;
+  left: 0;
+}
+.crop-se {
+  bottom: 0;
+  right: 0;
+}
+.image-editor-footer {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+}
+.image-editor-footer > div {
+  grid-column: 1 / -1;
+}
+.editor-discard {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.75rem;
+  background: var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.75rem;
+}
+.editor-discard p {
+  flex: 1 0 100%;
+}
+@media (min-width: 48rem) {
+  .image-editor {
+    inset: 1rem;
+    height: calc(100dvh - 2rem);
+    max-width: calc(100vw - 2rem);
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
+    box-shadow: 0 20px 100px var(--color-bg);
+  }
+  .image-editor-body {
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 19rem;
+  }
+  .image-editor-main {
+    border-bottom: 0;
+    border-right: 1px solid var(--color-border);
+  }
+  .image-editor-footer {
+    display: flex;
+    align-items: center;
+  }
+  .editor-discard p {
+    flex: 1;
+  }
+  .image-canvas-caption {
+    font-size: 0.6875rem;
+  }
+}

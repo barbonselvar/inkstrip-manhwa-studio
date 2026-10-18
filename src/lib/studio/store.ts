@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import {
   commitPanelMedia,
+  commitChapterStrip,
   getBlob,
   loadLibrary,
   putBlobs,
@@ -9,7 +10,9 @@ import {
   storageMessage,
 } from "@/lib/studio/db";
 import { decodeBlob, isImageFile, makeThumb, stitchChapter } from "@/lib/studio/images";
-import type { Chapter, Panel, Project, Strip, StripFormat } from "@/lib/studio/types";
+import { mediaIds, mediaReference, obsoleteMedia } from "./editor/references";
+import { validateRecipe } from "./editor/geometry";
+import type { Chapter, Panel, Project, Strip, StripFormat, PanelEdit } from "@/lib/studio/types";
 import { cleanTitle, uid } from "@/lib/utils";
 
 type Job = { chapterId: string; done: number; total: number; label: string };
@@ -45,8 +48,12 @@ type Studio = {
   selectNone: (chapterId: string) => void;
   display: (chapterId: string, mode: "replace" | "append") => Promise<boolean>;
   clearStrip: (chapterId: string) => Promise<void>;
-  replacePanelImage: (id: string, blob: Blob) => Promise<void>;
-  restorePanel: (id: string) => Promise<void>;
+  replacePanelImage: (
+    id: string,
+    blob: Blob,
+    options?: { expectedBlobId?: string; edit?: PanelEdit },
+  ) => Promise<void>;
+  restorePanel: (id: string, expectedBlobId?: string) => Promise<void>;
   loadMedia: (chapterId: string) => Promise<void>;
 };
 
@@ -200,11 +207,7 @@ export const useStudio = create<Studio>((set, get) => ({
     const chapterIds = new Set(chapters.map((chapter) => chapter.id));
     const panels = get().panels.filter((panel) => chapterIds.has(panel.chapterId));
     const blobs = [
-      ...panels.flatMap((panel) => [
-        panel.blobId,
-        panel.thumbId,
-        ...(panel.original ? [panel.original.blobId, panel.original.thumbId] : []),
-      ]),
+      ...panels.flatMap(mediaIds),
       ...chapters.flatMap((chapter) => chapter.strip?.parts.map((part) => part.blobId) ?? []),
     ];
     blobs.forEach(revokeBlobUrl);
@@ -266,11 +269,7 @@ export const useStudio = create<Studio>((set, get) => ({
     if (!chapter) return;
     const panels = get().panels.filter((panel) => panel.chapterId === id);
     const blobs = [
-      ...panels.flatMap((panel) => [
-        panel.blobId,
-        panel.thumbId,
-        ...(panel.original ? [panel.original.blobId, panel.original.thumbId] : []),
-      ]),
+      ...panels.flatMap(mediaIds),
       ...(chapter.strip?.parts.map((part) => part.blobId) ?? []),
     ];
     blobs.forEach(revokeBlobUrl);
@@ -431,11 +430,7 @@ export const useStudio = create<Studio>((set, get) => ({
     revokeBlobUrl(panel.thumbId);
     await removeRecords({
       panels: [panel.id],
-      blobs: [
-        panel.blobId,
-        panel.thumbId,
-        ...(panel.original ? [panel.original.blobId, panel.original.thumbId] : []),
-      ],
+      blobs: mediaIds(panel),
     });
     const remaining = chapterPanels(
       get().panels.filter((item) => item.id !== id),
@@ -564,7 +559,6 @@ export const useStudio = create<Studio>((set, get) => ({
         height: part.height,
         blob: part.blob,
       }));
-      await putBlobs(partRecords.map((part) => ({ id: part.blobId, blob: part.blob })));
       const strip: Strip = {
         width: result.width,
         totalHeight: result.totalHeight,
@@ -576,19 +570,16 @@ export const useStudio = create<Studio>((set, get) => ({
         createdAt: Date.now(),
       };
       const oldParts = chapter.strip?.parts ?? [];
+      const committed = await commitChapterStrip(
+        chapterId,
+        oldParts.map((part) => part.blobId),
+        strip,
+        partRecords.map((part) => ({ id: part.blobId, blob: part.blob })),
+        chosen.map((panel) => ({ id: panel.id, blobId: panel.blobId })),
+      );
+      const saved = committed.chapter;
+      const nextProject = committed.project;
       oldParts.forEach((part) => revokeBlobUrl(part.blobId));
-      if (oldParts.length > 0) {
-        await removeRecords({ blobs: oldParts.map((part) => part.blobId) });
-      }
-      const touched = withTimestamps(get().projects, get().chapters, chapter.projectId, chapterId);
-      const nextChapter = touched.chapters.find((item) => item.id === chapterId);
-      if (!nextChapter) return false;
-      const saved = { ...nextChapter, strip };
-      const nextProject = touched.projects.find((item) => item.id === chapter.projectId);
-      await putRecords({
-        chapters: [saved],
-        projects: nextProject ? [nextProject] : [],
-      });
       const urlsForStrip = partRecords.map((part) => blobUrl(part.blobId, part.blob));
       const widthNote =
         result.width === chapter.width
@@ -616,32 +607,49 @@ export const useStudio = create<Studio>((set, get) => ({
   clearStrip: async (chapterId) => {
     const chapter = get().chapters.find((item) => item.id === chapterId);
     if (!chapter?.strip) return;
-    chapter.strip.parts.forEach((part) => revokeBlobUrl(part.blobId));
-    await removeRecords({ blobs: chapter.strip.parts.map((part) => part.blobId) });
-    const next = { ...chapter, strip: null, updatedAt: Date.now() };
-    await putRecords({ chapters: [next] });
-    set((state) => ({
-      chapters: state.chapters.map((item) => (item.id === chapterId ? next : item)),
-      stripUrls: { ...state.stripUrls, [chapterId]: [] },
-    }));
+    const parts = chapter.strip.parts;
+    try {
+      const committed = await commitChapterStrip(
+        chapterId,
+        parts.map((part) => part.blobId),
+        null,
+        [],
+      );
+      parts.forEach((part) => revokeBlobUrl(part.blobId));
+      set((state) => ({
+        chapters: state.chapters.map((item) => (item.id === chapterId ? committed.chapter : item)),
+        projects: committed.project
+          ? state.projects.map((item) =>
+              item.id === committed.project!.id ? committed.project! : item,
+            )
+          : state.projects,
+        stripUrls: { ...state.stripUrls, [chapterId]: [] },
+      }));
+    } catch (error) {
+      set({ banner: storageMessage(error) });
+    }
   },
 
-  replacePanelImage: async (id, blob) => {
+  replacePanelImage: async (id, blob, options) => {
     const panel = get().panels.find((item) => item.id === id);
     if (!panel) throw new Error("This panel is no longer available.");
+    if (options?.expectedBlobId && panel.blobId !== options.expectedBlobId)
+      throw new Error("This image changed. Reopen the editor to try again.");
+    if (options?.edit)
+      validateRecipe(options.edit.recipe, options.edit.source.width, options.edit.source.height);
     const decoded = await decodeBlob(blob);
     try {
+      if (
+        options?.edit &&
+        (decoded.width !== options.edit.recipe.width ||
+          decoded.height !== options.edit.recipe.height)
+      )
+        throw new Error("Rendered dimensions do not match the editing recipe.");
       const thumb = await makeThumb(decoded.source, decoded.width, decoded.height);
-      const original = panel.original ?? {
-        blobId: panel.blobId,
-        thumbId: panel.thumbId,
-        mime: panel.mime,
-        width: panel.width,
-        height: panel.height,
-      };
       const next: Panel = {
         ...panel,
-        original,
+        original: panel.original ?? mediaReference(panel),
+        edit: options?.edit,
         blobId: uid(),
         thumbId: uid(),
         mime: blob.type,
@@ -649,10 +657,10 @@ export const useStudio = create<Studio>((set, get) => ({
         height: decoded.height,
         mediaUpdatedAt: Date.now(),
       };
-      const obsolete = panel.original ? [panel.blobId, panel.thumbId] : [];
-      await commitPanelMedia(
+      const obsolete = obsoleteMedia(panel, next);
+      const committed = await commitPanelMedia(
         next,
-        panel.blobId,
+        options?.expectedBlobId ?? panel.blobId,
         [
           { id: next.blobId, blob },
           { id: next.thumbId, blob: thumb },
@@ -661,7 +669,15 @@ export const useStudio = create<Studio>((set, get) => ({
       );
       obsolete.forEach(revokeBlobUrl);
       set((state) => ({
-        panels: state.panels.map((item) => (item.id === id ? next : item)),
+        panels: state.panels.map((item) => (item.id === id ? committed.panel : item)),
+        chapters: state.chapters.map((item) =>
+          item.id === committed.chapter.id ? committed.chapter : item,
+        ),
+        projects: committed.project
+          ? state.projects.map((item) =>
+              item.id === committed.project!.id ? committed.project! : item,
+            )
+          : state.projects,
         thumbs: { ...state.thumbs, [id]: blobUrl(next.thumbId, thumb) },
       }));
     } finally {
@@ -669,18 +685,33 @@ export const useStudio = create<Studio>((set, get) => ({
     }
   },
 
-  restorePanel: async (id) => {
+  restorePanel: async (id, expectedBlobId) => {
     const panel = get().panels.find((item) => item.id === id);
     if (!panel?.original) return;
     const original = panel.original;
     const [blob, thumb] = await Promise.all([getBlob(original.blobId), getBlob(original.thumbId)]);
     if (!blob || !thumb)
       throw new Error("The original image is unavailable. Current image unchanged.");
-    const next = { ...panel, ...original, original: undefined, mediaUpdatedAt: Date.now() };
-    await commitPanelMedia(next, panel.blobId, [], [panel.blobId, panel.thumbId]);
-    [panel.blobId, panel.thumbId].forEach(revokeBlobUrl);
+    const next = {
+      ...panel,
+      ...original,
+      original: undefined,
+      edit: undefined,
+      mediaUpdatedAt: Date.now(),
+    };
+    const obsolete = obsoleteMedia(panel, next);
+    const committed = await commitPanelMedia(next, expectedBlobId ?? panel.blobId, [], obsolete);
+    obsolete.forEach(revokeBlobUrl);
     set((state) => ({
-      panels: state.panels.map((item) => (item.id === id ? next : item)),
+      panels: state.panels.map((item) => (item.id === id ? committed.panel : item)),
+      chapters: state.chapters.map((item) =>
+        item.id === committed.chapter.id ? committed.chapter : item,
+      ),
+      projects: committed.project
+        ? state.projects.map((item) =>
+            item.id === committed.project!.id ? committed.project! : item,
+          )
+        : state.projects,
       thumbs: { ...state.thumbs, [id]: blobUrl(original.thumbId, thumb) },
     }));
   },

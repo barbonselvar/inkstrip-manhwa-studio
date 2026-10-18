@@ -1,4 +1,4 @@
-import type { Chapter, Panel, Project } from "@/lib/studio/types";
+import type { Chapter, Panel, Project, Strip } from "@/lib/studio/types";
 
 const DB_NAME = "inkstrip";
 const DB_VERSION = 1;
@@ -154,7 +154,7 @@ export async function commitPanelMedia(
   try {
     const current = await request<Panel | undefined>(tx.objectStore("panels").get(panel.id));
     if (!current || current.blobId !== expectedBlobId)
-      throw new Error("This panel changed. Reopen enhancement to try again.");
+      throw new Error("This panel changed. Reopen the editor to try again.");
     const chapter = await request<Chapter | undefined>(
       tx.objectStore("chapters").get(panel.chapterId),
     );
@@ -162,17 +162,96 @@ export async function commitPanelMedia(
     const project = await request<Project | undefined>(
       tx.objectStore("projects").get(chapter.projectId),
     );
+    const next: Panel = {
+      ...current,
+      blobId: panel.blobId,
+      thumbId: panel.thumbId,
+      width: panel.width,
+      height: panel.height,
+      mime: panel.mime,
+      original: panel.original,
+      edit: panel.edit,
+      mediaUpdatedAt: panel.mediaUpdatedAt,
+    };
+    for (const reference of [next.original, next.edit?.source]) {
+      if (reference && !(await request(tx.objectStore("blobs").get(reference.blobId))))
+        throw new Error("A retained source image is missing. Current image unchanged.");
+      if (reference && !(await request(tx.objectStore("blobs").get(reference.thumbId))))
+        throw new Error("A retained thumbnail is missing. Current image unchanged.");
+    }
+    const updatedAt = next.mediaUpdatedAt ?? Date.now();
+    const nextChapter = { ...chapter, updatedAt };
+    const nextProject = project ? { ...project, updatedAt } : null;
     for (const { id, blob } of blobs) tx.objectStore("blobs").put(blob, id);
-    tx.objectStore("panels").put(panel);
-    tx.objectStore("chapters").put({ ...chapter, updatedAt: Date.now() });
-    if (project) tx.objectStore("projects").put({ ...project, updatedAt: Date.now() });
-    for (const id of obsolete) tx.objectStore("blobs").delete(id);
+    tx.objectStore("panels").put(next);
+    tx.objectStore("chapters").put(nextChapter);
+    if (nextProject) tx.objectStore("projects").put(nextProject);
+    const retained = new Set([
+      next.blobId,
+      next.thumbId,
+      next.original?.blobId,
+      next.original?.thumbId,
+      next.edit?.source.blobId,
+      next.edit?.source.thumbId,
+    ]);
+    for (const id of obsolete) if (!retained.has(id)) tx.objectStore("blobs").delete(id);
     await done;
+    return { panel: next, chapter: nextChapter, project: nextProject };
   } catch (error) {
     try {
       tx.abort();
     } catch {
       /* The transaction may already have aborted. */
+    }
+    await done.catch(() => {});
+    throw error;
+  }
+}
+
+/** The old rendered page remains usable if quota, revision checks, or metadata writes fail. */
+export async function commitChapterStrip(
+  chapterId: string,
+  expectedParts: string[],
+  strip: Strip | null,
+  blobs: { id: string; blob: Blob }[],
+  expectedMedia: { id: string; blobId: string }[] = [],
+) {
+  const db = await openDb();
+  const tx = db.transaction(["chapters", "projects", "blobs", "panels"], "readwrite");
+  const done = transactionDone(tx);
+  try {
+    const chapter = await request<Chapter | undefined>(tx.objectStore("chapters").get(chapterId));
+    if (
+      !chapter ||
+      JSON.stringify(chapter.strip?.parts.map((p) => p.blobId) ?? []) !==
+        JSON.stringify(expectedParts)
+    )
+      throw new Error("The rendered chapter changed. Display again to retry.");
+    for (const expected of expectedMedia) {
+      const panel = await request<Panel | undefined>(tx.objectStore("panels").get(expected.id));
+      if (!panel || panel.blobId !== expected.blobId)
+        throw new Error(
+          "An image changed while stitching. Display again to include the latest edits.",
+        );
+    }
+    const project = await request<Project | undefined>(
+      tx.objectStore("projects").get(chapter.projectId),
+    );
+    const updatedAt = Date.now();
+    const nextChapter = { ...chapter, strip, updatedAt };
+    const nextProject = project ? { ...project, updatedAt } : null;
+    for (const { id, blob } of blobs) tx.objectStore("blobs").put(blob, id);
+    tx.objectStore("chapters").put(nextChapter);
+    if (nextProject) tx.objectStore("projects").put(nextProject);
+    const keep = new Set(strip?.parts.map((part) => part.blobId) ?? []);
+    for (const id of expectedParts) if (!keep.has(id)) tx.objectStore("blobs").delete(id);
+    await done;
+    return { chapter: nextChapter, project: nextProject };
+  } catch (error) {
+    try {
+      tx.abort();
+    } catch {
+      /* Transaction may already be complete. */
     }
     await done.catch(() => {});
     throw error;

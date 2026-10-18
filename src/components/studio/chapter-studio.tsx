@@ -1,3 +1,5 @@
+import { ImageEditor } from "./editor/image-editor";
+import { PanelImageActions } from "./editor/panel-image-actions";
 import { EnhanceDialog } from "@/components/studio/enhance-dialog";
 import { ReaderHeader } from "@/components/studio/reader-header";
 import type { Panel } from "@/lib/studio/types";
@@ -46,6 +48,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const clearStrip = useStudio((state) => state.clearStrip);
   const navigate = useNavigate();
 
+  const [editorPanel, setEditorPanel] = useState<Panel | null>(null);
   const [enhancePanels, setEnhancePanels] = useState<Panel[] | null>(null);
   const [pane, setPane] = useState<"panels" | "page">("panels");
   const [dragOver, setDragOver] = useState(false);
@@ -91,6 +94,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
 
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
+      if (editorPanel || enhancePanels) return;
       const files = [...(event.clipboardData?.files ?? [])];
       if (files.length === 0) return;
       event.preventDefault();
@@ -98,7 +102,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [addImages, chapterId]);
+  }, [addImages, chapterId, editorPanel, enhancePanels]);
 
   if (!project || !chapter || chapter.projectId !== projectId) {
     return (
@@ -304,7 +308,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                 return (
                   <li
                     key={panel.id}
-                    draggable={canDrag}
+                    draggable={canDrag && !busy}
                     onDragStart={(event) => {
                       event.dataTransfer.setData("text/plain", panel.id);
                       event.dataTransfer.effectAllowed = "move";
@@ -338,38 +342,14 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                     >
                       {String(index + 1).padStart(2, "0")}
                     </button>
-                    <button
-                      type="button"
-                      className="focus-ring min-w-0 flex-1 text-left"
-                      onClick={() => toggleSelected(chapter.id, panel.id)}
-                    >
-                      <span className="flex items-center gap-3">
-                        {thumbs[panel.id] ? (
-                          <img
-                            src={thumbs[panel.id]}
-                            alt=""
-                            className="h-16 w-12 rounded-sm bg-paper object-cover object-top"
-                          />
-                        ) : (
-                          <span className="h-16 w-12 rounded-sm bg-paper" />
-                        )}
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm text-fg">{panel.name}</span>
-                          <span className="mt-1 block text-xs text-subtle tabular-nums">
-                            {panel.width} × {panel.height}
-                          </span>
-                        </span>
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      className="focus-ring grid size-11 shrink-0 place-items-center rounded-sm text-accent hover:bg-accent/10"
-                      aria-label={`AI Enhance ${panel.name}`}
+                    <PanelImageActions
+                      panel={panel}
+                      thumb={thumbs[panel.id]}
                       disabled={busy}
-                      onClick={() => setEnhancePanels([panel])}
-                    >
-                      <Sparkles className="size-4" />
-                    </button>
+                      onToggle={() => toggleSelected(chapter.id, panel.id)}
+                      onEdit={() => setEditorPanel(panel)}
+                      onEnhance={() => setEnhancePanels([panel])}
+                    />
                     <div className="flex shrink-0 flex-col">
                       <button
                         type="button"
@@ -474,8 +454,14 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
             {chapter.strip && stripUrls.length > 0 ? (
               <Button
                 variant="secondary"
+                disabled={freshness === "stale" || !!job}
+                title={
+                  freshness === "stale"
+                    ? "Press Display to include your latest accepted edits before saving."
+                    : "Download chapter"
+                }
                 onClick={() =>
-                  downloadStrip(project.title, chapter.title, chapter.format, stripUrls)
+                  downloadStrip(project.title, chapter.title, chapter.strip!.format, stripUrls)
                 }
               >
                 <Download className="size-4" />
@@ -529,6 +515,14 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
           )}
         </section>
       </div>
+      {editorPanel ? (
+        <ImageEditor
+          key={editorPanel.id}
+          panel={editorPanel}
+          chapterWidth={chapter.width}
+          onClose={() => setEditorPanel(null)}
+        />
+      ) : null}
       {enhancePanels ? (
         <EnhanceDialog panels={enhancePanels} onClose={() => setEnhancePanels(null)} />
       ) : null}

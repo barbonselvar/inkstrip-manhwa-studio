@@ -24,7 +24,7 @@ try {
   });
   const page = await context.newPage();
   const errors = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("pageerror", (error) => errors.push(error.stack || error.message));
   page.on("requestfailed", (request) =>
     console.log("Request failed:", new URL(request.url()).hostname, request.failure()?.errorText),
   );
@@ -56,15 +56,13 @@ try {
       return { name: item.name, data: canvas.toDataURL("image/png").split(",")[1] };
     }),
   );
-  await page
-    .locator('input[type="file"]')
-    .setInputFiles(
-      fixtures.map((item) => ({
-        name: item.name,
-        mimeType: "image/png",
-        buffer: Buffer.from(item.data, "base64"),
-      })),
-    );
+  await page.locator('input[type="file"]').setInputFiles(
+    fixtures.map((item) => ({
+      name: item.name,
+      mimeType: "image/png",
+      buffer: Buffer.from(item.data, "base64"),
+    })),
+  );
   await page.getByRole("button", { name: "AI Enhance page-1.png", exact: true }).waitFor();
   await page.getByRole("button", { name: "Display 3", exact: true }).waitFor();
   await page.getByRole("button", { name: "Display 3", exact: true }).click();
@@ -79,9 +77,33 @@ try {
   assert.equal(await page.locator(".reader-chapter-info").getAttribute("data-hidden"), "false");
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.getByRole("button", { name: "Panels", exact: true }).click();
+  // Enhance the accepted crop, while retaining the imported original for recovery.
+  await page.getByRole("button", { name: "Edit Image page-1.png", exact: true }).click();
+  await page.getByRole("button", { name: "Crop", exact: true }).click();
+  for (const [label, value] of [
+    ["Crop width", "16"],
+    ["Crop height", "24"],
+  ]) {
+    await page.getByLabel(label, { exact: true }).fill(value);
+    await page.getByLabel(label, { exact: true }).press("Tab");
+  }
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await page.getByRole("dialog", { name: "Edit Image", exact: true }).waitFor({ state: "hidden" });
+  const acceptedBeforeAI = await page.evaluate(async () => {
+    const db = await new Promise((resolve) => {
+      const r = indexedDB.open("inkstrip", 1);
+      r.onsuccess = () => resolve(r.result);
+    });
+    const panels = await new Promise((resolve) => {
+      const r = db.transaction("panels").objectStore("panels").getAll();
+      r.onsuccess = () => resolve(r.result);
+    });
+    db.close();
+    return panels.map((p) => [p.id, p.blobId]);
+  });
   await page.getByRole("button", { name: "AI Enhance page-1.png", exact: true }).click();
   await page.getByRole("button", { name: "Enhance image", exact: true }).click();
-  console.log("Running real Swin2SR inference on a 32×48 fixture…");
+  console.log("Running real Swin2SR inference on an accepted 16×24 crop…");
   const timer = setInterval(async () => {
     try {
       console.log(
@@ -131,11 +153,34 @@ try {
     });
     db.close();
     IDBObjectStore.prototype.put = window.__originalPut;
-    return panels.every((panel) => !panel.original && panel.width !== 64);
+    return panels.map((panel) => [panel.id, panel.blobId]);
   });
-  assert.equal(failedSaveOriginal, true, "A failed save must not replace any original record");
+  assert.deepEqual(
+    failedSaveOriginal,
+    acceptedBeforeAI,
+    "A failed save must not replace any accepted record",
+  );
   await page.getByRole("button", { name: "Apply 1 preview(s)", exact: true }).click();
   await page.getByText(/Applied 1 image/).waitFor();
+  const enhancedSize = await page.evaluate(async () => {
+    const db = await new Promise((resolve) => {
+      const r = indexedDB.open("inkstrip", 1);
+      r.onsuccess = () => resolve(r.result);
+    });
+    const panels = await new Promise((resolve) => {
+      const r = db.transaction("panels").objectStore("panels").getAll();
+      r.onsuccess = () => resolve(r.result);
+    });
+    db.close();
+    const panel = panels.find((p) => p.name === "page-1.png");
+    return [panel.width, panel.height, !!panel.edit];
+  });
+  assert.deepEqual(
+    enhancedSize,
+    [32, 48, false],
+    "AI must upscale the accepted crop rather than reopening the uncropped import",
+  );
+
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.reload();
   await page.getByRole("button", { name: "AI Enhance page-1.png", exact: true }).click();

@@ -20,8 +20,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "check:build": "node scripts/check-build.mjs",
-    "test:studio": "node --experimental-strip-types --test src/lib/studio/enhance/enhance.test.ts src/lib/studio/reader-scroll.test.ts",
-    "test:studio:browser": "node scripts/studio-browser-check.mjs"
+    "test:studio": "node --experimental-strip-types --test src/lib/studio/enhance/enhance.test.ts src/lib/studio/reader-scroll.test.ts src/lib/studio/editor/editor.test.ts",
+    "test:studio:browser": "node scripts/studio-browser-check.mjs",
+    "test:editor:browser": "node scripts/editor-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
