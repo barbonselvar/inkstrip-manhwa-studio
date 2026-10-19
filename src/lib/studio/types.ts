@@ -1,3 +1,4 @@
+import type { EditingPreset } from "./workflow";
 import type { CharacterProfile } from "./characters/types";
 import type { EditRecipe } from "./editor/geometry";
 
@@ -9,6 +10,7 @@ export type StripPart = {
 };
 
 export type Strip = {
+  mediaRevisions?: Record<string, string>;
   width: number;
   totalHeight: number;
   parts: StripPart[];
@@ -20,6 +22,7 @@ export type Strip = {
 };
 
 export type Project = {
+  presets?: EditingPreset[];
   characters?: CharacterProfile[];
   id: string;
   title: string;
@@ -50,6 +53,7 @@ export type PanelMedia = {
 export type PanelEdit = { version: 1; source: PanelMedia; recipe: EditRecipe };
 
 export type Panel = {
+  draft?: { expectedBlobId: string; source: PanelMedia; recipe: EditRecipe; updatedAt: number };
   id: string;
   chapterId: string;
   name: string;

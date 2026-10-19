@@ -1,3 +1,4 @@
+import { PresetControls } from "./preset-controls";
 import { RetouchDialog } from "../retouch/retouch-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
@@ -36,7 +37,7 @@ import { LayoutControls } from "./layout-controls";
 import { MaskCanvas, type Brush as BrushSettings } from "./mask-canvas";
 import { NEUTRAL } from "@/lib/studio/editor/adjustments";
 import { NumberField } from "./number-field";
-import { getBlob, storageMessage } from "@/lib/studio/db";
+import { getBlob, saveEditorDraft, storageMessage } from "@/lib/studio/db";
 import { deviceLimits } from "@/lib/studio/images";
 import { ImageRenderer } from "@/lib/studio/editor/client";
 import {
@@ -102,7 +103,20 @@ export function ImageEditor({
   onClose: () => void;
 }) {
   const initial = useMemo(() => makeInitial(panel), [panel]);
-  const [history, setHistory] = useState(() => createHistory<Draft>(initial.draft));
+  const [history, setHistory] = useState(() => {
+    const recovered = panel.draft;
+    if (recovered?.expectedBlobId === panel.blobId)
+      try {
+        validateRecipe(recovered.recipe, recovered.source.width, recovered.source.height);
+        return createHistory<Draft>({ source: recovered.source, recipe: recovered.recipe });
+      } catch {
+        /* ignore invalid recovery metadata */
+      }
+    return createHistory<Draft>(initial.draft);
+  });
+  const [draftStatus, setDraftStatus] = useState(
+    panel.draft ? "Recovered an interrupted draft. Save to accept, or cancel and discard." : "",
+  );
   const draft = history.present;
   const [temporary, setTemporary] = useState<EditRecipe | null>(null);
   const recipe = temporary ?? draft.recipe;
@@ -168,6 +182,39 @@ export function ImageEditor({
       return null;
     }
   }, [original.width, original.height]);
+
+  const projectId =
+    useStudio.getState().chapters.find((c) => c.id === panel.chapterId)?.projectId ?? "";
+  const persistDraft = useCallback(
+    async (next: Panel["draft"] | null) => {
+      const saved = await saveEditorDraft(panel.id, panel.blobId, next);
+      useStudio.setState((s) => ({ panels: s.panels.map((p) => (p.id === saved.id ? saved : p)) }));
+    },
+    [panel.id, panel.blobId],
+  );
+  useEffect(() => {
+    if (busy || retouchBase) return;
+    const timer = setTimeout(() => {
+      void persistDraft(
+        dirty
+          ? {
+              expectedBlobId: panel.blobId,
+              source: draft.source,
+              recipe: draft.recipe,
+              updatedAt: Date.now(),
+            }
+          : null,
+      )
+        .then(() => {
+          if (mounted.current)
+            setDraftStatus(dirty ? "Draft saved locally · accepted image unchanged" : "");
+        })
+        .catch((e) => {
+          if (mounted.current) setDraftStatus(`Draft recovery unavailable: ${storageMessage(e)}`);
+        });
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [draft, dirty, busy, retouchBase, persistDraft, panel.blobId]);
 
   const endGroup = () => setHistory((value) => ({ ...value, group: undefined }));
   const change = (next: EditRecipe, group?: string) => {
@@ -273,8 +320,11 @@ export function ImageEditor({
       return;
     }
     if (dirty) setDiscard(true);
-    else onClose();
-  }, [dirty, onClose]);
+    else
+      void persistDraft(null)
+        .then(onClose)
+        .catch((e) => setError(storageMessage(e)));
+  }, [dirty, onClose, persistDraft]);
   async function save() {
     if (retouchBase || !loaded || phaseRef.current !== "idle" || !dirty || sizeError) return;
     setError("");
@@ -578,8 +628,12 @@ export function ImageEditor({
                 <Button
                   variant="danger"
                   onClick={() => {
-                    renderer.current?.dispose();
-                    onClose();
+                    void persistDraft(null)
+                      .then(() => {
+                        renderer.current?.dispose();
+                        onClose();
+                      })
+                      .catch((e) => setError(storageMessage(e)));
                   }}
                 >
                   Discard edits
@@ -813,6 +867,13 @@ export function ImageEditor({
                   Object Eraser & Retouch
                 </Button>
                 <fieldset disabled={busy || !loaded} className="image-property-fields">
+                  {tool === "adjust" ? (
+                    <PresetControls
+                      projectId={projectId}
+                      value={recipe.adjustments ?? { ...NEUTRAL }}
+                      onApply={(adjustments) => change({ ...recipe, adjustments })}
+                    />
+                  ) : null}
                   {tool === "transform" ? (
                     <>
                       <div className="editor-section-heading">
@@ -1238,6 +1299,11 @@ export function ImageEditor({
                         ? "Unsaved draft · imported original retained"
                         : "No unsaved changes"}
                 </p>
+                {draftStatus ? (
+                  <p className="text-xs text-muted" role="status">
+                    {draftStatus}
+                  </p>
+                ) : null}
                 {error || sizeError ? (
                   <p className="mt-1 text-xs text-danger" role="alert">
                     {error || sizeError}

@@ -1,3 +1,5 @@
+import { mediaIds } from "./editor/references";
+import { validateRecipe } from "./editor/geometry";
 import type { Chapter, Panel, Project, Strip } from "@/lib/studio/types";
 
 const DB_NAME = "inkstrip";
@@ -117,17 +119,36 @@ export async function removeRecords(input: {
   panels?: string[];
   blobs?: string[];
 }) {
-  const names = (["projects", "chapters", "panels", "blobs"] as const).filter(
-    (name) => (input[name]?.length ?? 0) > 0,
-  );
-  if (names.length === 0) return;
-  const db = await openDb();
-  const tx = db.transaction(names, "readwrite");
-  for (const name of names) {
-    const store = tx.objectStore(name);
-    for (const id of input[name] ?? []) store.delete(id);
+  const names: StoreName[] = ["projects", "chapters", "panels", "blobs"];
+  if (!Object.values(input).some((ids) => ids?.length)) return;
+  const db = await openDb(),
+    tx = db.transaction(names, "readwrite"),
+    done = transactionDone(tx);
+  try {
+    for (const name of ["projects", "chapters", "panels"] as const)
+      for (const id of input[name] ?? []) tx.objectStore(name).delete(id);
+    const protectedIds = await retainedBlobIds(tx);
+    for (const id of input.blobs ?? [])
+      if (!protectedIds.has(id)) tx.objectStore("blobs").delete(id);
+    await done;
+  } catch (error) {
+    try {
+      tx.abort();
+    } catch {
+      /* complete */
+    }
+    await done.catch(() => {});
+    throw error;
   }
-  await transactionDone(tx);
+}
+
+async function retainedBlobIds(tx: IDBTransaction) {
+  const panels = await request<Panel[]>(tx.objectStore("panels").getAll()),
+    chapters = await request<Chapter[]>(tx.objectStore("chapters").getAll());
+  return new Set([
+    ...panels.flatMap(mediaIds),
+    ...chapters.flatMap((c) => c.strip?.parts.map((p) => p.blobId) ?? []),
+  ]);
 }
 
 export function storageMessage(error: unknown) {
@@ -172,6 +193,7 @@ export async function commitPanelMedia(
       original: panel.original,
       edit: panel.edit,
       mediaUpdatedAt: panel.mediaUpdatedAt,
+      draft: undefined,
     };
     for (const reference of [next.original, next.edit?.source]) {
       if (reference && !(await request(tx.objectStore("blobs").get(reference.blobId))))
@@ -186,14 +208,7 @@ export async function commitPanelMedia(
     tx.objectStore("panels").put(next);
     tx.objectStore("chapters").put(nextChapter);
     if (nextProject) tx.objectStore("projects").put(nextProject);
-    const retained = new Set([
-      next.blobId,
-      next.thumbId,
-      next.original?.blobId,
-      next.original?.thumbId,
-      next.edit?.source.blobId,
-      next.edit?.source.thumbId,
-    ]);
+    const retained = await retainedBlobIds(tx);
     for (const id of obsolete) if (!retained.has(id)) tx.objectStore("blobs").delete(id);
     await done;
     return { panel: next, chapter: nextChapter, project: nextProject };
@@ -252,7 +267,7 @@ export async function commitChapterStrip(
     for (const { id, blob } of blobs) tx.objectStore("blobs").put(blob, id);
     tx.objectStore("chapters").put(nextChapter);
     if (nextProject) tx.objectStore("projects").put(nextProject);
-    const keep = new Set(strip?.parts.map((part) => part.blobId) ?? []);
+    const keep = await retainedBlobIds(tx);
     for (const id of expectedParts) if (!keep.has(id)) tx.objectStore("blobs").delete(id);
     await done;
     return { chapter: nextChapter, project: nextProject };
@@ -343,6 +358,41 @@ export async function commitPanelOrder(
     if (nextProject) tx.objectStore("projects").put(nextProject);
     await done;
     return { panels, chapter: nextChapter, project: nextProject };
+  } catch (error) {
+    try {
+      tx.abort();
+    } catch {
+      /* complete */
+    }
+    await done.catch(() => {});
+    throw error;
+  }
+}
+
+/** Autosave metadata only, tied to the accepted media revision; never accepts an image. */
+export async function saveEditorDraft(
+  id: string,
+  expectedBlobId: string,
+  draft: Panel["draft"] | null,
+) {
+  const db = await openDb(),
+    tx = db.transaction(["panels", "blobs"], "readwrite"),
+    done = transactionDone(tx);
+  try {
+    const panel = await request<Panel | undefined>(tx.objectStore("panels").get(id));
+    if (!panel || panel.blobId !== expectedBlobId)
+      throw new Error("Image changed; draft was not saved. Reopen the editor.");
+    if (draft) {
+      if (draft.expectedBlobId !== expectedBlobId) throw new Error("Draft revision mismatch.");
+      validateRecipe(draft.recipe, draft.source.width, draft.source.height);
+      for (const key of [draft.source.blobId, draft.source.thumbId])
+        if (!(await request(tx.objectStore("blobs").get(key))))
+          throw new Error("Draft source is missing. Accepted image unchanged.");
+    }
+    const next = { ...panel, draft: draft ?? undefined };
+    tx.objectStore("panels").put(next);
+    await done;
+    return next;
   } catch (error) {
     try {
       tx.abort();

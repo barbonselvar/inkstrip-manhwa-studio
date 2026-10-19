@@ -25,8 +25,7 @@ const EXTENSIONS = [
 
 export const IMAGE_ACCEPT = ["image/*", ...EXTENSIONS.map((ext) => `.${ext}`)].join(",");
 
-export const FORMAT_HINT =
-  "JPG, JPEG, PNG, WEBP, GIF, AVIF, BMP, TIFF, HEIC, HEIF, and SVG";
+export const FORMAT_HINT = "JPG, JPEG, PNG, WEBP, GIF, AVIF, BMP, TIFF, HEIC, HEIF, and SVG";
 
 export function isImageFile(file: File) {
   if (file.type.startsWith("image/")) return true;
@@ -42,8 +41,7 @@ export type Decoded = {
 };
 
 export function deviceLimits(): CanvasLimits {
-  const coarse =
-    typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+  const coarse = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
   if (coarse) return { maxSide: 8192, maxArea: 16_000_000 };
   return { maxSide: 16384, maxArea: 32_000_000 };
 }
@@ -123,30 +121,24 @@ export async function stitchChapter(
   for (let index = 0; index < plan.parts.length; index += 1) {
     const part = plan.parts[index];
     if (!part) continue;
-    const decoded: { panel: PlannedPart["panels"][number]; image: Decoded }[] = [];
-    try {
-      for (const panel of part.panels) {
-        const frame = byId.get(panel.id);
-        if (!frame) throw new Error("A panel disappeared while stitching.");
-        onProgress?.(done, total, `Reading ${done + 1} of ${total}`);
-        const image = await decodeBlob(frame.blob);
-        decoded.push({ panel, image });
-        done += 1;
-        await yieldToPaint();
-      }
-      onProgress?.(done, total, plan.parts.length > 1 ? `Drawing part ${index + 1}` : "Drawing the page");
-      const blob = await renderPart({
-        width: plan.width,
-        part,
-        images: decoded,
-        gap: options.gap,
-        isLastPart: index === plan.parts.length - 1,
-        format: options.format,
-      });
-      parts.push({ blob, height: part.height });
-    } finally {
-      for (const item of decoded) item.image.close();
-    }
+    onProgress?.(
+      done,
+      total,
+      plan.parts.length > 1 ? `Drawing part ${index + 1}` : "Drawing the page",
+    );
+    const blob = await renderPart({
+      width: plan.width,
+      part,
+      frames: byId,
+      gap: options.gap,
+      isLastPart: index === plan.parts.length - 1,
+      format: options.format,
+      onImage: () => {
+        done++;
+        onProgress?.(done, total, `Drawing ${done} of ${total}`);
+      },
+    });
+    parts.push({ blob, height: part.height });
   }
 
   return { width: plan.width, totalHeight: plan.totalHeight, parts };
@@ -155,7 +147,8 @@ export async function stitchChapter(
 async function renderPart(input: {
   width: number;
   part: PlannedPart;
-  images: { panel: PlannedPart["panels"][number]; image: Decoded }[];
+  frames: Map<string, { id: string; sw: number; sh: number; blob: Blob }>;
+  onImage: () => void;
   gap: number;
   isLastPart: boolean;
   format: StripFormat;
@@ -172,16 +165,27 @@ async function renderPart(input: {
 
   const gap = Math.max(0, Math.round(input.gap));
   let y = 0;
-  input.part.panels.forEach((panel, index) => {
-    const image = input.images.find((item) => item.panel.id === panel.id)?.image;
-    if (!image) throw new Error("A panel could not be drawn.");
-    ctx.drawImage(image.source, panel.x, y, panel.drawW, panel.drawH);
+  for (let index = 0; index < input.part.panels.length; index++) {
+    const panel = input.part.panels[index]!,
+      frame = input.frames.get(panel.id);
+    if (!frame) throw new Error("A panel could not be drawn.");
+    const image = await decodeBlob(frame.blob);
+    try {
+      ctx.drawImage(image.source, panel.x, y, panel.drawW, panel.drawH);
+    } finally {
+      image.close();
+    }
     y += panel.drawH;
-    const lastInPart = index === input.part.panels.length - 1;
-    if (!(lastInPart && input.isLastPart)) y += gap;
-  });
+    if (!(index === input.part.panels.length - 1 && input.isLastPart)) y += gap;
+    input.onImage();
+    await yieldToPaint();
+  }
 
-  const blob = await canvasToBlob(canvas, input.format, input.format === "image/jpeg" ? 0.92 : undefined);
+  const blob = await canvasToBlob(
+    canvas,
+    input.format,
+    input.format === "image/jpeg" ? 0.92 : undefined,
+  );
   canvas.width = 0;
   canvas.height = 0;
   return blob;

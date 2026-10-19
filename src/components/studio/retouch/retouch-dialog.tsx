@@ -14,6 +14,8 @@ export function RetouchDialog({
   projectId,
   defaultOperation = "erase",
   onSavingChange,
+  onSkip,
+  queueLabel,
   blob,
   width,
   height,
@@ -23,6 +25,8 @@ export function RetouchDialog({
   projectId: string;
   defaultOperation?: "erase" | "face";
   onSavingChange?: (saving: boolean) => void;
+  onSkip?: () => void;
+  queueLabel?: string;
   blob: Blob;
   width: number;
   height: number;
@@ -155,6 +159,12 @@ export function RetouchDialog({
                 Select, preview, accept, then save. Original artwork stays recoverable.
               </Dialog.Description>
             </div>
+            {queueLabel ? <span className="text-xs text-muted">{queueLabel}</span> : null}
+            {onSkip ? (
+              <Button variant="secondary" disabled={saving} onClick={onSkip}>
+                Skip target
+              </Button>
+            ) : null}
             <Button variant="ghost" disabled={saving} onClick={onClose}>
               Close
             </Button>

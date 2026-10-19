@@ -15,6 +15,7 @@ export function mediaIds(panel: Panel) {
       panel.thumbId,
       ...(panel.original ? [panel.original.blobId, panel.original.thumbId] : []),
       ...(panel.edit ? [panel.edit.source.blobId, panel.edit.source.thumbId] : []),
+      ...(panel.draft ? [panel.draft.source.blobId, panel.draft.source.thumbId] : []),
     ]),
   ];
 }

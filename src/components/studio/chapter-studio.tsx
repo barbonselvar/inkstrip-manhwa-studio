@@ -1,3 +1,5 @@
+import { BatchEditDialog } from "./batch-edit-dialog";
+import { getBlob } from "@/lib/studio/db";
 import { ReorderHandle, type DragPosition } from "./reorder-handle";
 import { FaceQueue } from "./retouch/face-queue";
 import { ImageEditor } from "./editor/image-editor";
@@ -49,6 +51,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const clearStrip = useStudio((state) => state.clearStrip);
   const navigate = useNavigate();
 
+  const [batchTargets, setBatchTargets] = useState<Panel[] | null>(null);
   const [faceTargets, setFaceTargets] = useState<Panel[] | null>(null);
   const [editorPanel, setEditorPanel] = useState<Panel | null>(null);
   const [enhancePanels, setEnhancePanels] = useState<Panel[] | null>(null);
@@ -94,7 +97,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
 
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
-      if (editorPanel || enhancePanels || faceTargets) return;
+      if (editorPanel || enhancePanels || faceTargets || batchTargets) return;
       const files = [...(event.clipboardData?.files ?? [])];
       if (files.length === 0) return;
       event.preventDefault();
@@ -102,7 +105,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [addImages, chapterId, editorPanel, enhancePanels, faceTargets]);
+  }, [addImages, chapterId, editorPanel, enhancePanels, faceTargets, batchTargets]);
 
   if (!project || !chapter || chapter.projectId !== projectId) {
     return (
@@ -160,6 +163,27 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
           />
           <p className="truncate text-xs text-subtle">{project.title}</p>
         </div>
+        <select
+          className="field chapter-jump"
+          aria-label="Navigate chapters"
+          value={chapterId}
+          onChange={(e) =>
+            void navigate({
+              to: "/p/$projectId/c/$chapterId",
+              params: { projectId, chapterId: e.target.value },
+            })
+          }
+        >
+          {useStudio
+            .getState()
+            .chapters.filter((c) => c.projectId === projectId)
+            .sort((a, b) => a.createdAt - b.createdAt)
+            .map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title}
+              </option>
+            ))}
+        </select>
         <span className="status-pill">
           <span className="status-dot" />
           Studio
@@ -253,6 +277,37 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
             >
               AI Face Fix · review selected targets
             </Button>
+            <Button
+              variant="secondary"
+              disabled={busy || !checked.length}
+              onClick={() => setBatchTargets(list.filter((p) => checkedSet.has(p.id)))}
+            >
+              Batch edit selected
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={busy || !checked.length}
+              onClick={() =>
+                void exportPanels(
+                  list.filter((p) => checkedSet.has(p.id)),
+                  false,
+                )
+              }
+            >
+              Export accepted images · native
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={busy || !checked.length}
+              onClick={() =>
+                void exportPanels(
+                  list.filter((p) => checkedSet.has(p.id)),
+                  true,
+                )
+              }
+            >
+              Export original images · native
+            </Button>
             <Segment
               label="Page width"
               value={chapter.width}
@@ -265,6 +320,38 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
               options={SEAMS.map((seam) => ({ value: seam.value, label: seam.label }))}
               onChange={(seam) => void setChapterOptions(chapter.id, { seam })}
             />
+            <label className="editor-field-label">
+              Custom chapter width
+              <input
+                className="field"
+                aria-label="Custom chapter width"
+                type="number"
+                min="320"
+                max="4096"
+                value={chapter.width}
+                onChange={(e) => {
+                  const width = +e.target.value;
+                  if (Number.isInteger(width) && width >= 320 && width <= 4096)
+                    void setChapterOptions(chapter.id, { width });
+                }}
+              />
+            </label>
+            <label className="editor-field-label">
+              Custom image spacing
+              <input
+                className="field"
+                aria-label="Custom image spacing"
+                type="number"
+                min="0"
+                max="512"
+                value={chapter.seam}
+                onChange={(e) => {
+                  const seam = +e.target.value;
+                  if (Number.isInteger(seam) && seam >= 0 && seam <= 512)
+                    void setChapterOptions(chapter.id, { seam });
+                }}
+              />
+            </label>
             <Segment
               label="File"
               value={chapter.format}
@@ -541,6 +628,13 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
           {list.find((p) => p.id === dragPosition.from)?.name} · release to move
         </div>
       ) : null}
+      {batchTargets ? (
+        <BatchEditDialog
+          panels={batchTargets}
+          projectId={projectId}
+          onClose={() => setBatchTargets(null)}
+        />
+      ) : null}
       {faceTargets ? (
         <FaceQueue
           panels={faceTargets}
@@ -580,4 +674,39 @@ function downloadStrip(project: string, chapter: string, format: StripFormat, ur
       anchor.remove();
     }, index * 400);
   });
+}
+
+async function exportPanels(panels: Panel[], original: boolean) {
+  try {
+    for (let i = 0; i < panels.length; i++) {
+      const panel = panels[i]!,
+        latest = useStudio.getState().panels.find((p) => p.id === panel.id);
+      if (!latest || latest.blobId !== panel.blobId)
+        throw new Error("An image changed. Select the latest images and retry export.");
+      const media = original ? (panel.original ?? panel) : panel,
+        blob = await getBlob(media.blobId);
+      if (!blob) throw new Error("An export image is missing.");
+      const url = URL.createObjectURL(blob),
+        a = document.createElement("a"),
+        ext =
+          media.mime === "image/png"
+            ? "png"
+            : media.mime === "image/jpeg"
+              ? "jpg"
+              : (media.mime.split("/")[1] ?? "img");
+      a.href = url;
+      a.download = `${String(i + 1).padStart(3, "0")}-${slugify(panel.name)}-${original ? "original" : "accepted"}.${ext}`;
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    useStudio.setState({
+      banner:
+        "Native-resolution downloads started. Your browser may request permission for multiple files.",
+    });
+  } catch (e) {
+    useStudio.setState({ banner: e instanceof Error ? e.message : "Export failed." });
+  }
 }

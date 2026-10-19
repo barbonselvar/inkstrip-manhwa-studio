@@ -72,6 +72,12 @@ function blobUrl(id: string, blob: Blob) {
 }
 
 function revokeBlobUrl(id: string) {
+  const live = useStudio.getState();
+  if (
+    live.panels.some((p) => mediaIds(p).includes(id)) ||
+    live.chapters.some((c) => c.strip?.parts.some((p) => p.blobId === id))
+  )
+    return;
   const url = urls.get(id);
   if (!url) return;
   URL.revokeObjectURL(url);
@@ -108,7 +114,11 @@ export function stripFreshness(chapter: Chapter, panels: Panel[]) {
     chapter.format === chapter.strip.format;
   const sameMedia = panels
     .filter((panel) => chapter.strip?.panelIds.includes(panel.id))
-    .every((panel) => !panel.mediaUpdatedAt || panel.mediaUpdatedAt <= chapter.strip!.createdAt);
+    .every((panel) =>
+      chapter.strip!.mediaRevisions
+        ? chapter.strip!.mediaRevisions[panel.id] === panel.blobId
+        : !panel.mediaUpdatedAt || panel.mediaUpdatedAt <= chapter.strip!.createdAt,
+    );
   return samePanels && sameSettings && sameMedia ? ("current" as const) : ("stale" as const);
 }
 
@@ -593,6 +603,7 @@ export const useStudio = create<Studio>((set, get) => ({
         blob: part.blob,
       }));
       const strip: Strip = {
+        mediaRevisions: Object.fromEntries(chosen.map((p) => [p.id, p.blobId])),
         width: result.width,
         totalHeight: result.totalHeight,
         parts: partRecords.map((part) => ({ blobId: part.blobId, height: part.height })),
@@ -682,6 +693,7 @@ export const useStudio = create<Studio>((set, get) => ({
       const next: Panel = {
         ...panel,
         original: panel.original ?? mediaReference(panel),
+        draft: undefined,
         edit: options?.edit,
         blobId: uid(),
         thumbId: uid(),
@@ -700,7 +712,6 @@ export const useStudio = create<Studio>((set, get) => ({
         ],
         obsolete,
       );
-      obsolete.forEach(revokeBlobUrl);
       set((state) => ({
         panels: state.panels.map((item) => (item.id === id ? committed.panel : item)),
         chapters: state.chapters.map((item) =>
@@ -713,6 +724,7 @@ export const useStudio = create<Studio>((set, get) => ({
           : state.projects,
         thumbs: { ...state.thumbs, [id]: blobUrl(next.thumbId, thumb) },
       }));
+      obsolete.forEach(revokeBlobUrl);
     } finally {
       decoded.close();
     }
@@ -730,11 +742,11 @@ export const useStudio = create<Studio>((set, get) => ({
       ...original,
       original: undefined,
       edit: undefined,
+      draft: undefined,
       mediaUpdatedAt: Date.now(),
     };
     const obsolete = obsoleteMedia(panel, next);
     const committed = await commitPanelMedia(next, expectedBlobId ?? panel.blobId, [], obsolete);
-    obsolete.forEach(revokeBlobUrl);
     set((state) => ({
       panels: state.panels.map((item) => (item.id === id ? committed.panel : item)),
       chapters: state.chapters.map((item) =>
@@ -747,6 +759,7 @@ export const useStudio = create<Studio>((set, get) => ({
         : state.projects,
       thumbs: { ...state.thumbs, [id]: blobUrl(original.thumbId, thumb) },
     }));
+    obsolete.forEach(revokeBlobUrl);
   },
 
   loadMedia: async (chapterId) => {

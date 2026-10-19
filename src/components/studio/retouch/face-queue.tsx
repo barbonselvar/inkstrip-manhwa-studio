@@ -39,31 +39,37 @@ export function FaceQueue({
     };
   }, [panel]);
   const next = () => {
+    setSaving(false);
     setBlob(null);
     setIndex((i) => i + 1);
   };
   return (
     <>
-      <div className="face-queue-status" role="status">
-        <span>
-          Face Fix target {Math.min(index + 1, panels.length)} / {panels.length} · {completed} saved
-        </span>
-        {panel ? (
-          <Button variant="secondary" disabled={saving} onClick={next}>
-            Skip target
+      {!blob ? (
+        <div className="face-queue-status" role="status">
+          <span>
+            Face Fix target {Math.min(index + 1, panels.length)} / {panels.length} · {completed}{" "}
+            saved
+          </span>
+          {panel ? (
+            <Button variant="secondary" disabled={saving} onClick={next}>
+              Skip target
+            </Button>
+          ) : null}
+          <Button variant="secondary" disabled={saving} onClick={onClose}>
+            Stop queue
           </Button>
-        ) : null}
-        <Button variant="secondary" disabled={saving} onClick={onClose}>
-          Stop queue
-        </Button>
-        {error ? <p role="alert">{error}</p> : null}
-      </div>
+          {error ? <p role="alert">{error}</p> : null}
+        </div>
+      ) : null}
       {panel && blob ? (
         <RetouchDialog
           key={panel.id}
           projectId={projectId}
           defaultOperation="face"
           onSavingChange={setSaving}
+          onSkip={next}
+          queueLabel={`${index + 1}/${panels.length} · ${completed} saved`}
           blob={blob}
           width={panel.width}
           height={panel.height}
