@@ -25,7 +25,8 @@
     "test:editor:browser": "node scripts/editor-browser-check.mjs",
     "test:adjustments:browser": "node scripts/adjustments-browser-check.mjs",
     "test:retouch:browser": "node scripts/retouch-browser-check.mjs",
-    "test:workflow:browser": "node scripts/workflow-browser-check.mjs"
+    "test:workflow:browser": "node scripts/workflow-browser-check.mjs",
+    "test:ui:browser": "node scripts/ui-redesign-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
