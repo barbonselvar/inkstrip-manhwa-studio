@@ -135,6 +135,32 @@ try {
         exact: true,
       })
       .waitFor();
+    // Fixture transport cancellation: no paid inference is used or claimed.
+    await page.route("**/api/studio/ai-edit", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await route
+        .fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "Delayed test response" }),
+        })
+        .catch(() => {});
+    });
+    const started = page.waitForRequest("**/api/studio/ai-edit");
+    await page.getByRole("button", { name: "Preview AI Face Fix", exact: true }).click();
+    await started;
+    await page.getByRole("button", { name: "Cancel processing", exact: true }).click();
+    await page.getByRole("button", { name: "Preview AI Face Fix", exact: true }).waitFor();
+    assert.equal(
+      await page.getByRole("button", { name: "Accept preview", exact: true }).count(),
+      0,
+    );
+    assert.equal(
+      await page.getByRole("button", { name: "Save accepted image", exact: true }).isEnabled(),
+      false,
+    );
+    await page.unrouteAll({ behavior: "wait" });
+    console.log("Cloud upload request cancellation fixture leaves accepted image unchanged: PASS");
     await page.getByRole("button", { name: "Close", exact: true }).click();
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await page.reload();
@@ -162,6 +188,18 @@ try {
     console.log(
       "Character reference persistence, explicit identity/upload consent, disabled-provider failure: PASS",
     );
+    await page
+      .getByRole("button", { name: "AI Face Fix · review selected targets", exact: true })
+      .click();
+    await page.getByRole("dialog", { name: "Object Eraser & Retouch", exact: true }).waitFor();
+    await page.getByText("1/2 · 0 saved", { exact: true }).waitFor();
+    await page.getByRole("button", { name: "Skip target", exact: true }).click();
+    await page.getByText("2/2 · 0 saved", { exact: true }).waitFor();
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await page
+      .getByRole("dialog", { name: "Object Eraser & Retouch", exact: true })
+      .waitFor({ state: "hidden" });
+    console.log("Face Fix target queue skip/stop with saved project character: PASS");
   }
   assert.deepEqual(errors, []);
   console.log(

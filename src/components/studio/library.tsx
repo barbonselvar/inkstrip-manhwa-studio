@@ -74,7 +74,7 @@ export function Library() {
           <ShieldCheck className="size-5 text-accent" />
           <p className="mt-3 text-sm text-fg">Your art. Your device.</p>
           <p className="mt-2 text-xs text-muted">
-            Projects and AI processing stay in your browser. Create without the cloud.
+            Projects stay in your browser. Local tools run on-device; cloud AI is optional.
           </p>
         </div>
         <p className="rail-footer">INKSTRIP / MANHWA STUDIO</p>
