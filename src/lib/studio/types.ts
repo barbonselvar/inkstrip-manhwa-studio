@@ -28,6 +28,7 @@ export type Project = {
 };
 
 export type Chapter = {
+  orderHistory?: { before: string[]; after: string[] }[];
   id: string;
   projectId: string;
   title: string;

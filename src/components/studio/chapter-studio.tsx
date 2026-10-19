@@ -1,3 +1,4 @@
+import { ReorderHandle, type DragPosition } from "./reorder-handle";
 import { FaceQueue } from "./retouch/face-queue";
 import { ImageEditor } from "./editor/image-editor";
 import { PanelImageActions } from "./editor/panel-image-actions";
@@ -41,7 +42,6 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const setChapterOptions = useStudio((state) => state.setChapterOptions);
   const removePanel = useStudio((state) => state.removePanel);
   const movePanel = useStudio((state) => state.movePanel);
-  const placePanel = useStudio((state) => state.placePanel);
   const toggleSelected = useStudio((state) => state.toggleSelected);
   const selectAll = useStudio((state) => state.selectAll);
   const selectNone = useStudio((state) => state.selectNone);
@@ -54,8 +54,10 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const [enhancePanels, setEnhancePanels] = useState<Panel[] | null>(null);
   const [pane, setPane] = useState<"panels" | "page">("panels");
   const [dragOver, setDragOver] = useState(false);
-  const [dragId, setDragId] = useState<string | null>(null);
-  const [canDrag, setCanDrag] = useState(false);
+  const [dragPosition, setDragPosition] = useState<DragPosition | null>(null);
+  const orderBusy = useStudio((s) => s.orderBusy);
+  const reorderPanels = useStudio((s) => s.reorderPanels);
+  const undoReorder = useStudio((s) => s.undoReorder);
   const inputRef = useRef<HTMLInputElement>(null);
   const pageRef = useRef<HTMLElement>(null);
   const busy = job?.chapterId === chapterId;
@@ -75,10 +77,6 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const freshness = chapter ? stripFreshness(chapter, panels) : "empty";
   const panelKey = list.map((panel) => panel.id).join(",");
   const stripKey = chapter?.strip?.createdAt ?? 0;
-
-  useEffect(() => {
-    setCanDrag(window.matchMedia("(pointer: fine)").matches);
-  }, []);
 
   useEffect(() => {
     void loadMedia(chapterId);
@@ -277,6 +275,18 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
               onChange={(format) => void setChapterOptions(chapter.id, { format })}
             />
 
+            <Button
+              variant="ghost"
+              disabled={busy || orderBusy || !chapter.orderHistory?.length}
+              onClick={() => void undoReorder(chapter.id)}
+            >
+              Undo reorder
+            </Button>
+            <p className="text-xs text-muted" aria-live="polite">
+              {orderBusy
+                ? "Saving order…"
+                : "Drag the grip to reorder; image long-press opens editing. Arrows work with a keyboard."}
+            </p>
             <div className="flex items-center justify-between gap-3 text-sm">
               <p className="text-muted tabular-nums">
                 {checked.length} of {list.length} checked
@@ -317,28 +327,23 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                 return (
                   <li
                     key={panel.id}
-                    draggable={canDrag && !busy}
-                    onDragStart={(event) => {
-                      event.dataTransfer.setData("text/plain", panel.id);
-                      event.dataTransfer.effectAllowed = "move";
-                      setDragId(panel.id);
-                    }}
-                    onDragEnd={() => setDragId(null)}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      const from = event.dataTransfer.getData("text/plain") || dragId;
-                      if (from) void placePanel(chapter.id, from, panel.id);
-                      setDragId(null);
-                      setDragOver(false);
-                    }}
+                    data-order-panel={panel.id}
                     className={cn(
                       "flex items-center gap-3 rounded-lg border border-border bg-bg p-2",
                       on && "bg-bg-subtle",
-                      dragId === panel.id && "opacity-50",
+                      dragPosition?.from === panel.id && "opacity-50",
+                      dragPosition?.to === panel.id &&
+                        (dragPosition.after ? "drop-after" : "drop-before"),
                     )}
                   >
+                    <ReorderHandle
+                      id={panel.id}
+                      name={panel.name}
+                      ids={list.map((p) => p.id)}
+                      disabled={busy || orderBusy}
+                      onPosition={setDragPosition}
+                      onCommit={(ids) => void reorderPanels(chapter.id, ids)}
+                    />
                     <button
                       type="button"
                       aria-pressed={on}
@@ -364,7 +369,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                         type="button"
                         className="focus-ring grid size-11 place-items-center text-muted disabled:opacity-30"
                         aria-label="Move up"
-                        disabled={index === 0 || busy}
+                        disabled={index === 0 || busy || orderBusy}
                         onClick={() => void movePanel(panel.id, -1)}
                       >
                         <ChevronUp className="size-4" />
@@ -373,7 +378,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                         type="button"
                         className="focus-ring grid size-11 place-items-center text-muted disabled:opacity-30"
                         aria-label="Move down"
-                        disabled={index === list.length - 1 || busy}
+                        disabled={index === list.length - 1 || busy || orderBusy}
                         onClick={() => void movePanel(panel.id, 1)}
                       >
                         <ChevronDown className="size-4" />
@@ -524,6 +529,18 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
           )}
         </section>
       </div>
+      {dragPosition ? (
+        <div
+          className="reorder-preview"
+          aria-live="polite"
+          style={{
+            left: Math.min(dragPosition.x + 12, window.innerWidth - 200),
+            top: Math.max(12, dragPosition.y - 50),
+          }}
+        >
+          {list.find((p) => p.id === dragPosition.from)?.name} · release to move
+        </div>
+      ) : null}
       {faceTargets ? (
         <FaceQueue
           panels={faceTargets}

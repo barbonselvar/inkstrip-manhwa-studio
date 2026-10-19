@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import {
   commitPanelMedia,
+  commitPanelOrder,
   commitChapterStrip,
   getBlob,
   loadLibrary,
@@ -19,6 +20,9 @@ type Job = { chapterId: string; done: number; total: number; label: string };
 
 type Studio = {
   ready: boolean;
+  orderBusy: boolean;
+  reorderPanels: (chapterId: string, ids: string[]) => Promise<void>;
+  undoReorder: (chapterId: string) => Promise<void>;
   projects: Project[];
   chapters: Chapter[];
   panels: Panel[];
@@ -136,6 +140,7 @@ function withTimestamps(
 
 export const useStudio = create<Studio>((set, get) => ({
   ready: false,
+  orderBusy: false,
   projects: [],
   chapters: [],
   panels: [],
@@ -498,6 +503,34 @@ export const useStudio = create<Studio>((set, get) => ({
     await commitOrder(chapterId, list, set, get);
   },
 
+  reorderPanels: async (chapterId, ids) => {
+    const map = new Map(get().panels.map((p) => [p.id, p]));
+    if (ids.some((id) => !map.has(id))) return;
+    await commitOrder(
+      chapterId,
+      ids.map((id) => map.get(id)!),
+      set,
+      get,
+    );
+  },
+  undoReorder: async (chapterId) => {
+    const h = get()
+      .chapters.find((c) => c.id === chapterId)
+      ?.orderHistory?.at(-1);
+    if (!h) return;
+    const map = new Map(get().panels.map((p) => [p.id, p]));
+    if (h.before.some((id) => !map.has(id))) {
+      set({ banner: "Images changed. The previous reorder cannot be restored." });
+      return;
+    }
+    await commitOrder(
+      chapterId,
+      h.before.map((id) => map.get(id)!),
+      set,
+      get,
+      true,
+    );
+  },
   toggleSelected: (chapterId, panelId) => {
     const current = selectedIds(get(), chapterId);
     const next = current.includes(panelId)
@@ -744,31 +777,29 @@ async function commitOrder(
   list: Panel[],
   set: (partial: Partial<Studio> | ((state: Studio) => Partial<Studio>)) => void,
   get: () => Studio,
+  undo = false,
 ) {
-  const ordered = list.map((panel, index) => ({ ...panel, order: index }));
-  const chapter = get().chapters.find((item) => item.id === chapterId);
-  const touched = chapter
-    ? withTimestamps(get().projects, get().chapters, chapter.projectId, chapterId)
-    : null;
-  const nextChapter = touched?.chapters.find((item) => item.id === chapterId);
-  const nextProject = chapter
-    ? touched?.projects.find((item) => item.id === chapter.projectId)
-    : undefined;
-  await putRecords({
-    panels: ordered,
-    chapters: nextChapter ? [nextChapter] : [],
-    projects: nextProject ? [nextProject] : [],
-  });
-  const byId = new Map(ordered.map((panel) => [panel.id, panel]));
-  set((state) => ({
-    panels: state.panels.map((panel) => byId.get(panel.id) ?? panel),
-    chapters: nextChapter
-      ? state.chapters.map((item) => (item.id === chapterId ? nextChapter : item))
-      : state.chapters,
-    projects: nextProject
-      ? state.projects.map((item) => (item.id === nextProject.id ? nextProject : item))
-      : state.projects,
-  }));
+  if (get().orderBusy) return;
+  const expected = chapterPanels(get().panels, chapterId).map((p) => p.id),
+    next = list.map((p) => p.id);
+  if (expected.join("\0") === next.join("\0")) return;
+  set({ orderBusy: true });
+  try {
+    const saved = await commitPanelOrder(chapterId, expected, next, undo),
+      byId = new Map(saved.panels.map((p) => [p.id, p]));
+    set((s) => ({
+      panels: s.panels.map((p) => byId.get(p.id) ?? p),
+      chapters: s.chapters.map((c) => (c.id === chapterId ? saved.chapter : c)),
+      projects: saved.project
+        ? s.projects.map((p) => (p.id === saved.project!.id ? saved.project! : p))
+        : s.projects,
+      banner: undo ? "Reorder undone." : "Image order saved.",
+    }));
+  } catch (error) {
+    set({ banner: storageMessage(error) });
+  } finally {
+    set({ orderBusy: false });
+  }
 }
 
 export function extensionFor(format: StripFormat) {

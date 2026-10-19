@@ -1222,3 +1222,11 @@ button,
 
 .face-queue-status { position: fixed; top: 0; left: 0; right: 0; z-index: 110; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; background: var(--color-bg); color: var(--color-fg); padding: .5rem 1rem; border-bottom: 1px solid var(--color-border); }
 body:has(.face-queue-status) .retouch-dialog { top: 3.5rem; height: calc(100dvh - 3.5rem); }
+
+.reorder-handle { display: grid; place-items: center; flex-shrink: 0; width: 1.5rem; min-height: 3rem; color: var(--color-muted); cursor: grab; touch-action: none; user-select: none; }
+.drop-before { box-shadow: 0 -3px 0 var(--color-accent); }
+.drop-after { box-shadow: 0 3px 0 var(--color-accent); }
+.reorder-preview { position: fixed; z-index: 100; max-width: 12rem; padding: .75rem; border: 1px solid var(--color-accent); border-radius: .5rem; background: var(--color-bg-elevated); color: var(--color-fg); pointer-events: none; font-size: .75rem; }
+.reorder-handle { width: 2.75rem; }
+.editor-shell [data-order-panel] { gap: .5rem; }
+@media (max-width: 420px) { .panel-image-target img { width: 2.25rem; } }

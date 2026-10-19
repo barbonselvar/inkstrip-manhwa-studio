@@ -227,6 +227,15 @@ export async function commitChapterStrip(
         JSON.stringify(expectedParts)
     )
       throw new Error("The rendered chapter changed. Display again to retry.");
+    if (expectedMedia.length) {
+      const latest = (
+        await request<Panel[]>(tx.objectStore("panels").index("by_chapter").getAll(chapterId))
+      )
+        .filter((p) => expectedMedia.some((e) => e.id === p.id))
+        .sort((a, b) => a.order - b.order || a.createdAt - b.createdAt);
+      if (latest.map((p) => p.id).join("\0") !== expectedMedia.map((p) => p.id).join("\0"))
+        throw new Error("Image order changed while stitching. Display again.");
+    }
     for (const expected of expectedMedia) {
       const panel = await request<Panel | undefined>(tx.objectStore("panels").get(expected.id));
       if (!panel || panel.blobId !== expected.blobId)
@@ -276,6 +285,69 @@ export async function updateProject(id: string, update: (project: Project) => Pr
       tx.abort();
     } catch {
       /* already aborted */
+    }
+    await done.catch(() => {});
+    throw error;
+  }
+}
+
+/** Reorder only the latest records' order fields; never replay stale media/recipes. */
+export async function commitPanelOrder(
+  chapterId: string,
+  expected: string[],
+  next: string[],
+  undo = false,
+) {
+  const { sameOrder, validateOrder } = await import("./order");
+  const db = await openDb(),
+    tx = db.transaction(["panels", "chapters", "projects"], "readwrite"),
+    done = transactionDone(tx);
+  try {
+    const chapter = await request<Chapter | undefined>(tx.objectStore("chapters").get(chapterId));
+    if (!chapter) throw new Error("Chapter no longer exists.");
+    const current = (
+      await request<Panel[]>(tx.objectStore("panels").index("by_chapter").getAll(chapterId))
+    ).sort((a, b) => a.order - b.order || a.createdAt - b.createdAt);
+    if (
+      !sameOrder(
+        current.map((p) => p.id),
+        expected,
+      )
+    )
+      throw new Error("Order changed in another tab. Reload before reordering.");
+    validateOrder(expected, next);
+    const history = chapter.orderHistory ?? [];
+    if (
+      undo &&
+      (!history.length ||
+        !sameOrder(history.at(-1)!.after, expected) ||
+        !sameOrder(history.at(-1)!.before, next))
+    )
+      throw new Error("This reorder can no longer be undone; images changed.");
+    const positions = new Map(next.map((id, i) => [id, i])),
+      panels = current.map((p) => ({ ...p, order: positions.get(p.id)! })),
+      updatedAt = Date.now();
+    const nextChapter = {
+      ...chapter,
+      updatedAt,
+      orderHistory: undo
+        ? history.slice(0, -1)
+        : [...history, { before: expected, after: next }].slice(-20),
+    };
+    const project = await request<Project | undefined>(
+        tx.objectStore("projects").get(chapter.projectId),
+      ),
+      nextProject = project ? { ...project, updatedAt } : null;
+    for (const p of panels) tx.objectStore("panels").put(p);
+    tx.objectStore("chapters").put(nextChapter);
+    if (nextProject) tx.objectStore("projects").put(nextProject);
+    await done;
+    return { panels, chapter: nextChapter, project: nextProject };
+  } catch (error) {
+    try {
+      tx.abort();
+    } catch {
+      /* complete */
     }
     await done.catch(() => {});
     throw error;
