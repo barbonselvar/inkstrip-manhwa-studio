@@ -19,7 +19,12 @@ export type Stroke = {
   erase: boolean;
   clip?: Selection;
 };
-export type Mask = { selection: Selection; strokes: Stroke[]; enabled: boolean };
+export type Mask = {
+  selection: Selection;
+  strokes: Stroke[];
+  enabled: boolean;
+  inverted?: boolean;
+};
 export type Shape =
   | "rectangle"
   | "ellipse"
@@ -240,7 +245,26 @@ export function validateDocument(d: ProDocument) {
       !finite(t.rotation, -360, 360)
     )
       throw new Error("Invalid layer transform.");
+    if (!l.adjustments) throw new Error("Layer adjustments are missing.");
     validateAdjustments(l.adjustments);
+    if (
+      l.kind === "group" &&
+      (l.mask ||
+        l.transform.x ||
+        l.transform.y ||
+        l.transform.rotation ||
+        l.transform.scaleX !== 1 ||
+        l.transform.scaleY !== 1 ||
+        Object.values(l.adjustments).some((n) => n !== 0) ||
+        l.hue ||
+        l.black ||
+        l.white !== 255 ||
+        l.gamma !== 1 ||
+        (Array.isArray(l.curve) && l.curve.some((n, i) => n !== [0, 64, 128, 192, 255][i])))
+    )
+      throw new Error(
+        "Group transforms, masks and adjustments are not supported; edit the child layers instead.",
+      );
     if (
       !finite(l.hue, -180, 180) ||
       !finite(l.black, 0, 254) ||
@@ -268,7 +292,8 @@ export function validateDocument(d: ProDocument) {
       if (
         !Array.isArray(l.mask.strokes) ||
         l.mask.strokes.length > 1000 ||
-        typeof l.mask.enabled !== "boolean"
+        typeof l.mask.enabled !== "boolean" ||
+        (l.mask.inverted !== undefined && typeof l.mask.inverted !== "boolean")
       )
         throw new Error("Invalid layer mask.");
       for (const s of l.mask.strokes) {
@@ -334,6 +359,8 @@ export function validateDocument(d: ProDocument) {
 export function validateAssets(session: ProSession) {
   validateDocument(session.document);
   let total = 0;
+  if (Object.keys(session.assets).length > 64)
+    throw new Error("A Pro document supports at most 64 raster assets.");
   for (const [id, b] of Object.entries(session.assets)) {
     if (!id || !(b instanceof Blob) || !["image/png", "image/jpeg", "image/webp"].includes(b.type))
       throw new Error("Only PNG, JPEG and WebP raster assets are supported.");
@@ -341,7 +368,12 @@ export function validateAssets(session: ProSession) {
   }
   if (total > MAX_ASSET_BYTES) throw new Error("Pro assets exceed the 48MB document limit.");
   for (const l of session.document.layers)
-    if (l.kind === "raster" && (!l.assetId || !session.assets[l.assetId]))
+    if (
+      l.kind === "raster" &&
+      (!l.assetId ||
+        !Object.hasOwn(session.assets, l.assetId) ||
+        !(session.assets[l.assetId] instanceof Blob))
+    )
       throw new Error("A raster source is missing; existing artwork is unchanged.");
 }
 export function localPoint(p: Point, l: Layer): Point {
@@ -398,6 +430,26 @@ export function removeLayer(d: ProDocument, id: string): ProDocument {
 export function toLocalSelection(s: Selection, l: Layer): Selection {
   return {
     ...s,
-    regions: s.regions.map((r) => ({ ...r, points: r.points.map((p) => localPoint(p, l)) })),
+    regions: s.regions.map((r) => {
+      let points = r.points;
+      const first = points[0]!,
+        last = points.at(-1)!;
+      if (r.kind === "rectangle")
+        points = [
+          { x: first.x, y: first.y },
+          { x: last.x, y: first.y },
+          { x: last.x, y: last.y },
+          { x: first.x, y: last.y },
+        ];
+      else if (r.kind === "ellipse")
+        points = Array.from({ length: 96 }, (_, i) => {
+          const angle = (i / 96) * Math.PI * 2;
+          return {
+            x: (first.x + last.x) / 2 + (Math.abs(last.x - first.x) / 2) * Math.cos(angle),
+            y: (first.y + last.y) / 2 + (Math.abs(last.y - first.y) / 2) * Math.sin(angle),
+          };
+        });
+      return { ...r, kind: "lasso", points: points.map((p) => localPoint(p, l)) };
+    }),
   };
 }
