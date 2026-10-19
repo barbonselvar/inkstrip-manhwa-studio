@@ -104,6 +104,7 @@ try {
   await page.getByRole("button", { name: "Edit Image repair.png", exact: true }).waitFor();
   if (process.argv[3]) {
     await open("anime-detector-qa.png");
+    await page.getByText("Face selection", { exact: true }).click();
     await page.getByRole("button", { name: "Detect possible anime faces", exact: true }).click();
     await page
       .getByRole("button", { name: "Select face 1", exact: true })
@@ -116,6 +117,7 @@ try {
     await page.getByLabel("Face width percent", { exact: true }).press("Tab");
   }
   if (process.argv[3]) {
+    await page.getByText("Character library", { exact: true }).click();
     await page.getByLabel("Character name", { exact: true }).fill("William");
     await page
       .getByLabel("Character appearance notes", { exact: true })

@@ -1,3 +1,4 @@
+import { ToolSection } from "../design/tool-section";
 import { CharacterControls } from "./character-controls";
 import { NumberField } from "../editor/number-field";
 import { overlap } from "@/lib/studio/faces/detect";
@@ -87,6 +88,27 @@ export function RetouchDialog({
   }, []);
   const scroll = useRef<HTMLDivElement>(null),
     drag = useRef<{ x: number; y: number; left: number; top: number; id: number } | null>(null);
+  const [fitWidth, setFitWidth] = useState(320);
+  const viewportObserver = useRef<ResizeObserver | null>(null);
+  const measureViewport = useCallback(
+    (viewport: HTMLDivElement | null) => {
+      scroll.current = viewport;
+      viewportObserver.current?.disconnect();
+      if (!viewport) return;
+      const measure = () => {
+        const availableWidth = Math.max(1, viewport.clientWidth - 32);
+        const availableHeight = Math.max(1, viewport.clientHeight - 32);
+        setFitWidth(Math.min(availableWidth, availableHeight * (width / height)));
+      };
+      measure();
+      const observer = new ResizeObserver(measure);
+      observer.observe(viewport);
+      viewportObserver.current = observer;
+    },
+    [width, height],
+  );
+  useEffect(() => () => viewportObserver.current?.disconnect(), []);
+
   async function run() {
     setBusy(true);
     setError("");
@@ -197,7 +219,7 @@ export function RetouchDialog({
               </div>
               <div
                 className="retouch-viewport"
-                ref={scroll}
+                ref={measureViewport}
                 onPointerDown={(e) => {
                   if (!pan) return;
                   const s = scroll.current!;
@@ -226,7 +248,7 @@ export function RetouchDialog({
               >
                 <div
                   className="retouch-plane"
-                  style={{ width: `${zoom * 100}%`, aspectRatio: `${width}/${height}` }}
+                  style={{ width: fitWidth * zoom, aspectRatio: `${width}/${height}` }}
                 >
                   <img src={url} alt="Retouch image preview" draggable={false} />
                   {!candidate && !before
@@ -283,129 +305,7 @@ export function RetouchDialog({
               </div>
             </section>
             <aside className="image-properties">
-              <fieldset disabled={busy || saving} className="image-property-fields">
-                <h3 className="font-display">Face detection & selection</h3>
-                <Button variant="secondary" onClick={() => void detect()} disabled={!!candidate}>
-                  Detect possible anime faces
-                </Button>
-                <p className="text-xs text-muted">
-                  Local trained LBP cascade, strongest on frontal anime faces. Profiles, occlusion
-                  and very small faces may be missed. Select manually with ellipse or lasso;
-                  brush/subtract correct the mask.
-                </p>
-                {faces.map((face, i) => (
-                  <div key={i} className="flex gap-2">
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setStrokes([
-                          {
-                            tool: "ellipse",
-                            mode: "add",
-                            size: 1,
-                            feather,
-                            points: [
-                              { x: face.x, y: face.y },
-                              {
-                                x: Math.min(1, face.x + face.width),
-                                y: Math.min(1, face.y + face.height),
-                              },
-                            ],
-                          },
-                        ]);
-                        setRedo([]);
-                      }}
-                    >
-                      Select face {i + 1}
-                    </Button>
-                    <span className="text-xs text-muted">{face.neighbors} agreeing windows</span>
-                  </div>
-                ))}
-                {status && !busy ? (
-                  <p role="status" className="text-xs text-muted">
-                    {status}
-                  </p>
-                ) : null}
-                {strokes.length === 1 && ["ellipse", "rectangle"].includes(strokes[0]!.tool) ? (
-                  <>
-                    <p className="text-xs text-muted">
-                      Adjust selected face bounds (% of full-resolution image)
-                    </p>
-                    <div className="editor-number-grid">
-                      {["x", "y", "width", "height"].map((axis) => {
-                        const a = strokes[0]!.points[0]!,
-                          b = strokes[0]!.points.at(-1)!,
-                          box = {
-                            x: Math.min(a.x, b.x),
-                            y: Math.min(a.y, b.y),
-                            width: Math.abs(a.x - b.x),
-                            height: Math.abs(a.y - b.y),
-                          };
-                        return (
-                          <NumberField
-                            key={axis}
-                            label={`Face ${axis} percent`}
-                            min={axis === "width" || axis === "height" ? 1 : 0}
-                            max={100}
-                            value={Math.round(box[axis as keyof typeof box] * 100)}
-                            onEnd={() => {}}
-                            onChange={(v) => {
-                              const n = { ...box, [axis]: v / 100 };
-                              n.x = Math.min(n.x, 0.99);
-                              n.y = Math.min(n.y, 0.99);
-                              n.width = Math.max(0.01, Math.min(n.width, 1 - n.x));
-                              n.height = Math.max(0.01, Math.min(n.height, 1 - n.y));
-                              setStrokes([
-                                {
-                                  ...strokes[0]!,
-                                  points: [
-                                    { x: n.x, y: n.y },
-                                    { x: n.x + n.width, y: n.y + n.height },
-                                  ],
-                                },
-                              ]);
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      disabled={!faces.length}
-                      onClick={() => {
-                        const a = strokes[0]!.points[0]!,
-                          b = strokes[0]!.points.at(-1)!;
-                        const box = {
-                          x: Math.min(a.x, b.x),
-                          y: Math.min(a.y, b.y),
-                          width: Math.abs(a.x - b.x),
-                          height: Math.abs(a.y - b.y),
-                          neighbors: 1,
-                        };
-                        const best = faces
-                          .map((f) => ({ f, score: overlap(box, f) }))
-                          .sort((a, b) => b.score - a.score)[0];
-                        if (!best || best.score < 0.1) {
-                          setError("No detected face overlaps this selection. Keep manual bounds.");
-                          return;
-                        }
-                        const f = best.f;
-                        setStrokes([
-                          {
-                            ...strokes[0]!,
-                            tool: "ellipse",
-                            points: [
-                              { x: f.x, y: f.y },
-                              { x: Math.min(1, f.x + f.width), y: Math.min(1, f.y + f.height) },
-                            ],
-                          },
-                        ]);
-                      }}
-                    >
-                      Refine to overlapping detected face
-                    </Button>
-                  </>
-                ) : null}
+              <fieldset disabled={busy || saving} className="image-property-fields retouch-fields">
                 <h3 className="font-display">Selection</h3>
                 <label className="editor-field-label">
                   Shape
@@ -490,13 +390,142 @@ export function RetouchDialog({
                     Clear selection
                   </Button>
                 </div>
-                <CharacterControls
-                  projectId={projectId}
-                  blob={current}
-                  strokes={strokes}
-                  disabled={busy || saving}
-                  onReference={chooseReference}
-                />
+                <ToolSection title="Face selection" defaultOpen={defaultOperation === "face"}>
+                  {" "}
+                  <h3 className="font-display">Face detection & selection</h3>
+                  <Button variant="secondary" onClick={() => void detect()} disabled={!!candidate}>
+                    Detect possible anime faces
+                  </Button>
+                  <p className="text-xs text-muted">
+                    Local trained LBP cascade, strongest on frontal anime faces. Profiles, occlusion
+                    and very small faces may be missed. Select manually with ellipse or lasso;
+                    brush/subtract correct the mask.
+                  </p>
+                  {faces.map((face, i) => (
+                    <div key={i} className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setStrokes([
+                            {
+                              tool: "ellipse",
+                              mode: "add",
+                              size: 1,
+                              feather,
+                              points: [
+                                { x: face.x, y: face.y },
+                                {
+                                  x: Math.min(1, face.x + face.width),
+                                  y: Math.min(1, face.y + face.height),
+                                },
+                              ],
+                            },
+                          ]);
+                          setRedo([]);
+                        }}
+                      >
+                        Select face {i + 1}
+                      </Button>
+                      <span className="text-xs text-muted">{face.neighbors} agreeing windows</span>
+                    </div>
+                  ))}
+                  {status && !busy ? (
+                    <p role="status" className="text-xs text-muted">
+                      {status}
+                    </p>
+                  ) : null}
+                  {strokes.length === 1 && ["ellipse", "rectangle"].includes(strokes[0]!.tool) ? (
+                    <>
+                      <p className="text-xs text-muted">
+                        Adjust selected face bounds (% of full-resolution image)
+                      </p>
+                      <div className="editor-number-grid">
+                        {["x", "y", "width", "height"].map((axis) => {
+                          const a = strokes[0]!.points[0]!,
+                            b = strokes[0]!.points.at(-1)!,
+                            box = {
+                              x: Math.min(a.x, b.x),
+                              y: Math.min(a.y, b.y),
+                              width: Math.abs(a.x - b.x),
+                              height: Math.abs(a.y - b.y),
+                            };
+                          return (
+                            <NumberField
+                              key={axis}
+                              label={`Face ${axis} percent`}
+                              min={axis === "width" || axis === "height" ? 1 : 0}
+                              max={100}
+                              value={Math.round(box[axis as keyof typeof box] * 100)}
+                              onEnd={() => {}}
+                              onChange={(v) => {
+                                const n = { ...box, [axis]: v / 100 };
+                                n.x = Math.min(n.x, 0.99);
+                                n.y = Math.min(n.y, 0.99);
+                                n.width = Math.max(0.01, Math.min(n.width, 1 - n.x));
+                                n.height = Math.max(0.01, Math.min(n.height, 1 - n.y));
+                                setStrokes([
+                                  {
+                                    ...strokes[0]!,
+                                    points: [
+                                      { x: n.x, y: n.y },
+                                      { x: n.x + n.width, y: n.y + n.height },
+                                    ],
+                                  },
+                                ]);
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        disabled={!faces.length}
+                        onClick={() => {
+                          const a = strokes[0]!.points[0]!,
+                            b = strokes[0]!.points.at(-1)!;
+                          const box = {
+                            x: Math.min(a.x, b.x),
+                            y: Math.min(a.y, b.y),
+                            width: Math.abs(a.x - b.x),
+                            height: Math.abs(a.y - b.y),
+                            neighbors: 1,
+                          };
+                          const best = faces
+                            .map((f) => ({ f, score: overlap(box, f) }))
+                            .sort((a, b) => b.score - a.score)[0];
+                          if (!best || best.score < 0.1) {
+                            setError(
+                              "No detected face overlaps this selection. Keep manual bounds.",
+                            );
+                            return;
+                          }
+                          const f = best.f;
+                          setStrokes([
+                            {
+                              ...strokes[0]!,
+                              tool: "ellipse",
+                              points: [
+                                { x: f.x, y: f.y },
+                                { x: Math.min(1, f.x + f.width), y: Math.min(1, f.y + f.height) },
+                              ],
+                            },
+                          ]);
+                        }}
+                      >
+                        Refine to overlapping detected face
+                      </Button>
+                    </>
+                  ) : null}
+                </ToolSection>
+                <ToolSection title="Character library" defaultOpen={defaultOperation === "face"}>
+                  <CharacterControls
+                    projectId={projectId}
+                    blob={current}
+                    strokes={strokes}
+                    disabled={busy || saving}
+                    onReference={chooseReference}
+                  />
+                </ToolSection>
                 <h3 className="font-display">Processing</h3>
                 <label className="editor-field-label">
                   Operation
@@ -570,6 +599,7 @@ export function RetouchDialog({
                   </>
                 ) : null}
                 <Button
+                  intent={engine === "cloud" ? "ai" : undefined}
                   disabled={
                     !strokes.length ||
                     !!candidate ||
@@ -638,6 +668,7 @@ export function RetouchDialog({
               </>
             ) : null}
             <Button
+              intent="save"
               disabled={busy || saving || !!candidate || current === blob}
               onClick={async () => {
                 setSaving(true);

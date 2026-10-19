@@ -338,6 +338,7 @@ try {
   panel = (await records(page)).find((p) => p.name === "edges.png");
   const filtered = await compareSaved(page, panel);
   await page.getByRole("button", { name: "Uncheck large.png", exact: true }).click();
+  await page.getByText("Chapter settings", { exact: true }).click();
   await page.getByRole("button", { name: "PNG", exact: true }).click();
   await page.getByRole("button", { name: "Display 2", exact: true }).click();
   await page.locator(".manhwa-image").first().waitFor();

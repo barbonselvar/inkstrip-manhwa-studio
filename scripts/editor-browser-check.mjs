@@ -269,6 +269,7 @@ try {
     true,
   );
   await cancel(page, true);
+  await page.getByText("Chapter settings", { exact: true }).click();
   await page.getByRole("button", { name: "PNG", exact: true }).click();
   await page.getByRole("button", { name: "Display 2", exact: true }).click();
   await page.locator(".manhwa-image").first().waitFor();

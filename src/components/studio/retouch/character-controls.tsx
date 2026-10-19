@@ -37,7 +37,8 @@ export function CharacterControls({
     [notes, setNotes] = useState(""),
     [angle, setAngle] = useState("Front"),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [notice, setNotice] = useState("");
   const selected = profiles.find((p) => p.id === id),
     reference =
       selected?.references.find((r) => r.id === (refId || selected.primaryId)) ??
@@ -51,6 +52,7 @@ export function CharacterControls({
   }, [reference, selected, onReference]);
   async function mutate(fn: (p: CharacterProfile[]) => CharacterProfile[]) {
     setError("");
+    setNotice("");
     setBusy(true);
     try {
       const saved = await updateProject(projectId, (p) => {
@@ -61,6 +63,7 @@ export function CharacterControls({
       useStudio.setState((s) => ({
         projects: s.projects.map((p) => (p.id === projectId ? saved : p)),
       }));
+      setNotice("Character library saved on this device.");
       return true;
     } catch (e) {
       setError(storageMessage(e));
@@ -119,7 +122,10 @@ export function CharacterControls({
     }
   }
   return (
-    <fieldset disabled={disabled || busy} className="image-property-fields">
+    <fieldset
+      disabled={disabled || busy}
+      className="image-property-fields character-library-fields"
+    >
       <h3 className="font-display">Character Library</h3>
       <p className="text-xs text-muted">
         Saved locally within this project, reusable across its chapters. References are independent
@@ -276,6 +282,11 @@ export function CharacterControls({
             Remove character
           </Button>
         </>
+      ) : null}
+      {notice ? (
+        <p role="status" className="inline-success">
+          {notice}
+        </p>
       ) : null}
       {error ? (
         <p role="alert" className="text-sm text-danger">

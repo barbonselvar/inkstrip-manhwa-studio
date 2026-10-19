@@ -48,7 +48,11 @@ export function ProjectView({ projectId }: { projectId: string }) {
   }
 
   return (
-    <main className="project-workspace story-space mx-auto flex min-h-dvh w-full max-w-4xl flex-col px-5 pt-6 pb-16">
+    <main
+      id="workspace"
+      tabIndex={-1}
+      className="project-workspace story-space mx-auto flex min-h-dvh w-full max-w-4xl flex-col px-5 pt-6 pb-16"
+    >
       <div className="flex items-center justify-between gap-3">
         <Link
           to="/"

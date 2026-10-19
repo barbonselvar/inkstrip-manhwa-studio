@@ -16,9 +16,11 @@ export function PresetControls({
   const presets = useStudio((s) => s.projects.find((p) => p.id === projectId)?.presets),
     [name, setName] = useState(""),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [notice, setNotice] = useState("");
   async function update(removeId?: string) {
     setError("");
+    setNotice("");
     setBusy(true);
     try {
       const saved = await updateProject(projectId, (p) => {
@@ -39,6 +41,7 @@ export function PresetControls({
         projects: s.projects.map((p) => (p.id === projectId ? saved : p)),
       }));
       setName("");
+      setNotice(removeId ? "Preset removed." : "Preset saved to this project.");
     } catch (e) {
       setError(storageMessage(e));
     } finally {
@@ -77,6 +80,11 @@ export function PresetControls({
         Tone/filter values only; crops, geometry and masks remain image-specific. Presets are local
         to this project.
       </p>
+      {notice ? (
+        <p role="status" className="inline-success">
+          {notice}
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" className="text-danger text-sm">
           {error}

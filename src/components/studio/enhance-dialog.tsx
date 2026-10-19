@@ -258,6 +258,7 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
           </div>
           <progress
             className="mt-3 w-full"
+            aria-label="AI enhancement progress"
             max={progress.total || 1}
             value={progress.total > 0 ? progress.done : undefined}
           />
@@ -341,7 +342,7 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
             Cancel processing
           </Button>
         ) : (
-          <Button disabled={saving} onClick={() => void run()}>
+          <Button intent="ai" disabled={saving} onClick={() => void run()}>
             <Sparkles className="size-4" />
             {previews.length
               ? "Regenerate"

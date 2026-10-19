@@ -19,6 +19,9 @@ export function AppReady({ children }: { children: ReactNode }) {
 
   return (
     <>
+      <a className="skip-link" href="#workspace">
+        Skip to workspace
+      </a>
       <AppearanceRuntime />
       <ConnectivityNotice />
       {banner ? <Banner text={banner} onDismiss={dismissBanner} /> : null}

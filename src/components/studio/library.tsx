@@ -107,7 +107,7 @@ export function Library() {
           <span className="status-dot" />A little space. A whole world.
         </div>
       </aside>
-      <main id="workspace" className="library-main library-content">
+      <main id="workspace" tabIndex={-1} className="library-main library-content">
         <nav className="workspace-nav" aria-label="Library toolbar">
           <span className="workspace-breadcrumb">
             <span className="eyebrow">WORKSPACE</span>

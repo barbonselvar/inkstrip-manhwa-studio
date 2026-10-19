@@ -36,7 +36,13 @@ upload consent and its existing configuration/quality limitations. No migration 
 artwork deletion. Browser-only appearance preferences use a separate localStorage
 key; malformed/unavailable storage falls back safely. Settings never touch artwork.
 
-The only editor behavior adjustment is a close/discard autosave barrier: pending
+Retouch now fits the complete artwork to the measured viewport initially, keeping
+selection coordinates normalized against the same image plane at every zoom.
+No decorative transform is applied to artwork. The main editor observes the canvas
+viewport when its Radix portal mounts, so initial fit uses measured dimensions on
+small screens rather than the fallback size.
+
+A necessary editor behavior adjustment is a close/discard autosave barrier: pending
 metadata writes finish before an explicit discard clears them, and closing prevents
 new autosave timers. Existing pixel/recovery regression checks exposed this race
 under the redesigned UI. The image-processing pipeline remains unchanged.

@@ -289,11 +289,12 @@ try {
       await page.screenshot({ path: "/workspace/screenshots/inkstrip-4-8-retouch-mobile.png" });
       await page.getByRole("button", { name: "Preview removal", exact: true }).click();
       const cancel = page.getByRole("button", { name: "Cancel processing", exact: true });
-      if (await cancel.isVisible()) await cancel.click();
+      if (await cancel.isVisible()) await cancel.evaluate((button) => button.click());
       await page.getByRole("button", { name: "Close", exact: true }).click();
       await page.getByRole("button", { name: "Cancel", exact: true }).click();
       console.log("Native touch lasso and retouch close/cancellation: PASS");
     }
+    await page.getByText("Export images", { exact: true }).click();
     const download = page.waitForEvent("download");
     await page
       .getByRole("button", { name: "Export accepted images · native", exact: true })

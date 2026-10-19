@@ -146,7 +146,7 @@ export function PanelImageActions({
           </span>
         </span>
       </button>
-      <div className="flex shrink-0 flex-col">
+      <div className="panel-quick-actions flex shrink-0 flex-col">
         <button
           type="button"
           aria-label={`Edit Image ${panel.name}`}

@@ -378,7 +378,7 @@ body .studio-notice {
 .studio-notice button {
   min-width: 2.75rem;
 }
-body:has(.image-editor) .studio-notice {
+body:has([role="dialog"]) .studio-notice {
   visibility: hidden;
 }
 @keyframes notice-arrive {
@@ -2251,5 +2251,49 @@ body .inline-success {
   .project-shelf > li:nth-child(-n + 6),
   .artwork-cover[data-loaded="true"] > img {
     animation: none;
+  }
+}
+.skip-link {
+  position: fixed;
+  z-index: 200;
+  top: 0.5rem;
+  left: 1rem;
+  transform: translateY(-200%);
+  padding: 0.75rem 1rem;
+  border-radius: 0.6rem;
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  font-size: 0.8125rem;
+}
+.skip-link:focus {
+  transform: none;
+}
+#workspace:focus {
+  outline: none;
+}
+html[data-studio-motion="quiet"] .studio-button:hover:not(:disabled),
+html[data-studio-motion="quiet"] .studio-button:active:not(:disabled) {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  body .studio-button:hover:not(:disabled),
+  body .studio-button:active:not(:disabled) {
+    transform: none;
+  }
+  .hero-secondary:hover svg,
+  .project-shelf-card:hover .project-card-title svg {
+    transform: none;
+  }
+}
+
+/* Fit retouch artwork initially; zoom changes only the measured selection plane. */
+.retouch-dialog .retouch-plane {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .image-properties input.field,
+  .image-properties select.field,
+  .image-properties textarea.field {
+    font-size: 1rem;
   }
 }

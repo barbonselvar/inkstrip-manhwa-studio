@@ -150,6 +150,17 @@ export function ImageEditor({
     outputCanvas = useRef<HTMLCanvasElement>(null);
   const stage = useRef<HTMLDivElement>(null),
     plane = useRef<HTMLDivElement>(null);
+  const stageObserver = useRef<ResizeObserver | null>(null);
+  const measureStage = useCallback((node: HTMLDivElement | null) => {
+    stage.current = node;
+    stageObserver.current?.disconnect();
+    if (!node) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setViewport({ width: entry.contentRect.width, height: entry.contentRect.height });
+    });
+    observer.observe(node);
+    stageObserver.current = observer;
+  }, []);
   const gesture = useRef<Gesture | null>(null);
   const temporaryRef = useRef<EditRecipe | null>(null);
   const mounted = useRef(true),
@@ -185,17 +196,21 @@ export function ImageEditor({
 
   const projectId =
     useStudio.getState().chapters.find((c) => c.id === panel.chapterId)?.projectId ?? "";
+  const draftClosing = useRef(false);
+  const pendingAutosave = useRef<Promise<void> | null>(null);
   const persistDraft = useCallback(
     async (next: Panel["draft"] | null) => {
+      if (next && draftClosing.current) return;
       const saved = await saveEditorDraft(panel.id, panel.blobId, next);
       useStudio.setState((s) => ({ panels: s.panels.map((p) => (p.id === saved.id ? saved : p)) }));
     },
     [panel.id, panel.blobId],
   );
   useEffect(() => {
-    if (busy || retouchBase) return;
+    if (busy || retouchBase || draftClosing.current) return;
     const timer = setTimeout(() => {
-      void persistDraft(
+      if (draftClosing.current) return;
+      pendingAutosave.current = persistDraft(
         dirty
           ? {
               expectedBlobId: panel.blobId,
@@ -216,6 +231,20 @@ export function ImageEditor({
     return () => clearTimeout(timer);
   }, [draft, dirty, busy, retouchBase, persistDraft, panel.blobId]);
 
+  const clearDraftAndClose = useCallback(() => {
+    draftClosing.current = true;
+    void Promise.resolve(pendingAutosave.current)
+      .catch(() => {})
+      .then(() => persistDraft(null))
+      .then(() => {
+        renderer.current?.dispose();
+        onClose();
+      })
+      .catch((e) => {
+        draftClosing.current = false;
+        setError(storageMessage(e));
+      });
+  }, [persistDraft, onClose]);
   const endGroup = () => setHistory((value) => ({ ...value, group: undefined }));
   const change = (next: EditRecipe, group?: string) => {
     setHistory((value) => record(value, { ...value.present, recipe: next }, group));
@@ -237,13 +266,9 @@ export function ImageEditor({
   };
   useEffect(() => {
     mounted.current = true;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) setViewport({ width: entry.contentRect.width, height: entry.contentRect.height });
-    });
-    if (stage.current) observer.observe(stage.current);
     return () => {
       mounted.current = false;
-      observer.disconnect();
+      stageObserver.current?.disconnect();
       renderer.current?.dispose();
     };
   }, []);
@@ -320,11 +345,8 @@ export function ImageEditor({
       return;
     }
     if (dirty) setDiscard(true);
-    else
-      void persistDraft(null)
-        .then(onClose)
-        .catch((e) => setError(storageMessage(e)));
-  }, [dirty, onClose, persistDraft]);
+    else clearDraftAndClose();
+  }, [dirty, onClose, clearDraftAndClose]);
   async function save() {
     if (retouchBase || !loaded || phaseRef.current !== "idle" || !dirty || sizeError) return;
     setError("");
@@ -628,12 +650,7 @@ export function ImageEditor({
                 <Button
                   variant="danger"
                   onClick={() => {
-                    void persistDraft(null)
-                      .then(() => {
-                        renderer.current?.dispose();
-                        onClose();
-                      })
-                      .catch((e) => setError(storageMessage(e)));
+                    clearDraftAndClose();
                   }}
                 >
                   Discard edits
@@ -686,7 +703,7 @@ export function ImageEditor({
                   </Button>
                 </div>
                 <div
-                  ref={stage}
+                  ref={measureStage}
                   className={cn("image-stage", tool === "crop" ? "crop-active" : "pan-active")}
                   aria-label="Image editing viewport"
                   data-pan={`${pan.x},${pan.y}`}
@@ -795,7 +812,7 @@ export function ImageEditor({
                   </span>
                 </div>
               </section>
-              <aside className="image-properties" aria-label="Image properties">
+              <aside className="image-properties" data-tool={tool} aria-label="Image properties">
                 <div className="editor-tool-picker">
                   <div className="image-tool-tabs">
                     <button
@@ -847,6 +864,8 @@ export function ImageEditor({
                   </div>
                 </div>
                 <Button
+                  className="retouch-launch"
+                  intent="ai"
                   variant="secondary"
                   disabled={busy || !loaded || !!sizeError}
                   onClick={async () => {
@@ -866,7 +885,11 @@ export function ImageEditor({
                 >
                   Object Eraser & Retouch
                 </Button>
-                <fieldset disabled={busy || !loaded} className="image-property-fields">
+                <fieldset
+                  key={tool}
+                  disabled={busy || !loaded}
+                  className="image-property-fields precision-tool-fields"
+                >
                   {tool === "adjust" ? (
                     <PresetControls
                       projectId={projectId}

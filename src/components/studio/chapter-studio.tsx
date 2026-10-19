@@ -1,3 +1,5 @@
+import { AppearanceButton } from "./design/preferences";
+import { ToolSection } from "./design/tool-section";
 import { BatchEditDialog } from "./batch-edit-dialog";
 import { getBlob } from "@/lib/studio/db";
 import { ReorderHandle, type DragPosition } from "./reorder-handle";
@@ -24,6 +26,8 @@ import {
   Sparkles,
   Layers3,
   ScanLine,
+  ScanFace,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -142,7 +146,12 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const progress = job && job.total > 0 ? Math.round((job.done / job.total) * 100) : 8;
 
   return (
-    <div className="editor-shell min-h-dvh" onDragEnter={() => setDragOver(true)}>
+    <main
+      id="workspace"
+      tabIndex={-1}
+      className="editor-shell min-h-dvh"
+      onDragEnter={() => setDragOver(true)}
+    >
       <header className="editor-topbar relative z-20 flex h-14 items-center gap-3 border-b border-border bg-bg px-3 sm:px-5">
         <div className="editor-wordmark">
           <Wordmark />
@@ -184,19 +193,25 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
               </option>
             ))}
         </select>
+        <AppearanceButton />
         <span className="status-pill">
           <span className="status-dot" />
           Studio
         </span>
       </header>
 
-      <div className="editor-tabs sticky top-0 z-10 grid grid-cols-2 gap-1 border-b border-border bg-bg p-2 md:hidden">
+      <div
+        data-pane={pane}
+        aria-label="Chapter views"
+        className="editor-tabs sticky top-0 z-10 grid grid-cols-2 gap-1 border-b border-border bg-bg p-2 md:hidden"
+      >
         <button
           type="button"
           className={cn(
             "press focus-ring flex h-11 items-center justify-center gap-2 rounded-sm text-sm",
             pane === "panels" ? "bg-bg-subtle text-fg" : "text-muted",
           )}
+          aria-pressed={pane === "panels"}
           onClick={() => setPane("panels")}
         >
           <Layers3 className="size-4" /> Panels
@@ -207,6 +222,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
             "press focus-ring flex h-11 items-center justify-center gap-2 rounded-sm text-sm",
             pane === "page" ? "bg-bg-subtle text-fg" : "text-muted",
           )}
+          aria-pressed={pane === "page"}
           onClick={() => setPane("page")}
         >
           <ScanLine className="size-4" /> Display
@@ -238,7 +254,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
             </div>
             <label
               className={buttonClass({
-                className: "w-full",
+                className: "upload-action w-full",
                 variant: busy ? "secondary" : "primary",
               })}
             >
@@ -257,119 +273,134 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                 }}
               />
             </label>
-            <p className="text-sm text-muted">
-              Opens the photo library on a phone, or files on a computer. {FORMAT_HINT}. You can
-              also drop or paste.
+            <p className="upload-hint text-sm text-muted">
+              Your panels, at their original quality. Drop, paste, or choose files.
+              <span className="sr-only">{FORMAT_HINT}</span>
             </p>
-
-            <Button
-              variant="secondary"
-              disabled={busy || checked.length === 0}
-              onClick={() => setEnhancePanels(list.filter((panel) => checkedSet.has(panel.id)))}
-            >
-              <Sparkles className="size-4 text-accent" />
-              AI Enhance{checked.length ? ` · ${checked.length} selected` : ""}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={busy || !checked.length}
-              onClick={() => setFaceTargets(list.filter((p) => checkedSet.has(p.id)))}
-            >
-              AI Face Fix · review selected targets
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={busy || !checked.length}
-              onClick={() => setBatchTargets(list.filter((p) => checkedSet.has(p.id)))}
-            >
-              Batch edit selected
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={busy || !checked.length}
-              onClick={() =>
-                void exportPanels(
-                  list.filter((p) => checkedSet.has(p.id)),
-                  false,
-                )
-              }
-            >
-              Export accepted images · native
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={busy || !checked.length}
-              onClick={() =>
-                void exportPanels(
-                  list.filter((p) => checkedSet.has(p.id)),
-                  true,
-                )
-              }
-            >
-              Export original images · native
-            </Button>
-            <Segment
-              label="Page width"
-              value={chapter.width}
-              options={PAGE_WIDTHS.map((width) => ({ value: width, label: String(width) }))}
-              onChange={(width) => void setChapterOptions(chapter.id, { width })}
-            />
-            <Segment
-              label="Seam"
-              value={chapter.seam}
-              options={SEAMS.map((seam) => ({ value: seam.value, label: seam.label }))}
-              onChange={(seam) => void setChapterOptions(chapter.id, { seam })}
-            />
-            <label className="editor-field-label">
-              Custom chapter width
-              <input
-                className="field"
-                aria-label="Custom chapter width"
-                type="number"
-                min="320"
-                max="4096"
+            <div className="chapter-tool-grid">
+              <Button
+                intent="ai"
+                variant="secondary"
+                disabled={busy || checked.length === 0}
+                onClick={() => setEnhancePanels(list.filter((panel) => checkedSet.has(panel.id)))}
+              >
+                <Sparkles className="size-4 text-accent" />
+                AI Enhance{checked.length ? ` · ${checked.length} selected` : ""}
+              </Button>
+              <Button
+                intent="ai"
+                aria-label="AI Face Fix · review selected targets"
+                variant="secondary"
+                disabled={busy || !checked.length}
+                onClick={() => setFaceTargets(list.filter((p) => checkedSet.has(p.id)))}
+              >
+                <ScanFace className="size-4" />
+                AI Face Fix
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={busy || !checked.length}
+                onClick={() => setBatchTargets(list.filter((p) => checkedSet.has(p.id)))}
+              >
+                <SlidersHorizontal className="size-4" />
+                Batch edit selected
+              </Button>
+            </div>
+            <p className="cloud-mode-note">
+              Enhance on-device. Face Fix requires optional cloud AI.
+            </p>
+            <ToolSection title="Export images">
+              <Button
+                variant="ghost"
+                disabled={busy || !checked.length}
+                onClick={() =>
+                  void exportPanels(
+                    list.filter((p) => checkedSet.has(p.id)),
+                    false,
+                  )
+                }
+              >
+                Export accepted images · native
+              </Button>
+              <Button
+                variant="ghost"
+                disabled={busy || !checked.length}
+                onClick={() =>
+                  void exportPanels(
+                    list.filter((p) => checkedSet.has(p.id)),
+                    true,
+                  )
+                }
+              >
+                Export original images · native
+              </Button>
+            </ToolSection>
+            <ToolSection title="Chapter settings">
+              <Segment
+                label="Page width"
                 value={chapter.width}
-                onChange={(e) => {
-                  const width = +e.target.value;
-                  if (Number.isInteger(width) && width >= 320 && width <= 4096)
-                    void setChapterOptions(chapter.id, { width });
-                }}
+                options={PAGE_WIDTHS.map((width) => ({ value: width, label: String(width) }))}
+                onChange={(width) => void setChapterOptions(chapter.id, { width })}
               />
-            </label>
-            <label className="editor-field-label">
-              Custom image spacing
-              <input
-                className="field"
-                aria-label="Custom image spacing"
-                type="number"
-                min="0"
-                max="512"
+              <Segment
+                label="Seam"
                 value={chapter.seam}
-                onChange={(e) => {
-                  const seam = +e.target.value;
-                  if (Number.isInteger(seam) && seam >= 0 && seam <= 512)
-                    void setChapterOptions(chapter.id, { seam });
-                }}
+                options={SEAMS.map((seam) => ({ value: seam.value, label: seam.label }))}
+                onChange={(seam) => void setChapterOptions(chapter.id, { seam })}
               />
-            </label>
-            <Segment
-              label="File"
-              value={chapter.format}
-              options={[
-                { value: "image/jpeg" as StripFormat, label: "JPG" },
-                { value: "image/png" as StripFormat, label: "PNG" },
-              ]}
-              onChange={(format) => void setChapterOptions(chapter.id, { format })}
-            />
-
-            <Button
-              variant="ghost"
-              disabled={busy || orderBusy || !chapter.orderHistory?.length}
-              onClick={() => void undoReorder(chapter.id)}
-            >
-              Undo reorder
-            </Button>
-            <p className="text-xs text-muted" aria-live="polite">
+              <label className="editor-field-label">
+                Custom chapter width
+                <input
+                  className="field"
+                  aria-label="Custom chapter width"
+                  type="number"
+                  min="320"
+                  max="4096"
+                  value={chapter.width}
+                  onChange={(e) => {
+                    const width = +e.target.value;
+                    if (Number.isInteger(width) && width >= 320 && width <= 4096)
+                      void setChapterOptions(chapter.id, { width });
+                  }}
+                />
+              </label>
+              <label className="editor-field-label">
+                Custom image spacing
+                <input
+                  className="field"
+                  aria-label="Custom image spacing"
+                  type="number"
+                  min="0"
+                  max="512"
+                  value={chapter.seam}
+                  onChange={(e) => {
+                    const seam = +e.target.value;
+                    if (Number.isInteger(seam) && seam >= 0 && seam <= 512)
+                      void setChapterOptions(chapter.id, { seam });
+                  }}
+                />
+              </label>
+              <Segment
+                label="File"
+                value={chapter.format}
+                options={[
+                  { value: "image/jpeg" as StripFormat, label: "JPG" },
+                  { value: "image/png" as StripFormat, label: "PNG" },
+                ]}
+                onChange={(format) => void setChapterOptions(chapter.id, { format })}
+              />
+            </ToolSection>
+            <div className="order-summary">
+              <span className="eyebrow">READING ORDER</span>
+              <Button
+                variant="ghost"
+                disabled={busy || orderBusy || !chapter.orderHistory?.length}
+                onClick={() => void undoReorder(chapter.id)}
+              >
+                Undo reorder
+              </Button>
+            </div>
+            <p className="reorder-hint text-xs text-muted" aria-live="polite">
               {orderBusy
                 ? "Saving order…"
                 : "Drag the grip to reorder; image long-press opens editing. Arrows work with a keyboard."}
@@ -415,6 +446,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                   <li
                     key={panel.id}
                     data-order-panel={panel.id}
+                    data-selected={on}
                     className={cn(
                       "flex items-center gap-3 rounded-lg border border-border bg-bg p-2",
                       on && "bg-bg-subtle",
@@ -451,7 +483,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                       onEdit={() => setEditorPanel(panel)}
                       onEnhance={() => setEnhancePanels([panel])}
                     />
-                    <div className="flex shrink-0 flex-col">
+                    <div className="panel-order-actions flex shrink-0 flex-col">
                       <button
                         type="button"
                         className="focus-ring grid size-11 place-items-center text-muted disabled:opacity-30"
@@ -473,7 +505,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                     </div>
                     <button
                       type="button"
-                      className="focus-ring grid size-11 place-items-center text-subtle hover:text-danger"
+                      className="panel-remove focus-ring grid size-11 place-items-center text-subtle hover:text-danger"
                       aria-label={`Remove ${panel.name}`}
                       disabled={busy}
                       onClick={() => void removePanel(panel.id)}
@@ -486,7 +518,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
             </ul>
           )}
 
-          <div className="safe-b sticky bottom-0 border-t border-border bg-bg p-3">
+          <div className="chapter-display-action safe-b sticky bottom-0 border-t border-border bg-bg p-3">
             {busy ? (
               <div>
                 <p className="text-sm text-fg" aria-live="polite">
@@ -498,7 +530,12 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                <Button disabled={checked.length < 2} onClick={() => void runDisplay("replace")}>
+                <Button
+                  intent="create"
+                  disabled={checked.length < 2}
+                  onClick={() => void runDisplay("replace")}
+                >
+                  <Layers3 className="size-4" />
                   Display{checked.length >= 2 ? ` ${checked.length}` : ""}
                 </Button>
                 {chapter.strip && extras.length > 0 ? (
@@ -554,6 +591,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
             </div>
             {chapter.strip && stripUrls.length > 0 ? (
               <Button
+                intent="export"
                 variant="secondary"
                 disabled={freshness === "stale" || !!job}
                 title={
@@ -605,7 +643,10 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
           ) : (
             <div className="px-4 pb-16 sm:px-8">
               <div className="empty-display mx-auto flex min-h-80 w-full max-w-md flex-col justify-end rounded-xl border border-dashed border-border px-5 py-8 text-fg">
-                <p className="text-xs tracking-widest uppercase text-subtle">Empty page</p>
+                <div className="empty-page-mark" aria-hidden="true">
+                  <ScanLine className="size-8" />
+                </div>
+                <p className="text-xs tracking-widest uppercase text-subtle">YOUR CHAPTER CANVAS</p>
                 <h3 className="mt-3 font-display text-3xl">Nothing stitched yet.</h3>
                 <p className="mt-3 max-w-xs text-sm text-muted">
                   Check at least two photos, then press Display. Add more later and stitch them into
@@ -653,7 +694,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
       {enhancePanels ? (
         <EnhanceDialog panels={enhancePanels} onClose={() => setEnhancePanels(null)} />
       ) : null}
-    </div>
+    </main>
   );
 }
 
