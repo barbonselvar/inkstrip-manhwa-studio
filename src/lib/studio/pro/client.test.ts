@@ -28,12 +28,12 @@ test("worker cancellation rejects pending preview and terminates rendering resou
 test("superseding previews retain initialization and closed workers reject new work", async () => {
   const originalWorker = globalThis.Worker,
     originalCanvas = globalThis.OffscreenCanvas;
-  let instance: FakeWorker;
   class FakeWorker {
+    static instances: FakeWorker[] = [];
     onmessage: ((e: { data: { id: number; type: string } }) => void) | undefined;
     onerror: unknown;
     constructor() {
-      instance = this;
+      FakeWorker.instances.push(this);
     }
     postMessage() {}
     terminate() {}
@@ -50,7 +50,7 @@ test("superseding previews retain initialization and closed workers reject new w
       updatedAt: 0,
     });
     const first = r.render(document, 1000);
-    instance!.onmessage!({ data: { id: 1, type: "ready" } });
+    FakeWorker.instances[0]!.onmessage!({ data: { id: 1, type: "ready" } });
     await initializing;
     const next = r.render(document, 1000);
     await assert.rejects(first, { name: "AbortError" });

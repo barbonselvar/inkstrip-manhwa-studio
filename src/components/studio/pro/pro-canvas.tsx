@@ -477,6 +477,7 @@ export function ProCanvas({
         ? {
             ...l,
             mask: {
+              ...l.mask,
               selection: l.mask?.selection ?? { regions: [], inverted: true, feather: 0 },
               enabled: true,
               strokes: [...(l.mask?.strokes ?? []), { ...s, points: [...s.points] }],

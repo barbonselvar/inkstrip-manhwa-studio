@@ -409,6 +409,7 @@ export default function ProWorkspace({
       object.transform = { ...object.transform, x: d.width * 0.1, y: d.height * 0.1 };
     commit({ ...d, layers: [...d.layers, object] }, `Add ${shape ?? kind}`);
     setSelectedIds([object.id]);
+    setMaskMode(false);
     setTool(kind === "paint" ? "brush" : "move");
     setTab("properties");
     setBefore(false);
@@ -590,6 +591,7 @@ export default function ProWorkspace({
         sessionRef.current = next;
         setSession(next);
         commit(next.document, "Import native document");
+        setMaskMode(false);
         setSelectedIds(next.document.layers.length ? [next.document.layers.at(-1)!.id] : []);
         setWidthDraft(next.document.width);
         setHeightDraft(next.document.height);
@@ -1009,7 +1011,10 @@ export default function ProWorkspace({
                 renderVersion={version}
                 onTransient={setTransient}
                 onCommit={commit}
-                onSelect={(id) => setSelectedIds(id ? [id] : [])}
+                onSelect={(id) => {
+                  setSelectedIds(id ? [id] : []);
+                  setMaskMode(false);
+                }}
                 onColor={(color) => setBrush((b) => ({ ...b, color }))}
                 disabled={busy}
                 rendering={rendering}
