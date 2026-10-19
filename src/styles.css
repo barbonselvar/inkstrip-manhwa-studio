@@ -1,21 +1,23 @@
 @import "tailwindcss";
+@import "./studio-design.css";
+@import "@fontsource/fraunces/latin-500-italic.css";
 @import "@fontsource/outfit/latin-400.css";
 @import "@fontsource/outfit/latin-500.css";
 @import "@fontsource/outfit/latin-600.css";
 
 @theme {
-  --color-bg: #0a0e12;
-  --color-bg-elevated: #12191f;
-  --color-bg-subtle: #1b252d;
-  --color-fg: #edf3f4;
-  --color-muted: #a1b0ba;
-  --color-subtle: #83959f;
-  --color-border: #26333c;
-  --color-accent: #9ce8d4;
+  --color-bg: #0b0e10;
+  --color-bg-elevated: #151a1d;
+  --color-bg-subtle: #1c2427;
+  --color-fg: #eff3f1;
+  --color-muted: #acb8b7;
+  --color-subtle: #899b98;
+  --color-border: #2a3536;
+  --color-accent: #a4efd6;
   --color-accent-fg: #0b2722;
   --color-paper: #f3efe6;
   --color-ink: #161513;
-  --color-danger: #d16a5a;
+  --color-danger: #f29487;
   --font-display: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
   --font-sans: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
   --radius-sm: 0.5rem;

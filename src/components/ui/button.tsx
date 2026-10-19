@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type { ButtonHTMLAttributes } from "react";
 
 const buttonVariants = cva(
-  "press focus-ring inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium disabled:pointer-events-none disabled:opacity-40",
+  "studio-button press focus-ring inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium disabled:pointer-events-none disabled:opacity-40",
   {
     variants: {
       variant: {
@@ -37,7 +37,18 @@ export function Button({
   variant,
   size,
   type = "button",
+  intent,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants>) {
-  return <button type={type} className={buttonClass({ className, variant, size })} {...props} />;
+}: ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants> & { intent?: "ai" | "save" | "export" | "create" }) {
+  return (
+    <button
+      type={type}
+      data-variant={variant ?? "primary"}
+      data-intent={intent}
+      title={props.title ?? (size === "icon" ? props["aria-label"] : undefined)}
+      className={buttonClass({ className, variant, size })}
+      {...props}
+    />
+  );
 }
