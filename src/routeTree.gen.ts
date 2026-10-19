@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiStudioAiEditRouteImport } from './routes/api/studio/ai-edit'
 import { Route as PProjectIdIndexRouteImport } from './routes/p/$projectId/index'
 import { Route as PProjectIdCChapterIdRouteImport } from './routes/p/$projectId/c/$chapterId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStudioAiEditRoute = ApiStudioAiEditRouteImport.update({
+  id: '/api/studio/ai-edit',
+  path: '/api/studio/ai-edit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PProjectIdIndexRoute = PProjectIdIndexRouteImport.update({
@@ -31,30 +37,44 @@ const PProjectIdCChapterIdRoute = PProjectIdCChapterIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/studio/ai-edit': typeof ApiStudioAiEditRoute
   '/p/$projectId/': typeof PProjectIdIndexRoute
   '/p/$projectId/c/$chapterId': typeof PProjectIdCChapterIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/studio/ai-edit': typeof ApiStudioAiEditRoute
   '/p/$projectId': typeof PProjectIdIndexRoute
   '/p/$projectId/c/$chapterId': typeof PProjectIdCChapterIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/studio/ai-edit': typeof ApiStudioAiEditRoute
   '/p/$projectId/': typeof PProjectIdIndexRoute
   '/p/$projectId/c/$chapterId': typeof PProjectIdCChapterIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/p/$projectId/' | '/p/$projectId/c/$chapterId'
+  fullPaths:
+    | '/'
+    | '/api/studio/ai-edit'
+    | '/p/$projectId/'
+    | '/p/$projectId/c/$chapterId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/p/$projectId' | '/p/$projectId/c/$chapterId'
-  id: '__root__' | '/' | '/p/$projectId/' | '/p/$projectId/c/$chapterId'
+  to:
+    '/' | '/api/studio/ai-edit' | '/p/$projectId' | '/p/$projectId/c/$chapterId'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/studio/ai-edit'
+    | '/p/$projectId/'
+    | '/p/$projectId/c/$chapterId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiStudioAiEditRoute: typeof ApiStudioAiEditRoute
   PProjectIdIndexRoute: typeof PProjectIdIndexRoute
   PProjectIdCChapterIdRoute: typeof PProjectIdCChapterIdRoute
 }
@@ -66,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/studio/ai-edit': {
+      id: '/api/studio/ai-edit'
+      path: '/api/studio/ai-edit'
+      fullPath: '/api/studio/ai-edit'
+      preLoaderRoute: typeof ApiStudioAiEditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/p/$projectId/': {
@@ -87,6 +114,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiStudioAiEditRoute: ApiStudioAiEditRoute,
   PProjectIdIndexRoute: PProjectIdIndexRoute,
   PProjectIdCChapterIdRoute: PProjectIdCChapterIdRoute,
 }

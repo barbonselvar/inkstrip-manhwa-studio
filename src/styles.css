@@ -1207,3 +1207,11 @@ button,
   z-index: 2;
   background: var(--color-bg-elevated);
 }
+
+/* Retouch shares the existing editor shell and mobile properties sheet. */
+.retouch-viewport { flex: 1; min-height: 0; overflow: auto; padding: 1rem; touch-action: pan-x pan-y; }
+.retouch-plane { position: relative; min-width: 100%; margin: auto; }
+.retouch-plane > img { display: block; width: 100%; height: 100%; user-select: none; pointer-events: none; }
+.retouch-selection { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+.retouch-dialog .image-editor-footer { flex-wrap: wrap; }
+.retouch-dialog .image-properties { overflow-y: auto; }
