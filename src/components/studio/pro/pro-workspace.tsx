@@ -182,6 +182,9 @@ export default function ProWorkspace({
       : 16_000_000;
   const doc = transient ?? history?.present.doc,
     active = doc?.layers.find((l) => l.id === selectedIds[0]);
+  useEffect(() => {
+    if (before && doc && !doc.layers.some((l) => l.assetId === "source")) setBefore(false);
+  }, [before, doc]);
   const install = (entry: ProSession, label: string) => {
     sessionRef.current = entry;
     setSession(entry);
@@ -322,7 +325,15 @@ export default function ProWorkspace({
               opacity: 1,
               blend: "source-over" as const,
               mask: undefined,
-              transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+              transform: {
+                x: (doc.width - l.width * Math.min(doc.width / l.width, doc.height / l.height)) / 2,
+                y:
+                  (doc.height - l.height * Math.min(doc.width / l.width, doc.height / l.height)) /
+                  2,
+                rotation: 0,
+                scaleX: Math.min(doc.width / l.width, doc.height / l.height),
+                scaleY: Math.min(doc.width / l.width, doc.height / l.height),
+              },
             })),
         }
       : doc;
@@ -496,6 +507,70 @@ export default function ProWorkspace({
         setCancellable(false);
         setProgress("");
       }
+    }
+  };
+  const adoptLatestImage = async () => {
+    if (busyRef.current || !historyRef.current || !sessionRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setProgress("Saving latest chapter image as a new base…");
+    try {
+      await saveTail.current.catch(() => {});
+      const current = useStudio.getState().panels.find((p) => p.id === panel.id),
+        session = sessionRef.current!,
+        h = historyRef.current!;
+      if (!current)
+        throw new Error("This chapter image is no longer available. Export a native backup.");
+      if (current.width * current.height > maxArea)
+        throw new Error(
+          "The latest chapter image exceeds this device’s Pro memory budget. Existing layers remain unchanged.",
+        );
+      const blob = await getBlob(current.blobId);
+      if (!blob) throw new Error("The latest chapter image is missing.");
+      const assetId = crypto.randomUUID(),
+        base = layer("raster", current.width, current.height);
+      base.assetId = assetId;
+      base.name = "Latest chapter image";
+      const document: ProDocument = {
+        ...h.present.doc,
+        width: current.width,
+        height: current.height,
+        layers: [
+          ...h.present.doc.layers.map((l) => (l.parentId ? l : { ...l, visible: false })),
+          base,
+        ],
+      };
+      const next: ProSession = {
+        ...session,
+        document,
+        assets: { ...session.assets, [assetId]: blob },
+        acceptedBlobId: current.blobId,
+      };
+      validateAssets(next);
+      const stored = await saveSession(next, session.revision);
+      sessionRef.current = stored;
+      setSession(stored);
+      setHist(
+        record(h, { doc: document, label: "Use latest chapter image; retain earlier layers" }),
+      );
+      lastSaved.current = JSON.stringify(document);
+      setSaved(true);
+      setSelectedIds([base.id]);
+      setSelection({ regions: [], inverted: false, feather: 0 });
+      setMaskMode(false);
+      setBefore(false);
+      setTool("move");
+      setWidthDraft(document.width);
+      setHeightDraft(document.height);
+      setAssetEpoch((n) => n + 1);
+      setError("");
+      setStatus("Latest chapter image added. Earlier layers are hidden and recoverable in Layers.");
+    } catch (e) {
+      setError(storageMessage(e));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+      setProgress("");
     }
   };
   const download = (blob: Blob, name: string) => {
@@ -879,6 +954,16 @@ export default function ProWorkspace({
               </button>
             </div>
           )}
+          {stale && doc ? (
+            <div className="pro-recovery-actions">
+              <Button variant="secondary" disabled={busy} onClick={() => void exportFile("native")}>
+                Export existing layered document
+              </Button>
+              <Button disabled={busy} onClick={() => void adoptLatestImage()}>
+                Use latest chapter image · keep layers
+              </Button>
+            </div>
+          ) : null}
           {error && doc ? (
             <div className="pro-recovery-actions">
               <Button variant="secondary" onClick={() => void exportFile("native")}>

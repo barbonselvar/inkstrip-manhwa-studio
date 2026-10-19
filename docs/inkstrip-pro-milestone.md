@@ -59,6 +59,11 @@ worker and uses the existing expected-revision media transaction. Chapter origin
 recovery remains intact. Cancel applies to the render stage; once the atomic
 chapter save starts it must finish. A changed chapter image or another tab's Pro
 save blocks overwrite. A quota/validation failure leaves accepted artwork intact.
+**Use latest chapter image · keep layers** resolves an intentional return from AI/image
+tools: the latest accepted result becomes a new base, earlier top-level layers
+are hidden but retained, and the canvas adopts the latest dimensions. The action
+is undoable, does not change chapter pixels and never deletes earlier assets.
+
 Errors offer a native recovery export and explicit confirmed leave-without-saving.
 
 Export choices: native `.inkstrip` (editable metadata and embedded raster bytes),

@@ -580,6 +580,85 @@ try {
       `Native touch rectangle, pinch, cancelled paint, recovery and no overflow at ${width}px: PASS`,
     );
   }
+  console.log(
+    "Testing AI/image-tools handoff and non-destructive return to the latest chapter revision…",
+  );
+  {
+    const recoveryContext = await browser.newContext({ viewport: { width: 1280, height: 900 } }),
+      rp = await recoveryContext.newPage();
+    await story(rp);
+    await open(rp);
+    await tab(rp, "AI tools");
+    await rp.getByRole("button", { name: "Apply + Image tools", exact: true }).click();
+    await rp.getByRole("dialog", { name: "Edit Image", exact: true }).waitFor();
+    await rp.getByRole("button", { name: "Rotate right", exact: true }).click();
+    await rp.getByRole("button", { name: "Save changes", exact: true }).click();
+    await rp.getByRole("dialog", { name: "Edit Image", exact: true }).waitFor({ state: "hidden" });
+    const latest = await records(rp);
+    assert.deepEqual([latest[0].width, latest[0].height], [96, 128]);
+    await rp.getByRole("button", { name: "Pro Studio · layers & vectors", exact: true }).click();
+    await rp
+      .getByRole("button", { name: "Use latest chapter image · keep layers", exact: true })
+      .waitFor();
+    assert.equal(
+      await rp.getByRole("button", { name: "Apply to chapter", exact: true }).isEnabled(),
+      false,
+    );
+    await rp
+      .getByRole("button", { name: "Use latest chapter image · keep layers", exact: true })
+      .click();
+    await rp
+      .getByText(
+        "Latest chapter image added. Earlier layers are hidden and recoverable in Layers.",
+        { exact: true },
+      )
+      .waitFor();
+    await rp.waitForFunction(() => {
+      const c = document.querySelector('canvas[aria-label="Pro composite preview"]');
+      return c?.width === 96 && c.height === 128;
+    });
+    assert.equal((await records(rp))[0].blobId, latest[0].blobId);
+    await rp.getByLabel("Compare imported source", { exact: true }).check();
+    await rp.waitForFunction(() => {
+      const c = document.querySelector('canvas[aria-label="Pro composite preview"]');
+      if (c?.width !== 96 || c.height !== 128) return false;
+      const ctx = c.getContext("2d");
+      return (
+        ctx.getImageData(48, 4, 1, 1).data[3] === 0 &&
+        ctx.getImageData(48, 64, 1, 1).data[3] === 255
+      );
+    });
+    await rp.getByLabel("Compare imported source", { exact: true }).uncheck();
+    await rp.getByRole("button", { name: "Pro undo", exact: true }).click();
+    await rp.waitForFunction(
+      () => document.querySelector('canvas[aria-label="Pro composite preview"]')?.width === 128,
+    );
+    await rp.getByRole("button", { name: "Pro redo", exact: true }).click();
+    await rp.waitForFunction(
+      () => document.querySelector('canvas[aria-label="Pro composite preview"]')?.width === 96,
+    );
+    await rp.getByRole("button", { name: "Save draft", exact: true }).click();
+    const recovered = await rp.evaluate(async () => {
+      const db = await new Promise((resolve) => {
+          const r = indexedDB.open("inkstrip-pro");
+          r.onsuccess = () => resolve(r.result);
+        }),
+        sessions = await new Promise((resolve) => {
+          const r = db.transaction("sessions").objectStore("sessions").getAll();
+          r.onsuccess = () => resolve(r.result);
+        });
+      db.close();
+      return {
+        layers: sessions[0].session.document.layers,
+        assets: Object.keys(sessions[0].session.assets),
+      };
+    });
+    assert.equal(recovered.layers.length, 2);
+    assert.equal(recovered.layers[0].visible, false);
+    assert.equal(recovered.layers[1].name, "Latest chapter image");
+    assert.equal(recovered.assets.length, 2);
+    await recoveryContext.close();
+  }
   // Isolated showcase artwork, generated only for QA screenshots, never seeded into the app.
   for (const mobileView of [false, true]) {
     const showcase = await browser.newContext({
@@ -699,6 +778,7 @@ try {
         "native source bytes",
         "SVG rejection",
         "safe apply/original retention",
+        "AI/image-tools handoff and latest-image recovery with retained layers",
       ],
     }),
   );
