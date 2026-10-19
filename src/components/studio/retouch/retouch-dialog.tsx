@@ -1,27 +1,44 @@
+import { CharacterControls } from "./character-controls";
 import { NumberField } from "../editor/number-field";
 import { overlap } from "@/lib/studio/faces/detect";
 import { detectFaces } from "@/lib/studio/faces/client";
 import type { FaceBox } from "@/lib/studio/faces/detect";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SelectionCanvas } from "./selection-canvas";
 import type { Selection, SelectionTool } from "@/lib/studio/retouch/selection";
 import { retouchImage } from "@/lib/studio/retouch/client";
 import { storageMessage } from "@/lib/studio/db";
 export function RetouchDialog({
+  projectId,
+  defaultOperation = "erase",
+  onSavingChange,
   blob,
   width,
   height,
   onSave,
   onClose,
 }: {
+  projectId: string;
+  defaultOperation?: "erase" | "face";
+  onSavingChange?: (saving: boolean) => void;
   blob: Blob;
   width: number;
   height: number;
   onSave: (blob: Blob) => Promise<void>;
   onClose: () => void;
 }) {
+  const [operation, setOperation] = useState<"erase" | "face">(defaultOperation);
+  const [reference, setReference] = useState<Blob | undefined>(),
+    [characterNotes, setCharacterNotes] = useState(""),
+    [characterName, setCharacterName] = useState("");
+  const chooseReference = useCallback((ref: Blob | undefined, notes: string, name: string) => {
+    setReference(ref);
+    setCharacterNotes(notes);
+    setCharacterName(name);
+    setConsent(false);
+  }, []);
   const [faces, setFaces] = useState<FaceBox[]>([]);
   const [versions, setVersions] = useState<Blob[]>([blob]),
     [index, setIndex] = useState(0),
@@ -43,13 +60,18 @@ export function RetouchDialog({
     [feather, setFeather] = useState(3),
     [zoom, setZoom] = useState(1),
     [pan, setPan] = useState(false);
-  const [engine, setEngine] = useState<"local" | "cloud">("local"),
+  const [engine, setEngine] = useState<"local" | "cloud">(
+      defaultOperation === "face" ? "cloud" : "local",
+    ),
     [consent, setConsent] = useState(false),
     [access, setAccess] = useState("");
   const [busy, setBusy] = useState(false),
     [saving, setSaving] = useState(false),
     [status, setStatus] = useState(""),
     [error, setError] = useState("");
+  useEffect(() => {
+    onSavingChange?.(saving);
+  }, [saving, onSavingChange]);
   const controller = useRef<AbortController | null>(null),
     alive = useRef(true);
   useEffect(() => {
@@ -70,6 +92,9 @@ export function RetouchDialog({
     try {
       const result = await retouchImage(current, strokes, {
         mode: engine,
+        operation,
+        reference,
+        notes: characterNotes,
         access,
         signal: abort.signal,
         progress: (label, n) =>
@@ -455,8 +480,41 @@ export function RetouchDialog({
                     Clear selection
                   </Button>
                 </div>
+                <CharacterControls
+                  projectId={projectId}
+                  blob={current}
+                  strokes={strokes}
+                  disabled={busy || saving}
+                  onReference={chooseReference}
+                />
                 <h3 className="font-display">Processing</h3>
+                <label className="editor-field-label">
+                  Operation
+                  <select
+                    className="field"
+                    aria-label="Retouch operation"
+                    value={operation}
+                    onChange={(e) => {
+                      const op = e.target.value as "erase" | "face";
+                      setOperation(op);
+                      setConsent(false);
+                      if (op === "face") setEngine("cloud");
+                    }}
+                  >
+                    <option value="erase">Object Eraser</option>
+                    <option value="face">AI Face Fix · reference guided</option>
+                  </select>
+                </label>
+                {operation === "face" ? (
+                  <p className="text-xs text-muted">
+                    Choose a saved reference and manually confirm this target belongs to{" "}
+                    {characterName || "the selected character"}. Optional OpenAI identity-guided
+                    editing may change expression or details; inspect every result. There is no
+                    local face-generation model or guaranteed identity preservation.
+                  </p>
+                ) : null}
                 <select
+                  disabled={operation === "face"}
                   aria-label="Retouch processing mode"
                   className="field"
                   value={engine}
@@ -495,17 +553,22 @@ export function RetouchDialog({
                         checked={consent}
                         onChange={(e) => setConsent(e.target.checked)}
                       />
-                      I choose to upload this context for paid cloud processing.
+                      {operation === "face"
+                        ? `I confirm this selected target is ${characterName || "the chosen character"} and choose to upload context, mask and reference for paid Face Fix.`
+                        : "I choose to upload this context for paid cloud processing."}
                     </label>
                   </>
                 ) : null}
                 <Button
                   disabled={
-                    !strokes.length || !!candidate || (engine === "cloud" && (!consent || !access))
+                    !strokes.length ||
+                    !!candidate ||
+                    (engine === "cloud" &&
+                      (!consent || !access || (operation === "face" && !reference)))
                   }
                   onClick={() => void run()}
                 >
-                  Preview removal
+                  {operation === "face" ? "Preview AI Face Fix" : "Preview removal"}
                 </Button>
                 {candidate ? (
                   <div className="flex flex-wrap gap-2">

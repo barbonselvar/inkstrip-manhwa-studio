@@ -1260,6 +1260,9 @@ export function ImageEditor({
       </Dialog.Root>
       {retouchBase ? (
         <RetouchDialog
+          projectId={
+            useStudio.getState().chapters.find((c) => c.id === panel.chapterId)?.projectId ?? ""
+          }
           blob={retouchBase}
           width={recipe.width}
           height={recipe.height}

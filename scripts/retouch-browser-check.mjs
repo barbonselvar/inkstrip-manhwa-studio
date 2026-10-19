@@ -115,6 +115,54 @@ try {
     await page.getByLabel("Face width percent", { exact: true }).fill("15");
     await page.getByLabel("Face width percent", { exact: true }).press("Tab");
   }
+  if (process.argv[3]) {
+    await page.getByLabel("Character name", { exact: true }).fill("William");
+    await page
+      .getByLabel("Character appearance notes", { exact: true })
+      .fill("Dark eyes; keep target expression");
+    await page.getByRole("button", { name: "Save selected face reference", exact: true }).click();
+    await page.getByAltText("Character reference face", { exact: true }).waitFor();
+    await page.getByLabel("Retouch operation", { exact: true }).selectOption("face");
+    assert.equal(
+      await page.getByRole("button", { name: "Preview AI Face Fix", exact: true }).isEnabled(),
+      false,
+    );
+    await page.getByLabel("Owner access code", { exact: true }).fill("test-owner-code");
+    await page.getByRole("checkbox", { name: /I confirm this selected target is William/ }).check();
+    await page.getByRole("button", { name: "Preview AI Face Fix", exact: true }).click();
+    await page
+      .getByText("Cloud editing is not configured. Local texture repair remains available.", {
+        exact: true,
+      })
+      .waitFor();
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await page.reload();
+    const profiles = await page.evaluate(async () => {
+      const db = await new Promise((resolve) => {
+        const r = indexedDB.open("inkstrip");
+        r.onsuccess = () => resolve(r.result);
+      });
+      const projects = await new Promise((resolve) => {
+        const r = db.transaction("projects").objectStore("projects").getAll();
+        r.onsuccess = () => resolve(r.result);
+      });
+      db.close();
+      return projects.flatMap((p) =>
+        (p.characters ?? []).map((c) => ({
+          name: c.name,
+          notes: c.notes,
+          references: c.references.map((r) => ({ type: r.blob.type, bytes: r.blob.size })),
+        })),
+      );
+    });
+    assert.equal(profiles[0].name, "William");
+    assert.ok(profiles[0].references[0].bytes > 0);
+    assert.equal(profiles[0].references[0].type, "image/png");
+    console.log(
+      "Character reference persistence, explicit identity/upload consent, disabled-provider failure: PASS",
+    );
+  }
   assert.deepEqual(errors, []);
   console.log(
     "Retouch worker, mask, output pixels, accepted save, original bytes, reload, face selection: PASS",

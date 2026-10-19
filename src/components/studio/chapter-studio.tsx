@@ -1,3 +1,4 @@
+import { FaceQueue } from "./retouch/face-queue";
 import { ImageEditor } from "./editor/image-editor";
 import { PanelImageActions } from "./editor/panel-image-actions";
 import { EnhanceDialog } from "@/components/studio/enhance-dialog";
@@ -48,6 +49,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const clearStrip = useStudio((state) => state.clearStrip);
   const navigate = useNavigate();
 
+  const [faceTargets, setFaceTargets] = useState<Panel[] | null>(null);
   const [editorPanel, setEditorPanel] = useState<Panel | null>(null);
   const [enhancePanels, setEnhancePanels] = useState<Panel[] | null>(null);
   const [pane, setPane] = useState<"panels" | "page">("panels");
@@ -94,7 +96,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
 
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
-      if (editorPanel || enhancePanels) return;
+      if (editorPanel || enhancePanels || faceTargets) return;
       const files = [...(event.clipboardData?.files ?? [])];
       if (files.length === 0) return;
       event.preventDefault();
@@ -102,7 +104,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [addImages, chapterId, editorPanel, enhancePanels]);
+  }, [addImages, chapterId, editorPanel, enhancePanels, faceTargets]);
 
   if (!project || !chapter || chapter.projectId !== projectId) {
     return (
@@ -245,6 +247,13 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
             >
               <Sparkles className="size-4 text-accent" />
               AI Enhance{checked.length ? ` · ${checked.length} selected` : ""}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={busy || !checked.length}
+              onClick={() => setFaceTargets(list.filter((p) => checkedSet.has(p.id)))}
+            >
+              AI Face Fix · review selected targets
             </Button>
             <Segment
               label="Page width"
@@ -515,6 +524,13 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
           )}
         </section>
       </div>
+      {faceTargets ? (
+        <FaceQueue
+          panels={faceTargets}
+          projectId={projectId}
+          onClose={() => setFaceTargets(null)}
+        />
+      ) : null}
       {editorPanel ? (
         <ImageEditor
           key={editorPanel.id}

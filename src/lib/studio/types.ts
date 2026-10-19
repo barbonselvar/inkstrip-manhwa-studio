@@ -1,3 +1,4 @@
+import type { CharacterProfile } from "./characters/types";
 import type { EditRecipe } from "./editor/geometry";
 
 export type StripFormat = "image/jpeg" | "image/png";
@@ -19,6 +20,7 @@ export type Strip = {
 };
 
 export type Project = {
+  characters?: CharacterProfile[];
   id: string;
   title: string;
   createdAt: number;

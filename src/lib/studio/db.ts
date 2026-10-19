@@ -257,3 +257,27 @@ export async function commitChapterStrip(
     throw error;
   }
 }
+
+/** Compare-and-update one project under a single read/write transaction, including character blobs. */
+export async function updateProject(id: string, update: (project: Project) => Project) {
+  const db = await openDb(),
+    tx = db.transaction("projects", "readwrite"),
+    done = transactionDone(tx);
+  try {
+    const current = await request<Project | undefined>(tx.objectStore("projects").get(id));
+    if (!current) throw new Error("Project no longer exists.");
+    const next = update(current);
+    if (next.id !== id) throw new Error("Project identifier cannot change.");
+    tx.objectStore("projects").put(next);
+    await done;
+    return next;
+  } catch (error) {
+    try {
+      tx.abort();
+    } catch {
+      /* already aborted */
+    }
+    await done.catch(() => {});
+    throw error;
+  }
+}
