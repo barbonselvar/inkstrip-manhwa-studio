@@ -1215,3 +1215,5 @@ button,
 .retouch-selection { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
 .retouch-dialog .image-editor-footer { flex-wrap: wrap; }
 .retouch-dialog .image-properties { overflow-y: auto; }
+
+.face-boundary { position: absolute; border: 2px solid var(--color-accent); background: transparent; color: var(--color-fg); z-index: 2; min-width: 2rem; min-height: 2rem; }
