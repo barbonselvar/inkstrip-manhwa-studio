@@ -78,6 +78,10 @@ self.onmessage = async ({ data }) => {
       self.postMessage({ id, type: "preview", bitmap }, [bitmap]);
     } else {
       const blob = await output.convertToBlob({ type: data.mime, quality: data.quality });
+      if (blob.type !== data.mime)
+        throw new Error(
+          "This browser cannot encode the requested image format. Choose PNG instead.",
+        );
       self.postMessage({ id, type: "export", blob, width: output.width, height: output.height });
     }
     output.width = output.height = 1;

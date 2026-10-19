@@ -29,9 +29,11 @@ import {
   ScanFace,
   SlidersHorizontal,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 const emptyUrls: string[] = [];
+
+const ProWorkspace = lazy(() => import("./pro/pro-workspace"));
 
 export function ChapterStudio({ projectId, chapterId }: { projectId: string; chapterId: string }) {
   const project = useStudio((state) => state.projects.find((item) => item.id === projectId));
@@ -57,6 +59,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
 
   const [batchTargets, setBatchTargets] = useState<Panel[] | null>(null);
   const [faceTargets, setFaceTargets] = useState<Panel[] | null>(null);
+  const [proPanel, setProPanel] = useState<Panel | null>(null);
   const [editorPanel, setEditorPanel] = useState<Panel | null>(null);
   const [enhancePanels, setEnhancePanels] = useState<Panel[] | null>(null);
   const [pane, setPane] = useState<"panels" | "page">("panels");
@@ -101,7 +104,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
 
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
-      if (editorPanel || enhancePanels || faceTargets || batchTargets) return;
+      if (editorPanel || proPanel || enhancePanels || faceTargets || batchTargets) return;
       const files = [...(event.clipboardData?.files ?? [])];
       if (files.length === 0) return;
       event.preventDefault();
@@ -109,7 +112,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [addImages, chapterId, editorPanel, enhancePanels, faceTargets, batchTargets]);
+  }, [addImages, chapterId, editorPanel, proPanel, enhancePanels, faceTargets, batchTargets]);
 
   if (!project || !chapter || chapter.projectId !== projectId) {
     return (
@@ -277,6 +280,14 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
               Your panels, at their original quality. Drop, paste, or choose files.
               <span className="sr-only">{FORMAT_HINT}</span>
             </p>
+            <Button
+              variant="secondary"
+              className="pro-launch"
+              disabled={busy || !checked.length}
+              onClick={() => setProPanel(list.find((p) => checkedSet.has(p.id)) ?? null)}
+            >
+              <Layers3 className="size-4" /> Pro Studio · layers & vectors
+            </Button>
             <div className="chapter-tool-grid">
               <Button
                 intent="ai"
@@ -481,6 +492,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                       disabled={busy}
                       onToggle={() => toggleSelected(chapter.id, panel.id)}
                       onEdit={() => setEditorPanel(panel)}
+                      onPro={() => setProPanel(panel)}
                       onEnhance={() => setEnhancePanels([panel])}
                     />
                     <div className="panel-order-actions flex shrink-0 flex-col">
@@ -682,6 +694,29 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
           projectId={projectId}
           onClose={() => setFaceTargets(null)}
         />
+      ) : null}
+      {proPanel ? (
+        <Suspense
+          fallback={
+            <div className="pro-loading" role="status">
+              Opening Pro Studio…
+            </div>
+          }
+        >
+          <ProWorkspace
+            panel={proPanel}
+            projectId={projectId}
+            onClose={() => setProPanel(null)}
+            onContinue={(mode) => {
+              const current = useStudio.getState().panels.find((p) => p.id === proPanel.id);
+              setProPanel(null);
+              if (!current) return;
+              if (mode === "enhance") setEnhancePanels([current]);
+              else if (mode === "face") setFaceTargets([current]);
+              else setEditorPanel(current);
+            }}
+          />
+        </Suspense>
       ) : null}
       {editorPanel ? (
         <ImageEditor

@@ -7,16 +7,18 @@ interface artwork or file-format internals were obtained or copied.
 
 ## Public sources and findings
 
-| Source | Observable workflow / design consequence |
-| --- | --- |
-| [Photoshop Layers panel](https://helpx.adobe.com/photoshop/using/layer-basics.html) | Layers have independent visibility, order, opacity and grouping. Keep document stacking separate from chapter image order. |
-| [Photoshop layer masks](https://helpx.adobe.com/photoshop/using/masking-layers.html) | A mask controls visibility without deleting source pixels. Store selection geometry and brush commands separately from original image bytes. |
-| [Photoshop undo/redo](https://helpx.adobe.com/photoshop/using/undo-history.html) | Reversible document actions are separate from canvas navigation. Group one pointer gesture into one history entry; do not copy full image buffers for every move. |
-| [Illustrator drawing modes](https://helpx.adobe.com/illustrator/using/drawing-basics.html) | Object order determines drawing in front/behind. Explicit object hierarchy is preferable to destructive raster flattening. |
-| [Illustrator anchor editing](https://helpx.adobe.com/illustrator/using/editing-paths.html) | Anchor points and direction handles remain editable. A path is geometry, not a screenshot of a line. |
+| Source                                                                                      | Observable workflow / design consequence                                                                                                                            |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Photoshop Layers panel](https://helpx.adobe.com/photoshop/using/layer-basics.html)         | Layers have independent visibility, order, opacity and grouping. Keep document stacking separate from chapter image order.                                          |
+| [Photoshop layer masks](https://helpx.adobe.com/photoshop/using/masking-layers.html)        | A mask controls visibility without deleting source pixels. Store selection geometry and brush commands separately from original image bytes.                        |
+| [Photoshop undo/redo](https://helpx.adobe.com/photoshop/using/undo-history.html)            | Reversible document actions are separate from canvas navigation. Group one pointer gesture into one history entry; do not copy full image buffers for every move.   |
+| [Illustrator drawing modes](https://helpx.adobe.com/illustrator/using/drawing-basics.html)  | Object order determines drawing in front/behind. Explicit object hierarchy is preferable to destructive raster flattening.                                          |
+| [Illustrator anchor editing](https://helpx.adobe.com/illustrator/using/editing-paths.html)  | Anchor points and direction handles remain editable. A path is geometry, not a screenshot of a line.                                                                |
 | [Illustrator saving artwork](https://helpx.adobe.com/illustrator/using/saving-artwork.html) | Editable authoring data and interchange/export formats have different guarantees. Keep a native document, raster composite and vector-only SVG as distinct actions. |
 
-These pages were fetched successfully and their titles/headings checked. Their
+Additional successful public references: [Photoshop workspace overview](https://helpx.adobe.com/photoshop/using/workspace-basics.html), [Brush/Pencil painting](https://helpx.adobe.com/photoshop/using/painting-tools.html), [rotation/flip](https://helpx.adobe.com/photoshop/using/transforming-objects.html), [Illustrator text](https://helpx.adobe.com/illustrator/using/creating-text.html) and [keyboard shortcuts](https://helpx.adobe.com/illustrator/using/default-keyboard-shortcuts.html). They reinforce contextual panels, explicit tool settings, editable text and discoverable shortcuts. A separate attempted Illustrator alignment URL returned 404 and was not used as evidence.
+
+The successful pages were fetched successfully and their titles/headings checked. Their
 functional ideas inform original code. This is not a claim of exhaustive Adobe
 feature parity, matching rasterization, or knowledge of Adobe internals.
 

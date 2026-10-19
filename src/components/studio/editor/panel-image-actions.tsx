@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil, Sparkles } from "lucide-react";
+import { Pencil, Sparkles, Layers3 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { LONG_PRESS_MS, withinPress } from "@/lib/studio/editor/gestures";
@@ -12,6 +12,7 @@ export function PanelImageActions({
   onToggle,
   onEdit,
   onEnhance,
+  onPro,
 }: {
   panel: Panel;
   thumb?: string;
@@ -19,6 +20,7 @@ export function PanelImageActions({
   onToggle: () => void;
   onEdit: () => void;
   onEnhance: () => void;
+  onPro: () => void;
 }) {
   const [menu, setMenu] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -188,6 +190,16 @@ export function PanelImageActions({
           >
             <Sparkles className="size-4" />
             AI Enhance
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setMenu(false);
+              onPro();
+            }}
+          >
+            <Layers3 className="size-4" />
+            Pro Studio · layers & vectors
           </Button>
           <p className="mt-2 text-xs text-muted">
             Edit without changing the imported original. Use the chapter arrows or desktop drag to

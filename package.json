@@ -20,13 +20,15 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "check:build": "node scripts/check-build.mjs",
-    "test:studio": "node --experimental-strip-types --test src/lib/studio/enhance/enhance.test.ts src/lib/studio/reader-scroll.test.ts src/lib/studio/editor/editor.test.ts src/lib/studio/editor/adjustments.test.ts src/lib/studio/retouch/retouch.test.ts src/lib/ai/image-edit.test.ts src/lib/studio/faces/detect.test.ts src/lib/studio/characters/characters.test.ts src/lib/studio/order.test.ts src/lib/studio/workflow.test.ts src/lib/studio/ui/preferences.test.ts",
+    "test:studio": "node --experimental-strip-types --test src/lib/studio/enhance/enhance.test.ts src/lib/studio/reader-scroll.test.ts src/lib/studio/editor/editor.test.ts src/lib/studio/editor/adjustments.test.ts src/lib/studio/retouch/retouch.test.ts src/lib/ai/image-edit.test.ts src/lib/studio/faces/detect.test.ts src/lib/studio/characters/characters.test.ts src/lib/studio/order.test.ts src/lib/studio/workflow.test.ts src/lib/studio/ui/preferences.test.ts && npm run test:pro",
     "test:studio:browser": "node scripts/studio-browser-check.mjs",
     "test:editor:browser": "node scripts/editor-browser-check.mjs",
     "test:adjustments:browser": "node scripts/adjustments-browser-check.mjs",
     "test:retouch:browser": "node scripts/retouch-browser-check.mjs",
     "test:workflow:browser": "node scripts/workflow-browser-check.mjs",
-    "test:ui:browser": "node scripts/ui-redesign-browser-check.mjs"
+    "test:ui:browser": "node scripts/ui-redesign-browser-check.mjs",
+    "test:pro": "node --experimental-strip-types --test src/lib/studio/pro/*.test.ts",
+    "test:pro:browser": "node --experimental-strip-types scripts/pro-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
