@@ -1,36 +1,46 @@
 /// <reference lib="webworker" />
 import { composite } from "./render";
-import { type ProSession, validateAssets } from "./model";
+import { type ProSession, type ProDocument, validateAssets, sourceReference } from "./model";
 let assets: ProSession["assets"] = {},
-  dimensions = new Map<string, { width: number; height: number }>(),
   cache = new Map<string, ImageBitmap>(),
+  cachePixels = 0,
   latest = 0;
+function documentSources(doc: ProDocument, maxArea: number) {
+  const dimensions = new Map<string, { width: number; height: number }>();
+  for (const l of doc.layers) {
+    if (l.width * l.height > maxArea)
+      throw new Error(
+        "A layer exceeds this device’s memory budget. Export a native backup or use a smaller source.",
+      );
+    if (l.assetId) dimensions.set(l.assetId, { width: l.width, height: l.height });
+  }
+  const original = sourceReference(doc);
+  if (original) {
+    if (original.width * original.height > maxArea)
+      throw new Error("The retained original exceeds this device’s memory budget.");
+    dimensions.set(original.assetId, original);
+  }
+  if ([...dimensions.values()].reduce((n, s) => n + s.width * s.height, 0) > maxArea * 3)
+    throw new Error(
+      "Raster sources exceed this device’s combined memory budget. Use fewer or smaller sources.",
+    );
+  return dimensions;
+}
 self.onmessage = async ({ data }) => {
   const { id, type } = data;
   latest = id;
   try {
     if (type === "init") {
       validateAssets(data.session);
-      for (const l of data.session.document.layers)
-        if (l.width * l.height > data.maxArea)
-          throw new Error(
-            "A layer exceeds this device’s memory budget. Export a native backup or use a smaller source.",
-          );
+      documentSources(data.session.document, data.maxArea);
       assets = data.session.assets;
       for (const b of cache.values()) b.close();
       cache = new Map();
-      dimensions = new Map();
-      for (const l of data.session.document.layers)
-        if (l.assetId) dimensions.set(l.assetId, { width: l.width, height: l.height });
-      const pixels = [...dimensions.values()].reduce((n, s) => n + s.width * s.height, 0);
-      if (pixels > data.maxArea * 3)
-        throw new Error(
-          "Raster sources exceed this device’s combined memory budget. Use fewer or smaller sources.",
-        );
+      cachePixels = 0;
       self.postMessage({ id, type: "ready" });
       return;
     }
-    const doc =
+    const doc: ProDocument =
       data.mime === "image/jpeg" && data.document.background === "transparent"
         ? { ...data.document, background: "#ffffff" }
         : data.document;
@@ -38,14 +48,12 @@ self.onmessage = async ({ data }) => {
       throw new Error(
         "This document exceeds the device memory budget. Export the native document or use the existing chapter strip workflow. No resolution was reduced.",
       );
-    for (const l of doc.layers)
-      if (l.width * l.height > data.maxArea)
-        throw new Error("A layer exceeds this device’s memory budget.");
-    const scale = type === "preview" ? Math.min(1, 1400 / Math.max(doc.width, doc.height)) : 1;
+    const dimensions = documentSources(doc, data.maxArea),
+      scale = type === "preview" ? Math.min(1, 1400 / Math.max(doc.width, doc.height)) : 1;
     const get = async (assetId: string, s: number) => {
       const size = dimensions.get(assetId);
       if (!size || !assets[assetId]) throw new Error("A raster asset is missing.");
-      const key = `${assetId}:${s}`;
+      const key = `${assetId}:${size.width}x${size.height}:${s}`;
       if (!cache.has(key)) {
         const bitmap = await createImageBitmap(assets[assetId]!, {
           resizeWidth: Math.max(1, Math.round(size.width * s)),
@@ -56,6 +64,18 @@ self.onmessage = async ({ data }) => {
           bitmap.close();
           throw new DOMException("Cancelled", "AbortError");
         }
+        const area = bitmap.width * bitmap.height;
+        while (cache.size && cachePixels + area > data.maxArea * 2) {
+          const [oldId, old] = cache.entries().next().value!;
+          cachePixels -= old.width * old.height;
+          old.close();
+          cache.delete(oldId);
+        }
+        cache.set(key, bitmap);
+        cachePixels += area;
+      } else {
+        const bitmap = cache.get(key)!;
+        cache.delete(key);
         cache.set(key, bitmap);
       }
       return cache.get(key)!;
@@ -70,7 +90,7 @@ self.onmessage = async ({ data }) => {
       },
     );
     if (latest !== id) {
-      output.width = 1;
+      output.width = output.height = 1;
       return;
     }
     if (type === "preview") {

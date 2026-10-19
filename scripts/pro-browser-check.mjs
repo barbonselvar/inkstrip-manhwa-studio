@@ -108,6 +108,68 @@ try {
     initial,
     "Opening a Pro document must not migrate or edit legacy data",
   );
+  console.log("Testing native import Undo with different source bytes sharing the same asset ID…");
+  const alternate = await page.evaluate(() => {
+    const c = document.createElement("canvas");
+    c.width = 128;
+    c.height = 96;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#d08040";
+    ctx.fillRect(0, 0, 128, 96);
+    return c.toDataURL().split(",")[1];
+  });
+  // Hold a real Pro transaction while the native file appends sources, then release it.
+  await page.evaluate(() => {
+    window.__proRaceRelease = false;
+    window.__proRacePut = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (...args) {
+      const result = window.__proRacePut.apply(this, args);
+      if (this.name === "sessions" && !window.__proRaceRelease) {
+        const end = performance.now() + 5000;
+        const spin = () => {
+          if (!window.__proRaceRelease && performance.now() < end) {
+            const read = this.get("__qa_keepalive__");
+            read.onsuccess = spin;
+          }
+        };
+        spin();
+      }
+      return result;
+    };
+  });
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  await importNative(
+    page,
+    fromPanel({ id: "other", name: "Different source", width: 128, height: 96 }),
+    alternate,
+  );
+  await pixel(page, 64, 48, [208, 128, 64, 255]);
+  await page.evaluate(() => {
+    window.__proRaceRelease = true;
+    IDBObjectStore.prototype.put = window.__proRacePut;
+  });
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  await page
+    .getByText("Editable Pro draft saved on this device. Chapter unchanged.", { exact: true })
+    .waitFor();
+  await page.getByRole("button", { name: "Pro undo", exact: true }).click();
+  await pixel(page, 64, 48, [32, 48, 64, 255]);
+  page.setDefaultTimeout(30000);
+  await page.getByRole("button", { name: "Pro redo", exact: true }).click();
+  await pixel(page, 64, 48, [208, 128, 64, 255]);
+  await page.getByRole("button", { name: "Pro undo", exact: true }).click();
+  await pixel(page, 64, 48, [32, 48, 64, 255]);
+  await tab(page, "Layers");
+  await page.locator(".pro-layer-select").first().click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await pixel(page, 64, 48, [0, 0, 0, 0]);
+  await page.getByLabel("Compare imported source", { exact: true }).check();
+  await pixel(page, 64, 48, [32, 48, 64, 255]);
+  await page.getByLabel("Compare imported source", { exact: true }).uncheck();
+  await pixel(page, 64, 48, [0, 0, 0, 0]);
+  await page.getByRole("button", { name: "Pro undo", exact: true }).click();
+  await pixel(page, 64, 48, [32, 48, 64, 255]);
+
   await page.getByRole("button", { name: "Paint layer", exact: true }).click();
   await page.getByLabel("Brush color", { exact: true }).fill("#00ff00");
   await page.getByLabel("Brush hardness", { exact: true }).fill("100");
@@ -775,7 +837,8 @@ try {
         "PNG/JPEG/WebP dimensions and transparency",
         "quota rollback and cross-tab recovery",
         "native touch drawing/pinch/cancellation at 320/390px",
-        "native source bytes",
+        "native source bytes and original recovery after deleting the base layer",
+        "native import ID remapping, undo/redo and in-flight save isolation",
         "SVG rejection",
         "safe apply/original retention",
         "AI/image-tools handoff and latest-image recovery with retained layers",

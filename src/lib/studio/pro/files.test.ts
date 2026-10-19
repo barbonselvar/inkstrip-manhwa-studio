@@ -64,3 +64,18 @@ test("levels/gamma and hue change RGB while preserving alpha and transparent pix
   assert.equal(result[3], 128);
   assert.deepEqual([...result.slice(4)], [3, 4, 5, 0]);
 });
+test("imported IDs are remapped without overwriting undo sources or raw comparison references", async () => {
+  const current = session(),
+    incoming = session();
+  incoming.assets.source = new Blob([new Uint8Array([9, 8, 7])], { type: "image/png" });
+  const { mergeNativeSession } = await import("./files.ts"),
+    { sourceReference } = await import("./model.ts");
+  const combined = mergeNativeSession(current, incoming),
+    id = combined.document.layers[0]!.assetId!;
+  assert.notEqual(id, "source");
+  assert.deepEqual([...new Uint8Array(await combined.assets.source!.arrayBuffer())], [1, 2, 3]);
+  assert.deepEqual([...new Uint8Array(await combined.assets[id]!.arrayBuffer())], [9, 8, 7]);
+  assert.equal(sourceReference(combined.document)!.assetId, id);
+  assert.equal(current.document.layers[0]!.assetId, "source");
+  validateAssets(combined);
+});

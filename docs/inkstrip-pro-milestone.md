@@ -72,7 +72,12 @@ only** (raster/paint excluded explicitly). JPEG fills transparent background whi
 Unsupported encoders show an error, rather than saving PNG under a WebP name.
 Changing canvas size is explicit, does not resample source assets, and is undoable.
 
-Native import validates version, ranges, references, budgets and assets. It
+Native import validates version, ranges, references, budgets and assets. Imported
+asset IDs are remapped into an append-only immutable pool, so Undo never rebinds
+an earlier layer to a different file. Save acknowledgements preserve assets added
+while a transaction was pending. An explicit original-source reference survives
+layer deletion; old version-1 files fall back to their original raster layer.
+Decoded history sources use a bounded worker LRU cache. It
 replaces only the editable Pro draft; the chapter stays unchanged. PNG/JPEG/WebP
 assets become independent layers. SVG import is a strict unitless basic-vector
 subset: shapes, paths, simple text, translate/scale/rotate. Scripts, HTML, external

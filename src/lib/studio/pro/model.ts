@@ -72,7 +72,9 @@ export type Layer = {
   letterSpacing: number;
   align: "left" | "center" | "right";
 };
+export type SourceReference = { assetId: string; width: number; height: number };
 export type ProDocument = {
+  source?: SourceReference;
   version: 1;
   id: string;
   name: string;
@@ -142,6 +144,7 @@ export function fromPanel(
   base.assetId = assetId;
   return {
     version: 1,
+    source: { assetId, width: panel.width, height: panel.height },
     id: crypto.randomUUID(),
     name: panel.name,
     panelId: panel.id,
@@ -215,6 +218,16 @@ export function validateDocument(d: ProDocument) {
     throw new Error(
       "Unsupported or oversized Pro document (up to 48 layers / 16 megapixels / 16384px per side).",
     );
+  if (
+    d.source !== undefined &&
+    (!d.source ||
+      typeof d.source.assetId !== "string" ||
+      !d.source.assetId ||
+      !finite(d.source.width, 1, 16384) ||
+      !finite(d.source.height, 1, 16384) ||
+      d.source.width * d.source.height > 16_000_000)
+  )
+    throw new Error("Invalid original source reference.");
   const ids = new Set<string>();
   let commands = 0;
   for (const l of d.layers) {
@@ -367,6 +380,13 @@ export function validateAssets(session: ProSession) {
     total += b.size;
   }
   if (total > MAX_ASSET_BYTES) throw new Error("Pro assets exceed the 48MB document limit.");
+  const original = sourceReference(session.document);
+  if (
+    original &&
+    (!Object.hasOwn(session.assets, original.assetId) ||
+      !(session.assets[original.assetId] instanceof Blob))
+  )
+    throw new Error("The original Pro source is missing.");
   for (const l of session.document.layers)
     if (
       l.kind === "raster" &&
@@ -452,4 +472,12 @@ export function toLocalSelection(s: Selection, l: Layer): Selection {
       return { ...r, kind: "lasso", points: points.map((p) => localPoint(p, l)) };
     }),
   };
+}
+
+export function sourceReference(d: ProDocument): SourceReference | undefined {
+  if (d.source) return d.source;
+  const original = d.layers.find((l) => l.kind === "raster" && l.assetId === "source");
+  return original?.assetId
+    ? { assetId: original.assetId, width: original.width, height: original.height }
+    : undefined;
 }

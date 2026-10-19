@@ -42,6 +42,7 @@ import { ProCanvas, type ProTool } from "./pro-canvas";
 import { ProProperties, ProNumber } from "./pro-properties";
 import {
   fromPanel,
+  sourceReference,
   layer,
   validateDocument,
   validateAssets,
@@ -58,7 +59,7 @@ import { createHistory, record, undo, redo, type History } from "@/lib/studio/ed
 import { isLocked, reorderLayer, ungroupLayers } from "@/lib/studio/pro/operations";
 import { ProRenderer } from "@/lib/studio/pro/client";
 import { loadSession, saveSession } from "@/lib/studio/pro/storage";
-import { nativeFile, readNative, vectorSvg } from "@/lib/studio/pro/files";
+import { nativeFile, readNative, vectorSvg, mergeNativeSession } from "@/lib/studio/pro/files";
 import { importSvg } from "@/lib/studio/pro/svg-import";
 import { getBlob, storageMessage } from "@/lib/studio/db";
 import { useStudio } from "@/lib/studio/store";
@@ -183,7 +184,7 @@ export default function ProWorkspace({
   const doc = transient ?? history?.present.doc,
     active = doc?.layers.find((l) => l.id === selectedIds[0]);
   useEffect(() => {
-    if (before && doc && !doc.layers.some((l) => l.assetId === "source")) setBefore(false);
+    if (before && doc && !sourceReference(doc)) setBefore(false);
   }, [before, doc]);
   const install = (entry: ProSession, label: string) => {
     sessionRef.current = entry;
@@ -244,9 +245,18 @@ export default function ProWorkspace({
         const current = sessionRef.current;
         if (!current) throw new Error("The document has not loaded.");
         const next = await saveSession({ ...current, document }, current.revision);
-        sessionRef.current = next;
+        // A file import can append immutable assets while this transaction is pending.
+        // A save acknowledgement must never replace that newer in-memory asset pool.
+        const live = sessionRef.current ?? next;
+        const currentSession = {
+          ...next,
+          document: historyRef.current?.present.doc ?? document,
+          assets: { ...next.assets, ...live.assets },
+          acceptedBlobId: live.acceptedBlobId,
+        };
+        sessionRef.current = currentSession;
         if (alive.current) {
-          setSession(next);
+          setSession(currentSession);
           lastSaved.current = JSON.stringify(document);
           setSaved(JSON.stringify(historyRef.current?.present.doc) === lastSaved.current);
         }
@@ -312,31 +322,20 @@ export default function ProWorkspace({
     if (!doc || !ready || busy || !renderer.current) return;
     const id = ++generation.current;
     setRendering(true);
-    const document = before
-      ? {
-          ...doc,
-          layers: doc.layers
-            .filter((l) => l.assetId === "source")
-            .slice(0, 1)
-            .map((l) => ({
-              ...layer("raster", l.width, l.height),
-              assetId: l.assetId,
-              visible: true,
-              opacity: 1,
-              blend: "source-over" as const,
-              mask: undefined,
-              transform: {
-                x: (doc.width - l.width * Math.min(doc.width / l.width, doc.height / l.height)) / 2,
-                y:
-                  (doc.height - l.height * Math.min(doc.width / l.width, doc.height / l.height)) /
-                  2,
-                rotation: 0,
-                scaleX: Math.min(doc.width / l.width, doc.height / l.height),
-                scaleY: Math.min(doc.width / l.width, doc.height / l.height),
-              },
-            })),
-        }
-      : doc;
+    const original = sourceReference(doc);
+    const raw = original ? layer("raster", original.width, original.height) : undefined;
+    if (raw && original) {
+      raw.assetId = original.assetId;
+      const fit = Math.min(doc.width / original.width, doc.height / original.height);
+      raw.transform = {
+        x: (doc.width - original.width * fit) / 2,
+        y: (doc.height - original.height * fit) / 2,
+        scaleX: fit,
+        scaleY: fit,
+        rotation: 0,
+      };
+    }
+    const document = before ? { ...doc, layers: raw ? [raw] : [] } : doc;
     const timer = setTimeout(() => {
       void renderer.current
         ?.render(document, maxArea)
@@ -625,11 +624,15 @@ export default function ProWorkspace({
     setStatus("Rendering cancelled. Document retained.");
   };
   const addAsset = async (blob: Blob, name: string) => {
-    const d = historyRef.current?.present.doc,
+    let d = historyRef.current?.present.doc,
       s = sessionRef.current;
     if (!d || !s || busyRef.current) return;
     const decoded = await decodeBlob(blob);
     try {
+      if (!alive.current || busyRef.current || closeInProgress.current) return;
+      d = historyRef.current?.present.doc;
+      s = sessionRef.current;
+      if (!d || !s) return;
       if (decoded.width * decoded.height > maxArea)
         throw new Error(
           "Image exceeds this device’s Pro memory budget. Use a smaller source or the existing chapter workflow.",
@@ -650,6 +653,9 @@ export default function ProWorkspace({
       setSession(next);
       commit(next.document, "Import raster asset");
       setSelectedIds([l.id]);
+      setMaskMode(false);
+      setBefore(false);
+      setTool("move");
       setAssetEpoch((n) => n + 1);
     } finally {
       decoded.close();
@@ -661,7 +667,8 @@ export default function ProWorkspace({
     try {
       if (file.name.toLowerCase().endsWith(".inkstrip")) {
         const imported = await readNative(file, panel.id, sessionRef.current.acceptedBlobId);
-        const next = { ...imported, revision: sessionRef.current.revision };
+        if (!alive.current || busyRef.current || closeInProgress.current) return;
+        const next = mergeNativeSession(sessionRef.current, imported);
         validateAssets(next);
         sessionRef.current = next;
         setSession(next);
@@ -1003,7 +1010,7 @@ export default function ProWorkspace({
             <label className="pro-check">
               <input
                 type="checkbox"
-                disabled={!doc?.layers.some((l) => l.assetId === "source")}
+                disabled={!doc || !sourceReference(doc)}
                 aria-label="Compare imported source"
                 checked={before}
                 onChange={(e) => setBefore(e.target.checked)}

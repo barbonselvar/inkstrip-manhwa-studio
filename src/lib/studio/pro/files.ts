@@ -1,5 +1,6 @@
 import {
   MAX_ASSET_BYTES,
+  sourceReference,
   validateAssets,
   type ProSession,
   type ProDocument,
@@ -113,4 +114,23 @@ export function vectorSvg(d: ProDocument): string {
       )
       .join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${d.width}" height="${d.height}" viewBox="0 0 ${d.width} ${d.height}">${branch()}</svg>`;
+}
+
+/** Import is one undoable metadata action; old raster bytes retain immutable IDs. */
+export function mergeNativeSession(current: ProSession, incoming: ProSession): ProSession {
+  validateAssets(incoming);
+  const mapping = new Map(Object.keys(incoming.assets).map((id) => [id, crypto.randomUUID()]));
+  const original = sourceReference(incoming.document),
+    assets = { ...current.assets };
+  for (const [id, blob] of Object.entries(incoming.assets)) assets[mapping.get(id)!] = blob;
+  const document: ProDocument = {
+    ...incoming.document,
+    source: original ? { ...original, assetId: mapping.get(original.assetId)! } : undefined,
+    layers: incoming.document.layers.map((l) =>
+      l.assetId ? { ...l, assetId: mapping.get(l.assetId)! } : l,
+    ),
+  };
+  const next = { ...current, document, assets };
+  validateAssets(next);
+  return next;
 }
