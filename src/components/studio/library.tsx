@@ -1,3 +1,10 @@
+import { Atmosphere } from "./design/atmosphere";
+import { ChapterSculpture } from "./design/chapter-sculpture";
+import { ArtworkCover } from "./design/artwork-cover";
+import { DepthSurface } from "./design/depth-surface";
+import { AppearanceButton } from "./design/preferences";
+import { Wordmark } from "./chrome";
+import { storageMessage } from "@/lib/studio/db";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useStudio } from "@/lib/studio/store";
@@ -15,18 +22,37 @@ import {
   PanelsTopLeft,
   WandSparkles,
 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 export function Library() {
   const projects = useStudio((state) => state.projects);
   const panels = useStudio((state) => state.panels);
   const [search, setSearch] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (
+        e.key !== "/" ||
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey ||
+        document.querySelector('[role="dialog"]') ||
+        (e.target as HTMLElement)?.closest("input,textarea,select,[contenteditable=true]")
+      )
+        return;
+      e.preventDefault();
+      searchInput.current?.focus();
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, []);
   const chapters = useStudio((state) => state.chapters);
   const createProject = useStudio((state) => state.createProject);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const ordered = [...projects]
     .sort((a, b) => b.updatedAt - a.updatedAt)
@@ -36,6 +62,7 @@ export function Library() {
     event.preventDefault();
     if (saving) return;
     setSaving(true);
+    setError("");
     try {
       const created = await createProject(title);
       setTitle("");
@@ -44,192 +71,274 @@ export function Library() {
         to: "/p/$projectId/c/$chapterId",
         params: { projectId: created.projectId, chapterId: created.chapterId },
       });
+    } catch (problem) {
+      setError(storageMessage(problem));
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="studio-layout">
+    <div className="studio-layout library-shell">
       <aside className="library-rail">
-        <a href="#workspace" className="brand-lockup">
-          <span className="brand-symbol">
-            <Layers3 className="size-5" />
-          </span>
-          <span>
-            inkstrip<span className="brand-dot">.</span>
-          </span>
-        </a>
-        <p className="eyebrow mt-12">Workspace</p>
-        <a href="#workspace" className="rail-link active">
-          <PanelsTopLeft className="size-4" />
-          My projects<span>{projects.length}</span>
-        </a>
-        <a href="#workflow" className="rail-link">
-          <WandSparkles className="size-4" />
-          Studio workflow
-          <ArrowUpRight className="size-3" />
-        </a>
+        <Wordmark />
+        <p className="eyebrow rail-section-title">Your creative space</p>
+        <nav aria-label="Workspace navigation">
+          <a href="#workspace" className="rail-link active" aria-current="page">
+            <PanelsTopLeft className="size-4" />
+            My projects<span>{projects.length.toString().padStart(2, "0")}</span>
+          </a>
+          <a href="#workflow" className="rail-link">
+            <WandSparkles className="size-4" />
+            The studio
+            <ArrowUpRight className="size-3" />
+          </a>
+        </nav>
         <div className="rail-note">
           <ShieldCheck className="size-5 text-accent" />
-          <p className="mt-3 text-sm text-fg">Your art. Your device.</p>
-          <p className="mt-2 text-xs text-muted">
-            Projects stay in your browser. Local tools run on-device; cloud AI is optional.
+          <p>
+            Your art.
+            <br />
+            Always yours.
           </p>
+          <span>Local projects. Recoverable originals. Cloud AI only when you choose.</span>
         </div>
-        <p className="rail-footer">INKSTRIP / MANHWA STUDIO</p>
+        <div className="rail-footer">
+          <span className="status-dot" />A little space. A whole world.
+        </div>
       </aside>
-      <main id="workspace" className="library-main">
-        <nav className="workspace-nav">
-          <span className="text-sm text-muted">
-            Workspace <span className="mx-2 text-subtle">/</span>
-            <span className="text-fg">My projects</span>
+      <main id="workspace" className="library-main library-content">
+        <nav className="workspace-nav" aria-label="Library toolbar">
+          <span className="workspace-breadcrumb">
+            <span className="eyebrow">WORKSPACE</span>
+            <ChevronRight className="size-3" />
+            <span>My projects</span>
           </span>
-          <span className="status-pill">
-            <span className="status-dot" />
-            On-device studio
-          </span>
-        </nav>
-        <section className="library-heading rise">
-          <div>
-            <p className="eyebrow flex items-center gap-2">
-              <span className="mini-line" />A new chapter starts here
-            </p>
-            <h1 className="mt-4 font-display text-4xl text-fg sm:text-5xl">
-              Stories worth
-              <br />
-              <span className="text-accent">scrolling for.</span>
-            </h1>
-            <p className="mt-4 max-w-md text-muted">
-              From raw panels to a seamless manhwa. Shape your story, restore the details, and make
-              every frame count.
-            </p>
+          <div className="flex items-center gap-2">
+            <span className="status-pill">
+              <span className="status-dot" />
+              On-device studio
+            </span>
+            <AppearanceButton />
           </div>
-          <Button className="new-project-button" onClick={() => setOpen(true)}>
-            <Plus className="size-4" />
-            New project
-            <ArrowUpRight className="ml-3 size-4" />
-          </Button>
+        </nav>
+        <section className="library-heading library-hero">
+          <Atmosphere />
+          <div className="hero-copy">
+            <p className="eyebrow">
+              <span className="mini-line" />A studio for visual storytellers
+            </p>
+            <h1 className="hero-title">
+              Every frame.
+              <br />
+              <em>A world.</em>
+            </h1>
+            <p className="hero-description">
+              From the first panel to the final scroll.
+              <br />A considered space to create, refine, and tell your story.
+            </p>
+            <div className="hero-actions">
+              <Button intent="create" className="new-project-button" onClick={() => setOpen(true)}>
+                <Plus className="size-4" />
+                New project
+                <ArrowUpRight className="size-4" />
+              </Button>
+              <a className="hero-secondary focus-ring" href="#workflow">
+                Explore the studio
+                <ChevronRight className="size-4" />
+              </a>
+            </div>
+            <div className="hero-footnote">
+              <ShieldCheck className="size-3" />
+              Your originals always have a way home.
+            </div>
+          </div>
+          <div className="hero-art" aria-hidden="true">
+            <ChapterSculpture />
+          </div>
         </section>
-        <div className="studio-stats">
+        <div className="studio-stats library-metrics">
           <div>
-            <BookOpen className="size-4" />
-            <strong>{projects.length.toString().padStart(2, "0")}</strong>
+            <span className="metric-icon">
+              <BookOpen className="size-4" />
+            </span>
+            <strong>{String(projects.length).padStart(2, "0")}</strong>
             <span>Projects</span>
           </div>
           <div>
-            <Layers3 className="size-4" />
-            <strong>{chapters.length.toString().padStart(2, "0")}</strong>
+            <span className="metric-icon">
+              <Layers3 className="size-4" />
+            </span>
+            <strong>{String(chapters.length).padStart(2, "0")}</strong>
             <span>Chapters</span>
           </div>
           <div>
-            <Sparkles className="size-4" />
-            <strong>{panels.length.toString().padStart(2, "0")}</strong>
+            <span className="metric-icon">
+              <Sparkles className="size-4" />
+            </span>
+            <strong>{String(panels.length).padStart(2, "0")}</strong>
             <span>Panels</span>
           </div>
+          <span className="metrics-note">A collection of worlds in the making.</span>
         </div>
         <div className="projects-toolbar">
-          <h2 className="font-display text-xl">
-            Your projects <span className="ml-2 text-sm text-subtle">{projects.length}</span>
-          </h2>
+          <div>
+            <p className="eyebrow">THE LIBRARY</p>
+            <h2 className="font-display text-2xl">
+              Your projects <span className="project-count">{projects.length}</span>
+            </h2>
+          </div>
           <label className="project-search">
             <Search className="size-4" />
             <input
+              ref={searchInput}
               aria-label="Search projects"
               placeholder="Find a story…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            <kbd>/</kbd>
           </label>
         </div>
         {ordered.length === 0 ? (
-          <section className="empty-project rise">
-            <div className="empty-project-symbol">
-              <BookOpen className="size-8" />
+          <section className="empty-project library-empty">
+            <div className="empty-illustration" aria-hidden="true">
+              <span />
+              <span />
+              <span>
+                <BookOpen />
+              </span>
             </div>
-            <h2 className="mt-6 font-display text-3xl text-fg">Your next world is waiting.</h2>
-            <p className="mt-3 max-w-md text-muted">
-              {search
-                ? "No projects match your search. Try another title."
-                : "Start with a project. Add your panels, refine the details, and stitch a chapter that flows."}
-            </p>
-            {!search ? (
-              <Button variant="secondary" className="mt-6" onClick={() => setOpen(true)}>
-                <Plus className="size-4" />
-                Create your first project
-              </Button>
-            ) : null}
+            <div>
+              <p className="eyebrow">{search ? "NO MATCHES" : "YOUR FIRST CHAPTER"}</p>
+              <h2>{search ? "A different title, perhaps?" : "Make something worth scrolling."}</h2>
+              <p>
+                {search
+                  ? "No projects match your search. Try another title."
+                  : "Bring your panels. We’ll give them room to become a story."}
+              </p>
+              {!search ? (
+                <Button variant="secondary" onClick={() => setOpen(true)}>
+                  <Plus className="size-4" />
+                  Create your first project
+                  <ArrowUpRight className="size-4" />
+                </Button>
+              ) : (
+                <Button variant="ghost" onClick={() => setSearch("")}>
+                  Clear search
+                </Button>
+              )}
+            </div>
+            <span className="empty-annotation" aria-hidden="true">
+              01 — IT STARTS HERE
+            </span>
           </section>
         ) : (
-          <ul className="project-grid">
-            {ordered.map((project) => {
-              const count = chapters.filter((chapter) => chapter.projectId === project.id).length;
+          <ul className="project-grid project-shelf">
+            {ordered.map((project, index) => {
+              const projectChapters = chapters.filter((c) => c.projectId === project.id),
+                ids = new Set(projectChapters.map((c) => c.id));
+              const cover = panels
+                .filter((p) => ids.has(p.chapterId))
+                .sort((a, b) => a.order - b.order)[0];
               return (
-                <li key={project.id} className="rise">
-                  <Link
-                    to="/p/$projectId"
-                    params={{ projectId: project.id }}
-                    className="project-card focus-ring"
-                  >
-                    <span className="project-icon" aria-hidden>
-                      <BookOpen className="size-6" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-display text-2xl text-fg">
-                        {project.title}
+                <li key={project.id}>
+                  <DepthSurface>
+                    <Link
+                      to="/p/$projectId"
+                      params={{ projectId: project.id }}
+                      className="project-card project-shelf-card focus-ring"
+                    >
+                      <ArtworkCover thumbId={cover?.thumbId} index={index} />
+                      <span className="project-card-info">
+                        <span className="project-card-title">
+                          {project.title}
+                          <ArrowUpRight className="size-4" />
+                        </span>
+                        <span className="project-card-meta">
+                          {countLabel(projectChapters.length, "chapter")}
+                          <span>Edited {formatDay(project.updatedAt)}</span>
+                        </span>
                       </span>
-                      <span className="mt-1 block text-sm text-muted tabular-nums">
-                        {countLabel(count, "chapter")} · Updated {formatDay(project.updatedAt)}
-                      </span>
-                    </span>
-                    <ChevronRight className="size-5 shrink-0 text-subtle" />
-                  </Link>
+                    </Link>
+                  </DepthSurface>
                 </li>
               );
             })}
           </ul>
         )}
-
         <section id="workflow" className="workflow-section">
-          <p className="eyebrow">Made for your creative flow</p>
+          <div className="workflow-heading">
+            <p className="eyebrow">FROM AN IDEA TO AN INFINITE SCROLL</p>
+            <h2>Your story. Your rhythm.</h2>
+            <p>Thoughtful tools, out of the way until you need them.</p>
+          </div>
           <div className="workflow-grid">
-            <div>
-              <span>01 / COMPOSE</span>
-              <Layers3 className="size-5" />
-              <h3>Panel by panel.</h3>
-              <p>Import, reorder, and select. Every frame in its right place.</p>
-            </div>
-            <div>
-              <span>02 / RESTORE</span>
-              <Sparkles className="size-5" />
-              <h3>Bring detail forward.</h3>
-              <p>Real on-device AI. Compare, enhance, or recover the original.</p>
-            </div>
-            <div>
-              <span>03 / DISPLAY</span>
-              <BookOpen className="size-5" />
-              <h3>One seamless story.</h3>
-              <p>Stitch your chapter. Read the full scroll. Export and share.</p>
-            </div>
+            {[
+              {
+                n: "01",
+                icon: Layers3,
+                title: "Set the scene.",
+                body: "Import your artwork. Reorder panels with a touch. Give every moment its space.",
+                tag: "COMPOSE",
+              },
+              {
+                n: "02",
+                icon: WandSparkles,
+                title: "Find the finer detail.",
+                body: "Precise edits, local AI enhancement, and character references. Always with originals intact.",
+                tag: "REFINE",
+              },
+              {
+                n: "03",
+                icon: BookOpen,
+                title: "Let the story unfold.",
+                body: "One continuous chapter. Compare, read, and export the version you’re ready to share.",
+                tag: "PUBLISH",
+              },
+            ].map((item) => (
+              <div key={item.n}>
+                <span>
+                  {item.n} / {item.tag}
+                </span>
+                <item.icon className="size-5" />
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </div>
+            ))}
           </div>
         </section>
         <footer className="studio-footer">
-          <span>Built for the stories only you can tell.</span>
+          <Wordmark />
+          <span>Made for the stories only you can tell.</span>
           <span className="flex items-center gap-2">
             <ShieldCheck className="size-3" />
-            Private by design
+            Private by choice. Local by default.
           </span>
         </footer>
-
+        <nav className="mobile-library-nav" aria-label="Mobile workspace navigation">
+          <a href="#workspace" aria-current="page">
+            <PanelsTopLeft className="size-4" />
+            Library
+          </a>
+          <button type="button" onClick={() => setOpen(true)}>
+            <Plus className="size-5" />
+            <span>New story</span>
+          </button>
+          <a href="#workflow">
+            <WandSparkles className="size-4" />
+            Studio
+          </a>
+        </nav>
         <Modal
           open={open}
           onOpenChange={setOpen}
           title="New project"
-          description="Chapter 1 is created with it, ready for photos."
+          description="Every world begins with a first chapter."
         >
           <form onSubmit={(event) => void onCreate(event)} className="flex flex-col gap-4">
-            <label className="flex flex-col gap-2 text-sm text-muted">
-              Title
+            <label className="editor-field-label">
+              Project title
               <input
                 autoFocus
                 value={title}
@@ -239,7 +348,17 @@ export function Library() {
                 maxLength={80}
               />
             </label>
-            <Button type="submit" disabled={saving}>
+            <p className="form-note">
+              <Layers3 className="size-4" />
+              Chapter 1 will be ready for your first panels.
+            </p>
+            {error ? (
+              <p role="alert" className="form-error">
+                {error}
+              </p>
+            ) : null}
+            <Button intent="create" type="submit" disabled={saving}>
+              <Plus className="size-4" />
               {saving ? "Creating…" : "Create chapter 1"}
             </Button>
           </form>

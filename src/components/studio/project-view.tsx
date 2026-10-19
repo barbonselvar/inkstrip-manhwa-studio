@@ -1,3 +1,6 @@
+import { ArtworkCover } from "./design/artwork-cover";
+import { AppearanceButton } from "./design/preferences";
+import { DepthSurface } from "./design/depth-surface";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton, InlineTitle, Wordmark } from "@/components/studio/chrome";
 import { useStudio } from "@/lib/studio/store";
@@ -45,7 +48,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
   }
 
   return (
-    <main className="project-workspace mx-auto flex min-h-dvh w-full max-w-4xl flex-col px-5 pt-6 pb-16">
+    <main className="project-workspace story-space mx-auto flex min-h-dvh w-full max-w-4xl flex-col px-5 pt-6 pb-16">
       <div className="flex items-center justify-between gap-3">
         <Link
           to="/"
@@ -54,34 +57,51 @@ export function ProjectView({ projectId }: { projectId: string }) {
           <ChevronLeft className="size-4" />
           Projects
         </Link>
-        <ConfirmButton
-          title="Delete project?"
-          description="Every chapter and photo in this project is removed from this device."
-          confirmLabel="Delete project"
-          onConfirm={() => {
-            void deleteProject(project.id).then(() => navigate({ to: "/" }));
-          }}
-          className="press focus-ring inline-flex h-11 items-center gap-2 rounded-sm px-2 text-sm text-subtle hover:text-danger"
-        >
-          <Trash2 className="size-4" />
-          Delete
-        </ConfirmButton>
+        <div className="flex items-center gap-2">
+          <AppearanceButton />
+          <ConfirmButton
+            title="Delete project?"
+            description="Every chapter and photo in this project is removed from this device."
+            confirmLabel="Delete project"
+            onConfirm={() => {
+              void deleteProject(project.id).then(() => navigate({ to: "/" }));
+            }}
+            className="press focus-ring inline-flex h-11 items-center gap-2 rounded-sm px-2 text-sm text-subtle hover:text-danger"
+          >
+            <Trash2 className="size-4" />
+            Delete
+          </ConfirmButton>
+        </div>
       </div>
 
-      <div className="project-heading rise">
-        <div className="project-icon mb-6 inline-flex">
-          <BookOpen className="size-7" />
+      <div className="project-heading story-heading">
+        <div className="story-heading-copy">
+          <div className="project-icon mb-6 inline-flex">
+            <BookOpen className="size-7" />
+          </div>
+          <p className="eyebrow mb-2">Your story / chapter library</p>
+          <InlineTitle
+            value={project.title}
+            onSave={(value) => void renameProject(project.id, value)}
+            className="mt-4 font-display text-4xl text-fg"
+          />
+          <p className="mt-3 max-w-md text-sm text-muted">
+            Every chapter, a world of its own. Arrange your panels, restore the details, and find
+            your story’s rhythm.
+          </p>
         </div>
-        <p className="eyebrow mb-2">Your story / chapter library</p>
-        <InlineTitle
-          value={project.title}
-          onSave={(value) => void renameProject(project.id, value)}
-          className="mt-4 font-display text-4xl text-fg"
-        />
-        <p className="mt-3 max-w-md text-sm text-muted">
-          Every chapter, a world of its own. Arrange your panels, restore the details, and find your
-          story’s rhythm.
-        </p>
+        <div className="story-cover">
+          <DepthSurface>
+            <ArtworkCover
+              thumbId={
+                panels
+                  .filter((p) => chapters.some((c) => c.id === p.chapterId))
+                  .sort((a, b) => a.order - b.order)[0]?.thumbId
+              }
+            />
+          </DepthSurface>
+          <span className="eyebrow">A WORLD IN PROGRESS</span>
+        </div>
       </div>
       <div className="project-summary">
         <span>
@@ -94,8 +114,13 @@ export function ProjectView({ projectId }: { projectId: string }) {
         </span>
       </div>
 
-      <div className="mt-8">
+      <div className="chapter-collection-heading mt-8">
+        <div>
+          <p className="eyebrow">THE SEQUENCE</p>
+          <h2>Chapter library</h2>
+        </div>
         <Button
+          intent="create"
           disabled={creating}
           onClick={() => {
             setCreating(true);
@@ -119,7 +144,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
           No chapters yet. Start with one and add photos inside it.
         </p>
       ) : (
-        <ol className="mt-8 flex flex-col gap-3">
+        <ol className="chapter-collection mt-8 flex flex-col gap-3">
           {chapters.map((chapter, index) => {
             const count = panels.filter((panel) => panel.chapterId === chapter.id).length;
             return (
@@ -129,7 +154,15 @@ export function ProjectView({ projectId }: { projectId: string }) {
                   params={{ projectId: project.id, chapterId: chapter.id }}
                   className="chapter-card focus-ring flex min-w-0 flex-1 items-center gap-4 rounded-xl border border-border bg-bg-elevated p-5 hover:border-muted"
                 >
-                  <span className="w-10 shrink-0 font-display text-2xl text-subtle tabular-nums">
+                  <ArtworkCover
+                    thumbId={
+                      panels
+                        .filter((p) => p.chapterId === chapter.id)
+                        .sort((a, b) => a.order - b.order)[0]?.thumbId
+                    }
+                    index={index}
+                  />
+                  <span className="chapter-index w-10 shrink-0 font-display text-2xl text-subtle tabular-nums">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <span className="min-w-0 flex-1">

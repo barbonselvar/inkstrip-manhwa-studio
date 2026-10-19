@@ -31,7 +31,7 @@ export function DepthSurface({
           frame.current = 0;
           el.style.setProperty("--depth-x", `${point.current.x * 5}deg`);
           el.style.setProperty("--depth-y", `${-point.current.y * 4}deg`);
-          el.style.setProperty("--light-x", `${(point.current.x + 0.5) * 100}%`);
+          el.style.setProperty("--light-shift", `${point.current.x * 12}px`);
         });
     };
     const reset = () => {
@@ -39,6 +39,7 @@ export function DepthSurface({
       frame.current = 0;
       el.style.setProperty("--depth-x", "0deg");
       el.style.setProperty("--depth-y", "0deg");
+      el.style.setProperty("--light-shift", "0px");
     };
     el.addEventListener("pointermove", move, { passive: true });
     el.addEventListener("pointerleave", reset);
