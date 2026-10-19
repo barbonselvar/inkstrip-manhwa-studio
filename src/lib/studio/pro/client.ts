@@ -2,9 +2,11 @@ import type { ProDocument, ProSession } from "./model";
 export class ProRenderer {
   private worker: Worker;
   private serial = 0;
+  private stopped = false;
   private pending = new Map<
     number,
     {
+      type: string;
       resolve: (r: { bitmap?: ImageBitmap; blob?: Blob }) => void;
       reject: (e: Error) => void;
       progress?: (n: number, total: number) => void;
@@ -44,14 +46,21 @@ export class ProRenderer {
     input: Record<string, unknown>,
     progress?: (n: number, t: number) => void,
   ) {
+    if (this.stopped)
+      return Promise.reject(
+        new Error(
+          "The rendering worker is closed. Save a native recovery file, then close and reopen Pro Studio.",
+        ),
+      );
     if (type === "preview")
       for (const [id, p] of this.pending) {
+        if (p.type !== "preview") continue;
         p.reject(new DOMException("Preview superseded", "AbortError"));
         this.pending.delete(id);
       }
     const id = ++this.serial;
     return new Promise<{ bitmap?: ImageBitmap; blob?: Blob }>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject, progress });
+      this.pending.set(id, { type, resolve, reject, progress });
       this.worker.postMessage({ id, type, ...input });
     });
   }
@@ -71,6 +80,7 @@ export class ProRenderer {
     return this.request("export", { document, maxArea, mime, quality }, progress);
   }
   dispose(reason: Error = new DOMException("Processing cancelled.", "AbortError")) {
+    this.stopped = true;
     this.worker.terminate();
     for (const p of this.pending.values()) p.reject(reason);
     this.pending.clear();
