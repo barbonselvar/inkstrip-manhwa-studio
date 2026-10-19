@@ -807,3 +807,13 @@
   opacity: 0.5;
   pointer-events: none;
 }
+@media (max-width: 640px) {
+  .pro-save-state {
+    display: block;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    margin: 0 0.5rem;
+    font-size: 0.5625rem;
+    color: var(--color-muted);
+  }
+}

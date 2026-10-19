@@ -112,6 +112,12 @@ try {
   await page.getByLabel("Brush color", { exact: true }).fill("#00ff00");
   await page.getByLabel("Brush hardness", { exact: true }).fill("100");
   await page.getByLabel("Brush size", { exact: true }).fill("12");
+  await page.getByLabel("Brush opacity", { exact: true }).fill("50");
+  await drag(page, { x: 32, y: 24 }, { x: 64, y: 24 });
+  await pixel(page, 48, 24, [16, 152, 32, 255]);
+  await page.getByRole("button", { name: "Pro undo", exact: true }).click();
+  await pixel(page, 48, 24, [32, 48, 64, 255]);
+  await page.getByLabel("Brush opacity", { exact: true }).fill("100");
   await drag(page, { x: 32, y: 24 }, { x: 64, y: 24 });
   await pixel(page, 48, 24, [0, 255, 0, 255]);
   await page.getByRole("button", { name: "Pro undo", exact: true }).click();
@@ -215,6 +221,44 @@ try {
   await page.getByLabel("Brush size", { exact: true }).fill("6");
   await drag(page, { x: 30, y: 20 }, { x: 30, y: 20 });
   await pixel(page, 30, 20, [255, 0, 0, 255]);
+  blue.mask = {
+    selection: {
+      regions: [
+        {
+          kind: "ellipse",
+          operation: "add",
+          points: [
+            { x: 0, y: 0 },
+            { x: 40, y: 30 },
+          ],
+        },
+        {
+          kind: "rectangle",
+          operation: "intersect",
+          points: [
+            { x: 10, y: 0 },
+            { x: 30, y: 30 },
+          ],
+        },
+        {
+          kind: "rectangle",
+          operation: "subtract",
+          points: [
+            { x: 15, y: 10 },
+            { x: 25, y: 20 },
+          ],
+        },
+      ],
+      inverted: false,
+      feather: 0,
+    },
+    strokes: [],
+    enabled: true,
+  };
+  await importNative(page, d, data);
+  await pixel(page, 28, 27, [0, 0, 255, 255]);
+  await pixel(page, 36, 27, [255, 0, 0, 255]);
+  await pixel(page, 20, 27, [255, 0, 0, 255]);
   delete blue.mask;
   blue.blend = "multiply";
   await importNative(page, d, data);
@@ -522,6 +566,107 @@ try {
     console.log(
       `Native touch rectangle, pinch, cancelled paint, recovery and no overflow at ${width}px: PASS`,
     );
+  }
+  // Isolated showcase artwork, generated only for QA screenshots, never seeded into the app.
+  for (const mobileView of [false, true]) {
+    const showcase = await browser.newContext({
+        viewport: mobileView ? { width: 390, height: 844 } : { width: 1440, height: 1000 },
+        isMobile: mobileView,
+        hasTouch: mobileView,
+        reducedMotion: "reduce",
+      }),
+      sp = await showcase.newPage();
+    await story(sp);
+    const poster = await sp.evaluate(() => {
+      const c = document.createElement("canvas");
+      c.width = 480;
+      c.height = 720;
+      const x = c.getContext("2d"),
+        g = x.createLinearGradient(0, 0, 0, 720);
+      g.addColorStop(0, "#23413b");
+      g.addColorStop(1, "#101c20");
+      x.fillStyle = g;
+      x.fillRect(0, 0, 480, 720);
+      x.fillStyle = "#cfdfcd";
+      x.beginPath();
+      x.arc(359, 167, 57, 0, Math.PI * 2);
+      x.fill();
+      x.fillStyle = "#23413b";
+      x.beginPath();
+      x.arc(337, 149, 56, 0, Math.PI * 2);
+      x.fill();
+      x.fillStyle = "#d8e4db";
+      x.font = "11px Arial";
+      x.fillText("INKSTRIP / ORIGINAL QA STUDY", 30, 34);
+      x.font = "italic 46px Georgia";
+      x.fillText("Glass", 30, 105);
+      x.fillText("Harbor", 30, 155);
+      for (let i = 0; i < 15; i++) {
+        const h = 90 + ((i * 47) % 180),
+          px = i * 34 - 10;
+        x.fillStyle = i % 2 ? "#17292c" : "#102226";
+        x.fillRect(px, 720 - h, 30, h);
+        x.fillStyle = "#54726b";
+        for (let y = 720 - h + 12; y < 700; y += 18)
+          for (let cx = px + 5; cx < px + 26; cx += 10) x.fillRect(cx, y, 2, 5);
+      }
+      x.strokeStyle = "#91b2a82b";
+      x.lineWidth = 1;
+      for (let i = 0; i < 27; i++) {
+        const px = (i * 37) % 480,
+          y = (i * 91) % 720;
+        x.beginPath();
+        x.moveTo(px, y);
+        x.lineTo(px - 18, y + 49);
+        x.stroke();
+      }
+      x.fillStyle = "#a7c4b9";
+      x.font = "10px Arial";
+      x.fillText("CHAPTER 01  /  AFTER THE RAIN", 30, 689);
+      return c.toDataURL().split(",")[1];
+    });
+    await sp.getByRole("button", { name: "Pro Studio · layers & vectors", exact: true }).click();
+    await sp.getByRole("dialog", { name: "Inkstrip Pro Studio", exact: true }).waitFor();
+    const scene = fromPanel({
+        id: "showcase",
+        name: "Glass Harbor · chapter artwork",
+        width: 480,
+        height: 720,
+      }),
+      bubble = layer("shape", 240, 160),
+      caption = layer("text", 194, 80);
+    bubble.shape = "bubble";
+    bubble.name = "Dialogue · editable bubble";
+    bubble.strokeWidth = 2;
+    bubble.transform.x = 173;
+    bubble.transform.y = 320;
+    bubble.tail = { x: 160, y: 150 };
+    caption.name = "Dialogue text";
+    caption.text = "Somewhere in this city,\nour story is still\nwaiting.";
+    caption.fontFamily = "Georgia";
+    caption.fontSize = 16;
+    caption.lineHeight = 1.4;
+    caption.strokeWidth = 0;
+    caption.fill = "#172420";
+    caption.transform.x = 198;
+    caption.transform.y = 340;
+    scene.layers.push(bubble, caption);
+    await importNative(sp, scene, poster);
+    await sp.waitForFunction(() => {
+      const c = document.querySelector('canvas[aria-label="Pro composite preview"]');
+      return c?.width === 480 && c.height === 720;
+    });
+    await sp.getByRole("button", { name: "Save draft", exact: true }).click();
+    await sp
+      .getByText("Editable Pro draft saved on this device. Chapter unchanged.", { exact: true })
+      .waitFor();
+    await tab(sp, "Properties");
+    if (mobileView)
+      await sp.getByRole("button", { name: "Toggle Pro panels", exact: true }).click();
+    await sp.screenshot({
+      path: `/workspace/screenshots/inkstrip-pro-showcase${mobileView ? "-mobile" : ""}.png`,
+    });
+    await showcase.close();
   }
   console.log(
     JSON.stringify({

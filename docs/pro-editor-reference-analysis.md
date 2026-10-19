@@ -18,7 +18,7 @@ interface artwork or file-format internals were obtained or copied.
 
 Additional successful public references: [Photoshop workspace overview](https://helpx.adobe.com/photoshop/using/workspace-basics.html), [Brush/Pencil painting](https://helpx.adobe.com/photoshop/using/painting-tools.html), [rotation/flip](https://helpx.adobe.com/photoshop/using/transforming-objects.html), [Illustrator text](https://helpx.adobe.com/illustrator/using/creating-text.html) and [keyboard shortcuts](https://helpx.adobe.com/illustrator/using/default-keyboard-shortcuts.html). They reinforce contextual panels, explicit tool settings, editable text and discoverable shortcuts. A separate attempted Illustrator alignment URL returned 404 and was not used as evidence.
 
-The successful pages were fetched successfully and their titles/headings checked. Their
+These public references were retrieved and their titles/headings checked. Their
 functional ideas inform original code. This is not a claim of exhaustive Adobe
 feature parity, matching rasterization, or knowledge of Adobe internals.
 

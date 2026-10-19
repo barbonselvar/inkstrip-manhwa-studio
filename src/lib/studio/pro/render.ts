@@ -76,9 +76,33 @@ export function selectionCanvas(s: Selection, w: number, h: number, scale = 1) {
   return output;
 }
 function stroke(ctx: Ctx, s: Stroke) {
+  // Flow accumulates per dab; opacity caps the complete stroke independently.
+  if (s.opacity < 1) {
+    const t = ctx.getTransform(),
+      r = s.size / 2;
+    const xs = s.points.map((p) => p.x),
+      ys = s.points.map((p) => p.y);
+    const left = Math.max(0, Math.floor((Math.min(...xs) - r) * t.a + t.e)),
+      top = Math.max(0, Math.floor((Math.min(...ys) - r) * t.d + t.f));
+    const right = Math.min(ctx.canvas.width, Math.ceil((Math.max(...xs) + r) * t.a + t.e)),
+      bottom = Math.min(ctx.canvas.height, Math.ceil((Math.max(...ys) + r) * t.d + t.f));
+    if (right <= left || bottom <= top || s.opacity === 0) return;
+    const ink = canvas(right - left, bottom - top),
+      c = ink.getContext("2d")!;
+    c.setTransform(t.a, t.b, t.c, t.d, t.e - left, t.f - top);
+    stroke(c, { ...s, opacity: 1, erase: false });
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = s.opacity;
+    ctx.globalCompositeOperation = s.erase ? "destination-out" : "source-over";
+    ctx.drawImage(ink, left, top);
+    ctx.restore();
+    ink.width = ink.height = 1;
+    return;
+  }
   ctx.save();
   ctx.globalCompositeOperation = s.erase ? "destination-out" : "source-over";
-  ctx.globalAlpha = s.opacity * s.flow;
+  ctx.globalAlpha = s.flow;
   const radius = s.size / 2;
   const dot = (x: number, y: number) => {
     ctx.fillStyle = s.color;
@@ -211,6 +235,16 @@ export async function composite(
   validateDocument(d);
   const output = canvas(d.width * scale, d.height * scale);
   let done = 0;
+  const total = d.layers.filter((l) => {
+    if (!l.visible) return false;
+    let parent = l.parentId;
+    while (parent) {
+      const p = d.layers.find((g) => g.id === parent);
+      if (!p?.visible) return false;
+      parent = p.parentId;
+    }
+    return true;
+  }).length;
   const branch = async (target: OffscreenCanvas, parent?: string) => {
     const ctx = target.getContext("2d")!;
     for (const l of d.layers.filter((l) => l.parentId === parent)) {
@@ -232,7 +266,7 @@ export async function composite(
       ctx.drawImage(bitmap, 0, 0);
       ctx.restore();
       bitmap.width = bitmap.height = 1;
-      progress(++done, d.layers.length);
+      progress(++done, total);
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
   };
