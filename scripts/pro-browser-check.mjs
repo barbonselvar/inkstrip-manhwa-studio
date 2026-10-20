@@ -2,7 +2,13 @@
 import assert from "node:assert/strict";
 import { readFile, mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
-import { fromPanel, layer } from "../src/lib/studio/pro/model.ts";
+import { selectColor } from "../src/lib/studio/pro/selection.ts";
+import {
+  fromPanel,
+  layer,
+  EMPTY_SELECTION,
+  toLocalSelection,
+} from "../src/lib/studio/pro/model.ts";
 const base = process.argv[2] ?? "http://127.0.0.1:8080";
 assert.ok(["localhost", "127.0.0.1"].includes(new URL(base).hostname));
 await mkdir("/workspace/screenshots", { recursive: true });
@@ -61,16 +67,35 @@ async function open(page) {
   await pixel(page, 64, 48, [32, 48, 64, 255]);
 }
 async function pixel(page, x, y, expected) {
-  await page.waitForFunction(
-    ({ x, y, expected }) => {
-      const c = document.querySelector('canvas[aria-label="Pro composite preview"]');
-      if (!c || c.width !== 128 || c.height !== 96) return false;
-      return [...c.getContext("2d").getImageData(x, y, 1, 1).data].every(
-        (n, i) => Math.abs(n - expected[i]) <= 1,
+  await page
+    .waitForFunction(
+      ({ x, y, expected }) => {
+        const c = document.querySelector('canvas[aria-label="Pro composite preview"]');
+        if (!c || c.width !== 128 || c.height !== 96) return false;
+        return [...c.getContext("2d").getImageData(x, y, 1, 1).data].every(
+          (n, i) => Math.abs(n - expected[i]) <= 1,
+        );
+      },
+      { x, y, expected },
+    )
+    .catch(async (error) => {
+      console.error(
+        "Pixel mismatch",
+        { x, y, expected },
+        await page.evaluate(
+          ({ x, y }) => {
+            const c = document.querySelector('canvas[aria-label="Pro composite preview"]');
+            return {
+              actual: c ? [...c.getContext("2d").getImageData(x, y, 1, 1).data] : null,
+              alerts: [...document.querySelectorAll('[role="alert"]')].map((n) => n.textContent),
+            };
+          },
+          { x, y },
+        ),
       );
-    },
-    { x, y, expected },
-  );
+      await page.screenshot({ path: "/workspace/screenshots/inkstrip-pixel-failure.png" });
+      throw error;
+    });
 }
 async function drag(page, a, b) {
   const r = await page.locator(".pro-artboard").boundingBox();
@@ -581,6 +606,313 @@ try {
   console.log(
     "Desktop layers, paint/erase, history, compositing, native recovery, safe SVG and chapter application: PASS",
   );
+  console.log(
+    "Testing Magic Wand/Color Range, boolean coverage, clipping, native history and export…",
+  );
+  {
+    const selectionContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } }),
+      p = await selectionContext.newPage(),
+      problems = [];
+    p.on("pageerror", (e) => problems.push(e.message));
+    p.setDefaultTimeout(30000);
+    await story(p);
+    await open(p);
+    const chapterBefore = await records(p);
+    const source = await p.evaluate(() => {
+      const c = document.createElement("canvas");
+      c.width = 128;
+      c.height = 96;
+      const x = c.getContext("2d");
+      x.fillStyle = "#203040";
+      x.fillRect(0, 0, 128, 96);
+      x.fillStyle = "#708090";
+      x.fillRect(0, 0, 16, 16);
+      x.fillRect(96, 0, 16, 16);
+      return c.toDataURL().split(",")[1];
+    });
+    await importNative(
+      p,
+      fromPanel({ id: "selection", name: "Color selection QA", width: 128, height: 96 }),
+      source,
+    );
+    await pixel(p, 104, 8, [112, 128, 144, 255]);
+    async function coverage(x, y, selected) {
+      await p.waitForFunction(
+        ({ x, y, selected }) => {
+          const c = document.querySelector('canvas[aria-label="Selected coverage preview"]');
+          if (!c || c.width !== 128) return false;
+          const a = c.getContext("2d").getImageData(x, y, 1, 1).data[3];
+          return selected ? a > 80 : a === 0;
+        },
+        { x, y, selected },
+      );
+    }
+    await p.getByRole("button", { name: "Magic Wand tool", exact: true }).click();
+    await p.getByLabel("Color tolerance", { exact: true }).fill("0");
+    await p.getByLabel("Anti-alias", { exact: true }).uncheck();
+    await clickAt(p, { x: 8, y: 8 });
+    await coverage(8, 8, true);
+    await coverage(104, 8, false);
+    await p.getByRole("button", { name: "Pro undo", exact: true }).click();
+    await coverage(8, 8, false);
+    await p.getByRole("button", { name: "Pro redo", exact: true }).click();
+    await coverage(8, 8, true);
+    await tab(p, "Properties");
+    await p.getByRole("button", { name: "Deselect", exact: true }).click();
+    await p.getByLabel("Contiguous", { exact: true }).uncheck();
+    await clickAt(p, { x: 8, y: 8 });
+    await coverage(104, 8, true);
+    await p.getByRole("button", { name: "Deselect", exact: true }).click();
+    await p.getByRole("button", { name: "Color Range tool", exact: true }).click();
+    await clickAt(p, { x: 8, y: 8 });
+    await coverage(8, 8, true);
+    await coverage(104, 8, true);
+    await p.getByRole("button", { name: "Magic Wand tool", exact: true }).click();
+    await p.getByLabel("Contiguous", { exact: true }).check();
+    await p.getByLabel("Selection operation", { exact: true }).selectOption("subtract");
+    await clickAt(p, { x: 8, y: 8 });
+    await coverage(8, 8, false);
+    await coverage(104, 8, true);
+    await p.getByRole("button", { name: "Invert selection", exact: true }).click();
+    await coverage(8, 8, true);
+    await coverage(104, 8, false);
+    await coverage(64, 48, true);
+    await p.getByLabel("Selection operation", { exact: true }).selectOption("intersect");
+    await clickAt(p, { x: 8, y: 8 });
+    await coverage(8, 8, true);
+    await coverage(104, 8, false);
+    await coverage(64, 48, false);
+    await p.getByLabel("Selection feather", { exact: true }).fill("3");
+    await p.waitForFunction(() => {
+      const c = document.querySelector('canvas[aria-label="Selected coverage preview"]');
+      const a = c.getContext("2d").getImageData(16, 8, 1, 1).data[3];
+      return a > 0 && a < 80;
+    });
+    await p.getByLabel("Selection feather", { exact: true }).fill("0");
+    await p.getByRole("button", { name: "Pencil tool", exact: true }).click();
+    await p.getByLabel("Brush color", { exact: true }).fill("#00ff00");
+    await p.getByLabel("Brush size", { exact: true }).fill("6");
+    await drag(p, { x: 8, y: 8 }, { x: 104, y: 8 });
+    await pixel(p, 8, 8, [0, 255, 0, 255]);
+    await pixel(p, 104, 8, [112, 128, 144, 255]);
+    await p.getByRole("button", { name: "Eraser tool", exact: true }).click();
+    await clickAt(p, { x: 8, y: 8 });
+    await pixel(p, 8, 8, [112, 128, 144, 255]);
+    await p.getByRole("button", { name: "Pro undo", exact: true }).click();
+    await pixel(p, 8, 8, [0, 255, 0, 255]);
+    await tab(p, "Export");
+    const nativeEvent = p.waitForEvent("download");
+    await p.getByRole("button", { name: "Export editable .inkstrip", exact: true }).click();
+    const native = JSON.parse((await readFile(await (await nativeEvent).path())).toString());
+    assert.equal(native.document.selection.inverted, true);
+    assert.ok(native.document.selection.regions.some((r) => r.kind === "pixels"));
+    assert.ok(
+      native.document.layers.at(-1).strokes[0].clip.regions.some((r) => r.kind === "pixels"),
+    );
+    await p.getByRole("button", { name: "Save draft", exact: true }).click();
+    await p.getByRole("button", { name: "Back to chapter from Pro Studio", exact: true }).click();
+    await open(p);
+    await coverage(8, 8, true);
+    await coverage(104, 8, false);
+    await pixel(p, 8, 8, [0, 255, 0, 255]);
+    await tab(p, "Export");
+    await p.getByLabel("Pro export format", { exact: true }).selectOption("image/png");
+    const rasterEvent = p.waitForEvent("download");
+    await p.getByRole("button", { name: "Export composite · 128 × 96", exact: true }).click();
+    const bytes = await readFile(await (await rasterEvent).path());
+    const exported = await p.evaluate(
+      async (data) => {
+        const b = await createImageBitmap(new Blob([Uint8Array.from(data)], { type: "image/png" }));
+        const c = document.createElement("canvas");
+        c.width = b.width;
+        c.height = b.height;
+        const x = c.getContext("2d");
+        x.drawImage(b, 0, 0);
+        b.close();
+        return [8, 104].map((px) => [...x.getImageData(px, 8, 1, 1).data]);
+      },
+      [...bytes],
+    );
+    assert.deepEqual(exported, [
+      [0, 255, 0, 255],
+      [112, 128, 144, 255],
+    ]);
+    assert.deepEqual(
+      await records(p),
+      chapterBefore,
+      "Selections and export preserve chapter data",
+    );
+    await p.screenshot({ path: "/workspace/screenshots/inkstrip-color-selection.png" });
+    // Imported pixel selection clipping shares the same renderer for all existing paint tools.
+    const mask = selectColor(
+      new Uint8ClampedArray([255, 255, 255, 255, 0, 0, 0, 255]),
+      2,
+      1,
+      { x: 0, y: 0 },
+      { tolerance: 0, contiguous: true, antiAlias: false },
+    );
+    mask.points = [
+      { x: 0, y: 0 },
+      { x: 128, y: 0 },
+      { x: 0, y: 96 },
+    ];
+    for (const mode of ["brush", "clone", "heal"]) {
+      const d = fromPanel({ id: "clip", name: mode, width: 128, height: 96 }),
+        paint = layer("paint", 128, 96);
+      paint.strokes = [
+        {
+          points: [
+            { x: 16, y: 40 },
+            { x: 110, y: 40 },
+          ],
+          size: 12,
+          hardness: 1,
+          opacity: 1,
+          flow: 1,
+          color: "#ff0000",
+          erase: false,
+          clip: { ...EMPTY_SELECTION, regions: [mask] },
+          ...(mode === "brush"
+            ? {}
+            : {
+                clone: {
+                  assetId: "source",
+                  width: 128,
+                  height: 96,
+                  source: { x: 8, y: 8 },
+                  destination: { x: 16, y: 40 },
+                  mode: mode === "heal" ? "heal" : "clone",
+                },
+              }),
+        },
+      ];
+      d.layers.push(paint);
+      await importNative(p, d, source);
+      await pixel(p, 110, 40, [32, 48, 64, 255]);
+      if (mode === "brush") await pixel(p, 16, 40, [255, 0, 0, 255]);
+      else if (mode === "clone") await pixel(p, 16, 40, [112, 128, 144, 255]);
+      else await pixel(p, 16, 40, [92, 108, 124, 255]);
+    }
+    // Feather is evaluated before inverse layer transforms, so its document-space radius stays stable.
+    let referenceFeather;
+    for (const transformed of [false, true]) {
+      const d = fromPanel({ id: "feather", name: "Feather coordinate QA", width: 128, height: 96 }),
+        paint = layer("paint", 128, 192),
+        selection = {
+          ...EMPTY_SELECTION,
+          regions: [
+            {
+              kind: "rectangle",
+              operation: "add",
+              points: [
+                { x: 0, y: 0 },
+                { x: 64, y: 96 },
+              ],
+            },
+          ],
+          feather: 4,
+        };
+      if (transformed) paint.transform = { x: 0, y: 0, scaleX: 2, scaleY: 0.5, rotation: 15 };
+      paint.strokes = [
+        {
+          points: [{ x: 64, y: 96 }],
+          size: 1000,
+          hardness: 1,
+          opacity: 1,
+          flow: 1,
+          color: "#ff0000",
+          erase: false,
+          clip: toLocalSelection(selection, paint, { width: 128, height: 96 }),
+        },
+      ];
+      const marker = layer("shape", 1, 1);
+      marker.transform.x = 127;
+      marker.transform.y = 95;
+      marker.fill = transformed ? "#00ff00" : "#ff00ff";
+      marker.strokeWidth = 0;
+      d.layers.push(paint, marker);
+      await importNative(p, d, source);
+      await pixel(p, 127, 95, transformed ? [0, 255, 0, 255] : [255, 0, 255, 255]);
+      await pixel(p, 32, 40, [255, 0, 0, 255]);
+      const samples = await p.evaluate(() => {
+        const x = document
+          .querySelector('canvas[aria-label="Pro composite preview"]')
+          .getContext("2d");
+        return [60, 64, 68].map((px) => [...x.getImageData(px, 40, 1, 1).data]);
+      });
+      if (!transformed) referenceFeather = samples;
+      else
+        samples.forEach((rgba, i) =>
+          rgba.forEach((v, c) =>
+            assert.ok(
+              Math.abs(v - referenceFeather[i][c]) <= 3,
+              "Nonuniform scaling/rotation must preserve the document-space feather",
+            ),
+          ),
+        );
+    }
+    const wideSource = await p.evaluate(() => {
+      const c = document.createElement("canvas");
+      c.width = 2000;
+      c.height = 96;
+      const x = c.getContext("2d");
+      x.fillStyle = "#203040";
+      x.fillRect(0, 0, 2000, 96);
+      x.fillStyle = "#ff0000";
+      x.fillRect(1500, 39, 3, 3);
+      return c.toDataURL().split(",")[1];
+    });
+    await importNative(
+      p,
+      fromPanel({ id: "wide", name: "Source resolution QA", width: 2000, height: 96 }),
+      wideSource,
+    );
+    await p.waitForFunction(
+      () => document.querySelector('canvas[aria-label="Pro composite preview"]')?.width === 1400,
+    );
+    await p.getByRole("button", { name: "Magic Wand tool", exact: true }).click();
+    await p.getByLabel("Selection operation", { exact: true }).selectOption("add");
+    await p.getByLabel("Anti-alias", { exact: true }).uncheck();
+    await p.getByLabel("Color tolerance", { exact: true }).fill("0");
+    const bounds = await p.locator(".pro-artboard").boundingBox();
+    await p.mouse.click(
+      bounds.x + (1501.5 / 2000) * bounds.width,
+      bounds.y + (40.5 / 96) * bounds.height,
+    );
+    await p
+      .getByText(
+        "Selection analyzed at full document resolution. Blue overlay shows selected coverage.",
+        { exact: true },
+      )
+      .waitFor();
+    await tab(p, "Export");
+    const wideEvent = p.waitForEvent("download");
+    await p.getByRole("button", { name: "Export editable .inkstrip", exact: true }).click();
+    const wideNative = JSON.parse((await readFile(await (await wideEvent).path())).toString());
+    assert.deepEqual(wideNative.document.selection.regions[0].pixels.runs, [
+      39 * 2000 + 1500,
+      3,
+      255,
+      40 * 2000 + 1500,
+      3,
+      255,
+      41 * 2000 + 1500,
+      3,
+      255,
+    ]);
+    await tab(p, "Properties");
+    await p.getByRole("button", { name: "Select all", exact: true }).click();
+    await p.getByLabel("Selection feather", { exact: true }).fill("4");
+    await p.waitForFunction(() => {
+      const c = document.querySelector('canvas[aria-label="Selected coverage preview"]');
+      return c.getContext("2d").getImageData(0, 0, 1, 1).data[3] > 80;
+    });
+    assert.deepEqual(problems, []);
+    await selectionContext.close();
+    console.log(
+      "Wand connectivity, Color Range, inverted boolean operations, feather coverage, pencil/eraser/brush/clone/heal clipping, undo/redo, native reopen, PNG pixels and chapter isolation: PASS",
+    );
+  }
   for (const width of [320, 390]) {
     const mobile = await browser.newContext({
         viewport: { width, height: 844 },
@@ -600,6 +932,20 @@ try {
       .boundingBox();
     assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width);
     await p.getByRole("button", { name: "Toggle Pro panels", exact: true }).click();
+    await p.getByRole("button", { name: "Magic Wand tool", exact: true }).click();
+    assert.equal(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    const wandBounds = await p.locator(".pro-artboard").boundingBox();
+    await p.touchscreen.tap(
+      wandBounds.x + 0.5 * wandBounds.width,
+      wandBounds.y + 0.5 * wandBounds.height,
+    );
+    await p.waitForFunction(() => {
+      const c = document.querySelector('canvas[aria-label="Selected coverage preview"]');
+      return c?.width === 128 && c.getContext("2d").getImageData(64, 48, 1, 1).data[3] > 80;
+    });
+    if (width === 390)
+      await p.screenshot({ path: "/workspace/screenshots/inkstrip-selection-mobile.png" });
+    await p.getByRole("button", { name: "Pro undo", exact: true }).click();
     await p.getByRole("button", { name: "Rectangle tool", exact: true }).click();
     const r = await p.locator(".pro-artboard").boundingBox(),
       cdp = await mobile.newCDPSession(p),
@@ -873,6 +1219,10 @@ try {
         "editable text reload",
         "layer order/opacity/multiply/isolated groups",
         "selection and invertible painted masks",
+        "full-resolution Magic Wand/Color Range, tolerance and connectivity",
+        "boolean selection coverage, inversion, feather, native reopen and PNG fidelity",
+        "document-space feather under nonuniform scale/rotation",
+        "color selections with brush/pencil/eraser/clone/healing clips and touch sampling",
         "Bézier handles and direct anchors",
         "PNG/JPEG/WebP dimensions and transparency",
         "quota rollback and cross-tab recovery",

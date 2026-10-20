@@ -1,4 +1,5 @@
-import type { ProDocument, ProSession } from "./model";
+import type { ColorSelectionOptions } from "./selection";
+import type { ProDocument, ProSession, Region } from "./model";
 export class ProRenderer {
   private worker: Worker;
   private serial = 0;
@@ -7,7 +8,7 @@ export class ProRenderer {
     number,
     {
       type: string;
-      resolve: (r: { bitmap?: ImageBitmap; blob?: Blob }) => void;
+      resolve: (r: { bitmap?: ImageBitmap; blob?: Blob; region?: Region }) => void;
       reject: (e: Error) => void;
       progress?: (n: number, total: number) => void;
     }
@@ -59,10 +60,12 @@ export class ProRenderer {
         this.pending.delete(id);
       }
     const id = ++this.serial;
-    return new Promise<{ bitmap?: ImageBitmap; blob?: Blob }>((resolve, reject) => {
-      this.pending.set(id, { type, resolve, reject, progress });
-      this.worker.postMessage({ id, type, ...input });
-    });
+    return new Promise<{ bitmap?: ImageBitmap; blob?: Blob; region?: Region }>(
+      (resolve, reject) => {
+        this.pending.set(id, { type, resolve, reject, progress });
+        this.worker.postMessage({ id, type, ...input });
+      },
+    );
   }
   init(session: ProSession, maxArea = 16_000_000) {
     return this.request("init", { session, maxArea });
@@ -78,6 +81,14 @@ export class ProRenderer {
     progress: (n: number, t: number) => void,
   ) {
     return this.request("export", { document, maxArea, mime, quality }, progress);
+  }
+  select(
+    document: ProDocument,
+    maxArea: number,
+    point: { x: number; y: number },
+    options: ColorSelectionOptions,
+  ) {
+    return this.request("select", { document, maxArea, point, options });
   }
   dispose(reason: Error = new DOMException("Processing cancelled.", "AbortError")) {
     this.stopped = true;

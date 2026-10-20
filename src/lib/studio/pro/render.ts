@@ -17,6 +17,34 @@ function canvas(w: number, h: number) {
 function region(ctx: Ctx, r: Selection["regions"][number]) {
   const first = r.points[0]!,
     last = r.points.at(-1)!;
+  if (r.kind === "pixels" && r.pixels) {
+    const { width, height, runs } = r.pixels,
+      [a, b, c] = r.points;
+    ctx.save();
+    ctx.transform(
+      (b!.x - a!.x) / width,
+      (b!.y - a!.y) / width,
+      (c!.x - a!.x) / height,
+      (c!.y - a!.y) / height,
+      a!.x,
+      a!.y,
+    );
+    const bitmap = canvas(width, height),
+      bc = bitmap.getContext("2d")!,
+      image = bc.createImageData(width, height);
+    for (let i = 0; i < runs.length; i += 3) {
+      const end = runs[i]! + runs[i + 1]!;
+      for (let p = runs[i]!; p < end; p++) {
+        image.data[p * 4] = image.data[p * 4 + 1] = image.data[p * 4 + 2] = 255;
+        image.data[p * 4 + 3] = runs[i + 2]!;
+      }
+    }
+    bc.putImageData(image, 0, 0);
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.width = bitmap.height = 1;
+    ctx.restore();
+    return;
+  }
   ctx.beginPath();
   if (r.kind === "rectangle")
     ctx.rect(
@@ -45,6 +73,15 @@ function region(ctx: Ctx, r: Selection["regions"][number]) {
 export function selectionCanvas(s: Selection, w: number, h: number, scale = 1) {
   const output = canvas(w * scale, h * scale),
     ctx = output.getContext("2d")!;
+  if (s.frame) {
+    const { width, height, transform } = s.frame,
+      source = selectionCanvas({ ...s, frame: undefined }, width, height, scale);
+    ctx.setTransform(...cloneSourceMatrix({ transform }, { x: 0, y: 0 }, scale));
+    ctx.drawImage(source, 0, 0);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    source.width = source.height = 1;
+    return output;
+  }
   ctx.fillStyle = "#ffffff";
   for (const r of s.regions) {
     const scratch = canvas(output.width, output.height),
@@ -52,6 +89,11 @@ export function selectionCanvas(s: Selection, w: number, h: number, scale = 1) {
     c.scale(scale, scale);
     c.fillStyle = "#ffffff";
     region(c, r);
+    if (r.inverted) {
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.globalCompositeOperation = "xor";
+      c.fillRect(0, 0, scratch.width, scratch.height);
+    }
     ctx.globalCompositeOperation =
       r.operation === "subtract"
         ? "destination-out"
@@ -66,14 +108,29 @@ export function selectionCanvas(s: Selection, w: number, h: number, scale = 1) {
     ctx.fillRect(0, 0, output.width, output.height);
   }
   if (s.feather) {
-    const copy = canvas(output.width, output.height),
+    const radius = s.feather * scale,
+      pad = Math.ceil(radius * 3),
+      w = output.width,
+      h = output.height,
+      padded = canvas(w + pad * 2, h + pad * 2),
+      p = padded.getContext("2d")!,
+      copy = canvas(w, h),
       c = copy.getContext("2d")!;
-    c.filter = `blur(${s.feather * scale}px)`;
-    c.drawImage(output, 0, 0);
-    ctx.clearRect(0, 0, output.width, output.height);
+    // Extend document-edge coverage before blurring, so Select All stays fully selected.
+    p.drawImage(output, pad, pad);
+    p.drawImage(output, 0, 0, 1, h, 0, pad, pad, h);
+    p.drawImage(output, w - 1, 0, 1, h, pad + w, pad, pad, h);
+    p.drawImage(output, 0, 0, w, 1, pad, 0, w, pad);
+    p.drawImage(output, 0, h - 1, w, 1, pad, pad + h, w, pad);
+    for (const x of [0, 1])
+      for (const y of [0, 1])
+        p.drawImage(output, x * (w - 1), y * (h - 1), 1, 1, x * (pad + w), y * (pad + h), pad, pad);
+    c.filter = `blur(${radius}px)`;
+    c.drawImage(padded, -pad, -pad);
+    ctx.clearRect(0, 0, w, h);
     ctx.globalCompositeOperation = "source-over";
     ctx.drawImage(copy, 0, 0);
-    copy.width = copy.height = 1;
+    copy.width = copy.height = padded.width = padded.height = 1;
   }
   return output;
 }
@@ -160,10 +217,16 @@ async function surface(
           // the target patch before applying the same editable brush mask.
           const points = s.points,
             radius = (s.size / 2) * scale,
-            left = Math.max(0, Math.floor((Math.min(...points.map((p) => p.x)) * scale) - radius)),
-            top = Math.max(0, Math.floor((Math.min(...points.map((p) => p.y)) * scale) - radius)),
-            right = Math.min(out.width, Math.ceil(Math.max(...points.map((p) => p.x)) * scale + radius)),
-            bottom = Math.min(out.height, Math.ceil(Math.max(...points.map((p) => p.y)) * scale + radius));
+            left = Math.max(0, Math.floor(Math.min(...points.map((p) => p.x)) * scale - radius)),
+            top = Math.max(0, Math.floor(Math.min(...points.map((p) => p.y)) * scale - radius)),
+            right = Math.min(
+              out.width,
+              Math.ceil(Math.max(...points.map((p) => p.x)) * scale + radius),
+            ),
+            bottom = Math.min(
+              out.height,
+              Math.ceil(Math.max(...points.map((p) => p.y)) * scale + radius),
+            );
           if (right > left && bottom > top) {
             const reference = canvas(out.width, out.height),
               referenceCtx = reference.getContext("2d", { willReadFrequently: true })!;
@@ -196,7 +259,7 @@ async function surface(
         ctx.globalCompositeOperation = "source-over";
         ctx.drawImage(cloned, 0, 0);
         ctx.restore();
-        source.close();
+        // The asset provider owns cached bitmaps; later previews/exports reuse this source.
         cloned.width = cloned.height = mask.width = mask.height = 1;
         continue;
       }

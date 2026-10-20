@@ -1,3 +1,4 @@
+import { appendSelection } from "@/lib/studio/pro/selection";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -17,6 +18,7 @@ import {
   Type,
   MousePointer,
   ScanLine,
+  Wand,
   Lasso,
   Undo2,
   Redo2,
@@ -43,6 +45,7 @@ import { Button } from "@/components/ui/button";
 import { ProCanvas, type ProTool } from "./pro-canvas";
 import { ProProperties, ProNumber } from "./pro-properties";
 import {
+  EMPTY_SELECTION,
   fromPanel,
   sourceReference,
   layer,
@@ -88,6 +91,8 @@ const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush 
   { id: "eyedropper", name: "Eyedropper", key: "I", Icon: Pipette },
   { id: "select-rect", name: "Rectangle selection", key: "M", Icon: ScanLine },
   { id: "select-ellipse", name: "Ellipse selection", key: "", Icon: Circle },
+  { id: "wand", name: "Magic Wand", key: "W", Icon: Wand },
+  { id: "color-range", name: "Color Range", key: "", Icon: Pipette },
   { id: "lasso", name: "Freehand lasso", key: "L", Icon: Lasso },
   { id: "poly-lasso", name: "Polygonal lasso", key: "", Icon: PenTool },
   { id: "rectangle", name: "Rectangle", key: "R", Icon: Square },
@@ -109,6 +114,8 @@ const RASTER_TOOL_IDS = new Set<ProTool>([
   "eyedropper",
   "select-rect",
   "select-ellipse",
+  "wand",
+  "color-range",
   "lasso",
   "poly-lasso",
   "rectangle",
@@ -181,7 +188,9 @@ export default function ProWorkspace({
     sessionRef = useRef<ProSession | null>(null),
     [selectedIds, setSelectedIds] = useState<string[]>([]),
     [tool, setTool] = useState<ProTool>(initialMode === "raster" ? "brush" : "pen"),
-    [selection, setSelection] = useState<Selection>({ regions: [], inverted: false, feather: 0 }),
+    [tolerance, setTolerance] = useState(32),
+    [contiguous, setContiguous] = useState(true),
+    [antiAlias, setAntiAlias] = useState(true),
     [operation, setOperation] = useState<"add" | "subtract" | "intersect">("add"),
     [brush, setBrush] = useState<Omit<Stroke, "points" | "erase">>({
       size: 24,
@@ -238,6 +247,7 @@ export default function ProWorkspace({
       ? 4_000_000
       : 16_000_000;
   const doc = transient ?? history?.present.doc,
+    selection = doc?.selection ?? EMPTY_SELECTION,
     active = doc?.layers.find((l) => l.id === selectedIds[0]);
   useEffect(() => {
     if (before && doc && !sourceReference(doc)) setBefore(false);
@@ -444,6 +454,46 @@ export default function ProWorkspace({
     },
     [setHist],
   );
+  const setSelection = useCallback(
+    (selection: Selection) => {
+      const current = historyRef.current?.present.doc;
+      if (current) commit({ ...current, selection }, "Change selection");
+    },
+    [commit],
+  );
+  const sampleSelection = async (point: { x: number; y: number }) => {
+    const document = historyRef.current?.present.doc,
+      worker = renderer.current;
+    if (!document || !worker || busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setError("");
+    setProgress("Analyzing colors at document resolution…");
+    try {
+      const result = await worker.select(document, maxArea, point, {
+        tolerance,
+        contiguous: tool === "wand" && contiguous,
+        antiAlias,
+      });
+      if (!result.region || !alive.current) return;
+      const previous = document.selection ?? EMPTY_SELECTION;
+      // Release the operation lock before recording its single undo transaction.
+      busyRef.current = false;
+      commit(
+        { ...document, selection: appendSelection(previous, { ...result.region, operation }) },
+        tool === "wand" ? "Magic Wand selection" : "Color Range selection",
+      );
+      setStatus(
+        "Selection analyzed at full document resolution. Blue overlay shows selected coverage.",
+      );
+    } catch (e) {
+      setError(storageMessage(e));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+      setProgress("");
+    }
+  };
   const patch = (p: Partial<Layer>, group?: string) => {
     const current = historyRef.current?.present.doc;
     if (!current || !active || isLocked(current, active.id)) return;
@@ -590,6 +640,7 @@ export default function ProWorkspace({
         ...h.present.doc,
         width: current.width,
         height: current.height,
+        selection: EMPTY_SELECTION,
         layers: [
           ...h.present.doc.layers.map((l) => (l.parentId ? l : { ...l, visible: false })),
           base,
@@ -611,7 +662,6 @@ export default function ProWorkspace({
       lastSaved.current = JSON.stringify(document);
       setSaved(true);
       setSelectedIds([base.id]);
-      setSelection({ regions: [], inverted: false, feather: 0 });
       setMaskMode(false);
       setBefore(false);
       setTool("move");
@@ -1164,6 +1214,38 @@ export default function ProWorkspace({
               <option value="subtract">Subtract</option>
               <option value="intersect">Intersect</option>
             </select>
+            {(tool === "wand" || tool === "color-range") && (
+              <>
+                <ProNumber
+                  label="Color tolerance"
+                  value={tolerance}
+                  min={0}
+                  max={255}
+                  onChange={setTolerance}
+                />
+                {tool === "wand" && (
+                  <label className="pro-check">
+                    <input
+                      type="checkbox"
+                      checked={contiguous}
+                      onChange={(e) => setContiguous(e.target.checked)}
+                    />
+                    Contiguous
+                  </label>
+                )}
+                <label className="pro-check">
+                  <input
+                    type="checkbox"
+                    checked={antiAlias}
+                    onChange={(e) => setAntiAlias(e.target.checked)}
+                  />
+                  Anti-alias
+                </label>
+                <span className="pro-help">
+                  Tap artwork to sample visible colors · tolerance 0–255
+                </span>
+              </>
+            )}
             <Button
               variant="ghost"
               onClick={() => {
@@ -1250,6 +1332,7 @@ export default function ProWorkspace({
                 rendering={rendering}
                 cloneSource={cloneSource}
                 cloneSampleArmed={cloneSampleArmed}
+                onColorSelect={(point) => void sampleSelection(point)}
                 onCloneSample={(point) => void captureCloneSource(point)}
                 onCloneAdvance={(delta) =>
                   setCloneSource((source) =>
@@ -1295,12 +1378,15 @@ export default function ProWorkspace({
                       selection={selection}
                       onSelection={setSelection}
                       onMask={() => {
-                        if (active) {
+                        if (active && doc) {
                           patch({
                             mask: {
                               selection:
                                 selection.regions.length || selection.inverted
-                                  ? toLocalSelection(selection, active)
+                                  ? toLocalSelection(selection, active, {
+                                      width: doc.width,
+                                      height: doc.height,
+                                    })
                                   : { regions: [], inverted: true, feather: 0 },
                               strokes: [],
                               enabled: true,

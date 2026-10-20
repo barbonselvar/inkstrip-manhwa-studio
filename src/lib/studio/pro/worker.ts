@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { selectColor } from "./selection";
 import { composite } from "./render";
 import { type ProSession, type ProDocument, validateAssets, sourceReference } from "./model";
 let assets: ProSession["assets"] = {},
@@ -97,6 +98,16 @@ self.onmessage = async ({ data }) => {
     );
     if (latest !== id) {
       output.width = output.height = 1;
+      return;
+    }
+    if (type === "select") {
+      try {
+        const pixels = output.getContext("2d")!.getImageData(0, 0, doc.width, doc.height);
+        const region = selectColor(pixels.data, doc.width, doc.height, data.point, data.options);
+        self.postMessage({ id, type: "selection", region });
+      } finally {
+        output.width = output.height = 1;
+      }
       return;
     }
     if (type === "preview") {

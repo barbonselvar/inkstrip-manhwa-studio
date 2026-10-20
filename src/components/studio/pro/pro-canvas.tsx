@@ -1,3 +1,4 @@
+import { appendSelection } from "@/lib/studio/pro/selection";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointer } from "react";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Scan, Hand } from "lucide-react";
@@ -15,6 +16,7 @@ import {
   type CloneSource,
 } from "@/lib/studio/pro/model";
 import { isLocked } from "@/lib/studio/pro/operations";
+import { selectionCanvas } from "@/lib/studio/pro/render";
 import { shapePath } from "@/lib/studio/pro/paths";
 export type ProTool =
   | "move"
@@ -34,6 +36,8 @@ export type ProTool =
   | "text"
   | "select-rect"
   | "select-ellipse"
+  | "wand"
+  | "color-range"
   | "lasso"
   | "poly-lasso";
 type View = { zoom: number; x: number; y: number };
@@ -73,6 +77,7 @@ export function ProCanvas({
   rendering,
   cloneSource,
   cloneSampleArmed,
+  onColorSelect,
   onCloneSample,
   onCloneAdvance,
 }: {
@@ -97,12 +102,14 @@ export function ProCanvas({
   rendering: boolean;
   cloneSource: CloneSource | null;
   cloneSampleArmed: boolean;
+  onColorSelect: (p: Point) => void;
   onCloneSample: (p: Point) => void;
   onCloneAdvance: (delta: Point) => void;
 }) {
   const viewport = useRef<HTMLDivElement>(null),
     board = useRef<HTMLDivElement>(null),
     mini = useRef<HTMLCanvasElement>(null),
+    selectionPreview = useRef<HTMLCanvasElement>(null),
     [size, setSize] = useState({ width: 600, height: 500 }),
     observer = useRef<ResizeObserver | null>(null);
   const measure = useCallback((node: HTMLDivElement | null) => {
@@ -116,6 +123,8 @@ export function ProCanvas({
     }
   }, []);
   useEffect(() => () => observer.current?.disconnect(), []);
+  const [selectionDraft, setSelectionDraft] = useState<Selection | null>(null);
+  const visibleSelection = selectionDraft ?? selection;
   const [view, setView] = useState<View>({ zoom: 1, x: 0, y: 0 }),
     gesture = useRef<Gesture | null>(null),
     pointers = useRef(new Map<number, Point>()),
@@ -142,22 +151,13 @@ export function ProCanvas({
         space.current = true;
       }
       if (e.key === "Escape") {
+        setSelectionDraft(null);
         gesture.current = null;
         onTransient(null);
         setPolygon([]);
       }
       if (e.key === "Enter" && polygon.length >= 3) {
-        onSelection({
-          ...selection,
-          regions: [
-            ...selection.regions,
-            {
-              kind: "lasso",
-              operation,
-              points: polygon,
-            },
-          ],
-        });
+        onSelection(appendSelection(selection, { kind: "lasso", operation, points: polygon }));
         setPolygon([]);
       }
     };
@@ -168,6 +168,7 @@ export function ProCanvas({
     window.addEventListener("keyup", up);
     const blur = () => {
       space.current = false;
+      setSelectionDraft(null);
       gesture.current = null;
       pointers.current.clear();
       pinch.current = null;
@@ -230,6 +231,22 @@ export function ProCanvas({
       );
     }
   }, [canvasRef, renderVersion, doc.width, doc.height]);
+  useEffect(() => {
+    const target = selectionPreview.current;
+    if (!target) return;
+    const scale = Math.min(1, 1400 / Math.max(doc.width, doc.height));
+    const mask = selectionCanvas(visibleSelection, doc.width, doc.height, scale);
+    target.width = mask.width;
+    target.height = mask.height;
+    const ctx = target.getContext("2d")!;
+    ctx.clearRect(0, 0, target.width, target.height);
+    ctx.drawImage(mask, 0, 0);
+    ctx.globalCompositeOperation = "source-in";
+    ctx.fillStyle = "rgba(30, 140, 255, 0.35)";
+    ctx.fillRect(0, 0, target.width, target.height);
+    ctx.globalCompositeOperation = "source-over";
+    mask.width = mask.height = 1;
+  }, [visibleSelection, doc.width, doc.height, before]);
   const hit = (p: Point) => {
     const ctx = canvasRef.current?.getContext("2d");
     return [...doc.layers].reverse().find((l) => {
@@ -268,6 +285,7 @@ export function ProCanvas({
         center: { x: (a!.x + b!.x) / 2, y: (a!.y + b!.y) / 2 },
       };
       gesture.current = null;
+      setSelectionDraft(null);
       onTransient(null);
       return;
     }
@@ -276,6 +294,10 @@ export function ProCanvas({
     setCursor(p);
     if (tool === "hand" || space.current) {
       gesture.current = { ...base, type: "pan" };
+      return;
+    }
+    if (tool === "wand" || tool === "color-range") {
+      onColorSelect(p);
       return;
     }
     if (tool === "eyedropper") {
@@ -324,7 +346,7 @@ export function ProCanvas({
         return;
       const clip =
         selection.regions.length || selection.inverted
-          ? toLocalSelection(selection, selected)
+          ? toLocalSelection(selection, selected, { width: doc.width, height: doc.height })
           : undefined;
       gesture.current = {
         ...base,
@@ -366,7 +388,7 @@ export function ProCanvas({
           clone: { ...clone, mode: tool === "heal" ? "heal" : "clone" },
           clip:
             selection.regions.length || selection.inverted
-              ? toLocalSelection(selection, selected)
+              ? toLocalSelection(selection, selected, { width: doc.width, height: doc.height })
               : undefined,
           points: [localPoint(p, selected)],
         },
@@ -460,7 +482,7 @@ export function ProCanvas({
     if (g.type === "selection") {
       const r = g.region!;
       g.region = { ...r, points: r.kind === "lasso" ? [...r.points, p] : [g.start, p] };
-      onSelection({ ...g.selection, regions: [...g.selection.regions, g.region] });
+      setSelectionDraft(appendSelection(g.selection, g.region));
       return null;
     }
     const l = g.doc.layers.find((x) => x.id === g.id);
@@ -598,7 +620,9 @@ export function ProCanvas({
           onCloneAdvance({ x: last.x - first.x, y: last.y - first.y });
         }
       }
-    } else if (g.type === "selection") onSelection(g.selection);
+      if (g.type === "selection" && g.region) onSelection(appendSelection(g.selection, g.region));
+    }
+    setSelectionDraft(null);
     gesture.current = null;
     onTransient(null);
   };
@@ -656,10 +680,7 @@ export function ProCanvas({
         }}
         onDoubleClick={() => {
           if (polygon.length >= 3) {
-            onSelection({
-              ...selection,
-              regions: [...selection.regions, { kind: "lasso", operation, points: polygon }],
-            });
+            onSelection(appendSelection(selection, { kind: "lasso", operation, points: polygon }));
             setPolygon([]);
           }
         }}
@@ -678,6 +699,13 @@ export function ProCanvas({
           }
         >
           <canvas ref={canvasRef} aria-label="Pro composite preview" />
+          {!before && (
+            <canvas
+              ref={selectionPreview}
+              className="pro-selection-preview"
+              aria-label="Selected coverage preview"
+            />
+          )}
           {!before && (
             <svg
               className="pro-overlays"
@@ -710,29 +738,6 @@ export function ProCanvas({
                   <line x1={0} y1={doc.height / 2} x2={doc.width} y2={doc.height / 2} />
                 </g>
               ) : null}
-              {selection.regions.map((r, i) =>
-                r.kind === "rectangle" ? (
-                  <rect
-                    key={i}
-                    x={Math.min(r.points[0]!.x, r.points.at(-1)!.x)}
-                    y={Math.min(r.points[0]!.y, r.points.at(-1)!.y)}
-                    width={Math.abs(r.points[0]!.x - r.points.at(-1)!.x)}
-                    height={Math.abs(r.points[0]!.y - r.points.at(-1)!.y)}
-                    className="pro-selection-outline"
-                  />
-                ) : r.kind === "ellipse" ? (
-                  <ellipse
-                    key={i}
-                    cx={(r.points[0]!.x + r.points.at(-1)!.x) / 2}
-                    cy={(r.points[0]!.y + r.points.at(-1)!.y) / 2}
-                    rx={Math.abs(r.points[0]!.x - r.points.at(-1)!.x) / 2}
-                    ry={Math.abs(r.points[0]!.y - r.points.at(-1)!.y) / 2}
-                    className="pro-selection-outline"
-                  />
-                ) : (
-                  <polygon key={i} points={poly(r.points)} className="pro-selection-outline" />
-                ),
-              )}
               {polygon.length > 0 && (
                 <polyline points={poly(polygon)} className="pro-selection-outline" />
               )}

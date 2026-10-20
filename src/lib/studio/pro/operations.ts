@@ -1,6 +1,6 @@
 import { localPoint, type ProDocument, type Layer, type Point } from "./model.ts";
 /** Canvas transform mapping sampled document pixels into a target layer's local surface. */
-export function cloneSourceMatrix(layer: Layer, offset: Point, scale: number) {
+export function cloneSourceMatrix(layer: Pick<Layer, "transform">, offset: Point, scale: number) {
   const angle = (-layer.transform.rotation * Math.PI) / 180,
     cos = Math.cos(angle),
     sin = Math.sin(angle),

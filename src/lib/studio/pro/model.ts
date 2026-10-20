@@ -4,11 +4,20 @@ export type Point = { x: number; y: number };
 export type Transform = { x: number; y: number; scaleX: number; scaleY: number; rotation: number };
 export type Anchor = Point & { incoming?: Point; outgoing?: Point };
 export type Region = {
-  kind: "rectangle" | "ellipse" | "lasso";
+  kind: "rectangle" | "ellipse" | "lasso" | "pixels";
+  inverted?: boolean;
+  /** Row-bounded RLE coverage; points define the affine image frame. */
+  pixels?: { width: number; height: number; runs: number[] };
   points: Point[];
   operation: "add" | "subtract" | "intersect";
 };
-export type Selection = { regions: Region[]; inverted: boolean; feather: number };
+export type Selection = {
+  regions: Region[];
+  inverted: boolean;
+  feather: number;
+  /** Selection captured in document space; map the completed mask into this layer. */
+  frame?: { width: number; height: number; transform: Transform };
+};
 export type CloneSource = {
   assetId: string;
   width: number;
@@ -93,6 +102,7 @@ export type Layer = {
 };
 export type SourceReference = { assetId: string; width: number; height: number };
 export type ProDocument = {
+  selection?: Selection;
   source?: SourceReference;
   version: 1;
   id: string;
@@ -187,17 +197,73 @@ export function validateSelection(s: Selection) {
     !finite(s.feather, 0, 100)
   )
     throw new Error("Invalid selection.");
-  for (const r of s.regions)
+  if (s.frame) {
+    const { width, height, transform: t } = s.frame;
+    if (
+      !Number.isInteger(width) ||
+      !Number.isInteger(height) ||
+      !finite(width, 1, 16384) ||
+      !finite(height, 1, 16384) ||
+      width * height > 16_000_000 ||
+      !t ||
+      !point(t) ||
+      !finite(t.scaleX, 0.01, 100) ||
+      !finite(t.scaleY, 0.01, 100) ||
+      !finite(t.rotation, -360, 360)
+    )
+      throw new Error("Invalid selection coordinate frame.");
+  }
+  for (const r of s.regions) {
     if (
       !r ||
-      !["rectangle", "ellipse", "lasso"].includes(r.kind) ||
+      !["rectangle", "ellipse", "lasso", "pixels"].includes(r.kind) ||
       !["add", "subtract", "intersect"].includes(r.operation) ||
+      (r.inverted !== undefined && typeof r.inverted !== "boolean") ||
       !Array.isArray(r.points) ||
       r.points.length < 2 ||
       r.points.length > 5000 ||
       !r.points.every(point)
     )
       throw new Error("Invalid selection region.");
+    if (r.kind === "pixels") {
+      const p = r.pixels;
+      if (
+        !p ||
+        r.points.length !== 3 ||
+        !Number.isInteger(p.width) ||
+        !Number.isInteger(p.height) ||
+        !finite(p.width, 1, 16384) ||
+        !finite(p.height, 1, 16384) ||
+        p.width * p.height > 16_000_000 ||
+        !Array.isArray(p.runs) ||
+        p.runs.length % 3 ||
+        p.runs.length > 600_000
+      )
+        throw new Error("Invalid pixel selection.");
+      const [a, b, c] = r.points;
+      if (Math.abs((b!.x - a!.x) * (c!.y - a!.y) - (c!.x - a!.x) * (b!.y - a!.y)) < 1e-10)
+        throw new Error("Invalid pixel selection frame.");
+      let end = 0;
+      for (let i = 0; i < p.runs.length; i += 3) {
+        const start = p.runs[i]!,
+          length = p.runs[i + 1]!,
+          alpha = p.runs[i + 2]!;
+        if (
+          !Number.isInteger(start) ||
+          !Number.isInteger(length) ||
+          !Number.isInteger(alpha) ||
+          start < end ||
+          length < 1 ||
+          start + length > p.width * p.height ||
+          Math.floor(start / p.width) !== Math.floor((start + length - 1) / p.width) ||
+          alpha < 1 ||
+          alpha > 255
+        )
+          throw new Error("Invalid pixel selection runs.");
+        end = start + length;
+      }
+    } else if (r.pixels !== undefined) throw new Error("Unexpected pixel selection data.");
+  }
 }
 function validateStroke(s: Stroke) {
   if (
@@ -262,6 +328,7 @@ export function validateDocument(d: ProDocument) {
       d.source.width * d.source.height > 16_000_000)
   )
     throw new Error("Invalid original source reference.");
+  if (d.selection !== undefined) validateSelection(d.selection);
   const ids = new Set<string>();
   let commands = 0;
   for (const l of d.layers) {
@@ -434,7 +501,7 @@ export function validateAssets(session: ProSession) {
       if (stroke.clone && !Object.hasOwn(session.assets, stroke.clone.assetId))
         throw new Error("A Clone Stamp source is missing; existing artwork is unchanged.");
 }
-export function localPoint(p: Point, l: Layer): Point {
+export function localPoint(p: Point, l: Pick<Layer, "transform">): Point {
   const r = (-l.transform.rotation * Math.PI) / 180,
     x = p.x - l.transform.x,
     y = p.y - l.transform.y;
@@ -485,7 +552,14 @@ export function removeLayer(d: ProDocument, id: string): ProDocument {
     for (const l of d.layers) if (l.parentId && ids.has(l.parentId)) ids.add(l.id);
   return { ...d, layers: d.layers.filter((l) => !ids.has(l.id)) };
 }
-export function toLocalSelection(s: Selection, l: Layer): Selection {
+export function toLocalSelection(
+  s: Selection,
+  l: Layer,
+  bounds?: { width: number; height: number },
+): Selection {
+  // Rasterize booleans and feather in document space before applying the inverse
+  // layer transform. This preserves the world-space radius under nonuniform scale.
+  if (bounds) return { ...s, frame: { ...bounds, transform: { ...l.transform } } };
   return {
     ...s,
     regions: s.regions.map((r) => {
@@ -507,7 +581,11 @@ export function toLocalSelection(s: Selection, l: Layer): Selection {
             y: (first.y + last.y) / 2 + (Math.abs(last.y - first.y) / 2) * Math.sin(angle),
           };
         });
-      return { ...r, kind: "lasso", points: points.map((p) => localPoint(p, l)) };
+      return {
+        ...r,
+        kind: r.kind === "pixels" ? "pixels" : "lasso",
+        points: points.map((p) => localPoint(p, l)),
+      };
     }),
   };
 }
