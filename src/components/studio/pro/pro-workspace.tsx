@@ -85,6 +85,36 @@ const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush 
   { id: "direct", name: "Direct select", key: "A", Icon: MousePointer },
   { id: "text", name: "Text", key: "T", Icon: Type },
 ];
+const RASTER_TOOL_IDS = new Set<ProTool>([
+  "move",
+  "hand",
+  "brush",
+  "eraser",
+  "eyedropper",
+  "select-rect",
+  "select-ellipse",
+  "lasso",
+  "poly-lasso",
+  "rectangle",
+  "ellipse",
+  "line",
+  "polygon",
+  "pen",
+  "direct",
+  "text",
+]);
+const VECTOR_TOOL_IDS = new Set<ProTool>([
+  "move",
+  "hand",
+  "eyedropper",
+  "rectangle",
+  "ellipse",
+  "line",
+  "polygon",
+  "pen",
+  "direct",
+  "text",
+]);
 function ReferenceImage({
   blob,
   name,
@@ -764,7 +794,10 @@ export default function ProWorkspace({
         e.preventDefault();
         actions.current.remove();
       } else if (!e.ctrlKey && !e.metaKey) {
-        const t = TOOLS.find((t) => t.key.toLowerCase() === e.key.toLowerCase());
+        const allowedTools = mode === "raster" ? RASTER_TOOL_IDS : VECTOR_TOOL_IDS;
+        const t = TOOLS.find(
+          (t) => allowedTools.has(t.id) && t.key.toLowerCase() === e.key.toLowerCase(),
+        );
         if (t) {
           e.preventDefault();
           actions.current.selectTool(t.id);
@@ -773,7 +806,7 @@ export default function ProWorkspace({
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, []);
+  }, [mode]);
   const stale = !!session && livePanel?.blobId !== session.acceptedBlobId;
   const branch = (parent?: string, depth = 0): React.ReactNode =>
     doc?.layers
@@ -1106,7 +1139,9 @@ export default function ProWorkspace({
           </div>
           <div className={`pro-body ${panelOpen ? "" : "pro-panel-hidden"}`}>
             <nav className="pro-tool-palette" aria-label="Pro tools">
-              {TOOLS.map(({ id, name, key, Icon }) => (
+              {TOOLS.filter(({ id }) =>
+                (mode === "raster" ? RASTER_TOOL_IDS : VECTOR_TOOL_IDS).has(id),
+              ).map(({ id, name, key, Icon }) => (
                 <Button
                   key={id}
                   variant="ghost"

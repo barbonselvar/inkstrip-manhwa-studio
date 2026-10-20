@@ -23,9 +23,10 @@ reverse-engineered file internals. It makes no claim of Adobe feature parity.
   selection, lasso, layer masks, groups, blend modes, tonal adjustment fields,
   comic bubbles/captions, character assets, AI workflows and recovery/export UI.
 - Raster and vector are presented as distinct entry modes on this branch, backed
-  by the existing shared Pro document engine. Switching modes retains document
-  state. This is an entry/workspace context, not full parity with either Adobe
-  application.
+  by the existing shared Pro document engine. Raster opens with the brush
+  workspace; Vector opens with the pen workspace and a vector-focused tool rail.
+  The mode switch retains the same document and editable layers. This is not
+  full parity with either Adobe application.
 - AI: Swin2SR runs in a browser worker; face detection is a local proposal flow;
   texture repair is a traditional local image algorithm; optional cloud editing
   requires the existing consent flow. The 3D homepage companion uses Three.js.
@@ -141,7 +142,7 @@ must remain unavailable or clearly partial, never a decorative control.
 This milestone adds two working chapter-image launch paths, visible from the
 chapter selection controls and the individual image tools menu. Both open the
 selected panel's original-size Pro document. A persistent Raster/Vector switch
-changes the active editing context and selects an appropriate starting tool;
+changes the active tool palette and selects an appropriate starting tool;
 switching never replaces the document or flattens layers. Existing Pro Studio,
 save, undo/redo, export and explicit chapter-apply behavior remain the shared
 foundation. Later milestones must add separately tested capabilities and update

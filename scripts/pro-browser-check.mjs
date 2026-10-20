@@ -49,10 +49,15 @@ async function records(page) {
 async function open(page) {
   await page.getByRole("button", { name: "Open in Raster Studio", exact: true }).click();
   await page.getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Brush tool", exact: true }).waitFor();
   await page.getByRole("button", { name: "Vector", exact: true }).click();
   await page.getByRole("dialog", { name: "Inkstrip Vector Studio", exact: true }).waitFor();
+  await page
+    .getByRole("button", { name: "Brush tool", exact: true })
+    .waitFor({ state: "detached" });
   await page.getByRole("button", { name: "Raster", exact: true }).click();
   await page.getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Brush tool", exact: true }).waitFor();
   await pixel(page, 64, 48, [32, 48, 64, 255]);
 }
 async function pixel(page, x, y, expected) {
