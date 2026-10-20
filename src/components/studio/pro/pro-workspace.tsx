@@ -5,6 +5,7 @@ import {
   MousePointer2,
   Hand,
   Brush,
+  Pencil,
   Eraser,
   Pipette,
   Square,
@@ -66,11 +67,19 @@ import { useStudio } from "@/lib/studio/store";
 import type { Panel } from "@/lib/studio/types";
 import { decodeBlob } from "@/lib/studio/images";
 import { ToolSection } from "../design/tool-section";
+import {
+  browserBrushStorage,
+  loadBrushPresets,
+  saveBrushPresets,
+  upsertBrushPreset,
+  type BrushPreset,
+} from "@/lib/studio/pro/brush-presets";
 type Entry = { doc: ProDocument; label: string };
 const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush }> = [
   { id: "move", name: "Move", key: "V", Icon: MousePointer2 },
   { id: "hand", name: "Hand", key: "H", Icon: Hand },
   { id: "brush", name: "Brush", key: "B", Icon: Brush },
+  { id: "pencil", name: "Pencil", key: "N", Icon: Pencil },
   { id: "eraser", name: "Eraser", key: "E", Icon: Eraser },
   { id: "eyedropper", name: "Eyedropper", key: "I", Icon: Pipette },
   { id: "select-rect", name: "Rectangle selection", key: "M", Icon: ScanLine },
@@ -89,6 +98,7 @@ const RASTER_TOOL_IDS = new Set<ProTool>([
   "move",
   "hand",
   "brush",
+  "pencil",
   "eraser",
   "eyedropper",
   "select-rect",
@@ -174,6 +184,9 @@ export default function ProWorkspace({
       flow: 1,
       color: "#a4efd6",
     }),
+    [brushPresets, setBrushPresets] = useState<BrushPreset[]>(() =>
+      loadBrushPresets(browserBrushStorage()),
+    ),
     [maskMode, setMaskMode] = useState(false),
     [grid, setGrid] = useState(false),
     [snapping, setSnapping] = useState(true),
@@ -754,7 +767,7 @@ export default function ProWorkspace({
     }
   };
   const chooseTool = (id: ProTool) => {
-    if ((id === "brush" || id === "eraser") && !maskMode && active?.kind !== "paint") add("paint");
+    if ((id === "brush" || id === "pencil" || id === "eraser") && !maskMode && active?.kind !== "paint") add("paint");
     setTool(id);
     setBefore(false);
   };
@@ -1151,8 +1164,7 @@ export default function ProWorkspace({
                   aria-pressed={tool === id}
                   disabled={busy}
                   onClick={() => {
-                    setTool(id);
-                    setBefore(false);
+                    chooseTool(id);
                   }}
                 >
                   <Icon />
@@ -1234,6 +1246,33 @@ export default function ProWorkspace({
                       }}
                       brush={brush}
                       onBrush={(p) => setBrush((b) => ({ ...b, ...p }))}
+                  brushPresets={brushPresets}
+                  onApplyBrushPreset={(preset) => setBrush((b) => ({ ...b, ...preset }))}
+                  onSaveBrushPreset={(name) => {
+                    try {
+                      const next = upsertBrushPreset(brushPresets, {
+                        name,
+                        settings: {
+                          size: brush.size,
+                          hardness: brush.hardness,
+                          opacity: brush.opacity,
+                          flow: brush.flow,
+                          color: brush.color === "transparent" ? "#172420" : brush.color,
+                          ...(brush.tip ? { tip: brush.tip } : {}),
+                        },
+                      });
+                      if (!saveBrushPresets(browserBrushStorage(), next)) throw new Error("Browser storage is unavailable.");
+                      setBrushPresets(next);
+                    } catch (e) {
+                      setError(storageMessage(e));
+                    }
+                  }}
+                  onDeleteBrushPreset={(name) => {
+                    const defaults = new Set(["Ink · round", "Soft shade", "Pencil · square"]);
+                    if (defaults.has(name)) return;
+                    const next = brushPresets.filter((preset) => preset.name !== name);
+                    if (saveBrushPresets(browserBrushStorage(), next)) setBrushPresets(next);
+                  }}
                       maskMode={maskMode}
                       setMaskMode={setMaskMode}
                     />

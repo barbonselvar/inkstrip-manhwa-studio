@@ -19,6 +19,7 @@ export type ProTool =
   | "move"
   | "hand"
   | "brush"
+  | "pencil"
   | "eraser"
   | "eyedropper"
   | "rectangle"
@@ -296,7 +297,7 @@ export function ProCanvas({
       };
       return;
     }
-    if (tool === "brush" || tool === "eraser") {
+    if (tool === "brush" || tool === "pencil" || tool === "eraser") {
       if (
         !selected ||
         isLocked(doc, selected.id) ||
@@ -314,6 +315,7 @@ export function ProCanvas({
         id: selected.id,
         stroke: {
           ...brush,
+          ...(tool === "pencil" ? { hardness: 1, tip: "square" as const } : {}),
           clip: maskMode ? undefined : clip,
           erase: maskMode && selected.mask?.inverted ? tool !== "eraser" : tool === "eraser",
           points: [localPoint(p, selected)],
@@ -526,7 +528,9 @@ export function ProCanvas({
           g.type === "paint"
             ? maskMode
               ? "Paint mask"
-              : "Brush stroke"
+              : g.stroke?.tip === "square"
+                ? "Pencil stroke"
+                : "Brush stroke"
             : g.type === "pen"
               ? "Add Bézier anchor"
               : `Edit ${g.type}`,

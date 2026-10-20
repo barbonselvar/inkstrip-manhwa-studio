@@ -2,6 +2,7 @@ import type { Layer, Selection, Stroke } from "@/lib/studio/pro/model";
 import { Button } from "@/components/ui/button";
 import { ADJUSTMENT_FIELDS } from "@/lib/studio/editor/adjustments";
 import { ToolSection } from "../design/tool-section";
+import type { BrushPreset, BrushSettings } from "@/lib/studio/pro/brush-presets";
 export function ProNumber({
   label,
   value,
@@ -45,6 +46,10 @@ export function ProProperties({
   onMask,
   brush,
   onBrush,
+  brushPresets,
+  onApplyBrushPreset,
+  onSaveBrushPreset,
+  onDeleteBrushPreset,
   maskMode,
   setMaskMode,
 }: {
@@ -55,12 +60,41 @@ export function ProProperties({
   onMask: () => void;
   brush: Omit<Stroke, "points" | "erase">;
   onBrush: (p: Partial<Stroke>) => void;
+  brushPresets: BrushPreset[];
+  onApplyBrushPreset: (settings: BrushSettings) => void;
+  onSaveBrushPreset: (name: string) => void;
+  onDeleteBrushPreset: (name: string) => void;
   maskMode: boolean;
   setMaskMode: (v: boolean) => void;
 }) {
   return (
     <div className="pro-properties-content">
       <ToolSection title="Brush & selection" defaultOpen>
+        <label className="pro-field">
+          Brush preset
+          <select
+            className="field"
+            aria-label="Brush preset"
+            value=""
+            onChange={(e) => {
+              const preset = brushPresets.find((item) => item.name === e.target.value);
+              if (preset) onApplyBrushPreset(preset.settings);
+            }}
+          >
+            <option value="" disabled>Choose a preset</option>
+            {brushPresets.map((preset) => <option key={preset.name} value={preset.name}>{preset.name}</option>)}
+          </select>
+        </label>
+        <div className="pro-actions">
+          <Button variant="secondary" onClick={() => {
+            const name = window.prompt("Name this brush preset");
+            if (name?.trim()) onSaveBrushPreset(name.trim());
+          }}>Save current preset</Button>
+          <Button variant="ghost" disabled={brushPresets.length <= 3} onClick={() => {
+            const name = window.prompt("Enter the exact name of the custom preset to delete");
+            if (name?.trim()) onDeleteBrushPreset(name.trim());
+          }}>Delete custom preset</Button>
+        </div>
         <div className="pro-number-grid">
           <ProNumber
             label="Brush size"

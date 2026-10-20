@@ -106,6 +106,10 @@ function stroke(ctx: Ctx, s: Stroke) {
   const radius = s.size / 2;
   const dot = (x: number, y: number) => {
     ctx.fillStyle = s.color;
+    if (s.tip === "square") {
+      ctx.fillRect(x - radius, y - radius, s.size, s.size);
+      return;
+    }
     if (s.hardness < 1) {
       const g = ctx.createRadialGradient(x, y, radius * s.hardness, x, y, radius);
       g.addColorStop(0, s.color);

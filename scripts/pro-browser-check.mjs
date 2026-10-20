@@ -198,6 +198,14 @@ try {
   await page.getByRole("button", { name: "Eraser tool", exact: true }).click();
   await drag(page, { x: 48, y: 24 }, { x: 48, y: 24 });
   await pixel(page, 48, 24, [32, 48, 64, 255]);
+  await tab(page, "Properties");
+  await page.getByLabel("Brush preset", { exact: true }).selectOption("Pencil · square");
+  await page.getByLabel("Brush color", { exact: true }).fill("#00ff00");
+  await page.getByRole("button", { name: "Pencil tool", exact: true }).click();
+  await drag(page, { x: 80, y: 48 }, { x: 80, y: 48 });
+  await pixel(page, 80, 48, [0, 255, 0, 255]);
+  await page.getByRole("button", { name: "Pro undo", exact: true }).click();
+  await pixel(page, 80, 48, [32, 48, 64, 255]);
   await tab(page, "Layers");
   await page.getByRole("button", { name: "Text layer", exact: true }).click();
   await page

@@ -17,6 +17,8 @@ export type Stroke = {
   flow: number;
   color: string;
   erase: boolean;
+  /** Square, hard-edged tip used by the pencil tool. Older native strokes default to round. */
+  tip?: "round" | "square";
   clip?: Selection;
 };
 export type Mask = {
@@ -192,7 +194,8 @@ function validateStroke(s: Stroke) {
     !finite(s.opacity, 0, 1) ||
     !finite(s.flow, 0.01, 1) ||
     !validColor(s.color) ||
-    typeof s.erase !== "boolean"
+    typeof s.erase !== "boolean" ||
+    (s.tip !== undefined && s.tip !== "round" && s.tip !== "square")
   )
     throw new Error("Invalid brush stroke.");
   if (s.clip) validateSelection(s.clip);
