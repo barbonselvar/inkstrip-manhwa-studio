@@ -1,5 +1,14 @@
 import type { ColorSelectionOptions } from "./selection";
 import type { ProDocument, ProSession, Region } from "./model";
+type RenderReply = {
+  bitmap?: ImageBitmap;
+  blob?: Blob;
+  region?: Region;
+  document?: ProDocument;
+  assetId?: string;
+  layerId?: string;
+  thumbnails?: { id: string; blob: Blob }[];
+};
 export class ProRenderer {
   private worker: Worker;
   private serial = 0;
@@ -8,7 +17,7 @@ export class ProRenderer {
     number,
     {
       type: string;
-      resolve: (r: { bitmap?: ImageBitmap; blob?: Blob; region?: Region }) => void;
+      resolve: (r: RenderReply) => void;
       reject: (e: Error) => void;
       progress?: (n: number, total: number) => void;
     }
@@ -60,12 +69,10 @@ export class ProRenderer {
         this.pending.delete(id);
       }
     const id = ++this.serial;
-    return new Promise<{ bitmap?: ImageBitmap; blob?: Blob; region?: Region }>(
-      (resolve, reject) => {
-        this.pending.set(id, { type, resolve, reject, progress });
-        this.worker.postMessage({ id, type, ...input });
-      },
-    );
+    return new Promise<RenderReply>((resolve, reject) => {
+      this.pending.set(id, { type, resolve, reject, progress });
+      this.worker.postMessage({ id, type, ...input });
+    });
   }
   init(session: ProSession, maxArea = 16_000_000) {
     return this.request("init", { session, maxArea });
@@ -89,6 +96,18 @@ export class ProRenderer {
     options: ColorSelectionOptions,
   ) {
     return this.request("select", { document, maxArea, point, options });
+  }
+  thumbnails(document: ProDocument, maxArea: number) {
+    return this.request("thumbnails", { document, maxArea });
+  }
+  merge(
+    document: ProDocument,
+    maxArea: number,
+    mode: "selected" | "visible" | "flatten",
+    ids: string[],
+    progress: (n: number, total: number) => void,
+  ) {
+    return this.request("merge", { document, maxArea, mode, ids }, progress);
   }
   dispose(reason: Error = new DOMException("Processing cancelled.", "AbortError")) {
     this.stopped = true;

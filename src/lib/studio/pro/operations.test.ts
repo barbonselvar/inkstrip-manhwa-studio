@@ -82,3 +82,19 @@ test("Clone Stamp source mapping follows scaled and rotated paint layers", () =>
   assert.ok(Math.abs(sourceAtDestination.x / scale - expectedDestination.x) < 1e-10);
   assert.ok(Math.abs(sourceAtDestination.y / scale - expectedDestination.y) < 1e-10);
 });
+
+test("ungroup preserves isolated clip blends and refuses orphan clips that would bind outside", () => {
+  const d = doc(),
+    g = layer("group", 128, 96, "g"),
+    base = layer("shape", 10, 10, "base"),
+    clip = layer("shape", 10, 10, "clip");
+  base.parentId = clip.parentId = "g";
+  clip.clipped = true;
+  clip.blend = "multiply";
+  d.layers.push(g, base, clip);
+  const ungrouped = ungroupLayers(d, "g");
+  assert.equal(ungrouped.layers.at(-1)!.clipped, true);
+  assert.equal(ungrouped.layers.at(-1)!.blend, "multiply");
+  base.clipped = true;
+  assert.throws(() => ungroupLayers(d, "g"), /clipping/);
+});

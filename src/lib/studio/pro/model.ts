@@ -68,6 +68,10 @@ export type Layer = {
   name: string;
   kind: "raster" | "paint" | "shape" | "text" | "group";
   parentId?: string;
+  /** Consecutive clipped siblings share the nearest unclipped base below. */
+  clipped?: boolean;
+  /** Members translate together; no pixel or artwork data is shared. */
+  linkId?: string;
   visible: boolean;
   locked: boolean;
   opacity: number;
@@ -342,6 +346,9 @@ export function validateDocument(d: ProDocument) {
       !["raster", "paint", "shape", "text", "group"].includes(l.kind) ||
       typeof l.visible !== "boolean" ||
       typeof l.locked !== "boolean" ||
+      (l.clipped !== undefined && typeof l.clipped !== "boolean") ||
+      (l.linkId !== undefined &&
+        (typeof l.linkId !== "string" || !l.linkId || l.linkId.length > 128)) ||
       !finite(l.opacity, 0, 1) ||
       !["source-over", "multiply", "screen", "overlay", "darken", "lighten"].includes(l.blend) ||
       !finite(l.width, 1, 16384) ||

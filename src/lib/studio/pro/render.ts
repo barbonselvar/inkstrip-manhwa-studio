@@ -10,6 +10,8 @@ import { applyAdjustments, hasAdjustments } from "../editor/adjustments";
 import { tonePixels } from "./pixels";
 import { cloneSourceMatrix } from "./operations";
 import { matchRepairColor } from "./repair";
+import { stacks, siblings, visibleLayerIds } from "./layers";
+import { blendClippedPixels } from "./clipping";
 type Ctx = OffscreenCanvasRenderingContext2D;
 function canvas(w: number, h: number) {
   return new OffscreenCanvas(Math.max(1, Math.ceil(w)), Math.max(1, Math.ceil(h)));
@@ -362,39 +364,84 @@ export async function composite(
   validateDocument(d);
   const output = canvas(d.width * scale, d.height * scale);
   let done = 0;
-  const total = d.layers.filter((l) => {
-    if (!l.visible) return false;
-    let parent = l.parentId;
-    while (parent) {
-      const p = d.layers.find((g) => g.id === parent);
-      if (!p?.visible) return false;
-      parent = p.parentId;
-    }
-    return true;
-  }).length;
-  const branch = async (target: OffscreenCanvas, parent?: string) => {
+  const total = visibleLayerIds(d).size;
+  const release = (c: OffscreenCanvas) => {
+    c.width = c.height = 1;
+  };
+  const draw = (
+    target: OffscreenCanvas,
+    bitmap: OffscreenCanvas,
+    l: Layer,
+    projected = false,
+    opacity = l.opacity,
+    blend = l.blend,
+  ) => {
     const ctx = target.getContext("2d")!;
-    for (const l of d.layers.filter((l) => l.parentId === parent)) {
-      if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
-      if (!l.visible) continue;
-      let bitmap: OffscreenCanvas;
-      if (l.kind === "group") {
-        bitmap = canvas(output.width, output.height);
-        await branch(bitmap, l.id);
-      } else bitmap = await surface(l, scale, asset);
-      ctx.save();
-      ctx.globalAlpha = l.opacity;
-      ctx.globalCompositeOperation = l.blend;
-      if (l.kind !== "group") {
-        ctx.translate(l.transform.x * scale, l.transform.y * scale);
-        ctx.rotate((l.transform.rotation * Math.PI) / 180);
-        ctx.scale(l.transform.scaleX, l.transform.scaleY);
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    ctx.globalCompositeOperation = blend;
+    if (!projected && l.kind !== "group") {
+      ctx.translate(l.transform.x * scale, l.transform.y * scale);
+      ctx.rotate((l.transform.rotation * Math.PI) / 180);
+      ctx.scale(l.transform.scaleX, l.transform.scaleY);
+    }
+    ctx.drawImage(bitmap, 0, 0);
+    ctx.restore();
+  };
+  const checkpoint = async () => {
+    if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
+    progress(++done, total);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  };
+  const node = async (l: Layer): Promise<OffscreenCanvas> => {
+    if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
+    if (l.kind !== "group") return surface(l, scale, asset);
+    const bitmap = canvas(output.width, output.height);
+    try {
+      await branch(bitmap, l.id);
+      return bitmap;
+    } catch (e) {
+      release(bitmap);
+      throw e;
+    }
+  };
+  const project = (bitmap: OffscreenCanvas, l: Layer) => {
+    if (l.kind === "group") return bitmap;
+    const full = canvas(output.width, output.height);
+    draw(full, bitmap, l, false, 1, "source-over");
+    release(bitmap);
+    return full;
+  };
+  const branch = async (target: OffscreenCanvas, parent?: string) => {
+    for (const { base, clips } of stacks(siblings(d, parent))) {
+      // An orphan or a hidden base hides every clipped sibling. Group boundaries reset the chain.
+      if (!base?.visible) continue;
+      let bitmap = await node(base);
+      try {
+        if (clips.length) {
+          bitmap = project(bitmap, base);
+          for (const clip of clips) {
+            if (!clip.visible) continue;
+            const source = project(await node(clip), clip);
+            try {
+              const ctx = bitmap.getContext("2d", { willReadFrequently: true })!,
+                pixels = ctx.getImageData(0, 0, bitmap.width, bitmap.height),
+                overlay = source.getContext("2d")!.getImageData(0, 0, source.width, source.height);
+              pixels.data.set(
+                blendClippedPixels(pixels.data, overlay.data, clip.opacity, clip.blend),
+              );
+              ctx.putImageData(pixels, 0, 0);
+            } finally {
+              release(source);
+            }
+            await checkpoint();
+          }
+        }
+        draw(target, bitmap, base, clips.length > 0);
+      } finally {
+        release(bitmap);
       }
-      ctx.drawImage(bitmap, 0, 0);
-      ctx.restore();
-      bitmap.width = bitmap.height = 1;
-      progress(++done, total);
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await checkpoint();
     }
   };
   const ctx = output.getContext("2d")!;

@@ -61,3 +61,28 @@ test("superseding previews retain initialization and closed workers reject new w
     Object.assign(globalThis, { Worker: originalWorker, OffscreenCanvas: originalCanvas });
   }
 });
+
+test("cancelling a merge rejects pending results without changing the input document", async () => {
+  const originalWorker = globalThis.Worker,
+    originalCanvas = globalThis.OffscreenCanvas;
+  let stopped = false;
+  class FakeWorker {
+    postMessage() {}
+    terminate() {
+      stopped = true;
+    }
+  }
+  Object.assign(globalThis, { Worker: FakeWorker, OffscreenCanvas: class {} });
+  try {
+    const document = fromPanel({ id: "p", name: "art", width: 8, height: 8 }),
+      before = structuredClone(document),
+      renderer = new ProRenderer();
+    const pending = renderer.merge(document, 1000, "flatten", [], () => {});
+    renderer.dispose();
+    await assert.rejects(pending, { name: "AbortError" });
+    assert.ok(stopped);
+    assert.deepEqual(document, before);
+  } finally {
+    Object.assign(globalThis, { Worker: originalWorker, OffscreenCanvas: originalCanvas });
+  }
+});

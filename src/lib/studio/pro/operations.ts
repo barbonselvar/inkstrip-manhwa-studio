@@ -41,6 +41,17 @@ export function ungroupLayers(d: ProDocument, id: string): ProDocument {
     throw new Error(
       "To ungroup without changing appearance, unlock/show the group and set its opacity to 100% and blend to Normal first.",
     );
+  if (
+    g.clipped ||
+    d.layers.filter((l) => l.parentId === g.parentId)[
+      d.layers.filter((l) => l.parentId === g.parentId).indexOf(g) + 1
+    ]?.clipped ||
+    d.layers.filter((l) => l.parentId === id)[0]?.clipped ||
+    d.layers.some((l) => l.parentId === id && !l.clipped && l.blend !== "source-over")
+  )
+    throw new Error(
+      "This group has clipping or backdrop-dependent blend modes. Merge it or release those relationships before ungrouping.",
+    );
   const children = d.layers
       .filter((l) => l.parentId === id)
       .map((l) => ({ ...l, parentId: g.parentId })),
