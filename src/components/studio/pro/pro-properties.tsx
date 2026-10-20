@@ -79,14 +79,15 @@ export function ProProperties({
   return (
     <div className="pro-properties-content">
       <ToolSection title="Brush & selection" defaultOpen>
-        <ToolSection title="Clone Stamp" defaultOpen={false}>
+        <ToolSection title="Clone & Healing source" defaultOpen={false}>
           <p className="pro-help">
-            Samples the visible composite at full resolution and paints onto the selected paint
-            layer. Desktop: hold Alt/Option and click a source point. Touch: arm source selection,
-            then tap the canvas.
+            Clone Stamp copies the sampled pixels. Healing Brush uses the same full-resolution
+            texture sample and color-matches it to the target patch with a traditional local
+            pixel algorithm; it does not use generative AI. Desktop: hold Alt/Option and click a
+            source point. Touch: arm source selection, then tap the canvas.
           </p>
           <Button variant={cloneSampleArmed ? "secondary" : "ghost"} onClick={onArmCloneSample}>
-            {cloneSampleArmed ? "Tap canvas to set source" : "Set Clone Stamp source"}
+            {cloneSampleArmed ? "Tap canvas to set source" : "Set sample source"}
           </Button>
           <p className="pro-help" role="status">
             {cloneSource

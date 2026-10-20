@@ -28,7 +28,15 @@ export type Stroke = {
   tip?: "round" | "square";
   clip?: Selection;
   /** Immutable merged-document snapshot sampled for Clone Stamp. */
-  clone?: { assetId: string; width: number; height: number; source: Point; destination: Point };
+  clone?: {
+    assetId: string;
+    width: number;
+    height: number;
+    source: Point;
+    destination: Point;
+    /** Color-match sampled texture to the target neighborhood (traditional healing). */
+    mode?: "clone" | "heal";
+  };
 };
 export type Mask = {
   selection: Selection;
@@ -218,7 +226,8 @@ function validateStroke(s: Stroke) {
       !Number.isInteger(s.clone.height) ||
       s.clone.width * s.clone.height > 16_000_000 ||
       !point(s.clone.source) ||
-      !point(s.clone.destination))
+      !point(s.clone.destination) ||
+      (s.clone.mode !== undefined && s.clone.mode !== "clone" && s.clone.mode !== "heal"))
   )
     throw new Error("Invalid Clone Stamp source.");
 }

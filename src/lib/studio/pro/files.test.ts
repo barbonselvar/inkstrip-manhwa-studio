@@ -24,7 +24,7 @@ test("native format roundtrip keeps editable text, immutable source bytes and ta
     new Uint8Array([1, 2, 3]),
   );
 });
-test("Clone Stamp source snapshots survive native roundtrip and asset remapping", async () => {
+test("Clone Stamp and Healing Brush snapshots survive native roundtrip and asset remapping", async () => {
   const incoming = session(),
     paint = layer("paint", 32, 24, "clone-layer");
   incoming.assets["clone-snapshot"] = new Blob([new Uint8Array([4, 5, 6])], { type: "image/png" });
@@ -45,11 +45,13 @@ test("Clone Stamp source snapshots survive native roundtrip and asset remapping"
       height: 24,
       source: { x: 2, y: 3 },
       destination: { x: 9, y: 8 },
+      mode: "heal",
     },
   });
   incoming.document.layers.push(paint);
   const reopened = await readNative(await nativeFile(incoming), "panel-2", "media-2");
   assert.equal(reopened.document.layers.at(-1)!.strokes[0]!.clone?.assetId, "clone-snapshot");
+  assert.equal(reopened.document.layers.at(-1)!.strokes[0]!.clone?.mode, "heal");
   validateAssets(reopened);
   const { mergeNativeSession } = await import("./files.ts"),
     merged = mergeNativeSession(session(), reopened),

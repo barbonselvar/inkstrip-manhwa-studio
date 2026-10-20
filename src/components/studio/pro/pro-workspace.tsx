@@ -83,6 +83,7 @@ const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush 
   { id: "brush", name: "Brush", key: "B", Icon: Brush },
   { id: "pencil", name: "Pencil", key: "N", Icon: Pencil },
   { id: "clone", name: "Clone Stamp", key: "S", Icon: Stamp },
+  { id: "heal", name: "Healing Brush", key: "J", Icon: Brush },
   { id: "eraser", name: "Eraser", key: "E", Icon: Eraser },
   { id: "eyedropper", name: "Eyedropper", key: "I", Icon: Pipette },
   { id: "select-rect", name: "Rectangle selection", key: "M", Icon: ScanLine },
@@ -103,6 +104,7 @@ const RASTER_TOOL_IDS = new Set<ProTool>([
   "brush",
   "pencil",
   "clone",
+  "heal",
   "eraser",
   "eyedropper",
   "select-rect",
@@ -774,12 +776,12 @@ export default function ProWorkspace({
   };
   const chooseTool = (id: ProTool) => {
     if (
-      (id === "brush" || id === "pencil" || id === "eraser" || id === "clone") &&
+      (id === "brush" || id === "pencil" || id === "eraser" || id === "clone" || id === "heal") &&
       !maskMode &&
       active?.kind !== "paint"
     )
       add("paint");
-    if (id === "clone") setMaskMode(false);
+    if (id === "clone" || id === "heal") setMaskMode(false);
     setTool(id);
     setBefore(false);
   };

@@ -9,6 +9,7 @@ import { shapePath } from "./paths";
 import { applyAdjustments, hasAdjustments } from "../editor/adjustments";
 import { tonePixels } from "./pixels";
 import { cloneSourceMatrix } from "./operations";
+import { matchRepairColor } from "./repair";
 type Ctx = OffscreenCanvasRenderingContext2D;
 function canvas(w: number, h: number) {
   return new OffscreenCanvas(Math.max(1, Math.ceil(w)), Math.max(1, Math.ceil(h)));
@@ -153,6 +154,30 @@ async function surface(
           };
         sourceCtx.setTransform(...cloneSourceMatrix(l, offset, scale));
         sourceCtx.drawImage(source, 0, 0);
+        if (s.clone.mode === "heal") {
+          // Use the immutable full-resolution sample as both the donor texture
+          // and the target tone reference. Shift the donor's average RGB toward
+          // the target patch before applying the same editable brush mask.
+          const points = s.points,
+            radius = (s.size / 2) * scale,
+            left = Math.max(0, Math.floor((Math.min(...points.map((p) => p.x)) * scale) - radius)),
+            top = Math.max(0, Math.floor((Math.min(...points.map((p) => p.y)) * scale) - radius)),
+            right = Math.min(out.width, Math.ceil(Math.max(...points.map((p) => p.x)) * scale + radius)),
+            bottom = Math.min(out.height, Math.ceil(Math.max(...points.map((p) => p.y)) * scale + radius));
+          if (right > left && bottom > top) {
+            const reference = canvas(out.width, out.height),
+              referenceCtx = reference.getContext("2d", { willReadFrequently: true })!;
+            referenceCtx.setTransform(...cloneSourceMatrix(l, { x: 0, y: 0 }, scale));
+            referenceCtx.drawImage(source, 0, 0);
+            const width = right - left,
+              height = bottom - top,
+              sampledPixels = sourceCtx.getImageData(left, top, width, height),
+              targetPixels = referenceCtx.getImageData(left, top, width, height);
+            sampledPixels.data.set(matchRepairColor(sampledPixels.data, targetPixels.data));
+            sourceCtx.putImageData(sampledPixels, left, top);
+            reference.width = reference.height = 1;
+          }
+        }
         maskCtx.scale(scale, scale);
         stroke(maskCtx, { ...s, clone: undefined, color: "#ffffff", erase: false, opacity: 1 });
         if (s.clip) {

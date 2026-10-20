@@ -22,6 +22,7 @@ export type ProTool =
   | "brush"
   | "pencil"
   | "clone"
+  | "heal"
   | "eraser"
   | "eyedropper"
   | "rectangle"
@@ -292,7 +293,7 @@ export function ProCanvas({
       }
       return;
     }
-    if (tool === "clone" && (e.altKey || cloneSampleArmed)) {
+    if ((tool === "clone" || tool === "heal") && (e.altKey || cloneSampleArmed)) {
       onCloneSample(p);
       return;
     }
@@ -339,7 +340,7 @@ export function ProCanvas({
       };
       return;
     }
-    if (tool === "clone") {
+    if (tool === "clone" || tool === "heal") {
       if (
         !cloneSource ||
         !selected ||
@@ -362,7 +363,7 @@ export function ProCanvas({
         stroke: {
           ...brush,
           erase: false,
-          clone,
+          clone: { ...clone, mode: tool === "heal" ? "heal" : "clone" },
           clip:
             selection.regions.length || selection.inverted
               ? toLocalSelection(selection, selected)
@@ -579,7 +580,9 @@ export function ProCanvas({
             ? maskMode
               ? "Paint mask"
               : g.stroke?.clone
-                ? "Clone Stamp"
+                ? g.stroke.clone.mode === "heal"
+                  ? "Healing Brush"
+                  : "Clone Stamp"
                 : g.stroke?.tip === "square"
                   ? "Pencil stroke"
                   : "Brush stroke"
@@ -681,7 +684,7 @@ export function ProCanvas({
               viewBox={`0 0 ${doc.width} ${doc.height}`}
               aria-label="Pro selection overlays"
             >
-              {cursor && ["brush", "pencil", "eraser", "clone"].includes(tool) ? (
+              {cursor && ["brush", "pencil", "eraser", "clone", "heal"].includes(tool) ? (
                 <circle
                   cx={cursor.x}
                   cy={cursor.y}
@@ -689,7 +692,7 @@ export function ProCanvas({
                   className="pro-brush-cursor"
                 />
               ) : null}
-              {tool === "clone" && cloneSource ? (
+              {(tool === "clone" || tool === "heal") && cloneSource ? (
                 <g className="pro-clone-source-marker" aria-label="Clone Stamp source point">
                   <circle
                     cx={cloneSource.point.x}
