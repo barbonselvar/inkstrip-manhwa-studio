@@ -23,15 +23,6 @@ import {
   Undo2,
   Redo2,
   Layers3,
-  Plus,
-  Eye,
-  EyeOff,
-  Lock,
-  Unlock,
-  ChevronUp,
-  ChevronDown,
-  Copy,
-  Trash2,
   Download,
   Save,
   Maximize2,
@@ -51,8 +42,6 @@ import {
   layer,
   validateDocument,
   validateAssets,
-  moveLayer,
-  removeLayer,
   toLocalSelection,
   type ProDocument,
   type ProSession,
@@ -62,7 +51,15 @@ import {
   type CloneSource,
 } from "@/lib/studio/pro/model";
 import { createHistory, record, undo, redo, type History } from "@/lib/studio/editor/history";
-import { isLocked, reorderLayer, ungroupLayers } from "@/lib/studio/pro/operations";
+import { isLocked, ungroupLayers } from "@/lib/studio/pro/operations";
+import { ProLayers } from "./pro-layers";
+import {
+  duplicateLayers,
+  deleteLayers,
+  groupLayers,
+  translateLayers,
+  type MergeMode,
+} from "@/lib/studio/pro/layers";
 import { ProRenderer } from "@/lib/studio/pro/client";
 import { loadSession, saveSession } from "@/lib/studio/pro/storage";
 import { nativeFile, readNative, vectorSvg, mergeNativeSession } from "@/lib/studio/pro/files";
@@ -236,8 +233,7 @@ export default function ProWorkspace({
     lastSaved = useRef(""),
     generation = useRef(0),
     busyRef = useRef(false),
-    operationRun = useRef(0),
-    draggedLayer = useRef("");
+    operationRun = useRef(0);
   const project = useStudio((s) => s.projects.find((p) => p.id === projectId)),
     livePanel = useStudio((s) => s.panels.find((p) => p.id === panel.id));
   const maxArea =
@@ -436,6 +432,14 @@ export default function ProWorkspace({
       clearTimeout(timer);
     };
   }, [doc, ready, before, busy, maxArea]);
+  useEffect(() => {
+    const current = history?.present.doc;
+    if (!current) return;
+    setSelectedIds((ids) => {
+      const valid = ids.filter((id) => current.layers.some((l) => l.id === id));
+      return valid.length ? valid : current.layers.length ? [current.layers.at(-1)!.id] : [];
+    });
+  }, [history?.present.doc]);
   const setHist = useCallback((value: History<Entry>) => {
     historyRef.current = value;
     setHistory(value);
@@ -497,11 +501,21 @@ export default function ProWorkspace({
   const patch = (p: Partial<Layer>, group?: string) => {
     const current = historyRef.current?.present.doc;
     if (!current || !active || isLocked(current, active.id)) return;
-    commit(
-      { ...current, layers: current.layers.map((l) => (l.id === active.id ? { ...l, ...p } : l)) },
-      "Change layer properties",
-      group ? `${active.id}:${group}` : undefined,
-    );
+    try {
+      const next = p.transform
+        ? translateLayers(current, selectedIds, {
+            x: p.transform.x - active.transform.x,
+            y: p.transform.y - active.transform.y,
+          })
+        : current;
+      commit(
+        { ...next, layers: next.layers.map((l) => (l.id === active.id ? { ...l, ...p } : l)) },
+        "Change layer properties",
+        group ? `${active.id}:${group}` : undefined,
+      );
+    } catch (e) {
+      setError(storageMessage(e));
+    }
   };
   const add = (kind: Layer["kind"], shape?: Layer["shape"]) => {
     const d = historyRef.current?.present.doc;
@@ -531,20 +545,76 @@ export default function ProWorkspace({
     setBefore(false);
   };
   const duplicate = () => {
-    if (!doc || !active || active.locked || active.kind === "group") return;
-    const object = {
-      ...structuredClone(active),
-      id: crypto.randomUUID(),
-      name: active.name + " copy",
-      transform: { ...active.transform, x: active.transform.x + 16, y: active.transform.y + 16 },
-    };
-    commit({ ...doc, layers: [...doc.layers, object] }, "Duplicate layer");
-    setSelectedIds([object.id]);
+    if (!doc || busyRef.current) return;
+    try {
+      const result = duplicateLayers(doc, selectedIds);
+      commit(result.document, "Duplicate layers");
+      setSelectedIds(result.ids);
+    } catch (e) {
+      setError(storageMessage(e));
+    }
   };
   const remove = () => {
-    if (doc && active && !active.locked) {
-      commit(removeLayer(doc, active.id), "Delete layer");
+    if (!doc || busyRef.current) return;
+    try {
+      commit(deleteLayers(doc, selectedIds), "Delete layers");
       setSelectedIds([]);
+    } catch (e) {
+      setError(storageMessage(e));
+    }
+  };
+  const merge = async (mode: MergeMode) => {
+    const d = historyRef.current?.present.doc,
+      s = sessionRef.current;
+    if (!d || !s || busyRef.current || !renderer.current) return;
+    const run = ++operationRun.current;
+    busyRef.current = true;
+    setBusy(true);
+    ++generation.current;
+    setCancellable(true);
+    setError("");
+    setProgress("Preparing native-resolution merge…");
+    setStatus(
+      "Rendering native-resolution merge. Existing layers are retained until validation completes.",
+    );
+    try {
+      const result = await renderer.current.merge(d, maxArea, mode, selectedIds, (n, total) =>
+        setProgress(`Merging layer ${n} / ${total}`),
+      );
+      if (!alive.current || run !== operationRun.current) return;
+      if (!result.blob || !result.document || !result.assetId || !result.layerId)
+        throw new Error("The merge returned no image. Existing layers are unchanged.");
+      if (historyRef.current?.present.doc !== d)
+        throw new Error("The document changed. Retry the merge; no layers were replaced.");
+      const next = {
+        ...sessionRef.current!,
+        document: result.document,
+        assets: { ...sessionRef.current!.assets, [result.assetId]: result.blob },
+      };
+      validateAssets(next);
+      sessionRef.current = next;
+      setSession(next);
+      busyRef.current = false;
+      commit(
+        result.document,
+        mode === "flatten"
+          ? "Flatten image"
+          : mode === "visible"
+            ? "Merge visible layers"
+            : "Merge selected layers",
+      );
+      setSelectedIds([result.layerId]);
+      setMaskMode(false);
+      setBefore(false);
+      setAssetEpoch((n) => n + 1);
+      setStatus("Layers merged at native resolution. Undo restores the editable layer stack.");
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") setError(storageMessage(e));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+      setCancellable(false);
+      setProgress("");
     }
   };
   const saveNow = useCallback(async () => {
@@ -798,21 +868,14 @@ export default function ProWorkspace({
     }
   };
   const groupSelected = () => {
-    if (!doc) return;
-    const chosen = doc.layers.filter((l) => selectedIds.includes(l.id) && !l.locked);
-    if (chosen.length < 2 || chosen.some((l) => l.parentId || l.kind === "group")) {
-      setError(
-        "Select at least two unlocked top-level objects with Shift-click. Nested grouping is not available in this milestone.",
-      );
-      return;
+    if (!doc || busyRef.current) return;
+    try {
+      const result = groupLayers(doc, selectedIds);
+      commit(result.document, "Group layers");
+      setSelectedIds([result.id]);
+    } catch (e) {
+      setError(storageMessage(e));
     }
-    const g = layer("group", doc.width, doc.height);
-    g.name = "Layer group";
-    const last = Math.max(...chosen.map((l) => doc.layers.indexOf(l))),
-      layers = doc.layers.map((l) => (chosen.includes(l) ? { ...l, parentId: g.id } : l));
-    layers.splice(last + 1, 0, g);
-    commit({ ...doc, layers }, "Group layers");
-    setSelectedIds([g.id]);
   };
   const ungroup = () => {
     if (doc && active?.kind === "group") {
@@ -894,7 +957,11 @@ export default function ProWorkspace({
   };
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (busyRef.current) return;
+      if (
+        busyRef.current ||
+        (e.target as HTMLElement).closest('[role="menu"],[role="alertdialog"]')
+      )
+        return;
       const input = (e.target as HTMLElement).closest("input,textarea,select");
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
@@ -924,93 +991,6 @@ export default function ProWorkspace({
     return () => window.removeEventListener("keydown", key);
   }, [mode]);
   const stale = !!session && livePanel?.blobId !== session.acceptedBlobId;
-  const branch = (parent?: string, depth = 0): React.ReactNode =>
-    doc?.layers
-      .filter((l) => l.parentId === parent)
-      .slice()
-      .reverse()
-      .map((l) => (
-        <div key={l.id}>
-          <div
-            className="pro-layer-row"
-            data-active={selectedIds.includes(l.id)}
-            style={{ paddingLeft: 8 + depth * 12 }}
-            draggable={!l.locked && !busy}
-            onDragStart={() => {
-              draggedLayer.current = l.id;
-            }}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              const id = draggedLayer.current,
-                from = doc.layers.find((x) => x.id === id);
-              if (from && from.parentId === l.parentId) {
-                commit(reorderLayer(doc, id, l.id), "Reorder layers");
-              }
-              draggedLayer.current = "";
-            }}
-          >
-            <button
-              type="button"
-              aria-label={`${l.visible ? "Hide" : "Show"} layer ${l.name}`}
-              onClick={() =>
-                commit(
-                  {
-                    ...doc,
-                    layers: doc.layers.map((x) =>
-                      x.id === l.id ? { ...x, visible: !x.visible } : x,
-                    ),
-                  },
-                  "Toggle visibility",
-                )
-              }
-            >
-              {l.visible ? <Eye /> : <EyeOff />}
-            </button>
-            <button
-              className="pro-layer-select"
-              type="button"
-              aria-pressed={selectedIds.includes(l.id)}
-              onClick={(e) => {
-                setSelectedIds(
-                  e.shiftKey
-                    ? (ids) =>
-                        ids.includes(l.id) ? ids.filter((id) => id !== l.id) : [...ids, l.id]
-                    : [l.id],
-                );
-                setMaskMode(false);
-              }}
-            >
-              <Layers3 />
-              <span>
-                {l.name}
-                <small>
-                  {l.kind}
-                  {l.mask ? " · masked" : ""}
-                </small>
-              </span>
-            </button>
-            <button
-              type="button"
-              aria-label={`${l.locked ? "Unlock" : "Lock"} layer ${l.name}`}
-              onClick={() =>
-                commit(
-                  {
-                    ...doc,
-                    layers: doc.layers.map((x) =>
-                      x.id === l.id ? { ...x, locked: !x.locked } : x,
-                    ),
-                  },
-                  "Toggle layer lock",
-                )
-              }
-            >
-              {l.locked ? <Lock /> : <Unlock />}
-            </button>
-          </div>
-          {l.kind === "group" ? branch(l.id, depth + 1) : null}
-        </div>
-      ));
   return (
     <Dialog.Root
       open
@@ -1310,6 +1290,8 @@ export default function ProWorkspace({
               <ProCanvas
                 doc={doc}
                 activeId={selectedIds[0] ?? ""}
+                selectedIds={selectedIds}
+                onError={setError}
                 tool={tool}
                 selection={selection}
                 onSelection={setSelection}
@@ -1441,75 +1423,27 @@ export default function ProWorkspace({
                   )}
                   {tab === "layers" && doc && (
                     <>
-                      <div className="pro-section-heading">
-                        <h3>Document layers</h3>
-                        <span>{doc.layers.length} / 48</span>
-                      </div>
-                      <p className="pro-help">
-                        Top row is in front. Drag desktop rows or use layer arrows. Shift-click to
-                        group objects.
-                      </p>
-                      <div className="pro-layer-tree" role="group" aria-label="Layer stack">
-                        {branch()}
-                      </div>
-                      <div className="pro-actions">
-                        <Button variant="secondary" disabled={busy} onClick={() => add("paint")}>
-                          <Plus />
-                          Paint layer
-                        </Button>
-                        <Button variant="secondary" onClick={() => add("text")}>
-                          <Type />
-                          Text layer
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          aria-label="Bring layer forward"
-                          disabled={!active || active.locked}
-                          onClick={() =>
-                            active && commit(moveLayer(doc, active.id, 1), "Bring forward")
-                          }
-                        >
-                          <ChevronUp />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          aria-label="Send layer backward"
-                          disabled={!active || active.locked}
-                          onClick={() =>
-                            active && commit(moveLayer(doc, active.id, -1), "Send backward")
-                          }
-                        >
-                          <ChevronDown />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          disabled={!active || active.kind === "group" || active.locked}
-                          onClick={duplicate}
-                        >
-                          <Copy />
-                          Duplicate
-                        </Button>
-                        <Button
-                          variant="danger"
-                          disabled={!active || active.locked}
-                          onClick={remove}
-                        >
-                          <Trash2 />
-                          Delete
-                        </Button>
-                      </div>
-                      <div className="pro-actions">
-                        <Button variant="secondary" onClick={groupSelected}>
-                          Group selected
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          disabled={active?.kind !== "group"}
-                          onClick={ungroup}
-                        >
-                          Ungroup
-                        </Button>
-                      </div>
+                      {session && (
+                        <ProLayers
+                          doc={doc}
+                          session={session}
+                          selectedIds={selectedIds}
+                          onSelect={(ids) => {
+                            setSelectedIds(ids);
+                            setMaskMode(false);
+                          }}
+                          onChange={commit}
+                          onError={setError}
+                          onDuplicate={duplicate}
+                          onDelete={remove}
+                          onGroup={groupSelected}
+                          onUngroup={ungroup}
+                          onMerge={(mode) => void merge(mode)}
+                          onAdd={add}
+                          disabled={busy}
+                          maxArea={maxArea}
+                        />
+                      )}
                       <ToolSection title="Editable speech bubbles">
                         <p className="pro-help">
                           Add a vector bubble and a separate text layer; group them to keep them

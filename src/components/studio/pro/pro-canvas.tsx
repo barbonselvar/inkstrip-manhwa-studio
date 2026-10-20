@@ -15,6 +15,7 @@ import {
   type Region,
   type CloneSource,
 } from "@/lib/studio/pro/model";
+import { translateLayers, translationIds, visibleLayerIds } from "@/lib/studio/pro/layers";
 import { isLocked } from "@/lib/studio/pro/operations";
 import { selectionCanvas } from "@/lib/studio/pro/render";
 import { shapePath } from "@/lib/studio/pro/paths";
@@ -47,6 +48,7 @@ type Gesture = {
   screen: Point;
   doc: ProDocument;
   id?: string;
+  ids?: string[];
   stroke?: Stroke;
   region?: Region;
   index?: number;
@@ -58,6 +60,8 @@ type Gesture = {
 export function ProCanvas({
   doc,
   activeId,
+  selectedIds,
+  onError,
   tool,
   selection,
   onSelection,
@@ -83,6 +87,8 @@ export function ProCanvas({
 }: {
   doc: ProDocument;
   activeId: string;
+  selectedIds: string[];
+  onError: (message: string) => void;
   tool: ProTool;
   selection: Selection;
   onSelection: (s: Selection) => void;
@@ -249,8 +255,9 @@ export function ProCanvas({
   }, [visibleSelection, doc.width, doc.height, before]);
   const hit = (p: Point) => {
     const ctx = canvasRef.current?.getContext("2d");
+    const visible = visibleLayerIds(doc);
     return [...doc.layers].reverse().find((l) => {
-      if (!l.visible || l.locked || l.kind === "group") return false;
+      if (!visible.has(l.id) || l.locked || l.kind === "group") return false;
       let parent = l.parentId;
       while (parent) {
         const g = doc.layers.find((x) => x.id === parent);
@@ -463,8 +470,18 @@ export function ProCanvas({
     }
     const chosen = hit(p);
     if (chosen) {
-      onSelect(chosen.id);
-      gesture.current = { ...base, type: "move", id: chosen.id };
+      let selectedAncestor = chosen.parentId;
+      while (selectedAncestor && !selectedIds.includes(selectedAncestor))
+        selectedAncestor = doc.layers.find((l) => l.id === selectedAncestor)?.parentId;
+      const ids = selectedIds.includes(chosen.id) || selectedAncestor ? selectedIds : [chosen.id];
+      if (
+        ids.some((id) => [...translationIds(doc, [id])].some((target) => isLocked(doc, target)))
+      ) {
+        onError("Unlock linked or selected layers before moving them.");
+        return;
+      }
+      if (!selectedIds.includes(chosen.id) && !selectedAncestor) onSelect(chosen.id);
+      gesture.current = { ...base, type: "move", id: chosen.id, ids };
     } else onSelect("");
   };
   const update = (screen: Point): ProDocument | null => {
@@ -503,7 +520,15 @@ export function ProCanvas({
         if (Math.abs(center.y - doc.height / 2) < 8 / (fit * view.zoom))
           y += doc.height / 2 - center.y;
       }
-      next = { ...l, transform: { ...l.transform, x, y } };
+      try {
+        return translateLayers(g.doc, g.ids ?? [l.id], {
+          x: x - l.transform.x,
+          y: y - l.transform.y,
+        });
+      } catch (e) {
+        onError((e as Error).message);
+        return null;
+      }
     }
     if (g.type === "shape") {
       const w = Math.abs(p.x - g.start.x),
@@ -741,6 +766,31 @@ export function ProCanvas({
               {polygon.length > 0 && (
                 <polyline points={poly(polygon)} className="pro-selection-outline" />
               )}
+              {tool === "move" &&
+                [...translationIds(doc, selectedIds)]
+                  .filter((id) => id !== activeId)
+                  .map((id) => {
+                    const l = doc.layers.find((l) => l.id === id);
+                    return l && l.kind !== "group" ? (
+                      <polygon
+                        key={id}
+                        className="pro-linked-outline"
+                        points={[
+                          { x: 0, y: 0 },
+                          { x: l.width, y: 0 },
+                          { x: l.width, y: l.height },
+                          { x: 0, y: l.height },
+                        ]
+                          .map((p) => worldPoint(p, l))
+                          .map((p) => `${p.x},${p.y}`)
+                          .join(" ")}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1 / (fit * view.zoom)}
+                        strokeDasharray="4 4"
+                      />
+                    ) : null;
+                  })}
               {selected && selected.kind !== "group" && ["move", "direct"].includes(tool) && (
                 <>
                   <polygon
