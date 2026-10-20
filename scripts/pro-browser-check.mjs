@@ -47,8 +47,12 @@ async function records(page) {
   });
 }
 async function open(page) {
-  await page.getByRole("button", { name: "Pro Studio · layers & vectors", exact: true }).click();
-  await page.getByRole("dialog", { name: "Inkstrip Pro Studio", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Open in Raster Studio", exact: true }).click();
+  await page.getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Vector", exact: true }).click();
+  await page.getByRole("dialog", { name: "Inkstrip Vector Studio", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Raster", exact: true }).click();
+  await page.getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true }).waitFor();
   await pixel(page, 64, 48, [32, 48, 64, 255]);
 }
 async function pixel(page, x, y, expected) {
@@ -201,7 +205,7 @@ try {
   await page.getByText("Draft saved", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Back to chapter from Pro Studio", exact: true }).click();
   await page
-    .getByRole("dialog", { name: "Inkstrip Pro Studio", exact: true })
+    .getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true })
     .waitFor({ state: "hidden" });
   assert.deepEqual(
     await records(page),
@@ -210,7 +214,7 @@ try {
   );
   await page.reload();
   await page.getByRole("button", { name: "Pro Studio · layers & vectors", exact: true }).click();
-  await page.getByRole("dialog", { name: "Inkstrip Pro Studio", exact: true }).waitFor();
+  await page.getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true }).waitFor();
   await tab(page, "Properties");
   assert.equal(
     await page.getByLabel("Pro text content", { exact: true }).inputValue(),
@@ -556,7 +560,7 @@ try {
     await open(p);
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     const bounds = await p
-      .getByRole("dialog", { name: "Inkstrip Pro Studio", exact: true })
+      .getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true })
       .boundingBox();
     assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width);
     await p.getByRole("button", { name: "Toggle Pro panels", exact: true }).click();
@@ -618,7 +622,7 @@ try {
       await p.screenshot({ path: "/workspace/screenshots/inkstrip-pro-mobile.png" });
     await p.getByRole("button", { name: "Back to chapter from Pro Studio", exact: true }).click();
     await p
-      .getByRole("dialog", { name: "Inkstrip Pro Studio", exact: true })
+      .getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true })
       .waitFor({ state: "hidden" });
     const stored = await p.evaluate(async () => {
       const db = await new Promise((resolve) => {
@@ -780,7 +784,7 @@ try {
       return c.toDataURL().split(",")[1];
     });
     await sp.getByRole("button", { name: "Pro Studio · layers & vectors", exact: true }).click();
-    await sp.getByRole("dialog", { name: "Inkstrip Pro Studio", exact: true }).waitFor();
+    await sp.getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true }).waitFor();
     const scene = fromPanel({
         id: "showcase",
         name: "Glass Harbor · chapter artwork",

@@ -115,21 +115,26 @@ function ReferenceImage({
 export default function ProWorkspace({
   panel,
   projectId,
+  mode: initialMode,
+  onModeChange,
   onClose,
   onContinue,
 }: {
   panel: Panel;
   projectId: string;
+  mode: "raster" | "vector";
+  onModeChange: (mode: "raster" | "vector") => void;
   onClose: () => void;
   onContinue: (mode: "enhance" | "image" | "face") => void;
 }) {
+  const [mode, setMode] = useState(initialMode);
   const [history, setHistory] = useState<History<Entry> | null>(null),
     historyRef = useRef<History<Entry> | null>(null),
     [transient, setTransient] = useState<ProDocument | null>(null),
     [session, setSession] = useState<ProSession | null>(null),
     sessionRef = useRef<ProSession | null>(null),
     [selectedIds, setSelectedIds] = useState<string[]>([]),
-    [tool, setTool] = useState<ProTool>("move"),
+    [tool, setTool] = useState<ProTool>(initialMode === "raster" ? "brush" : "pen"),
     [selection, setSelection] = useState<Selection>({ regions: [], inverted: false, feather: 0 }),
     [operation, setOperation] = useState<"add" | "subtract" | "intersect">("add"),
     [brush, setBrush] = useState<Omit<Stroke, "points" | "erase">>({
@@ -892,9 +897,42 @@ export default function ProWorkspace({
             </Button>
             <div className="pro-brand">
               <Dialog.Title>
-                Inkstrip <span>Pro Studio</span>
+                Inkstrip <span>{mode === "raster" ? "Raster Studio" : "Vector Studio"}</span>
               </Dialog.Title>
-              <Dialog.Description>{panel.name} · layered, local workspace</Dialog.Description>
+              <Dialog.Description>
+                {panel.name} · {mode === "raster" ? "raster and layered" : "vector and reference"} ·
+                local workspace
+              </Dialog.Description>
+            </div>
+            <div className="pro-mode-switch" role="group" aria-label="Switch editing mode">
+              <Button
+                type="button"
+                variant={mode === "raster" ? "secondary" : "ghost"}
+                aria-pressed={mode === "raster"}
+                disabled={busy}
+                onClick={() => {
+                  setMode("raster");
+                  onModeChange("raster");
+                  setTool("brush");
+                  setBefore(false);
+                }}
+              >
+                <Brush /> Raster
+              </Button>
+              <Button
+                type="button"
+                variant={mode === "vector" ? "secondary" : "ghost"}
+                aria-pressed={mode === "vector"}
+                disabled={busy}
+                onClick={() => {
+                  setMode("vector");
+                  onModeChange("vector");
+                  setTool("pen");
+                  setBefore(false);
+                }}
+              >
+                <PenTool /> Vector
+              </Button>
             </div>
             <span className="pro-save-state" role="status">
               {busy
