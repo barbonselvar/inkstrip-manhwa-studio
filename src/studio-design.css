@@ -2297,3 +2297,260 @@ html[data-studio-motion="quiet"] .studio-button:active:not(:disabled) {
     font-size: 1rem;
   }
 }
+
+/* Homepage motion director: the Three.js companion is painted beneath the
+   print sheets, so the browser's own stacking order gives it true occlusion. */
+.chapter-sculpture {
+  isolation: isolate;
+  animation: sculpture-float 7s ease-in-out 1.2s infinite;
+}
+.robot-companion {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.robot-companion-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.sculpture-sheet {
+  animation: sculpture-assemble 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.sheet-back {
+  animation-delay: 120ms;
+}
+.sheet-mid {
+  animation-delay: 230ms;
+}
+.sheet-front {
+  animation-delay: 340ms;
+}
+.library-hero .hero-title {
+  transform-origin: left center;
+  animation: hero-title-in 850ms cubic-bezier(0.2, 0.8, 0.2, 1) 90ms both;
+}
+.library-hero .hero-title em {
+  display: inline-block;
+  transform-origin: left bottom;
+  animation: hero-word-in 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 190ms both;
+}
+.library-rail .brand-symbol {
+  transform-origin: center;
+  animation: brand-lock-in 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.library-metrics > div {
+  animation: metric-arrive 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.library-metrics > div:nth-child(2) {
+  animation-delay: 90ms;
+}
+.library-metrics > div:nth-child(3) {
+  animation-delay: 180ms;
+}
+@keyframes hero-title-in {
+  from {
+    opacity: 0;
+    transform: perspective(900px) translate3d(0, 1rem, -2rem) rotateX(10deg);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(900px) translate3d(0, 0, 0) rotateX(0);
+    filter: blur(0);
+  }
+}
+@keyframes hero-word-in {
+  from {
+    opacity: 0.2;
+    translate: 0 0.5rem -1rem;
+    rotate: x 9deg;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0 0;
+    rotate: x 0deg;
+  }
+}
+@keyframes brand-lock-in {
+  from {
+    opacity: 0;
+    transform: perspective(240px) rotateY(-50deg) translateZ(-1rem) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(240px) rotateY(0) translateZ(0) scale(1);
+  }
+}
+@keyframes metric-arrive {
+  from {
+    opacity: 0;
+    transform: perspective(650px) translate3d(0, 0.8rem, -2rem) rotateX(8deg);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(650px) translate3d(0, 0, 0) rotateX(0);
+  }
+}
+@keyframes sculpture-assemble {
+  from {
+    opacity: 0.4;
+    translate: 0 2rem -5rem;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0 0;
+  }
+}
+@keyframes sculpture-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -0.35rem;
+  }
+}
+
+/* Scroll-triggered project entrances keep the existing cards and links intact. */
+.project-shelf > li > .depth-surface[data-motion-ready="true"] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) rotateX(0);
+  transition:
+    opacity 650ms var(--ease-studio),
+    transform 750ms var(--ease-studio);
+  transition-delay: calc(var(--motion-index, 0) * 55ms);
+  transform-style: preserve-3d;
+}
+.project-shelf > li > .depth-surface[data-motion-ready="true"][data-entered="false"] {
+  opacity: 0;
+  transform: perspective(900px) translate3d(0, 2.5rem, -6rem) rotateX(8deg) scale(0.98);
+}
+
+/* Workflow cards have distinct motion cues while sharing the site's materials. */
+.library-content .workflow-grid > .workflow-card-depth {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transition:
+    opacity 650ms var(--ease-studio),
+    transform 750ms var(--ease-studio);
+}
+.workflow-card-depth[data-motion-ready="true"][data-entered="false"] {
+  opacity: 0;
+  transform: perspective(800px) translate3d(0, 2rem, -4rem) rotateX(7deg);
+}
+.workflow-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  min-height: 100%;
+  padding: 1.5rem;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: 1rem;
+  background: var(--surface-light);
+  transform: rotateX(var(--depth-y, 0deg)) rotateY(var(--depth-x, 0deg));
+  transform-style: preserve-3d;
+  transition:
+    transform var(--motion-slow) var(--ease-studio),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-slow);
+}
+.workflow-card::after {
+  position: absolute;
+  inset: 0.35rem;
+  z-index: -1;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 16%, transparent);
+  border-radius: 0.75rem;
+  content: "";
+  opacity: 0;
+  transform: translateZ(-18px) translateY(0.35rem);
+  transition:
+    opacity var(--motion-slow),
+    transform var(--motion-slow) var(--ease-studio);
+}
+.workflow-card-depth:hover .workflow-card {
+  border-color: color-mix(in srgb, var(--color-accent) 32%, var(--line-soft));
+  box-shadow: 0 1rem 2rem #0003;
+}
+.depth-surface:hover > .project-shelf-card.project-card {
+  transform: rotateX(var(--depth-y, 0deg)) rotateY(var(--depth-x, 0deg)) translateY(-4px)
+    translateZ(12px);
+  box-shadow: 0 1.1rem 2rem #0005;
+}
+.project-shelf > li:hover + li > .depth-surface {
+  transform: translateX(2px) translateZ(-2px);
+}
+.workflow-card-depth:hover .workflow-card::after {
+  opacity: 1;
+  transform: translateZ(-18px) translateY(0);
+}
+.workflow-card[data-feature="compose"] > svg {
+  filter: drop-shadow(-0.25rem 0.2rem 0 color-mix(in srgb, var(--color-accent) 20%, transparent));
+}
+.workflow-card[data-feature="refine"] > svg {
+  transform: rotate(-8deg);
+  transition: transform var(--motion-slow) var(--ease-studio);
+}
+.workflow-card-depth:hover .workflow-card[data-feature="refine"] > svg {
+  transform: rotate(18deg) translate3d(0.15rem, -0.15rem, 0.5rem);
+}
+.workflow-card[data-feature="publish"]::before {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  width: 1.5rem;
+  height: 2rem;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 22%, transparent);
+  border-radius: 0.2rem;
+  content: "";
+  opacity: 0.6;
+  transform: translateZ(-16px) rotate(6deg);
+}
+.depth-surface > .workflow-card {
+  transform: rotateX(var(--depth-y, 0deg)) rotateY(var(--depth-x, 0deg));
+}
+html[data-studio-motion="quiet"] .chapter-sculpture,
+html[data-studio-motion="quiet"] .sculpture-sheet {
+  animation: none;
+}
+html[data-studio-motion="quiet"] .robot-companion {
+  visibility: hidden;
+}
+html[data-studio-motion="quiet"] .depth-surface:hover > .project-shelf-card.project-card {
+  transform: none;
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chapter-sculpture,
+  .sculpture-sheet {
+    animation: none;
+  }
+  .project-shelf > li > .depth-surface[data-motion-ready="true"],
+  .workflow-card-depth[data-motion-ready="true"] {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+  .workflow-card,
+  .workflow-card::after {
+    transition: none;
+    transform: none;
+  }
+  .depth-surface:hover > .project-shelf-card.project-card {
+    transform: none;
+    box-shadow: none;
+  }
+  .library-hero .hero-title,
+  .library-hero .hero-title em,
+  .library-rail .brand-symbol,
+  .library-metrics > div {
+    animation: none;
+    filter: none;
+  }
+}

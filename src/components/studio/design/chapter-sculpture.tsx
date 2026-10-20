@@ -1,9 +1,16 @@
+import { lazy, Suspense } from "react";
 import { ArrowDown, Layers3 } from "lucide-react";
 import { DepthSurface } from "./depth-surface";
-/** Decorative print sculpture, not an interactive editor or a fabricated project. */
+const RobotCompanion = lazy(() =>
+  import("./robot-companion").then((module) => ({ default: module.RobotCompanion })),
+);
+/** Hero artwork and its animated companion; neither represents a stored project. */
 export function ChapterSculpture() {
   return (
     <DepthSurface className="chapter-sculpture">
+      <Suspense fallback={null}>
+        <RobotCompanion />
+      </Suspense>
       <div className="sculpture-halo" />
       <div className="sculpture-orbit" />
       <div className="sculpture-sheet sheet-back">

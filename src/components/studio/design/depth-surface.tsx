@@ -41,18 +41,65 @@ export function DepthSurface({
       el.style.setProperty("--depth-y", "0deg");
       el.style.setProperty("--light-shift", "0px");
     };
+    const press = (event: PointerEvent) => {
+      if (!allowed() || event.pointerType !== "touch") return;
+      const r = el.getBoundingClientRect();
+      point.current = {
+        x: (event.clientX - r.left) / r.width - 0.5,
+        y: (event.clientY - r.top) / r.height - 0.5,
+      };
+      if (!frame.current)
+        frame.current = requestAnimationFrame(() => {
+          frame.current = 0;
+          el.style.setProperty("--depth-x", `${point.current.x * 5}deg`);
+          el.style.setProperty("--depth-y", `${-point.current.y * 4}deg`);
+          el.style.setProperty("--light-shift", `${point.current.x * 12}px`);
+        });
+    };
     el.addEventListener("pointermove", move, { passive: true });
+    el.addEventListener("pointerdown", press, { passive: true });
     el.addEventListener("pointerleave", reset);
+    el.addEventListener("pointerup", reset);
+    el.addEventListener("pointercancel", reset);
     window.addEventListener("blur", reset);
     return () => {
       el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerdown", press);
       el.removeEventListener("pointerleave", reset);
+      el.removeEventListener("pointerup", reset);
+      el.removeEventListener("pointercancel", reset);
       window.removeEventListener("blur", reset);
       reset();
     };
   }, []);
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    el.dataset.motionReady = "true";
+    if (typeof IntersectionObserver === "undefined") {
+      el.dataset.entered = "true";
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          el.dataset.entered = "true";
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -4% 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   return (
-    <div ref={root} className={`depth-surface ${className}`} style={style}>
+    <div
+      ref={root}
+      className={`depth-surface ${className}`}
+      style={style}
+      data-motion-ready="false"
+      data-entered="false"
+    >
       {children}
     </div>
   );

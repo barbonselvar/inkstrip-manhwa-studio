@@ -22,7 +22,7 @@ import {
   PanelsTopLeft,
   WandSparkles,
 } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
 
 export function Library() {
   const projects = useStudio((state) => state.projects);
@@ -162,21 +162,21 @@ export function Library() {
             <span className="metric-icon">
               <BookOpen className="size-4" />
             </span>
-            <strong>{String(projects.length).padStart(2, "0")}</strong>
+            <AnimatedMetric value={projects.length} />
             <span>Projects</span>
           </div>
           <div>
             <span className="metric-icon">
               <Layers3 className="size-4" />
             </span>
-            <strong>{String(chapters.length).padStart(2, "0")}</strong>
+            <AnimatedMetric value={chapters.length} />
             <span>Chapters</span>
           </div>
           <div>
             <span className="metric-icon">
               <Sparkles className="size-4" />
             </span>
-            <strong>{String(panels.length).padStart(2, "0")}</strong>
+            <AnimatedMetric value={panels.length} />
             <span>Panels</span>
           </div>
           <span className="metrics-note">A collection of worlds in the making.</span>
@@ -242,7 +242,10 @@ export function Library() {
                 .filter((p) => ids.has(p.chapterId))
                 .sort((a, b) => a.order - b.order)[0];
               return (
-                <li key={project.id}>
+                <li
+                  key={project.id}
+                  style={{ "--motion-index": Math.min(index, 8) } as CSSProperties}
+                >
                   <DepthSurface>
                     <Link
                       to="/p/$projectId"
@@ -297,14 +300,16 @@ export function Library() {
                 tag: "PUBLISH",
               },
             ].map((item) => (
-              <div key={item.n}>
-                <span>
-                  {item.n} / {item.tag}
-                </span>
-                <item.icon className="size-5" />
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </div>
+              <DepthSurface key={item.n} className="workflow-card-depth">
+                <div className="workflow-card" data-feature={item.tag.toLowerCase()}>
+                  <span>
+                    {item.n} / {item.tag}
+                  </span>
+                  <item.icon className="size-5" />
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                </div>
+              </DepthSurface>
             ))}
           </div>
         </section>
@@ -366,4 +371,30 @@ export function Library() {
       </main>
     </div>
   );
+}
+
+function AnimatedMetric({ value }: { value: number }) {
+  const [displayValue, setDisplayValue] = useState(0);
+  const lastValue = useRef(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      lastValue.current = value;
+      setDisplayValue(value);
+      return;
+    }
+    const startValue = lastValue.current;
+    const startTime = performance.now();
+    let frame = 0;
+    const step = (now: number) => {
+      const progress = Math.min(1, (now - startTime) / 620);
+      const eased = 1 - (1 - progress) ** 4;
+      const next = Math.round(startValue + (value - startValue) * eased);
+      lastValue.current = next;
+      setDisplayValue(next);
+      if (progress < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+  return <strong>{String(displayValue).padStart(2, "0")}</strong>;
 }
