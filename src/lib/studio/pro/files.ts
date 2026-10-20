@@ -126,9 +126,30 @@ export function mergeNativeSession(current: ProSession, incoming: ProSession): P
   const document: ProDocument = {
     ...incoming.document,
     source: original ? { ...original, assetId: mapping.get(original.assetId)! } : undefined,
-    layers: incoming.document.layers.map((l) =>
-      l.assetId ? { ...l, assetId: mapping.get(l.assetId)! } : l,
-    ),
+    layers: incoming.document.layers.map((l) => ({
+      ...l,
+      ...(l.assetId ? { assetId: mapping.get(l.assetId)! } : {}),
+      strokes: l.strokes.map((stroke) =>
+        stroke.clone
+          ? { ...stroke, clone: { ...stroke.clone, assetId: mapping.get(stroke.clone.assetId)! } }
+          : stroke,
+      ),
+      ...(l.mask
+        ? {
+            mask: {
+              ...l.mask,
+              strokes: l.mask.strokes.map((stroke) =>
+                stroke.clone
+                  ? {
+                      ...stroke,
+                      clone: { ...stroke.clone, assetId: mapping.get(stroke.clone.assetId)! },
+                    }
+                  : stroke,
+              ),
+            },
+          }
+        : {}),
+    })),
   };
   const next = { ...current, document, assets };
   validateAssets(next);

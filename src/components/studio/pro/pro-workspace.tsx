@@ -6,6 +6,7 @@ import {
   Hand,
   Brush,
   Pencil,
+  Stamp,
   Eraser,
   Pipette,
   Square,
@@ -55,6 +56,7 @@ import {
   type Layer,
   type Selection,
   type Stroke,
+  type CloneSource,
 } from "@/lib/studio/pro/model";
 import { createHistory, record, undo, redo, type History } from "@/lib/studio/editor/history";
 import { isLocked, reorderLayer, ungroupLayers } from "@/lib/studio/pro/operations";
@@ -80,6 +82,7 @@ const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush 
   { id: "hand", name: "Hand", key: "H", Icon: Hand },
   { id: "brush", name: "Brush", key: "B", Icon: Brush },
   { id: "pencil", name: "Pencil", key: "N", Icon: Pencil },
+  { id: "clone", name: "Clone Stamp", key: "S", Icon: Stamp },
   { id: "eraser", name: "Eraser", key: "E", Icon: Eraser },
   { id: "eyedropper", name: "Eyedropper", key: "I", Icon: Pipette },
   { id: "select-rect", name: "Rectangle selection", key: "M", Icon: ScanLine },
@@ -99,6 +102,7 @@ const RASTER_TOOL_IDS = new Set<ProTool>([
   "hand",
   "brush",
   "pencil",
+  "clone",
   "eraser",
   "eyedropper",
   "select-rect",
@@ -187,6 +191,8 @@ export default function ProWorkspace({
     [brushPresets, setBrushPresets] = useState<BrushPreset[]>(() =>
       loadBrushPresets(browserBrushStorage()),
     ),
+    [cloneSource, setCloneSource] = useState<CloneSource | null>(null),
+    [cloneSampleArmed, setCloneSampleArmed] = useState(false),
     [maskMode, setMaskMode] = useState(false),
     [grid, setGrid] = useState(false),
     [snapping, setSnapping] = useState(true),
@@ -767,9 +773,54 @@ export default function ProWorkspace({
     }
   };
   const chooseTool = (id: ProTool) => {
-    if ((id === "brush" || id === "pencil" || id === "eraser") && !maskMode && active?.kind !== "paint") add("paint");
+    if (
+      (id === "brush" || id === "pencil" || id === "eraser" || id === "clone") &&
+      !maskMode &&
+      active?.kind !== "paint"
+    )
+      add("paint");
+    if (id === "clone") setMaskMode(false);
     setTool(id);
     setBefore(false);
+  };
+  const captureCloneSource = async (point: { x: number; y: number }) => {
+    const document = historyRef.current?.present.doc,
+      session = sessionRef.current,
+      worker = renderer.current;
+    if (!document || !session || !worker || busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setError("");
+    setProgress("Sampling merged artwork at full resolution…");
+    try {
+      await saveTail.current.catch(() => {});
+      const currentSession = sessionRef.current;
+      if (!currentSession) throw new Error("The document session is unavailable.");
+      const result = await worker.export(document, maxArea, "image/png", 1, () => {});
+      if (!result.blob) throw new Error("Could not capture the clone source.");
+      const assetId = crypto.randomUUID(),
+        next = { ...currentSession, assets: { ...currentSession.assets, [assetId]: result.blob } };
+      validateAssets(next);
+      const stored = await saveSession(next, currentSession.revision);
+      sessionRef.current = stored;
+      setSession(stored);
+      setCloneSource({
+        assetId,
+        width: document.width,
+        height: document.height,
+        point,
+        aligned: true,
+      });
+      setCloneSampleArmed(false);
+      setAssetEpoch((n) => n + 1);
+      setStatus("Clone source captured from the visible composite at full document resolution.");
+    } catch (e) {
+      setError(storageMessage(e));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+      setProgress("");
+    }
   };
   const actions = useRef({
     save: saveNow,
@@ -1195,6 +1246,19 @@ export default function ProWorkspace({
                 onColor={(color) => setBrush((b) => ({ ...b, color }))}
                 disabled={busy}
                 rendering={rendering}
+                cloneSource={cloneSource}
+                cloneSampleArmed={cloneSampleArmed}
+                onCloneSample={(point) => void captureCloneSource(point)}
+                onCloneAdvance={(delta) =>
+                  setCloneSource((source) =>
+                    source && source.aligned
+                      ? {
+                          ...source,
+                          point: { x: source.point.x + delta.x, y: source.point.y + delta.y },
+                        }
+                      : source,
+                  )
+                }
               />
             ) : (
               <div className="pro-loading">
@@ -1246,33 +1310,43 @@ export default function ProWorkspace({
                       }}
                       brush={brush}
                       onBrush={(p) => setBrush((b) => ({ ...b, ...p }))}
-                  brushPresets={brushPresets}
-                  onApplyBrushPreset={(preset) => setBrush((b) => ({ ...b, ...preset }))}
-                  onSaveBrushPreset={(name) => {
-                    try {
-                      const next = upsertBrushPreset(brushPresets, {
-                        name,
-                        settings: {
-                          size: brush.size,
-                          hardness: brush.hardness,
-                          opacity: brush.opacity,
-                          flow: brush.flow,
-                          color: brush.color === "transparent" ? "#172420" : brush.color,
-                          ...(brush.tip ? { tip: brush.tip } : {}),
-                        },
-                      });
-                      if (!saveBrushPresets(browserBrushStorage(), next)) throw new Error("Browser storage is unavailable.");
-                      setBrushPresets(next);
-                    } catch (e) {
-                      setError(storageMessage(e));
-                    }
-                  }}
-                  onDeleteBrushPreset={(name) => {
-                    const defaults = new Set(["Ink · round", "Soft shade", "Pencil · square"]);
-                    if (defaults.has(name)) return;
-                    const next = brushPresets.filter((preset) => preset.name !== name);
-                    if (saveBrushPresets(browserBrushStorage(), next)) setBrushPresets(next);
-                  }}
+                      cloneSource={cloneSource}
+                      cloneSampleArmed={cloneSampleArmed}
+                      onArmCloneSample={() => {
+                        setCloneSampleArmed((armed) => !armed);
+                        setStatus("Tap the artwork to sample a Clone Stamp source.");
+                      }}
+                      onCloneAlignment={(aligned) =>
+                        setCloneSource((source) => (source ? { ...source, aligned } : source))
+                      }
+                      brushPresets={brushPresets}
+                      onApplyBrushPreset={(preset) => setBrush((b) => ({ ...b, ...preset }))}
+                      onSaveBrushPreset={(name) => {
+                        try {
+                          const next = upsertBrushPreset(brushPresets, {
+                            name,
+                            settings: {
+                              size: brush.size,
+                              hardness: brush.hardness,
+                              opacity: brush.opacity,
+                              flow: brush.flow,
+                              color: brush.color === "transparent" ? "#172420" : brush.color,
+                              ...(brush.tip ? { tip: brush.tip } : {}),
+                            },
+                          });
+                          if (!saveBrushPresets(browserBrushStorage(), next))
+                            throw new Error("Browser storage is unavailable.");
+                          setBrushPresets(next);
+                        } catch (e) {
+                          setError(storageMessage(e));
+                        }
+                      }}
+                      onDeleteBrushPreset={(name) => {
+                        const defaults = new Set(["Ink · round", "Soft shade", "Pencil · square"]);
+                        if (defaults.has(name)) return;
+                        const next = brushPresets.filter((preset) => preset.name !== name);
+                        if (saveBrushPresets(browserBrushStorage(), next)) setBrushPresets(next);
+                      }}
                       maskMode={maskMode}
                       setMaskMode={setMaskMode}
                     />

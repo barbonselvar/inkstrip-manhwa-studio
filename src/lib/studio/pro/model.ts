@@ -9,6 +9,13 @@ export type Region = {
   operation: "add" | "subtract" | "intersect";
 };
 export type Selection = { regions: Region[]; inverted: boolean; feather: number };
+export type CloneSource = {
+  assetId: string;
+  width: number;
+  height: number;
+  point: Point;
+  aligned: boolean;
+};
 export type Stroke = {
   points: Point[];
   size: number;
@@ -20,6 +27,8 @@ export type Stroke = {
   /** Square, hard-edged tip used by the pencil tool. Older native strokes default to round. */
   tip?: "round" | "square";
   clip?: Selection;
+  /** Immutable merged-document snapshot sampled for Clone Stamp. */
+  clone?: { assetId: string; width: number; height: number; source: Point; destination: Point };
 };
 export type Mask = {
   selection: Selection;
@@ -199,6 +208,19 @@ function validateStroke(s: Stroke) {
   )
     throw new Error("Invalid brush stroke.");
   if (s.clip) validateSelection(s.clip);
+  if (
+    s.clone &&
+    (typeof s.clone.assetId !== "string" ||
+      !s.clone.assetId ||
+      !finite(s.clone.width, 1, 16384) ||
+      !Number.isInteger(s.clone.width) ||
+      !finite(s.clone.height, 1, 16384) ||
+      !Number.isInteger(s.clone.height) ||
+      s.clone.width * s.clone.height > 16_000_000 ||
+      !point(s.clone.source) ||
+      !point(s.clone.destination))
+  )
+    throw new Error("Invalid Clone Stamp source.");
 }
 export function validateDocument(d: ProDocument) {
   if (
@@ -398,6 +420,10 @@ export function validateAssets(session: ProSession) {
         !(session.assets[l.assetId] instanceof Blob))
     )
       throw new Error("A raster source is missing; existing artwork is unchanged.");
+  for (const l of session.document.layers)
+    for (const stroke of [...l.strokes, ...(l.mask?.strokes ?? [])])
+      if (stroke.clone && !Object.hasOwn(session.assets, stroke.clone.assetId))
+        throw new Error("A Clone Stamp source is missing; existing artwork is unchanged.");
 }
 export function localPoint(p: Point, l: Layer): Point {
   const r = (-l.transform.rotation * Math.PI) / 180,

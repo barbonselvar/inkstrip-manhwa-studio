@@ -79,6 +79,14 @@ async function drag(page, a, b) {
   await page.mouse.move(r.x + (b.x / 128) * r.width, r.y + (b.y / 96) * r.height, { steps: 8 });
   await page.mouse.up();
 }
+async function clickAt(page, point, { alt = false } = {}) {
+  const r = await page.locator(".pro-artboard").boundingBox();
+  await page.mouse.move(r.x + (point.x / 128) * r.width, r.y + (point.y / 96) * r.height);
+  if (alt) await page.keyboard.down("Alt");
+  await page.mouse.down();
+  await page.mouse.up();
+  if (alt) await page.keyboard.up("Alt");
+}
 async function tab(page, name) {
   await page
     .getByRole("navigation", { name: "Pro panels", exact: true })
@@ -206,6 +214,21 @@ try {
   await pixel(page, 80, 48, [0, 255, 0, 255]);
   await page.getByRole("button", { name: "Pro undo", exact: true }).click();
   await pixel(page, 80, 48, [32, 48, 64, 255]);
+  await page.getByRole("button", { name: "Clone Stamp tool", exact: true }).click();
+  await clickAt(page, { x: 8, y: 8 }, { alt: true });
+  await page
+    .getByText("Clone source captured from the visible composite at full document resolution.", {
+      exact: true,
+    })
+    .waitFor();
+  await clickAt(page, { x: 40, y: 40 });
+  await pixel(page, 40, 40, [112, 128, 144, 255]);
+  await page.getByRole("button", { name: "Pro undo", exact: true }).click();
+  await pixel(page, 40, 40, [32, 48, 64, 255]);
+  await page.getByRole("button", { name: "Pro redo", exact: true }).click();
+  await pixel(page, 40, 40, [112, 128, 144, 255]);
+  await page.getByRole("button", { name: "Pro undo", exact: true }).click();
+  await pixel(page, 40, 40, [32, 48, 64, 255]);
   await tab(page, "Layers");
   await page.getByRole("button", { name: "Text layer", exact: true }).click();
   await page

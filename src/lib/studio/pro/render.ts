@@ -8,6 +8,7 @@ import {
 import { shapePath } from "./paths";
 import { applyAdjustments, hasAdjustments } from "../editor/adjustments";
 import { tonePixels } from "./pixels";
+import { cloneSourceMatrix } from "./operations";
 type Ctx = OffscreenCanvasRenderingContext2D;
 function canvas(w: number, h: number) {
   return new OffscreenCanvas(Math.max(1, Math.ceil(w)), Math.max(1, Math.ceil(h)));
@@ -140,6 +141,40 @@ async function surface(
   if (l.kind === "raster") ctx.drawImage(await asset(l.assetId!, scale), 0, 0, l.width, l.height);
   if (l.kind === "paint")
     for (const s of l.strokes) {
+      if (s.clone) {
+        const source = await asset(s.clone.assetId, scale),
+          cloned = canvas(out.width, out.height),
+          sourceCtx = cloned.getContext("2d")!,
+          mask = canvas(out.width, out.height),
+          maskCtx = mask.getContext("2d")!,
+          offset = {
+            x: s.clone.source.x - s.clone.destination.x,
+            y: s.clone.source.y - s.clone.destination.y,
+          };
+        sourceCtx.setTransform(...cloneSourceMatrix(l, offset, scale));
+        sourceCtx.drawImage(source, 0, 0);
+        maskCtx.scale(scale, scale);
+        stroke(maskCtx, { ...s, clone: undefined, color: "#ffffff", erase: false, opacity: 1 });
+        if (s.clip) {
+          maskCtx.setTransform(1, 0, 0, 1, 0, 0);
+          const clip = selectionCanvas(s.clip, l.width, l.height, scale);
+          maskCtx.globalCompositeOperation = "destination-in";
+          maskCtx.drawImage(clip, 0, 0);
+          clip.width = clip.height = 1;
+        }
+        sourceCtx.setTransform(1, 0, 0, 1, 0, 0);
+        sourceCtx.globalCompositeOperation = "destination-in";
+        sourceCtx.drawImage(mask, 0, 0);
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalAlpha = s.opacity;
+        ctx.globalCompositeOperation = "source-over";
+        ctx.drawImage(cloned, 0, 0);
+        ctx.restore();
+        source.close();
+        cloned.width = cloned.height = mask.width = mask.height = 1;
+        continue;
+      }
       if (s.clip) {
         const ink = canvas(out.width, out.height),
           c = ink.getContext("2d")!;

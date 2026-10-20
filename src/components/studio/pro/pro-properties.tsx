@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ADJUSTMENT_FIELDS } from "@/lib/studio/editor/adjustments";
 import { ToolSection } from "../design/tool-section";
 import type { BrushPreset, BrushSettings } from "@/lib/studio/pro/brush-presets";
+import type { CloneSource } from "@/lib/studio/pro/model";
 export function ProNumber({
   label,
   value,
@@ -50,6 +51,10 @@ export function ProProperties({
   onApplyBrushPreset,
   onSaveBrushPreset,
   onDeleteBrushPreset,
+  cloneSource,
+  cloneSampleArmed,
+  onArmCloneSample,
+  onCloneAlignment,
   maskMode,
   setMaskMode,
 }: {
@@ -64,12 +69,45 @@ export function ProProperties({
   onApplyBrushPreset: (settings: BrushSettings) => void;
   onSaveBrushPreset: (name: string) => void;
   onDeleteBrushPreset: (name: string) => void;
+  cloneSource: CloneSource | null;
+  cloneSampleArmed: boolean;
+  onArmCloneSample: () => void;
+  onCloneAlignment: (aligned: boolean) => void;
   maskMode: boolean;
   setMaskMode: (v: boolean) => void;
 }) {
   return (
     <div className="pro-properties-content">
       <ToolSection title="Brush & selection" defaultOpen>
+        <ToolSection title="Clone Stamp" defaultOpen={false}>
+          <p className="pro-help">
+            Samples the visible composite at full resolution and paints onto the selected paint
+            layer. Desktop: hold Alt/Option and click a source point. Touch: arm source selection,
+            then tap the canvas.
+          </p>
+          <Button variant={cloneSampleArmed ? "secondary" : "ghost"} onClick={onArmCloneSample}>
+            {cloneSampleArmed ? "Tap canvas to set source" : "Set Clone Stamp source"}
+          </Button>
+          <p className="pro-help" role="status">
+            {cloneSource
+              ? `Source ${Math.round(cloneSource.point.x)}, ${Math.round(cloneSource.point.y)} · ${cloneSource.width} × ${cloneSource.height} px`
+              : "No source sampled yet."}
+          </p>
+          <label className="pro-check">
+            <input
+              type="checkbox"
+              aria-label="Aligned Clone Stamp"
+              checked={cloneSource?.aligned ?? true}
+              disabled={!cloneSource}
+              onChange={(e) => onCloneAlignment(e.target.checked)}
+            />
+            Aligned sampling
+          </label>
+          <p className="pro-help">
+            Painting creates editable Clone Stamp strokes in a separate paint layer; the sampled
+            composite is embedded in the native project.
+          </p>
+        </ToolSection>
         <label className="pro-field">
           Brush preset
           <select
@@ -81,19 +119,36 @@ export function ProProperties({
               if (preset) onApplyBrushPreset(preset.settings);
             }}
           >
-            <option value="" disabled>Choose a preset</option>
-            {brushPresets.map((preset) => <option key={preset.name} value={preset.name}>{preset.name}</option>)}
+            <option value="" disabled>
+              Choose a preset
+            </option>
+            {brushPresets.map((preset) => (
+              <option key={preset.name} value={preset.name}>
+                {preset.name}
+              </option>
+            ))}
           </select>
         </label>
         <div className="pro-actions">
-          <Button variant="secondary" onClick={() => {
-            const name = window.prompt("Name this brush preset");
-            if (name?.trim()) onSaveBrushPreset(name.trim());
-          }}>Save current preset</Button>
-          <Button variant="ghost" disabled={brushPresets.length <= 3} onClick={() => {
-            const name = window.prompt("Enter the exact name of the custom preset to delete");
-            if (name?.trim()) onDeleteBrushPreset(name.trim());
-          }}>Delete custom preset</Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const name = window.prompt("Name this brush preset");
+              if (name?.trim()) onSaveBrushPreset(name.trim());
+            }}
+          >
+            Save current preset
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={brushPresets.length <= 3}
+            onClick={() => {
+              const name = window.prompt("Enter the exact name of the custom preset to delete");
+              if (name?.trim()) onDeleteBrushPreset(name.trim());
+            }}
+          >
+            Delete custom preset
+          </Button>
         </div>
         <div className="pro-number-grid">
           <ProNumber

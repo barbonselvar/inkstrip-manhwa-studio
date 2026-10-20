@@ -12,6 +12,7 @@ import {
   type Selection,
   type Stroke,
   type Region,
+  type CloneSource,
 } from "@/lib/studio/pro/model";
 import { isLocked } from "@/lib/studio/pro/operations";
 import { shapePath } from "@/lib/studio/pro/paths";
@@ -20,6 +21,7 @@ export type ProTool =
   | "hand"
   | "brush"
   | "pencil"
+  | "clone"
   | "eraser"
   | "eyedropper"
   | "rectangle"
@@ -68,6 +70,10 @@ export function ProCanvas({
   onColor,
   disabled,
   rendering,
+  cloneSource,
+  cloneSampleArmed,
+  onCloneSample,
+  onCloneAdvance,
 }: {
   doc: ProDocument;
   activeId: string;
@@ -88,6 +94,10 @@ export function ProCanvas({
   onColor: (c: string) => void;
   disabled: boolean;
   rendering: boolean;
+  cloneSource: CloneSource | null;
+  cloneSampleArmed: boolean;
+  onCloneSample: (p: Point) => void;
+  onCloneAdvance: (delta: Point) => void;
 }) {
   const viewport = useRef<HTMLDivElement>(null),
     board = useRef<HTMLDivElement>(null),
@@ -111,6 +121,7 @@ export function ProCanvas({
     pinch = useRef<{ distance: number; view: View; center: Point } | null>(null),
     space = useRef(false),
     [polygon, setPolygon] = useState<Point[]>([]),
+    [cursor, setCursor] = useState<Point | null>(null),
     pathId = useRef(""),
     [context, setContext] = useState(false);
   const fit = Math.min(
@@ -261,6 +272,7 @@ export function ProCanvas({
     }
     const p = docPoint(screen),
       base: Gesture = { type: tool, start: p, screen, doc, view, selection };
+    setCursor(p);
     if (tool === "hand" || space.current) {
       gesture.current = { ...base, type: "pan" };
       return;
@@ -278,6 +290,10 @@ export function ProCanvas({
           ).data;
         onColor("#" + [...rgba.slice(0, 3)].map((v) => v.toString(16).padStart(2, "0")).join(""));
       }
+      return;
+    }
+    if (tool === "clone" && (e.altKey || cloneSampleArmed)) {
+      onCloneSample(p);
       return;
     }
     if (tool === "poly-lasso") {
@@ -318,6 +334,39 @@ export function ProCanvas({
           ...(tool === "pencil" ? { hardness: 1, tip: "square" as const } : {}),
           clip: maskMode ? undefined : clip,
           erase: maskMode && selected.mask?.inverted ? tool !== "eraser" : tool === "eraser",
+          points: [localPoint(p, selected)],
+        },
+      };
+      return;
+    }
+    if (tool === "clone") {
+      if (
+        !cloneSource ||
+        !selected ||
+        isLocked(doc, selected.id) ||
+        selected.kind !== "paint" ||
+        maskMode
+      )
+        return;
+      const clone = {
+        assetId: cloneSource.assetId,
+        width: cloneSource.width,
+        height: cloneSource.height,
+        source: cloneSource.point,
+        destination: p,
+      };
+      gesture.current = {
+        ...base,
+        type: "paint",
+        id: selected.id,
+        stroke: {
+          ...brush,
+          erase: false,
+          clone,
+          clip:
+            selection.regions.length || selection.inverted
+              ? toLocalSelection(selection, selected)
+              : undefined,
           points: [localPoint(p, selected)],
         },
       };
@@ -491,6 +540,7 @@ export function ProCanvas({
   };
   const move = (e: ReactPointer<HTMLDivElement>) => {
     const screen = { x: e.clientX, y: e.clientY };
+    setCursor(docPoint(screen));
     if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, screen);
     if (pinch.current && pointers.current.size >= 2) {
       const [a, b] = [...pointers.current.values()],
@@ -528,13 +578,23 @@ export function ProCanvas({
           g.type === "paint"
             ? maskMode
               ? "Paint mask"
-              : g.stroke?.tip === "square"
-                ? "Pencil stroke"
-                : "Brush stroke"
+              : g.stroke?.clone
+                ? "Clone Stamp"
+                : g.stroke?.tip === "square"
+                  ? "Pencil stroke"
+                  : "Brush stroke"
             : g.type === "pen"
               ? "Add Bézier anchor"
               : `Edit ${g.type}`,
         );
+      if (g.type === "paint" && g.stroke?.clone && cloneSource?.aligned) {
+        const layer = g.doc.layers.find((l) => l.id === g.id);
+        if (layer) {
+          const first = worldPoint(g.stroke.points[0]!, layer),
+            last = worldPoint(g.stroke.points.at(-1)!, layer);
+          onCloneAdvance({ x: last.x - first.x, y: last.y - first.y });
+        }
+      }
     } else if (g.type === "selection") onSelection(g.selection);
     gesture.current = null;
     onTransient(null);
@@ -583,6 +643,7 @@ export function ProCanvas({
         onPointerMove={move}
         onPointerUp={(e) => end(e)}
         onPointerCancel={(e) => end(e, true)}
+        onPointerLeave={() => setCursor(null)}
         onLostPointerCapture={(e) => {
           if (gesture.current) end(e, true);
         }}
@@ -620,6 +681,26 @@ export function ProCanvas({
               viewBox={`0 0 ${doc.width} ${doc.height}`}
               aria-label="Pro selection overlays"
             >
+              {cursor && ["brush", "pencil", "eraser", "clone"].includes(tool) ? (
+                <circle
+                  cx={cursor.x}
+                  cy={cursor.y}
+                  r={Math.max(0.5, brush.size / 2)}
+                  className="pro-brush-cursor"
+                />
+              ) : null}
+              {tool === "clone" && cloneSource ? (
+                <g className="pro-clone-source-marker" aria-label="Clone Stamp source point">
+                  <circle
+                    cx={cloneSource.point.x}
+                    cy={cloneSource.point.y}
+                    r={6 / (fit * view.zoom)}
+                  />
+                  <path
+                    d={`M${cloneSource.point.x - 10 / (fit * view.zoom)} ${cloneSource.point.y} H${cloneSource.point.x + 10 / (fit * view.zoom)} M${cloneSource.point.x} ${cloneSource.point.y - 10 / (fit * view.zoom)} V${cloneSource.point.y + 10 / (fit * view.zoom)}`}
+                  />
+                </g>
+              ) : null}
               {snapping && gesture.current?.type === "move" ? (
                 <g className="pro-center-guides">
                   <line x1={doc.width / 2} y1={0} x2={doc.width / 2} y2={doc.height} />

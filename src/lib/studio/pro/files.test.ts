@@ -24,6 +24,40 @@ test("native format roundtrip keeps editable text, immutable source bytes and ta
     new Uint8Array([1, 2, 3]),
   );
 });
+test("Clone Stamp source snapshots survive native roundtrip and asset remapping", async () => {
+  const incoming = session(),
+    paint = layer("paint", 32, 24, "clone-layer");
+  incoming.assets["clone-snapshot"] = new Blob([new Uint8Array([4, 5, 6])], { type: "image/png" });
+  paint.strokes.push({
+    points: [
+      { x: 9, y: 8 },
+      { x: 10, y: 8 },
+    ],
+    size: 5,
+    hardness: 1,
+    opacity: 0.75,
+    flow: 1,
+    color: "#000000",
+    erase: false,
+    clone: {
+      assetId: "clone-snapshot",
+      width: 32,
+      height: 24,
+      source: { x: 2, y: 3 },
+      destination: { x: 9, y: 8 },
+    },
+  });
+  incoming.document.layers.push(paint);
+  const reopened = await readNative(await nativeFile(incoming), "panel-2", "media-2");
+  assert.equal(reopened.document.layers.at(-1)!.strokes[0]!.clone?.assetId, "clone-snapshot");
+  validateAssets(reopened);
+  const { mergeNativeSession } = await import("./files.ts"),
+    merged = mergeNativeSession(session(), reopened),
+    remapped = merged.document.layers.at(-1)!.strokes[0]!.clone!.assetId;
+  assert.notEqual(remapped, "clone-snapshot");
+  assert.equal(merged.assets[remapped]!.type, "image/png");
+  validateAssets(merged);
+});
 test("native import refuses wrong versions, executable assets and missing sources", async () => {
   await assert.rejects(() =>
     readNative(new Blob(['{"format":"inkstrip-pro","version":9}']), "p", "m"),
