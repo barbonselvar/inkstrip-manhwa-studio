@@ -342,3 +342,13 @@ and is explicit rather than silently flattened. [Changelog](CHANGELOG.md).
 Next: Phase D vector geometry, Boolean/compound paths, artboards, snapping,
 appearance, text-on-path and SVG improvements. Existing cubic Pen/direct-anchor
 editing must be extended rather than recreated.
+
+
+## Phase D started (unreleased)
+
+[Vector engine status](PHASE_D_VECTOR_ENGINE.md): exact cubic subdivision and
+bounded-error arc metrics/inversion plus native subdivision transactions are
+implemented as an internal foundation. Editor insertion/metrics controls,
+Pathfinder, compound paths, artboards, advanced snapping/appearance, text-on-path
+and SVG expansion remain missing or partial as described there. No new inactive
+UI is advertised. Phase C remains the verified production release.
