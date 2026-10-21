@@ -1,4 +1,10 @@
-import { validateDocument, type ProDocument, type Transform, type Point } from "./model.ts";
+import {
+  validateDocument,
+  contours,
+  type ProDocument,
+  type Transform,
+  type Point,
+} from "./model.ts";
 import { translateLayers, translationIds } from "./layers.ts";
 import { isLocked } from "./operations.ts";
 import { affine, bounds, compose, fromAffine, inverse } from "./transform.ts";
@@ -54,6 +60,26 @@ export function transformDocument(
   const l = doc.layers.find((l) => l.id === id);
   if (!l || l.kind === "group" || isLocked(doc, id))
     throw new Error("Select an unlocked non-group layer for Free Transform.");
+  if (transform.deform && l.vectorOverflow && l.kind === "shape") {
+    const margin =
+      l.stroke !== "transparent"
+        ? (l.strokeWidth / 2) * (l.lineJoin === "miter" ? (l.miterLimit ?? 10) : 1)
+        : 0;
+    if (
+      contours(l).some((c) =>
+        c.anchors.some((a) =>
+          [a, a.incoming, a.outgoing].some(
+            (p) =>
+              p &&
+              (p.x < margin || p.y < margin || p.x > l.width - margin || p.y > l.height - margin),
+          ),
+        ),
+      )
+    )
+      throw new Error(
+        "Cancel the transform and use Fit vector frame to content before Perspective or Warp. No geometry was cropped.",
+      );
+  }
   const moved = translation.x || translation.y ? translateLayers(doc, [id], translation) : doc,
     result = { ...moved, layers: moved.layers.map((l) => (l.id === id ? { ...l, transform } : l)) };
   validateDocument(result);

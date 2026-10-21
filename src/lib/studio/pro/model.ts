@@ -25,6 +25,7 @@ export type Anchor = Point & {
   /** Omitted in older documents: independently editable corner handles. */
   mode?: "corner" | "smooth" | "symmetric";
 };
+export type Contour = { anchors: Anchor[]; closed: boolean };
 export type Region = {
   kind: "rectangle" | "ellipse" | "lasso" | "pixels";
   inverted?: boolean;
@@ -134,6 +135,18 @@ export type Layer = {
   strokeWidth: number;
   anchors: Anchor[];
   closed: boolean;
+  /** Additional contours; anchors/closed remain the first contour for legacy documents. */
+  subpaths?: Contour[];
+  /** Affine vector artwork may extend beyond its editing frame. Legacy frames stay clipped. */
+  vectorOverflow?: boolean;
+  fillRule?: "nonzero" | "evenodd";
+  lineCap?: "butt" | "round" | "square";
+  lineJoin?: "miter" | "round" | "bevel";
+  miterLimit?: number;
+  dash?: number[];
+  dashOffset?: number;
+  fillOpacity?: number;
+  strokeOpacity?: number;
   pathData?: string;
   tail: Point;
   text: string;
@@ -525,7 +538,19 @@ export function validateDocument(d: ProDocument) {
         commands += s.points.length;
       }
     }
-    for (const a of l.anchors)
+    if (
+      l.subpaths !== undefined &&
+      (!Array.isArray(l.subpaths) ||
+        l.subpaths.length > 127 ||
+        l.kind !== "shape" ||
+        l.shape !== "path" ||
+        !!l.pathData ||
+        l.subpaths.some((c) => !c || !Array.isArray(c.anchors) || typeof c.closed !== "boolean"))
+    )
+      throw new Error("Invalid compound contours.");
+    const pathAnchors = [l.anchors, ...(l.subpaths ?? []).map((c) => c.anchors)].flat();
+    if (pathAnchors.length > 1000) throw new Error("The path exceeds the 1000-anchor limit.");
+    for (const a of pathAnchors)
       if (
         !point(a) ||
         (a.incoming && !point(a.incoming)) ||
@@ -548,6 +573,18 @@ export function validateDocument(d: ProDocument) {
       !validColor(l.fill) ||
       !validColor(l.stroke) ||
       !finite(l.strokeWidth, 0, 100) ||
+      (l.vectorOverflow !== undefined && typeof l.vectorOverflow !== "boolean") ||
+      (l.fillRule !== undefined && !["nonzero", "evenodd"].includes(l.fillRule)) ||
+      (l.lineCap !== undefined && !["butt", "round", "square"].includes(l.lineCap)) ||
+      (l.lineJoin !== undefined && !["miter", "round", "bevel"].includes(l.lineJoin)) ||
+      (l.miterLimit !== undefined && !finite(l.miterLimit, 1, 1000)) ||
+      (l.dashOffset !== undefined && !finite(l.dashOffset, -100000, 100000)) ||
+      (l.dash !== undefined &&
+        (!Array.isArray(l.dash) ||
+          l.dash.length > 32 ||
+          !l.dash.every((n) => finite(n, 0, 100000)))) ||
+      (l.fillOpacity !== undefined && !finite(l.fillOpacity, 0, 1)) ||
+      (l.strokeOpacity !== undefined && !finite(l.strokeOpacity, 0, 1)) ||
       !point(l.tail) ||
       typeof l.closed !== "boolean" ||
       (l.pathData !== undefined &&
@@ -624,17 +661,53 @@ export function worldPoint(p: Point, l: Pick<Layer, "transform">): Point {
 }
 export function pathData(l: Layer): string {
   if (l.pathData) return l.pathData;
-  const a = l.anchors;
+  return contours(l)
+    .map((c) => contourData(c))
+    .join(" ");
+}
+export function contours(l: Pick<Layer, "anchors" | "closed" | "subpaths">): Contour[] {
+  return [{ anchors: l.anchors, closed: l.closed }, ...(l.subpaths ?? [])];
+}
+export function contourAt(l: Pick<Layer, "anchors" | "closed" | "subpaths">, index = 0): Contour {
+  if (!Number.isInteger(index) || index < 0 || index > (l.subpaths?.length ?? 0))
+    throw new Error("Choose an existing subpath.");
+  return index === 0 ? { anchors: l.anchors, closed: l.closed } : l.subpaths![index - 1]!;
+}
+export function withContour(l: Layer, index: number, c: Contour): Layer {
+  contourAt(l, index);
+  return index === 0
+    ? { ...l, ...c }
+    : { ...l, subpaths: l.subpaths!.map((n, i) => (i === index - 1 ? c : n)) };
+}
+export function contourData(c: Contour): string {
+  const a = c.anchors;
   if (!a.length) return "";
   let result = `M${a[0]!.x} ${a[0]!.y}`;
-  for (let i = 1; i < a.length + (l.closed ? 1 : 0); i++) {
+  for (let i = 1; i < a.length + (c.closed ? 1 : 0); i++) {
     const previous = a[(i - 1) % a.length]!,
       next = a[i % a.length]!,
       c1 = previous.outgoing ?? previous,
       c2 = next.incoming ?? next;
-    result += ` C${c1.x} ${c1.y} ${c2.x} ${c2.y} ${next.x} ${next.y}`;
+    if (!previous.outgoing && !next.incoming) {
+      if (i < a.length) result += ` L${next.x} ${next.y}`;
+      continue; // Z supplies an ordinary straight closing edge.
+    }
+    // Reduce only exact quadratic cubics (within floating-point roundoff).
+    // Retaining Q avoids the renderer's different cubic dash/flatness approximation.
+    const q1 = {
+        x: previous.x + 1.5 * (c1.x - previous.x),
+        y: previous.y + 1.5 * (c1.y - previous.y),
+      },
+      q2 = { x: next.x + 1.5 * (c2.x - next.x), y: next.y + 1.5 * (c2.y - next.y) },
+      epsilon =
+        Number.EPSILON *
+        64 *
+        Math.max(1, ...[previous, next, c1, c2].flatMap((p) => [Math.abs(p.x), Math.abs(p.y)]));
+    if (Math.hypot(q1.x - q2.x, q1.y - q2.y) <= epsilon)
+      result += ` Q${(q1.x + q2.x) / 2} ${(q1.y + q2.y) / 2} ${next.x} ${next.y}`;
+    else result += ` C${c1.x} ${c1.y} ${c2.x} ${c2.y} ${next.x} ${next.y}`;
   }
-  return result + (l.closed ? " Z" : "");
+  return result + (c.closed ? " Z" : "");
 }
 export function moveLayer(d: ProDocument, id: string, direction: -1 | 1): ProDocument {
   const current = d.layers.find((l) => l.id === id);

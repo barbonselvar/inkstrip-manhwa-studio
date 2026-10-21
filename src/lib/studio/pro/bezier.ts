@@ -1,5 +1,13 @@
 /** Phase D foundation: native cubic geometry, without flattening editable paths. */
-import { validateDocument, type Anchor, type Point, type ProDocument } from "./model.ts";
+import {
+  validateDocument,
+  contourAt,
+  contours,
+  withContour,
+  type Anchor,
+  type Point,
+  type ProDocument,
+} from "./model.ts";
 import { isLocked } from "./operations.ts";
 export type Cubic = [Point, Point, Point, Point];
 const lerp = (a: Point, b: Point, t: number): Point => ({
@@ -113,9 +121,11 @@ export function splitAnchorSegment(
   id: string,
   index: number,
   t: number,
+  contour = 0,
 ): ProDocument {
   validateDocument(doc);
-  const l = doc.layers.find((l) => l.id === id),
+  const original = doc.layers.find((l) => l.id === id),
+    l = original ? { ...original, ...contourAt(original, contour) } : undefined,
     count = l ? l.anchors.length - (l.closed ? 0 : 1) : 0;
   if (
     !l ||
@@ -135,7 +145,8 @@ export function splitAnchorSegment(
     );
   if (isLocked(doc, id))
     throw new Error("Unlock the path and its ancestors before editing anchors.");
-  if (l.anchors.length >= 1000) throw new Error("The path has reached the 1000-anchor limit.");
+  if (contours(original!).reduce((n, c) => n + c.anchors.length, 0) >= 1000)
+    throw new Error("The path has reached the 1000-anchor limit.");
   const anchors = structuredClone(l.anchors),
     a = anchors[index]!,
     b = anchors[(index + 1) % anchors.length]!,
@@ -151,7 +162,12 @@ export function splitAnchorSegment(
     outgoing: right[1],
     mode: "smooth",
   });
-  const result = { ...doc, layers: doc.layers.map((n) => (n.id === id ? { ...n, anchors } : n)) };
+  const result = {
+    ...doc,
+    layers: doc.layers.map((n) =>
+      n.id === id ? withContour(n, contour, { anchors, closed: l.closed }) : n,
+    ),
+  };
   validateDocument(result);
   return result;
 }

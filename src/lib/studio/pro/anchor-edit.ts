@@ -5,6 +5,8 @@ import {
   type Point,
   type ProDocument,
   validateDocument,
+  contourAt,
+  withContour,
 } from "./model.ts";
 import { isLocked } from "./operations.ts";
 export type AnchorEdit =
@@ -96,8 +98,13 @@ function editable(doc: ProDocument, id: string): Layer {
     throw new Error("Unlock the path and its ancestors before editing anchors.");
   return l;
 }
-function replace(doc: ProDocument, l: Layer, anchors: Anchor[]): ProDocument {
-  const result = { ...doc, layers: doc.layers.map((n) => (n.id === l.id ? { ...n, anchors } : n)) };
+function replace(doc: ProDocument, l: Layer, anchors: Anchor[], contour: number): ProDocument {
+  const result = {
+    ...doc,
+    layers: doc.layers.map((n) =>
+      n.id === l.id ? withContour(n, contour, { anchors, closed: l.closed }) : n,
+    ),
+  };
   validateDocument(result);
   return result;
 }
@@ -106,8 +113,10 @@ export function editAnchor(
   id: string,
   index: number,
   edit: AnchorEdit,
+  contour = 0,
 ): ProDocument {
-  const l = editable(doc, id),
+  const original = editable(doc, id),
+    l = { ...original, ...contourAt(original, contour) },
     n = l.anchors.length;
   if (!Number.isInteger(index) || index < 0 || index >= n)
     throw new Error("Choose an existing anchor.");
@@ -119,6 +128,7 @@ export function editAnchor(
       doc,
       l,
       l.anchors.filter((_, i) => i !== index),
+      contour,
     );
   }
   const previous = l.anchors[index > 0 ? index - 1 : l.closed ? n - 1 : -1],
@@ -127,11 +137,13 @@ export function editAnchor(
     doc,
     l,
     l.anchors.map((a, i) => (i === index ? editedAnchor(a, edit, previous, next) : a)),
+    contour,
   );
 }
 /** Reverse traversal without changing the geometric locus or closed path's first anchor. */
-export function reverseAnchors(doc: ProDocument, id: string): ProDocument {
-  const l = editable(doc, id),
+export function reverseAnchors(doc: ProDocument, id: string, contour = 0): ProDocument {
+  const original = editable(doc, id),
+    l = { ...original, ...contourAt(original, contour) },
     reversed =
       l.closed && l.anchors.length
         ? [l.anchors[0]!, ...l.anchors.slice(1).reverse()]
@@ -144,5 +156,6 @@ export function reverseAnchors(doc: ProDocument, id: string): ProDocument {
       ...(outgoing ? { incoming: { ...outgoing } } : {}),
       ...(incoming ? { outgoing: { ...incoming } } : {}),
     })),
+    contour,
   );
 }

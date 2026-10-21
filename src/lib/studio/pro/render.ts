@@ -230,6 +230,73 @@ export function clippedStroke(ctx: Ctx, s: Stroke, width: number, height: number
   ctx.restore();
   ink.width = ink.height = clip.width = clip.height = 1;
 }
+/** Draw editable geometry directly into either a local or a document-resolution plane. */
+function vector(ctx: Ctx, l: Layer) {
+  if (l.kind === "shape") {
+    const path = new Path2D(shapePath(l));
+    ctx.fillStyle = l.fill;
+    ctx.strokeStyle = l.stroke;
+    ctx.lineWidth = l.strokeWidth;
+    ctx.lineJoin = l.lineJoin ?? "round";
+    ctx.lineCap = l.lineCap ?? "butt";
+    ctx.miterLimit = l.miterLimit ?? 10;
+    ctx.setLineDash(l.dash ?? []);
+    ctx.lineDashOffset = l.dashOffset ?? 0;
+    if (l.fill !== "transparent") {
+      ctx.globalAlpha = l.fillOpacity ?? 1;
+      ctx.fill(path, l.fillRule ?? "nonzero");
+    }
+    if (l.strokeWidth && l.stroke !== "transparent") {
+      ctx.globalAlpha = l.strokeOpacity ?? 1;
+      ctx.stroke(path);
+    }
+    ctx.globalAlpha = 1;
+  }
+  if (l.kind === "text") {
+    ctx.font = `${l.fontWeight} ${l.fontSize}px ${l.fontFamily}`;
+    ctx.textBaseline = "alphabetic";
+    ctx.textAlign = l.align;
+    ctx.fillStyle = l.fill;
+    ctx.strokeStyle = l.stroke;
+    ctx.lineWidth = l.strokeWidth;
+    ctx.lineJoin = l.lineJoin ?? "miter";
+    ctx.lineCap = l.lineCap ?? "butt";
+    ctx.miterLimit = l.miterLimit ?? 10;
+    ctx.setLineDash(l.dash ?? []);
+    ctx.lineDashOffset = l.dashOffset ?? 0;
+    const textFill = (text: string, x: number, y: number) => {
+      ctx.globalAlpha = l.fillOpacity ?? 1;
+      ctx.fillText(text, x, y);
+    };
+    const textStroke = (text: string, x: number, y: number) => {
+      ctx.globalAlpha = l.strokeOpacity ?? 1;
+      ctx.strokeText(text, x, y);
+    };
+    for (const [i, line] of l.text.split("\n").entries()) {
+      const x = l.align === "left" ? 0 : l.align === "center" ? l.width / 2 : l.width,
+        y = l.fontSize + i * l.fontSize * l.lineHeight;
+      if (l.letterSpacing === 0) {
+        if (l.fill !== "transparent") textFill(line, x, y);
+        if (l.strokeWidth && l.stroke !== "transparent") textStroke(line, x, y);
+      } else {
+        const chars = Array.from(line),
+          length =
+            chars.reduce((a, c) => a + ctx.measureText(c).width, 0) +
+            Math.max(0, chars.length - 1) * l.letterSpacing;
+        let left =
+          l.align === "left" ? 0 : l.align === "center" ? (l.width - length) / 2 : l.width - length;
+        ctx.textAlign = "left";
+        for (const c of chars) {
+          if (l.fill !== "transparent") textFill(c, left, y);
+          if (l.strokeWidth && l.stroke !== "transparent") textStroke(c, left, y);
+          left += ctx.measureText(c).width + l.letterSpacing;
+        }
+        ctx.textAlign = l.align;
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+}
 async function surface(
   l: Layer,
   scale: number,
@@ -330,45 +397,7 @@ async function surface(
       }
       clippedStroke(ctx, s, l.width, l.height, scale);
     }
-  if (l.kind === "shape") {
-    const path = new Path2D(shapePath(l));
-    ctx.fillStyle = l.fill;
-    ctx.strokeStyle = l.stroke;
-    ctx.lineWidth = l.strokeWidth;
-    ctx.lineJoin = "round";
-    if (l.fill !== "transparent") ctx.fill(path);
-    if (l.strokeWidth && l.stroke !== "transparent") ctx.stroke(path);
-  }
-  if (l.kind === "text") {
-    ctx.font = `${l.fontWeight} ${l.fontSize}px ${l.fontFamily}`;
-    ctx.textBaseline = "alphabetic";
-    ctx.textAlign = l.align;
-    ctx.fillStyle = l.fill;
-    ctx.strokeStyle = l.stroke;
-    ctx.lineWidth = l.strokeWidth;
-    for (const [i, line] of l.text.split("\n").entries()) {
-      const x = l.align === "left" ? 0 : l.align === "center" ? l.width / 2 : l.width,
-        y = l.fontSize + i * l.fontSize * l.lineHeight;
-      if (l.letterSpacing === 0) {
-        if (l.fill !== "transparent") ctx.fillText(line, x, y);
-        if (l.strokeWidth && l.stroke !== "transparent") ctx.strokeText(line, x, y);
-      } else {
-        const chars = Array.from(line),
-          length =
-            chars.reduce((a, c) => a + ctx.measureText(c).width, 0) +
-            Math.max(0, chars.length - 1) * l.letterSpacing;
-        let left =
-          l.align === "left" ? 0 : l.align === "center" ? (l.width - length) / 2 : l.width - length;
-        ctx.textAlign = "left";
-        for (const c of chars) {
-          if (l.fill !== "transparent") ctx.fillText(c, left, y);
-          if (l.strokeWidth && l.stroke !== "transparent") ctx.strokeText(c, left, y);
-          left += ctx.measureText(c).width + l.letterSpacing;
-        }
-        ctx.textAlign = l.align;
-      }
-    }
-  }
+  vector(ctx, l);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (
     l.color ||
@@ -436,6 +465,7 @@ export async function composite(
     nativeWidth = Math.max(1, Math.round(d.width * scale)),
     nativeHeight = Math.max(1, Math.round(d.height * scale)),
     output = canvas(nativeWidth + 2 * padding, nativeHeight + 2 * padding);
+  const documentPlanes = new WeakSet<OffscreenCanvas>();
   let done = 0;
   const total = visibleLayerIds(d).size;
   const release = (c: OffscreenCanvas) => {
@@ -450,6 +480,7 @@ export async function composite(
     blend = l.blend,
   ) => {
     const ctx = target.getContext("2d")!;
+    projected ||= documentPlanes.has(bitmap);
     ctx.save();
     ctx.globalAlpha = opacity;
     ctx.globalCompositeOperation = blend;
@@ -476,7 +507,8 @@ export async function composite(
     await new Promise((resolve) => setTimeout(resolve, 0));
   };
   const project = (bitmap: OffscreenCanvas, l: Layer) => {
-    if (l.kind === "group" || l.effects?.some((e) => e.enabled)) return bitmap;
+    if (l.kind === "group" || l.effects?.some((e) => e.enabled) || documentPlanes.has(bitmap))
+      return bitmap;
     const full = canvas(output.width, output.height);
     draw(full, bitmap, l, false, 1, "source-over");
     release(bitmap);
@@ -484,13 +516,49 @@ export async function composite(
   };
   const node = async (l: Layer): Promise<OffscreenCanvas> => {
     if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
+    const direct =
+      (l.kind === "shape" || l.kind === "text") &&
+      !l.transform.deform &&
+      !l.mask &&
+      !l.strokes.length &&
+      !hasAdjustments(l.adjustments) &&
+      !l.hue &&
+      !l.black &&
+      l.white === 255 &&
+      l.gamma === 1 &&
+      l.curve.every((n, i) => n === [0, 64, 128, 192, 255][i]) &&
+      (!l.color || !Object.keys(l.color).length) &&
+      !l.colorSelection;
     let bitmap =
-      l.kind === "group" ? canvas(output.width, output.height) : await surface(l, scale, asset);
+      l.kind === "group" || direct
+        ? canvas(output.width, output.height)
+        : await surface(l, scale, asset);
+    if (direct) {
+      const ctx = bitmap.getContext("2d")!,
+        m = affine(l.transform);
+      ctx.save();
+      ctx.setTransform(
+        m[0] * scale,
+        m[1] * scale,
+        m[2] * scale,
+        m[3] * scale,
+        m[4] * scale + padding,
+        m[5] * scale + padding,
+      );
+      if (!l.vectorOverflow) {
+        ctx.beginPath();
+        ctx.rect(0, 0, l.width, l.height);
+        ctx.clip();
+      }
+      vector(ctx, l);
+      ctx.restore();
+      documentPlanes.add(bitmap);
+    }
     try {
       if (l.kind === "group") await branch(bitmap, l.id);
       if (l.effects?.some((e) => e.enabled)) {
         // Project the original masked artwork once; render styles in document pixels.
-        if (l.kind !== "group") {
+        if (l.kind !== "group" && !documentPlanes.has(bitmap)) {
           const full = canvas(output.width, output.height);
           draw(full, bitmap, l, false, 1, "source-over");
           release(bitmap);

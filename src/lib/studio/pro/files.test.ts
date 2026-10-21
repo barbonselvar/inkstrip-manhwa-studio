@@ -3,6 +3,106 @@ import assert from "node:assert/strict";
 import { fromPanel, layer, validateAssets, type ProSession } from "./model.ts";
 import { nativeFile, readNative, vectorSvg } from "./files.ts";
 import { tonePixels } from "./pixels.ts";
+test("native export retains current/hidden/original/clone/mask assets without copying unused history", async () => {
+  const s = session(),
+    paint = layer("paint", 32, 24),
+    hidden = layer("raster", 32, 24);
+  for (const id of ["texture", "mask-texture", "hidden", "unused-history"])
+    s.assets[id] = new Blob([new Uint8Array([4, 5, 6])], { type: "image/png" });
+  hidden.assetId = "hidden";
+  hidden.visible = false;
+  const stroke = {
+    points: [{ x: 4, y: 4 }],
+    size: 5,
+    hardness: 1,
+    opacity: 1,
+    flow: 1,
+    color: "#000000",
+    erase: false,
+    clone: {
+      assetId: "texture",
+      width: 32,
+      height: 24,
+      source: { x: 0, y: 0 },
+      destination: { x: 4, y: 4 },
+      mode: "clone" as const,
+    },
+  };
+  paint.strokes = [stroke];
+  paint.mask = {
+    enabled: true,
+    selection: { regions: [], inverted: false, feather: 0 },
+    strokes: [{ ...stroke, clone: { ...stroke.clone, assetId: "mask-texture" } }],
+  };
+  s.document.layers = [paint, hidden]; // Original source survives deletion of its base layer.
+  const restored = await readNative(await nativeFile(s), "panel", "media");
+  assert.deepEqual(Object.keys(restored.assets).sort(), [
+    "hidden",
+    "mask-texture",
+    "source",
+    "texture",
+  ]);
+  assert.ok(s.assets["unused-history"], "Export must not evict the session's Undo assets");
+  validateAssets(restored);
+});
+test("25 native import/export cycles retain original bytes without exponential file growth", async () => {
+  const { mergeNativeSession } = await import("./files.ts");
+  let s = session();
+  const initialSize = (await nativeFile(s)).size;
+  for (let i = 0; i < 25; i++) {
+    const file = await nativeFile(s),
+      decoded = await readNative(file, "panel", "media");
+    assert.equal(Object.keys(decoded.assets).length, 1);
+    assert.ok(file.size < initialSize + 128);
+    s = mergeNativeSession(s, decoded);
+    assert.deepEqual(
+      [...new Uint8Array(await s.assets[s.document.source!.assetId]!.arrayBuffer())],
+      [1, 2, 3],
+    );
+  }
+  assert.equal(
+    Object.keys(s.assets).length,
+    26,
+    "All old immutable IDs remain available for session Undo",
+  );
+});
+test("new vector features use a v2 envelope that older v1 readers reject; legacy documents stay v1", async () => {
+  const s = session();
+  assert.equal(JSON.parse(await (await nativeFile(s)).text()).version, 1);
+  const p = layer("shape", 32, 24);
+  p.shape = "path";
+  p.anchors = [
+    { x: 0, y: 0 },
+    { x: 20, y: 0 },
+    { x: 20, y: 20 },
+  ];
+  p.subpaths = [
+    {
+      anchors: [
+        { x: 5, y: 5 },
+        { x: 10, y: 5 },
+        { x: 10, y: 10 },
+      ],
+      closed: true,
+    },
+  ];
+  p.fillRule = "evenodd";
+  s.document.layers.push(p);
+  const file = await nativeFile(s),
+    envelope = JSON.parse(await file.text());
+  assert.equal(envelope.version, 2);
+  assert.equal(envelope.document.version, 1);
+  assert.equal(
+    envelope.version === 1,
+    false,
+    "The production v1-only reader must refuse feature-bearing files",
+  );
+  const restored = await readNative(file, "panel", "media");
+  assert.deepEqual(restored.document.layers[1]!.subpaths, p.subpaths);
+  s.document.layers.pop();
+  const legacy = await readNative(await nativeFile(s), "panel", "media");
+  assert.deepEqual(legacy.document, s.document);
+});
 const session = (): ProSession => ({
   document: fromPanel({ id: "panel", name: "test", width: 32, height: 24 }),
   assets: { source: new Blob([new Uint8Array([1, 2, 3])], { type: "image/png" }) },

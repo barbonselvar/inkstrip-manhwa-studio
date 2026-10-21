@@ -17,16 +17,47 @@ function encode(bytes: Uint8Array) {
 }
 export async function nativeFile(s: ProSession): Promise<Blob> {
   validateAssets(s);
+  // History stays in the session's immutable pool. Native files carry the current
+  // document, not the undo timeline; exporting unused history assets makes repeated
+  // import/export exponentially duplicate the same bytes under fresh immutable IDs.
+  const referenced = new Set<string>();
+  const original = sourceReference(s.document);
+  if (original) referenced.add(original.assetId);
+  for (const l of s.document.layers) {
+    if (l.assetId) referenced.add(l.assetId);
+    for (const stroke of [...l.strokes, ...(l.mask?.strokes ?? [])])
+      if (stroke.clone) referenced.add(stroke.clone.assetId);
+  }
   const assets = Object.fromEntries(
     await Promise.all(
-      Object.entries(s.assets).map(async ([id, b]) => [
-        id,
-        { mime: b.type, data: encode(new Uint8Array(await b.arrayBuffer())) },
-      ]),
+      Object.entries(s.assets)
+        .filter(([id]) => referenced.has(id))
+        .map(async ([id, b]) => [
+          id,
+          { mime: b.type, data: encode(new Uint8Array(await b.arrayBuffer())) },
+        ]),
     ),
   );
+  // Older releases accept extra v1 fields and would silently omit holes/stroke styles.
+  // Feature-bearing files use envelope v2 so old readers reject them safely. The
+  // internal document model and legacy v1 reader remain backward compatible.
+  const version = s.document.layers.some(
+    (l) =>
+      l.subpaths?.length ||
+      l.vectorOverflow ||
+      l.fillRule === "evenodd" ||
+      l.lineCap !== undefined ||
+      l.lineJoin !== undefined ||
+      l.miterLimit !== undefined ||
+      l.dash !== undefined ||
+      l.dashOffset !== undefined ||
+      l.fillOpacity !== undefined ||
+      l.strokeOpacity !== undefined,
+  )
+    ? 2
+    : 1;
   return new Blob(
-    [JSON.stringify({ format: "inkstrip-pro", version: 1, document: s.document, assets })],
+    [JSON.stringify({ format: "inkstrip-pro", version, document: s.document, assets })],
     { type: "application/json" },
   );
 }
@@ -40,12 +71,14 @@ export async function readNative(
   if (
     !value ||
     value.format !== "inkstrip-pro" ||
-    value.version !== 1 ||
+    ![1, 2].includes(value.version) ||
     !value.assets ||
     typeof value.assets !== "object" ||
     Array.isArray(value.assets)
   )
-    throw new Error("Unsupported native document. Use an Inkstrip Pro version 1 file.");
+    throw new Error(
+      "Unsupported native document. This editor supports Inkstrip Pro native versions 1 and 2.",
+    );
   const assets: Record<string, Blob> = Object.create(null);
   let total = 0;
   for (const [id, entry] of Object.entries(value.assets)) {
@@ -114,7 +147,7 @@ export function vectorSvg(d: ProDocument): string {
         "SVG export does not support masks, adjustments or non-normal blend modes. Export PNG or a native document to preserve them.",
       );
   const attrs = (l: Layer) =>
-    `opacity="${l.opacity}" transform="matrix(${affine(l.transform).join(" ")})" fill="${l.fill}" stroke="${l.stroke}" stroke-width="${l.strokeWidth}"`;
+    `opacity="${l.opacity}" transform="matrix(${affine(l.transform).join(" ")})" fill="${l.fill}" stroke="${l.stroke}" stroke-width="${l.strokeWidth}" fill-rule="${l.fillRule ?? "nonzero"}" stroke-linecap="${l.lineCap ?? "butt"}" stroke-linejoin="${l.lineJoin ?? (l.kind === "text" ? "miter" : "round")}" stroke-miterlimit="${l.miterLimit ?? 10}" stroke-dasharray="${l.dash?.length ? l.dash.join(" ") : "none"}" stroke-dashoffset="${l.dashOffset ?? 0}" fill-opacity="${l.fillOpacity ?? 1}" stroke-opacity="${l.strokeOpacity ?? 1}"`;
   const branch = (parent?: string): string =>
     included
       .filter((l) => l.parentId === parent && l.visible)
@@ -133,7 +166,14 @@ export function vectorSvg(d: ProDocument): string {
       )
       .join("");
   const size = outputSize(d);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}" viewBox="0 0 ${size.width} ${size.height}"><defs><clipPath id="canvas"><rect width="${d.width}" height="${d.height}"/></clipPath></defs><g transform="matrix(${outputMatrix(d).join(" ")})" clip-path="url(#canvas)">${branch()}</g></svg>`;
+  if (!d.crop)
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}" viewBox="0 0 ${d.width} ${d.height}" preserveAspectRatio="none">${branch()}</svg>`;
+  // With no crop the SVG viewport already clips the original canvas (also after resize).
+  // Keep explicit source clipping for rotated/outside crop bounds.
+  const clip = d.crop
+    ? `<defs><clipPath id="canvas"><rect width="${d.width}" height="${d.height}"/></clipPath></defs>`
+    : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}" viewBox="0 0 ${size.width} ${size.height}">${clip}<g transform="matrix(${outputMatrix(d).join(" ")})"${d.crop ? ' clip-path="url(#canvas)"' : ""}>${branch()}</g></svg>`;
 }
 
 /** Import is one undoable metadata action; old raster bytes retain immutable IDs. */
