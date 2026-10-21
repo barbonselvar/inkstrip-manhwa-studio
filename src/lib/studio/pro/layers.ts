@@ -218,6 +218,13 @@ export function groupLayers(d: ProDocument, ids: string[]) {
     throw new Error(
       "Include the blend backdrop when creating an isolated group, or use Merge visible.",
     );
+  if (
+    range.lo > 0 &&
+    [...descendants(d, ids)].some((id) => d.layers.find((l) => l.id === id)?.kind === "adjustment")
+  )
+    throw new Error(
+      "Include the adjustment layer’s complete backdrop when creating an isolated group.",
+    );
   if (range.chosen.length < 2) throw new Error("Select at least two consecutive layers to group.");
   unlocked(d, descendants(d, ids));
   const g = layer("group", d.width, d.height);
@@ -363,6 +370,8 @@ export function planMerge(
   unlocked(d, all);
   if (!range.parentId && range.chosen.length === siblings(d).length)
     return { render: d, replacement, remove: [...all], retained: [] };
+  if (d.layers.some((l) => all.has(l.id) && l.kind === "adjustment"))
+    throw new Error("Use Merge visible to include the complete adjustment backdrop.");
   const units = stacks(range.chosen);
   if (units.length > 1 && range.chosen.some((l) => !l.clipped && l.blend !== "source-over"))
     throw new Error(
