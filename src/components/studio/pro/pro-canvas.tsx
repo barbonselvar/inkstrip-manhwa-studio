@@ -20,6 +20,8 @@ import {
 import { brushPoint } from "@/lib/studio/pro/brush-dynamics";
 import { patchSelection, type RepairRequest, type RepairKind } from "@/lib/studio/pro/repair";
 import { appendSelection } from "@/lib/studio/pro/selection";
+import { editedAnchor } from "@/lib/studio/pro/anchor-edit";
+import { anchorCurve, cubicPoint, splitAnchorSegment } from "@/lib/studio/pro/bezier";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointer } from "react";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Scan, Hand } from "lucide-react";
@@ -100,6 +102,8 @@ export function ProCanvas({
   onApplyCrop,
   activeId,
   selectedIds,
+  activeAnchor,
+  onSelectAnchor,
   onError,
   tool,
   selection,
@@ -137,6 +141,8 @@ export function ProCanvas({
   onApplyCrop: () => void;
   activeId: string;
   selectedIds: string[];
+  activeAnchor: number;
+  onSelectAnchor: (index: number) => void;
   onError: (message: string) => void;
   tool: ProTool;
   selection: Selection;
@@ -204,6 +210,23 @@ export function ProCanvas({
     selected = doc.layers.find((l) => l.id === activeId),
     transformTarget =
       selected && transformDraft?.frame ? { ...selected, ...transformDraft.frame } : selected;
+  const splitSegment =
+    selected && selected.anchors.length >= 2
+      ? Math.min(activeAnchor, selected.anchors.length - (selected.closed ? 1 : 2))
+      : -1;
+  const splitPoint =
+    selected && splitSegment >= 0 && !selected.pathData
+      ? worldPoint(
+          cubicPoint(
+            anchorCurve(
+              selected.anchors[splitSegment]!,
+              selected.anchors[(splitSegment + 1) % selected.anchors.length]!,
+            ),
+            0.5,
+          ),
+          selected,
+        )
+      : null;
   useEffect(() => {
     pathId.current = "";
     setPolygon([]);
@@ -604,15 +627,51 @@ export function ProCanvas({
     const target = e.target as HTMLElement,
       anchor = target.closest("[data-anchor]"),
       corner = target.closest("[data-corner]");
-    if (tool === "direct" && anchor && selected && !isLocked(doc, selected.id)) {
-      gesture.current = {
-        ...base,
-        type: "anchor",
-        id: selected.id,
-        index: Number(anchor.getAttribute("data-anchor")),
-        part: anchor.getAttribute("data-part") ?? "point",
-      };
-      return;
+    if (tool === "direct" && selected && !isLocked(doc, selected.id) && !selected.pathData) {
+      // Use a screen-space touch target without drawing oversized, overlapping handles.
+      const nearest = selected.anchors
+        .flatMap((a, index) =>
+          (["point", "incoming", "outgoing"] as const).flatMap((part) => {
+            const q = part === "point" ? a : a[part];
+            if (!q) return [];
+            const world = worldPoint(q, selected);
+            return [
+              { index, part, distance: Math.hypot(world.x - p.x, world.y - p.y) * fit * view.zoom },
+            ];
+          }),
+        )
+        .sort((a, b) => a.distance - b.distance)[0];
+      if (
+        target.closest("[data-split-segment]") &&
+        splitSegment >= 0 &&
+        splitPoint &&
+        (!nearest ||
+          Math.hypot(splitPoint.x - p.x, splitPoint.y - p.y) * fit * view.zoom < nearest.distance)
+      ) {
+        try {
+          onCommit(splitAnchorSegment(doc, selected.id, splitSegment, 0.5), "Insert Bézier anchor");
+          onSelectAnchor(splitSegment + 1);
+        } catch (error) {
+          onError((error as Error).message);
+        }
+        return;
+      }
+      const index = anchor ? Number(anchor.getAttribute("data-anchor")) : nearest?.index,
+        part = anchor ? (anchor.getAttribute("data-part") ?? "point") : nearest?.part;
+      if (
+        index !== undefined &&
+        (anchor || (nearest && nearest.distance <= (e.pointerType === "touch" ? 22 : 10)))
+      ) {
+        onSelectAnchor(index);
+        gesture.current = {
+          ...base,
+          type: "anchor",
+          id: selected.id,
+          index,
+          part,
+        };
+        return;
+      }
     }
     if (tool === "pen") {
       let existing = doc.layers.find((l) => l.id === pathId.current && !l.closed && !l.locked);
@@ -814,18 +873,21 @@ export function ProCanvas({
       if (g.type === "pen") {
         const dx = a.x - old.x,
           dy = a.y - old.y;
-        anchors[g.index!] = { ...old, outgoing: a, incoming: { x: old.x - dx, y: old.y - dy } };
-      } else if (g.part === "incoming" || g.part === "outgoing")
-        anchors[g.index!] = { ...old, [g.part]: a };
-      else {
-        const dx = a.x - old.x,
-          dy = a.y - old.y;
         anchors[g.index!] = {
           ...old,
-          ...a,
-          incoming: old.incoming ? { x: old.incoming.x + dx, y: old.incoming.y + dy } : undefined,
-          outgoing: old.outgoing ? { x: old.outgoing.x + dx, y: old.outgoing.y + dy } : undefined,
+          mode: "symmetric",
+          outgoing: a,
+          incoming: { x: old.x - dx, y: old.y - dy },
         };
+      } else if (g.part === "incoming" || g.part === "outgoing")
+        anchors[g.index!] = editedAnchor(old, {
+          kind: "handle",
+          part: g.part,
+          point: a,
+          independent: input?.altKey,
+        });
+      else {
+        anchors[g.index!] = editedAnchor(old, { kind: "move", point: a });
       }
       next = { ...l, anchors };
     }
@@ -1386,11 +1448,32 @@ export function ProCanvas({
                             cx={p.x}
                             cy={p.y}
                             r={6 / (fit * view.zoom)}
-                            className="pro-anchor"
+                            className={`pro-anchor${i === activeAnchor ? " pro-anchor-selected" : ""}`}
                           />
                         </g>
                       );
                     })}
+                  {tool === "direct" &&
+                    splitPoint &&
+                    selected.kind === "shape" &&
+                    selected.shape === "path" &&
+                    selected.anchors.length < 1000 &&
+                    !isLocked(doc, selected.id) && (
+                      <g data-split-segment={splitSegment} className="pro-anchor-insert">
+                        <title>Insert an exact midpoint anchor</title>
+                        <rect
+                          x={splitPoint.x - 22 / (fit * view.zoom)}
+                          y={splitPoint.y - 22 / (fit * view.zoom)}
+                          width={44 / (fit * view.zoom)}
+                          height={44 / (fit * view.zoom)}
+                          fill="transparent"
+                          stroke="none"
+                        />
+                        <path
+                          d={`M${splitPoint.x} ${splitPoint.y - 5 / (fit * view.zoom)} l${5 / (fit * view.zoom)} ${5 / (fit * view.zoom)} l${-5 / (fit * view.zoom)} ${5 / (fit * view.zoom)} l${-5 / (fit * view.zoom)} ${-5 / (fit * view.zoom)} Z`}
+                        />
+                      </g>
+                    )}
                 </>
               )}
             </svg>

@@ -243,6 +243,20 @@
 .pro-anchor {
   fill: var(--color-accent);
 }
+.pro-anchor-selected {
+  fill: var(--color-bg);
+  stroke-width: 3px;
+}
+.pro-anchor-insert {
+  pointer-events: all;
+  cursor: copy;
+  fill: var(--color-bg);
+  stroke: var(--color-accent);
+  stroke-width: 1.5px;
+}
+.pro-anchor-insert path {
+  vector-effect: non-scaling-stroke;
+}
 .pro-canvas-foot {
   flex-shrink: 0;
   display: flex;

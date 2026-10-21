@@ -1,4 +1,5 @@
 import { ProAppearance } from "./pro-appearance";
+import type { ReactNode } from "react";
 import { ProColor } from "./pro-color";
 import type { Layer, Selection, Stroke } from "@/lib/studio/pro/model";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export function ProNumber({
   );
 }
 export function ProProperties({
+  anchorControls,
   selected,
   documentSize,
   onPatch,
@@ -61,6 +63,7 @@ export function ProProperties({
   maskMode,
   setMaskMode,
 }: {
+  anchorControls?: ReactNode;
   selected?: Layer;
   documentSize?: { width: number; height: number };
   onPatch: (p: Partial<Layer>, group?: string) => void;
@@ -387,11 +390,7 @@ export function ProProperties({
                       />{" "}
                       Closed path
                     </label>
-                    <p className="pro-help">
-                      Pen: click anchors, drag for curve handles. Direct select: drag anchors or
-                      handles. Imported SVG paths retain their geometry; native anchors are
-                      editable.
-                    </p>
+                    {anchorControls}
                   </>
                 )}
                 {["bubble", "thought"].includes(selected.shape) && (

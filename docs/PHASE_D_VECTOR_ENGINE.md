@@ -6,7 +6,7 @@ appearance/mobile, AI and 3D verification. Its branch is
 `codex/phase-d-vector-engine`. It must remain a draft until the whole phase is
 implemented and release gates pass. Phase C remains the production release.
 
-## Implemented foundation
+## Implemented geometry and anchor-editing increment
 
 `bezier.ts` extends the existing native cubic-anchor representation:
 
@@ -22,20 +22,50 @@ implemented and release gates pass. Phase C remains the production release.
   are retained. Layer/ancestor locks, imported raw SVG paths, endpoints and the
   1000-anchor limit are guarded.
 
-The foundation is an internal API, **not a newly advertised editor tool**. Existing
-Pen/direct-anchor controls remain intact. UI segment insertion/metrics integration
-is still missing. This is the first step toward precise anchor insertion,
-snapping and text-on-path; it is not a claim that those tools are complete.
+The geometry is now integrated into the existing Pen, Direct Select and Vector
+appearance controls in both Studios:
+
+- Select anchors on the canvas or by number. Numeric X/Y moves both attached
+  handles with the anchor. Individual incoming/outgoing X/Y remains editable.
+- Corner handles are independent. Smooth handles stay collinear while retaining
+  the opposite length; symmetric handles mirror position and length. Changing
+  modes creates useful tangents from neighboring anchors when needed. Alt/Option
+  dragging breaks coupling into a corner. Collapsed handles remain finite.
+- Dragging with the Pen creates symmetric handles. Older documents with no
+  anchor mode keep their independent-handle behavior. Optional `Anchor.mode`
+  persists within the existing version-1 format; no source pixels are replaced.
+- An on-curve diamond inserts an exact midpoint; numeric insertion supports
+  cubic-parameter percentage or percentage of traveled arc distance. Segment
+  length is displayed in source-layer pixels. Both adjacent handles are updated,
+  and adjacent symmetric modes become smooth when their lengths change.
+- Reverse open or closed path traversal without flattening or changing its
+  geometric locus. Closed reversal retains the first anchor.
+- Remove handles or delete an anchor with clear geometry-changing descriptions.
+  Direct Select's Delete/Backspace edits the anchor rather than removing its
+  layer. Keep at least two anchors for an open path and three for a closed path.
+  Minimum-topology violations and locked ancestors are guarded.
+- Live pointer previews, pointer cancellation and one-step gesture undo use the
+  existing history. Numeric updates coalesce by anchor/property. Native/local
+  save/reopen, raster/SVG output and Chapter handoff use the shared engines.
+- Direct Select uses screen-space 44px touch hit regions, resolves nearby
+  controls against the insertion diamond, and maps points through the existing
+  inverse affine/perspective/warp mapping. Existing two-finger pan/zoom cancels
+  an in-progress anchor gesture without modifying geometry.
+
+No replacement Pen or graphics engine was introduced. This is a working anchor
+editing increment, **not a completed Phase D release**.
 
 Tests independently verify analytic endpoints/derivatives, dense whole-curve
 subdivision equivalence, quarter-circle length reference and declared error,
 cusp traveled length, inverse distance, native open/closed geometry,
-locks/limits, undo/redo and native/source roundtrips.
+locks/limits, undo/redo and native/source roundtrips. Additional anchor tests cover
+coupling, mode conversion, degenerate tangents, deletion topology, reversal,
+perspective coordinates, mask/clip/source preservation and SVG cubic output.
 
 ## Remaining Phase D scope
 
-- Wire precise subdivision/metrics into Pen/direct-anchor editing and browser
-  regressions; add professional anchor types and editing operations.
+- Remaining path editing: join/split open paths, multi-anchor selection, explicit
+  native conversion of imported raw SVG paths and additional keyboard modifiers.
 - Robust Pathfinder Boolean operations and compound-path fill rules.
 - Multiple artboards and artboard-aware native output.
 - Precision object/anchor snapping and alignment.
@@ -46,12 +76,35 @@ locks/limits, undo/redo and native/source roundtrips.
 - Full native/history/export/mobile/AI/3D regression and release gates before
   merging; live production verification before the following phase.
 
-Existing functionality must be extended in place. No new fake buttons or inactive
-controls are introduced by the foundation commit.
+Existing functionality is extended in place. Raw imported SVG `pathData` remains
+preserved and deliberately read-only in the anchor editor until a real converter
+is implemented. Handle removal and deletion change geometry; they do not promise
+curve-preserving simplification. The midpoint diamond uses cubic parameter 0.5,
+while the numeric distance option uses bounded arc-distance inversion. Very
+complex/degenerate paths can exceed the documented arc precision/work budget;
+those operations fail explicitly. No multi-anchor editing or precision anchor
+snapping is claimed by this increment. Existing SVG export restrictions on masks,
+clipping, effects and nonlinear transforms remain explicit; native/raster output
+preserves those features.
 
-Foundation validation: **497 automated tests passed**, including 198 Pro tests and
-13 new Bézier tests. TypeScript, lint (one existing shared Button warning),
-production build and build configuration checks passed. The 10 checked runtime
-assets remain byte-identical to the verified Phase C build because this internal
-module is not yet wired into editor controls. Phase D browser/complete release
-gates remain pending with its broader implementation; this is not a Phase D release.
+The original foundation passed 497 automated tests. The editor increment adds
+17 algorithm/document/history tests (514 total, including 215 Pro tests).
+`npm run test:vector:browser` checks real controls/workers, invariant curve pixels,
+arc-distance insertion, coupling/Alt, pointer cancellation, reversal, keyboard
+deletion, undo/redo, transformed mask/clip metadata, native/local persistence,
+SVG/PNG fidelity, source retention and Chapter/Raster/Vector handoff. It also
+checks Chromium CDP touch at 320px and 390px, cancellation, pinch/pan and no page
+scroll/overflow. This is emulation, not physical Android testing. The full phase
+release gates remain pending with the remaining Phase D implementation.
+
+Increment validation: all **514 automated tests** passed. TypeScript, production
+build, build configuration and auth invariants passed; lint has only the existing
+shared Button fast-refresh warning. All **14 supported Chromium suites** passed
+against built output: studio AI, editor, adjustments, retouch, workflow, UI, Pro,
+layers, repair, geometry, transforms, color, appearance and vector anchors.
+Dev/built homepage smoke checks rendered desktop/mobile with no runtime errors
+or baseline divergence, including the existing 3D canvas. Desktop and mobile
+editor screenshots were inspected. The initial vector test fixture incorrectly
+discarded remapped asset IDs on native reopen; preserving the actual exported
+asset map fixed the fixture, and the full suite then passed. No tests were skipped
+or tolerances/timeouts relaxed to obtain these results.

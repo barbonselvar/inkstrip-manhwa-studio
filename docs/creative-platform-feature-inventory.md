@@ -348,7 +348,12 @@ editing must be extended rather than recreated.
 
 [Vector engine status](PHASE_D_VECTOR_ENGINE.md): exact cubic subdivision and
 bounded-error arc metrics/inversion plus native subdivision transactions are
-implemented as an internal foundation. Editor insertion/metrics controls,
-Pathfinder, compound paths, artboards, advanced snapping/appearance, text-on-path
-and SVG expansion remain missing or partial as described there. No new inactive
-UI is advertised. Phase C remains the verified production release.
+implemented and integrated into the existing Pen/Direct Select tools. Native
+anchor selection, numeric coordinates/handles, corner/smooth/symmetric coupling,
+canvas midpoint and numeric parameter/arc-distance insertion, reversal, guarded
+deletion, history/native/export and touch 320px/390px checks are implemented.
+Path editing remains **partial**: no multi-anchor selection, join/split paths or
+conversion of imported raw SVG paths. Pathfinder, compound paths, artboards,
+advanced snapping/appearance, text-on-path and SVG expansion remain missing or
+partial as described there. Phase D is an unreleased draft; Phase C remains the
+verified production release.

@@ -38,6 +38,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProCanvas, type ProTool } from "./pro-canvas";
+import { ProAnchors } from "./pro-anchors";
+import { editAnchor } from "@/lib/studio/pro/anchor-edit";
 import {
   transformDocument,
   transformForest,
@@ -207,6 +209,7 @@ export default function ProWorkspace({
     [session, setSession] = useState<ProSession | null>(null),
     sessionRef = useRef<ProSession | null>(null),
     [selectedIds, setSelectedIds] = useState<string[]>([]),
+    [anchorSelection, setAnchorSelection] = useState({ id: "", index: 0 }),
     [tool, setTool] = useState<ProTool>(initialMode === "raster" ? "brush" : "pen"),
     [transformDraft, setTransformDraft] = useState<TransformDraft | null>(null),
     transformRef = useRef<TransformDraft | null>(null),
@@ -286,6 +289,11 @@ export default function ProWorkspace({
     }, [transient, history?.present.doc, transformDraft]),
     selection = doc?.selection ?? EMPTY_SELECTION,
     active = doc?.layers.find((l) => l.id === selectedIds[0]);
+  const activeAnchor =
+    active && anchorSelection.id === active.id
+      ? Math.max(0, Math.min(active.anchors.length - 1, anchorSelection.index))
+      : 0;
+  const selectAnchor = (index: number) => setAnchorSelection({ id: active?.id ?? "", index });
   useEffect(() => {
     if (before && doc && !sourceReference(doc)) setBefore(false);
   }, [before, doc]);
@@ -1196,7 +1204,26 @@ export default function ProWorkspace({
       if (cropDraft) cancelCrop();
       if (historyRef.current) setHist(redo(historyRef.current));
     },
-    remove,
+    remove: () => {
+      const d = historyRef.current?.present.doc;
+      if (
+        tool === "direct" &&
+        active?.kind === "shape" &&
+        active.shape === "path" &&
+        d &&
+        !transformRef.current
+      ) {
+        try {
+          commit(
+            editAnchor(d, active.id, activeAnchor, { kind: "delete" }),
+            "Delete Bézier anchor",
+          );
+          selectAnchor(Math.max(0, activeAnchor - 1));
+        } catch (e) {
+          setError(storageMessage(e));
+        }
+      } else remove();
+    },
     selectTool: chooseTool,
   };
   useEffect(() => {
@@ -1569,6 +1596,8 @@ export default function ProWorkspace({
                 doc={doc}
                 activeId={selectedIds[0] ?? ""}
                 selectedIds={selectedIds}
+                activeAnchor={activeAnchor}
+                onSelectAnchor={selectAnchor}
                 onError={setError}
                 tool={tool}
                 selection={selection}
@@ -1647,6 +1676,19 @@ export default function ProWorkspace({
                 <div className="pro-panel-content">
                   {tab === "properties" && (
                     <ProProperties
+                      anchorControls={
+                        active && doc && active.shape === "path" ? (
+                          <ProAnchors
+                            key={active.id}
+                            doc={doc}
+                            layer={active}
+                            index={activeAnchor}
+                            onSelect={selectAnchor}
+                            onChange={commit}
+                            onError={setError}
+                          />
+                        ) : undefined
+                      }
                       documentSize={doc ? { width: doc.width, height: doc.height } : undefined}
                       selected={
                         active && doc

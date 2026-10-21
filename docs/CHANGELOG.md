@@ -1,10 +1,16 @@
 # Inkstrip release changelog
 
-## Unreleased — Phase D vector foundation
+## Unreleased — Phase D vector geometry and anchor editing
 
 - Exact cubic subdivision and bounded-error arc metrics/inversion.
 - Native open/closed segment-subdivision transaction with history/native tests.
-- Internal API only; editor integration and the remaining vector phase are pending.
+- Precise native curve insertion from the canvas and numeric parameter/arc
+  distance controls; source-space segment lengths.
+- Corner/smooth/symmetric handles, numeric anchor/handle coordinates, touch-aware
+  Direct Select, Alt to break coupling, path reversal and guarded anchor deletion.
+- Existing history/native/export/Chapter integration and desktop/320px/390px
+  Chromium regression suite. Pathfinder/compound paths/artboards/text-on-path and
+  the remaining vector phase are still pending; no Phase D production release.
 - [Phase D status and remaining scope](PHASE_D_VECTOR_ENGINE.md).
 
 ## Phase C — editable gradient, effect and adjustment layers
