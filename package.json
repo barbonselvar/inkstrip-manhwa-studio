@@ -30,7 +30,8 @@
     "test:pro": "node --experimental-strip-types --test src/lib/studio/pro/*.test.ts",
     "test:pro:browser": "node --experimental-strip-types scripts/pro-browser-check.mjs",
     "test:layers:browser": "node --experimental-strip-types scripts/layers-browser-check.mjs",
-    "test:repair:browser": "node --experimental-strip-types scripts/repair-browser-check.mjs"
+    "test:repair:browser": "node --experimental-strip-types scripts/repair-browser-check.mjs",
+    "test:geometry:browser": "node --experimental-strip-types scripts/geometry-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

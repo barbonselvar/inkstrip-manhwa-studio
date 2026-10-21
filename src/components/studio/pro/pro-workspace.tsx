@@ -3,6 +3,7 @@ import { appendSelection } from "@/lib/studio/pro/selection";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Crop as CropIcon,
   ArrowLeft,
   MousePointer2,
   Hand,
@@ -36,6 +37,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProCanvas, type ProTool } from "./pro-canvas";
+import { ProGeometry } from "./pro-geometry";
+import { fullCrop, outputSize, type Crop } from "@/lib/studio/pro/geometry";
 import { ProProperties, ProNumber } from "./pro-properties";
 import {
   EMPTY_SELECTION,
@@ -81,6 +84,7 @@ import {
 type Entry = { doc: ProDocument; label: string };
 const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush }> = [
   { id: "move", name: "Move", key: "V", Icon: MousePointer2 },
+  { id: "crop", name: "Crop", key: "C", Icon: CropIcon },
   { id: "hand", name: "Hand", key: "H", Icon: Hand },
   { id: "brush", name: "Brush", key: "B", Icon: Brush },
   { id: "pencil", name: "Pencil", key: "N", Icon: Pencil },
@@ -105,6 +109,7 @@ const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush 
   { id: "text", name: "Text", key: "T", Icon: Type },
 ];
 const RASTER_TOOL_IDS = new Set<ProTool>([
+  "crop",
   "move",
   "hand",
   "brush",
@@ -130,6 +135,7 @@ const RASTER_TOOL_IDS = new Set<ProTool>([
   "text",
 ]);
 const VECTOR_TOOL_IDS = new Set<ProTool>([
+  "crop",
   "move",
   "hand",
   "eyedropper",
@@ -191,6 +197,8 @@ export default function ProWorkspace({
     sessionRef = useRef<ProSession | null>(null),
     [selectedIds, setSelectedIds] = useState<string[]>([]),
     [tool, setTool] = useState<ProTool>(initialMode === "raster" ? "brush" : "pen"),
+    [cropDraft, setCropDraft] = useState<Crop | null>(null),
+    [cropRatio, setCropRatio] = useState(0),
     [tolerance, setTolerance] = useState(32),
     [contiguous, setContiguous] = useState(true),
     [antiAlias, setAntiAlias] = useState(true),
@@ -213,9 +221,9 @@ export default function ProWorkspace({
     [grid, setGrid] = useState(false),
     [snapping, setSnapping] = useState(true),
     [before, setBefore] = useState(false),
-    [tab, setTab] = useState<"properties" | "layers" | "history" | "assets" | "ai" | "export">(
-      "layers",
-    ),
+    [tab, setTab] = useState<
+      "properties" | "geometry" | "layers" | "history" | "assets" | "ai" | "export"
+    >("layers"),
     [panelOpen, setPanelOpen] = useState(true),
     [panelWidth, setPanelWidth] = useState(300),
     [error, setError] = useState(""),
@@ -230,8 +238,7 @@ export default function ProWorkspace({
     [version, setVersion] = useState(0),
     [mime, setMime] = useState("image/png"),
     [quality, setQuality] = useState(0.95),
-    [widthDraft, setWidthDraft] = useState(0),
-    [heightDraft, setHeightDraft] = useState(0);
+    [geometryRevision, setGeometryRevision] = useState(0);
   const canvas = useRef<HTMLCanvasElement>(null),
     renderer = useRef<ProRenderer | null>(null),
     root = useRef<HTMLDivElement>(null),
@@ -256,6 +263,9 @@ export default function ProWorkspace({
   useEffect(() => {
     if (before && doc && !sourceReference(doc)) setBefore(false);
   }, [before, doc]);
+  useEffect(() => {
+    if (tool !== "crop") setCropDraft(null);
+  }, [tool]);
   const install = (entry: ProSession, label: string) => {
     sessionRef.current = entry;
     setSession(entry);
@@ -263,8 +273,6 @@ export default function ProWorkspace({
     historyRef.current = h;
     setHistory(h);
     setSelectedIds(entry.document.layers.length ? [entry.document.layers.at(-1)!.id] : []);
-    setWidthDraft(entry.document.width);
-    setHeightDraft(entry.document.height);
     setAssetEpoch((n) => n + 1);
   };
   useEffect(() => {
@@ -457,6 +465,14 @@ export default function ProWorkspace({
       if (busyRef.current) return;
       try {
         validateDocument(next);
+        if (
+          [next, next.crop, next.imageSize].some(
+            (size) => size && size.width * size.height > maxArea,
+          )
+        )
+          throw new Error(
+            "Canvas, crop or output exceeds this device’s memory budget. Nothing was changed.",
+          );
         const h = historyRef.current;
         if (h) setHist(record(h, { doc: next, label }, group));
         setError("");
@@ -464,7 +480,7 @@ export default function ProWorkspace({
         setError(storageMessage(e));
       }
     },
-    [setHist],
+    [setHist, maxArea],
   );
   const setSelection = useCallback(
     (selection: Selection) => {
@@ -716,6 +732,8 @@ export default function ProWorkspace({
       base.name = "Latest chapter image";
       const document: ProDocument = {
         ...h.present.doc,
+        crop: undefined,
+        imageSize: undefined,
         width: current.width,
         height: current.height,
         selection: EMPTY_SELECTION,
@@ -743,8 +761,6 @@ export default function ProWorkspace({
       setMaskMode(false);
       setBefore(false);
       setTool("move");
-      setWidthDraft(document.width);
-      setHeightDraft(document.height);
       setAssetEpoch((n) => n + 1);
       setError("");
       setStatus("Latest chapter image added. Earlier layers are hidden and recoverable in Layers.");
@@ -768,6 +784,7 @@ export default function ProWorkspace({
     if (!doc || !sessionRef.current || busyRef.current) return;
     setError("");
     try {
+      if (cropDraft) throw new Error("Apply or cancel the crop draft before exporting.");
       if (kind === "native") {
         download(
           await nativeFile({ ...sessionRef.current, document: doc }),
@@ -854,13 +871,19 @@ export default function ProWorkspace({
         if (!alive.current || busyRef.current || closeInProgress.current) return;
         const next = mergeNativeSession(sessionRef.current, imported);
         validateAssets(next);
+        if (
+          [next.document, next.document.crop, next.document.imageSize].some(
+            (size) => size && size.width * size.height > maxArea,
+          )
+        )
+          throw new Error("Imported canvas, crop or output exceeds this device’s memory budget.");
         sessionRef.current = next;
         setSession(next);
+        setCropDraft(null);
+        if (tool === "crop") setTool("move");
         commit(next.document, "Import native document");
         setMaskMode(false);
         setSelectedIds(next.document.layers.length ? [next.document.layers.at(-1)!.id] : []);
-        setWidthDraft(next.document.width);
-        setHeightDraft(next.document.height);
         setAssetEpoch((n) => n + 1);
         setStatus("Native document imported into this Pro draft. Chapter unchanged.");
       } else if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
@@ -896,6 +919,11 @@ export default function ProWorkspace({
     }
   };
   const chooseTool = (id: ProTool) => {
+    setCropDraft(id === "crop" && doc ? { ...(doc.crop ?? fullCrop(doc)) } : null);
+    if (id === "crop") {
+      setTab("geometry");
+      setPanelOpen(true);
+    }
     if (
       ["brush", "pencil", "eraser", "clone", "heal", "spot", "patch"].includes(id) &&
       (!maskMode || ["clone", "heal", "spot", "patch"].includes(id)) &&
@@ -919,7 +947,7 @@ export default function ProWorkspace({
       await saveTail.current.catch(() => {});
       const currentSession = sessionRef.current;
       if (!currentSession) throw new Error("The document session is unavailable.");
-      const result = await worker.export(document, maxArea, "image/png", 1, () => {});
+      const result = await worker.export(document, maxArea, "image/png", 1, () => {}, true);
       if (!result.blob) throw new Error("Could not capture the clone source.");
       const assetId = crypto.randomUUID(),
         next = { ...currentSession, assets: { ...currentSession.assets, [assetId]: result.blob } };
@@ -991,6 +1019,27 @@ export default function ProWorkspace({
       setProgress("");
     }
   };
+  const cancelCrop = () => {
+    setCropDraft(null);
+    setTool("move");
+    setGeometryRevision((n) => n + 1);
+  };
+  const applyCrop = () => {
+    if (!doc || !cropDraft || busyRef.current) return;
+    try {
+      const next = { ...doc, crop: cropDraft };
+      validateDocument(next);
+      if (
+        [next, next.crop, next.imageSize].some((size) => size && size.width * size.height > maxArea)
+      )
+        throw new Error("Canvas, crop or output exceeds this device’s memory budget.");
+      commit(next, "Apply non-destructive crop");
+      cancelCrop();
+      setStatus("Crop applied to output. Full canvas, masks and original artwork retained.");
+    } catch (e) {
+      setError(storageMessage(e));
+    }
+  };
   const actions = useRef({
     save: saveNow,
     undo: () => {},
@@ -1001,9 +1050,11 @@ export default function ProWorkspace({
   actions.current = {
     save: saveNow,
     undo: () => {
+      if (cropDraft) cancelCrop();
       if (historyRef.current) setHist(undo(historyRef.current));
     },
     redo: () => {
+      if (cropDraft) cancelCrop();
       if (historyRef.current) setHist(redo(historyRef.current));
     },
     remove,
@@ -1060,7 +1111,7 @@ export default function ProWorkspace({
           style={{ "--pro-panel-width": `${panelWidth}px` } as React.CSSProperties}
           onEscapeKeyDown={(e) => {
             e.preventDefault();
-            if (!busyRef.current && tool !== "patch") void close();
+            if (!busyRef.current && tool !== "patch" && tool !== "crop") void close();
           }}
           onBlurCapture={() => {
             const h = historyRef.current;
@@ -1096,6 +1147,7 @@ export default function ProWorkspace({
                 onClick={() => {
                   setMode("raster");
                   onModeChange("raster");
+                  setCropDraft(null);
                   setTool("brush");
                   setBefore(false);
                 }}
@@ -1110,6 +1162,7 @@ export default function ProWorkspace({
                 onClick={() => {
                   setMode("vector");
                   onModeChange("vector");
+                  setCropDraft(null);
                   setTool("pen");
                   setBefore(false);
                 }}
@@ -1157,7 +1210,7 @@ export default function ProWorkspace({
             </Button>
             <Button
               intent="save"
-              disabled={!doc || busy || stale || !ready}
+              disabled={!doc || busy || stale || !ready || !!cropDraft}
               onClick={() => void apply()}
             >
               <Layers3 />
@@ -1215,6 +1268,16 @@ export default function ProWorkspace({
             </div>
           ) : null}
           <div className="pro-context-bar">
+            {cropDraft && (
+              <div className="pro-crop-actions">
+                <Button onClick={applyCrop} disabled={busy}>
+                  Apply crop
+                </Button>
+                <Button variant="secondary" onClick={cancelCrop}>
+                  Cancel crop
+                </Button>
+              </div>
+            )}
             <span>{TOOLS.find((t) => t.id === tool)?.name ?? "Move"}</span>
             <label className="pro-check">
               <input type="checkbox" checked={grid} onChange={(e) => setGrid(e.target.checked)} />
@@ -1342,6 +1405,11 @@ export default function ProWorkspace({
             </nav>
             {doc ? (
               <ProCanvas
+                cropDraft={cropDraft}
+                cropRatio={cropRatio}
+                onCropDraft={setCropDraft}
+                onCancelCrop={cancelCrop}
+                onApplyCrop={applyCrop}
                 doc={doc}
                 activeId={selectedIds[0] ?? ""}
                 selectedIds={selectedIds}
@@ -1392,18 +1460,26 @@ export default function ProWorkspace({
             {panelOpen && (
               <aside className="pro-inspector" aria-label="Pro inspector">
                 <nav className="pro-panel-tabs" aria-label="Pro panels">
-                  {(["properties", "layers", "history", "assets", "ai", "export"] as const).map(
-                    (t) => (
-                      <button
-                        type="button"
-                        key={t}
-                        aria-pressed={tab === t}
-                        onClick={() => setTab(t)}
-                      >
-                        {t === "ai" ? "AI tools" : t[0]!.toUpperCase() + t.slice(1)}
-                      </button>
-                    ),
-                  )}
+                  {(
+                    [
+                      "properties",
+                      "geometry",
+                      "layers",
+                      "history",
+                      "assets",
+                      "ai",
+                      "export",
+                    ] as const
+                  ).map((t) => (
+                    <button
+                      type="button"
+                      key={t}
+                      aria-pressed={tab === t}
+                      onClick={() => setTab(t)}
+                    >
+                      {t === "ai" ? "AI tools" : t[0]!.toUpperCase() + t.slice(1)}
+                    </button>
+                  ))}
                 </nav>
                 <div className="pro-panel-content">
                   {tab === "properties" && (
@@ -1564,6 +1640,27 @@ export default function ProWorkspace({
                       </ToolSection>
                     </>
                   )}
+                  {tab === "geometry" && doc && (
+                    <ProGeometry
+                      key={geometryRevision}
+                      doc={doc}
+                      draft={cropDraft}
+                      ratio={cropRatio}
+                      onRatio={setCropRatio}
+                      onDraft={setCropDraft}
+                      onStart={() => chooseTool("crop")}
+                      onApply={applyCrop}
+                      onCancel={cancelCrop}
+                      onReset={() => {
+                        commit({ ...doc, crop: undefined }, "Reset non-destructive crop");
+                        if (cropDraft) cancelCrop();
+                      }}
+                      onCommit={commit}
+                      canvasRef={canvas}
+                      renderVersion={version}
+                      disabled={busy}
+                    />
+                  )}
                   {tab === "history" && history && (
                     <>
                       <h3>Document history</h3>
@@ -1715,6 +1812,12 @@ export default function ProWorkspace({
                   {tab === "export" && doc && (
                     <>
                       <h3>Save & export</h3>
+                      {cropDraft && (
+                        <p className="pro-help">
+                          Apply or cancel your crop draft before exporting. Exports use committed
+                          boundaries.
+                        </p>
+                      )}
                       <p className="pro-help">
                         Native documents keep layers and source bytes. Raster exports flatten the
                         current document at its exact dimensions. JPEG uses a white background for
@@ -1757,42 +1860,18 @@ export default function ProWorkspace({
                         onClick={() => void exportFile("raster")}
                       >
                         <Download />
-                        Export composite · {doc.width} × {doc.height}
+                        Export composite · {outputSize(doc).width} × {outputSize(doc).height}
                       </Button>
-                      <ToolSection title="Canvas dimensions">
-                        <p className="pro-help">
-                          Changing the canvas changes output dimensions; it does not resample source
-                          layers. Use object transforms to scale content.
-                        </p>
-                        <ProNumber
-                          label="Document width"
-                          value={widthDraft}
-                          min={1}
-                          max={16384}
-                          onChange={setWidthDraft}
-                        />
-                        <ProNumber
-                          label="Document height"
-                          value={heightDraft}
-                          min={1}
-                          max={16384}
-                          onChange={setHeightDraft}
-                        />
-                        <Button
-                          variant="secondary"
-                          onClick={() =>
-                            commit(
-                              {
-                                ...doc,
-                                width: Math.round(widthDraft),
-                                height: Math.round(heightDraft),
-                              },
-                              "Resize canvas",
-                            )
-                          }
-                        >
-                          Resize canvas
-                        </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setTab("geometry");
+                          setPanelOpen(true);
+                        }}
+                      >
+                        Crop, canvas & image size
+                      </Button>
+                      <ToolSection title="Document background">
                         <label className="pro-field">
                           Background
                           <select

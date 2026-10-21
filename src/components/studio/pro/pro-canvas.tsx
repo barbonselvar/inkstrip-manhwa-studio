@@ -1,3 +1,13 @@
+import {
+  CROP_HANDLES,
+  cropHandlePoint,
+  cropLocal,
+  cropPoint,
+  dragCrop,
+  outputSize,
+  type Crop,
+  type CropHandle,
+} from "@/lib/studio/pro/geometry";
 import { brushPoint } from "@/lib/studio/pro/brush-dynamics";
 import { patchSelection, type RepairRequest, type RepairKind } from "@/lib/studio/pro/repair";
 import { appendSelection } from "@/lib/studio/pro/selection";
@@ -22,6 +32,7 @@ import { isLocked } from "@/lib/studio/pro/operations";
 import { selectionCanvas } from "@/lib/studio/pro/render";
 import { shapePath } from "@/lib/studio/pro/paths";
 export type ProTool =
+  | "crop"
   | "move"
   | "hand"
   | "brush"
@@ -47,6 +58,8 @@ export type ProTool =
   | "poly-lasso";
 type View = { zoom: number; x: number; y: number };
 type Gesture = {
+  crop?: Crop;
+  cropHandle?: CropHandle;
   type: string;
   start: Point;
   screen: Point;
@@ -64,6 +77,11 @@ type Gesture = {
 };
 export function ProCanvas({
   doc,
+  cropDraft,
+  cropRatio,
+  onCropDraft,
+  onCancelCrop,
+  onApplyCrop,
   activeId,
   selectedIds,
   onError,
@@ -92,6 +110,11 @@ export function ProCanvas({
   onRepair,
 }: {
   doc: ProDocument;
+  cropDraft: Crop | null;
+  cropRatio: number;
+  onCropDraft: (c: Crop) => void;
+  onCancelCrop: () => void;
+  onApplyCrop: () => void;
   activeId: string;
   selectedIds: string[];
   onError: (message: string) => void;
@@ -149,6 +172,9 @@ export function ProCanvas({
     [cursor, setCursor] = useState<Point | null>(null),
     pathId = useRef(""),
     [context, setContext] = useState(false);
+  const cropActions = useRef({ onCancelCrop, onApplyCrop });
+  cropActions.current = { onCancelCrop, onApplyCrop };
+  const shownCrop = cropDraft ?? doc.crop;
   const fit = Math.min(
       Math.max(1, size.width - 64) / doc.width,
       Math.max(1, size.height - 64) / doc.height,
@@ -162,6 +188,14 @@ export function ProCanvas({
   }, [tool]);
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      if (tool === "crop" && e.key === "Escape") {
+        e.preventDefault();
+        cropActions.current.onCancelCrop();
+      }
+      if (tool === "crop" && e.key === "Enter") {
+        e.preventDefault();
+        cropActions.current.onApplyCrop();
+      }
       if ((e.target as HTMLElement)?.closest("input,textarea,select")) return;
       if (e.code === "Space") {
         e.preventDefault();
@@ -199,7 +233,7 @@ export function ProCanvas({
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", blur);
     };
-  }, [polygon, selection, operation, onSelection, onTransient]);
+  }, [polygon, selection, operation, onSelection, onTransient, tool]);
   const docPoint = (p: Point): Point => {
     const r = board.current!.getBoundingClientRect();
     return {
@@ -294,6 +328,7 @@ export function ProCanvas({
   const begin = (e: ReactPointer<HTMLDivElement>) => {
     if (disabled || before || e.button !== 0) return;
     e.preventDefault();
+    e.currentTarget.focus({ preventScroll: true });
     e.currentTarget.setPointerCapture(e.pointerId);
     const screen = { x: e.clientX, y: e.clientY };
     pointers.current.set(e.pointerId, screen);
@@ -304,6 +339,7 @@ export function ProCanvas({
         view,
         center: { x: (a!.x + b!.x) / 2, y: (a!.y + b!.y) / 2 },
       };
+      if (gesture.current?.crop) onCropDraft(gesture.current.crop);
       gesture.current = null;
       setSelectionDraft(null);
       onTransient(null);
@@ -314,6 +350,31 @@ export function ProCanvas({
     setCursor(p);
     if (tool === "hand" || space.current) {
       gesture.current = { ...base, type: "pan" };
+      return;
+    }
+    if (tool === "crop" && cropDraft) {
+      const local = cropLocal(cropDraft, p),
+        inside =
+          local.x >= 0 && local.y >= 0 && local.x <= cropDraft.width && local.y <= cropDraft.height,
+        core =
+          inside &&
+          local.x > cropDraft.width / 4 &&
+          local.x < (cropDraft.width * 3) / 4 &&
+          local.y > cropDraft.height / 4 &&
+          local.y < (cropDraft.height * 3) / 4,
+        nearest = CROP_HANDLES.map((h) => ({ h, p: cropHandlePoint(cropDraft, h) }))
+          .map(({ h, p: q }) => ({
+            h,
+            distance: Math.hypot(q.x - p.x, q.y - p.y) * fit * view.zoom,
+          }))
+          .sort((a, b) => a.distance - b.distance)[0]!,
+        handle: CropHandle = !core && nearest.distance <= 22 ? nearest.h : inside ? "move" : "draw";
+      gesture.current = {
+        ...base,
+        type: "crop",
+        crop: { ...cropDraft },
+        cropHandle: handle,
+      };
       return;
     }
     if (tool === "wand" || tool === "color-range") {
@@ -588,6 +649,10 @@ export function ProCanvas({
       });
       return null;
     }
+    if (g.type === "crop" && g.crop) {
+      onCropDraft(dragCrop(g.crop, g.cropHandle!, g.start, p, cropRatio));
+      return null;
+    }
     if (g.type === "patch-destination") {
       g.region = { ...g.region!, points: [g.start, p] };
       setPatchPreview(g.region);
@@ -738,6 +803,7 @@ export function ProCanvas({
     }
     const g = gesture.current;
     if (!g) return;
+    if (cancel && g.crop) onCropDraft(g.crop);
     if (!cancel) {
       const next = update(
         { x: e.clientX, y: e.clientY },
@@ -862,7 +928,7 @@ export function ProCanvas({
               : "Draw the destination rectangle"
             : rendering
               ? "Rendering preview…"
-              : `${doc.width} × ${doc.height} px`}
+              : `${doc.width} × ${doc.height} canvas · ${outputSize(doc).width} × ${outputSize(doc).height} output`}
         </span>
       </div>
       <div
@@ -1002,6 +1068,64 @@ export function ProCanvas({
                       />
                     ) : null;
                   })}
+              {shownCrop &&
+                (() => {
+                  const c = shownCrop,
+                    corners = ["nw", "ne", "se", "sw"].map((h) => cropHandlePoint(c, h)),
+                    points = poly(corners),
+                    hitSize = 44 / (fit * view.zoom),
+                    line = 1 / (fit * view.zoom);
+                  return (
+                    <g className="pro-crop-overlay" aria-label="Crop boundaries">
+                      <path
+                        className="pro-crop-shade"
+                        fillRule="evenodd"
+                        d={`M0 0H${doc.width}V${doc.height}H0Z M${corners.map((p) => `${p.x} ${p.y}`).join("L")}Z`}
+                      />
+                      <polygon className="pro-crop-outline" points={points} strokeWidth={line} />
+                      {tool === "crop" && (
+                        <>
+                          {[1, 2].map((n) => {
+                            const a = cropPoint(c, { x: (c.width * n) / 3, y: 0 }),
+                              b = cropPoint(c, { x: (c.width * n) / 3, y: c.height }),
+                              e = cropPoint(c, { x: 0, y: (c.height * n) / 3 }),
+                              f = cropPoint(c, { x: c.width, y: (c.height * n) / 3 });
+                            return (
+                              <g className="pro-crop-thirds" key={n} strokeWidth={line}>
+                                <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
+                                <line x1={e.x} y1={e.y} x2={f.x} y2={f.y} />
+                              </g>
+                            );
+                          })}
+                          {CROP_HANDLES.map((h) => {
+                            const p = cropHandlePoint(c, h);
+                            return (
+                              <g key={h}>
+                                <rect
+                                  className="pro-crop-handle-mark"
+                                  x={p.x - hitSize / 11}
+                                  y={p.y - hitSize / 11}
+                                  width={(hitSize * 2) / 11}
+                                  height={(hitSize * 2) / 11}
+                                  strokeWidth={line}
+                                />
+                                <rect
+                                  className="pro-crop-handle-hit"
+                                  data-crop-handle={h}
+                                  aria-label={`Crop ${h} handle`}
+                                  x={p.x - hitSize / 2}
+                                  y={p.y - hitSize / 2}
+                                  width={hitSize}
+                                  height={hitSize}
+                                />
+                              </g>
+                            );
+                          })}
+                        </>
+                      )}
+                    </g>
+                  );
+                })()}
               {selected && selected.kind !== "group" && ["move", "direct"].includes(tool) && (
                 <>
                   <polygon

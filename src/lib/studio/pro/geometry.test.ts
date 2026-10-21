@@ -112,6 +112,24 @@ test("native save/reopen retains exact crop, resampling, editable text, masks an
   const d = document();
   d.crop = { x: 12.25, y: -3, width: 83, height: 52, rotation: -6.7 };
   d.imageSize = { width: 166, height: 104, resampling: "lanczos" };
+  d.layers[0]!.mask = {
+    enabled: true,
+    strokes: [],
+    selection: {
+      inverted: false,
+      feather: 3,
+      regions: [
+        {
+          kind: "ellipse",
+          operation: "add",
+          points: [
+            { x: 10, y: 8 },
+            { x: 90, y: 75 },
+          ],
+        },
+      ],
+    },
+  };
   d.layers.push(layer("text", 20, 30));
   const session: ProSession = {
       document: d,
