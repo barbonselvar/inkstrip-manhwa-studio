@@ -86,3 +86,40 @@ test("cancelling a merge rejects pending results without changing the input docu
     Object.assign(globalThis, { Worker: originalWorker, OffscreenCanvas: originalCanvas });
   }
 });
+
+test("repair cancellation rejects pending work without publishing document edits", async () => {
+  const originalWorker = globalThis.Worker,
+    originalCanvas = globalThis.OffscreenCanvas;
+  let terminated = false;
+  class FakeWorker {
+    postMessage() {}
+    terminate() {
+      terminated = true;
+    }
+  }
+  Object.assign(globalThis, { Worker: FakeWorker, OffscreenCanvas: class {} });
+  try {
+    const document = fromPanel({ id: "p", name: "art", width: 8, height: 8 }),
+      before = structuredClone(document),
+      renderer = new ProRenderer();
+    const pending = renderer.repair(document, 1000, {
+      kind: "spot",
+      layerId: document.layers[0]!.id,
+      stroke: {
+        points: [{ x: 4, y: 4 }],
+        size: 2,
+        hardness: 1,
+        opacity: 1,
+        flow: 1,
+        color: "#000000",
+        erase: false,
+      },
+    });
+    renderer.dispose();
+    await assert.rejects(pending, { name: "AbortError" });
+    assert.ok(terminated);
+    assert.deepEqual(document, before);
+  } finally {
+    Object.assign(globalThis, { Worker: originalWorker, OffscreenCanvas: originalCanvas });
+  }
+});

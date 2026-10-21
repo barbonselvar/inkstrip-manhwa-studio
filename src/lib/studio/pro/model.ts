@@ -26,7 +26,18 @@ export type CloneSource = {
   aligned: boolean;
 };
 export type Stroke = {
-  points: Point[];
+  points: (Point & { pressure?: number })[];
+  sizePressure?: boolean;
+  smoothing?: number;
+  /** Patch footprint in the target layer; normal strokes continue using brush dabs. */
+  patch?: Selection;
+  /** New repair strokes embed their processed native-size donor texture. */
+  repair?: {
+    kind: "spot" | "patch" | "heal";
+    source: Point;
+    destination: Point;
+    algorithm: "spatial-v1";
+  };
   size: number;
   hardness: number;
   opacity: number;
@@ -43,6 +54,8 @@ export type Stroke = {
     height: number;
     source: Point;
     destination: Point;
+    /** Mapping captured when the texture is painted; later layer transforms move its pixels. */
+    targetTransform?: Transform;
     /** Color-match sampled texture to the target neighborhood (traditional healing). */
     mode?: "clone" | "heal";
   };
@@ -275,7 +288,9 @@ function validateStroke(s: Stroke) {
     !Array.isArray(s.points) ||
     s.points.length < 1 ||
     s.points.length > 10000 ||
-    !s.points.every(point) ||
+    !s.points.every((p) => point(p) && (p.pressure === undefined || finite(p.pressure, 0.05, 1))) ||
+    (s.sizePressure !== undefined && typeof s.sizePressure !== "boolean") ||
+    (s.smoothing !== undefined && !finite(s.smoothing, 0, 0.95)) ||
     !finite(s.size, 1, 1000) ||
     !finite(s.hardness, 0, 1) ||
     !finite(s.opacity, 0, 1) ||
@@ -286,6 +301,19 @@ function validateStroke(s: Stroke) {
   )
     throw new Error("Invalid brush stroke.");
   if (s.clip) validateSelection(s.clip);
+  if (s.patch) {
+    validateSelection(s.patch);
+    if (!s.clone) throw new Error("Patch repair texture is missing.");
+  }
+  if (
+    s.repair &&
+    (!s.clone ||
+      !["spot", "patch", "heal"].includes(s.repair.kind) ||
+      s.repair.algorithm !== "spatial-v1" ||
+      !point(s.repair.source) ||
+      !point(s.repair.destination))
+  )
+    throw new Error("Invalid repair metadata.");
   if (
     s.clone &&
     (typeof s.clone.assetId !== "string" ||
@@ -300,6 +328,17 @@ function validateStroke(s: Stroke) {
       (s.clone.mode !== undefined && s.clone.mode !== "clone" && s.clone.mode !== "heal"))
   )
     throw new Error("Invalid Clone Stamp source.");
+  if (s.clone?.targetTransform !== undefined) {
+    const t = s.clone.targetTransform;
+    if (
+      !t ||
+      !point(t) ||
+      !finite(t.scaleX, 0.01, 100) ||
+      !finite(t.scaleY, 0.01, 100) ||
+      !finite(t.rotation, -360, 360)
+    )
+      throw new Error("Invalid sampled texture transform.");
+  }
 }
 export function validateDocument(d: ProDocument) {
   if (

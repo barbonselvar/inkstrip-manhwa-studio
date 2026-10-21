@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { renderRepair } from "./repair-worker";
 import { selectColor } from "./selection";
 import { composite } from "./render";
 import { planMerge, finishMerge, descendants } from "./layers";
@@ -35,6 +36,10 @@ self.onmessage = async ({ data }) => {
         type === "preview" || type === "thumbnails"
           ? Math.min(1, 1400 / Math.max(doc.width, doc.height))
           : 1;
+    if (type === "repair" && data.request.stroke.clone) {
+      const source = data.request.stroke.clone;
+      dimensions.set(source.assetId, { width: source.width, height: source.height });
+    }
     const get = async (assetId: string, s: number) => {
       const size = dimensions.get(assetId);
       if (!size || !assets[assetId]) throw new Error("A raster asset is missing.");
@@ -190,6 +195,20 @@ self.onmessage = async ({ data }) => {
     );
     if (latest !== id) {
       output.width = output.height = 1;
+      return;
+    }
+    if (type === "repair") {
+      try {
+        if (Object.keys(assets).length >= 64)
+          throw new Error(
+            "The repair asset pool is full. Save a native backup and use a smaller document.",
+          );
+        const result = await renderRepair(doc, data.request, output, get, data.maxArea);
+        if (latest !== id) throw new DOMException("Cancelled", "AbortError");
+        self.postMessage({ id, type: "repair", ...result });
+      } finally {
+        output.width = output.height = 1;
+      }
       return;
     }
     if (type === "select") {

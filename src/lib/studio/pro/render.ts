@@ -136,7 +136,7 @@ export function selectionCanvas(s: Selection, w: number, h: number, scale = 1) {
   }
   return output;
 }
-function stroke(ctx: Ctx, s: Stroke) {
+export function stroke(ctx: Ctx, s: Stroke) {
   // Flow accumulates per dab; opacity caps the complete stroke independently.
   if (s.opacity < 1) {
     const t = ctx.getTransform(),
@@ -165,10 +165,11 @@ function stroke(ctx: Ctx, s: Stroke) {
   ctx.globalCompositeOperation = s.erase ? "destination-out" : "source-over";
   ctx.globalAlpha = s.flow;
   const radius = s.size / 2;
-  const dot = (x: number, y: number) => {
+  const dot = (x: number, y: number, pressure = 1) => {
+    const radius = Math.max(0.1, (s.size / 2) * pressure);
     ctx.fillStyle = s.color;
     if (s.tip === "square") {
-      ctx.fillRect(x - radius, y - radius, s.size, s.size);
+      ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
       return;
     }
     if (s.hardness < 1) {
@@ -181,14 +182,44 @@ function stroke(ctx: Ctx, s: Stroke) {
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fill();
   };
-  dot(s.points[0]!.x, s.points[0]!.y);
+  dot(s.points[0]!.x, s.points[0]!.y, s.points[0]!.pressure);
   for (let i = 1; i < s.points.length; i++) {
     const a = s.points[i - 1]!,
       b = s.points[i]!,
-      n = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / Math.max(1, radius * 0.2));
-    for (let j = 1; j <= n; j++) dot(a.x + ((b.x - a.x) * j) / n, a.y + ((b.y - a.y) * j) / n);
+      n = Math.ceil(
+        Math.hypot(b.x - a.x, b.y - a.y) /
+          (a.pressure !== undefined || b.pressure !== undefined
+            ? Math.max(0.2, radius * Math.min(a.pressure ?? 1, b.pressure ?? 1) * 0.2)
+            : Math.max(1, radius * 0.2)),
+      );
+    for (let j = 1; j <= n; j++)
+      dot(
+        a.x + ((b.x - a.x) * j) / n,
+        a.y + ((b.y - a.y) * j) / n,
+        (a.pressure ?? 1) + (((b.pressure ?? 1) - (a.pressure ?? 1)) * j) / n,
+      );
   }
   ctx.restore();
+}
+export function clippedStroke(ctx: Ctx, s: Stroke, width: number, height: number, scale: number) {
+  if (!s.clip) {
+    stroke(ctx, s);
+    return;
+  }
+  const ink = canvas(width * scale, height * scale),
+    c = ink.getContext("2d")!;
+  c.scale(scale, scale);
+  stroke(c, { ...s, erase: false });
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  const clip = selectionCanvas(s.clip, width, height, scale);
+  c.globalCompositeOperation = "destination-in";
+  c.drawImage(clip, 0, 0);
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = s.erase ? "destination-out" : "source-over";
+  ctx.drawImage(ink, 0, 0);
+  ctx.restore();
+  ink.width = ink.height = clip.width = clip.height = 1;
 }
 async function surface(
   l: Layer,
@@ -211,7 +242,13 @@ async function surface(
             x: s.clone.source.x - s.clone.destination.x,
             y: s.clone.source.y - s.clone.destination.y,
           };
-        sourceCtx.setTransform(...cloneSourceMatrix(l, offset, scale));
+        sourceCtx.setTransform(
+          ...cloneSourceMatrix(
+            s.clone.targetTransform ? { transform: s.clone.targetTransform } : l,
+            offset,
+            scale,
+          ),
+        );
         sourceCtx.drawImage(source, 0, 0);
         if (s.clone.mode === "heal") {
           // Use the immutable full-resolution sample as both the donor texture
@@ -244,7 +281,15 @@ async function surface(
           }
         }
         maskCtx.scale(scale, scale);
-        stroke(maskCtx, { ...s, clone: undefined, color: "#ffffff", erase: false, opacity: 1 });
+        if (s.patch) {
+          const patch = selectionCanvas(s.patch, l.width, l.height, scale);
+          maskCtx.setTransform(1, 0, 0, 1, 0, 0);
+          maskCtx.globalAlpha = s.flow;
+          maskCtx.drawImage(patch, 0, 0);
+          maskCtx.globalAlpha = 1;
+          patch.width = patch.height = 1;
+        } else
+          stroke(maskCtx, { ...s, clone: undefined, color: "#ffffff", erase: false, opacity: 1 });
         if (s.clip) {
           maskCtx.setTransform(1, 0, 0, 1, 0, 0);
           const clip = selectionCanvas(s.clip, l.width, l.height, scale);
@@ -265,22 +310,7 @@ async function surface(
         cloned.width = cloned.height = mask.width = mask.height = 1;
         continue;
       }
-      if (s.clip) {
-        const ink = canvas(out.width, out.height),
-          c = ink.getContext("2d")!;
-        c.scale(scale, scale);
-        stroke(c, { ...s, erase: false });
-        c.setTransform(1, 0, 0, 1, 0, 0);
-        const clip = selectionCanvas(s.clip, l.width, l.height, scale);
-        c.globalCompositeOperation = "destination-in";
-        c.drawImage(clip, 0, 0);
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.globalCompositeOperation = s.erase ? "destination-out" : "source-over";
-        ctx.drawImage(ink, 0, 0);
-        ctx.restore();
-        ink.width = clip.width = 1;
-      } else stroke(ctx, s);
+      clippedStroke(ctx, s, l.width, l.height, scale);
     }
   if (l.kind === "shape") {
     const path = new Path2D(shapePath(l));
@@ -339,7 +369,8 @@ async function surface(
     const mask = selectionCanvas(l.mask.selection, l.width, l.height, scale),
       m = mask.getContext("2d")!;
     m.scale(scale, scale);
-    for (const s of l.mask.strokes) stroke(m, { ...s, color: "#ffffff" });
+    for (const s of l.mask.strokes)
+      clippedStroke(m, { ...s, color: "#ffffff" }, l.width, l.height, scale);
     if (l.mask.inverted) {
       m.save();
       m.setTransform(1, 0, 0, 1, 0, 0);
