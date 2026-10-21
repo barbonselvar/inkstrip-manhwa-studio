@@ -30,6 +30,9 @@ import {
   localPoint,
   toLocalSelection,
   worldPoint,
+  contourAt,
+  contours,
+  withContour,
   type ProDocument,
   type Layer,
   type Point,
@@ -84,6 +87,7 @@ type Gesture = {
   repairKind?: RepairKind;
   region?: Region;
   index?: number;
+  contour?: number;
   part?: string;
   corner?: string;
   view: View;
@@ -103,6 +107,7 @@ export function ProCanvas({
   activeId,
   selectedIds,
   activeAnchor,
+  activeContour,
   onSelectAnchor,
   onError,
   tool,
@@ -142,7 +147,8 @@ export function ProCanvas({
   activeId: string;
   selectedIds: string[];
   activeAnchor: number;
-  onSelectAnchor: (index: number) => void;
+  activeContour: number;
+  onSelectAnchor: (index: number, contour?: number) => void;
   onError: (message: string) => void;
   tool: ProTool;
   selection: Selection;
@@ -210,17 +216,18 @@ export function ProCanvas({
     selected = doc.layers.find((l) => l.id === activeId),
     transformTarget =
       selected && transformDraft?.frame ? { ...selected, ...transformDraft.frame } : selected;
+  const selectedPath = selected ? contourAt(selected, activeContour) : undefined;
   const splitSegment =
-    selected && selected.anchors.length >= 2
-      ? Math.min(activeAnchor, selected.anchors.length - (selected.closed ? 1 : 2))
+    selectedPath && selectedPath.anchors.length >= 2
+      ? Math.min(activeAnchor, selectedPath.anchors.length - (selectedPath.closed ? 1 : 2))
       : -1;
   const splitPoint =
     selected && splitSegment >= 0 && !selected.pathData
       ? worldPoint(
           cubicPoint(
             anchorCurve(
-              selected.anchors[splitSegment]!,
-              selected.anchors[(splitSegment + 1) % selected.anchors.length]!,
+              selectedPath!.anchors[splitSegment]!,
+              selectedPath!.anchors[(splitSegment + 1) % selectedPath!.anchors.length]!,
             ),
             0.5,
           ),
@@ -372,9 +379,19 @@ export function ProCanvas({
         const path = new Path2D(shapePath(l));
         ctx.save();
         ctx.lineWidth = Math.max(l.strokeWidth, 10 / (fit * view.zoom));
+        ctx.lineCap = l.lineCap ?? "butt";
+        ctx.lineJoin = l.lineJoin ?? "round";
+        ctx.miterLimit = l.miterLimit ?? 10;
+        ctx.setLineDash(l.dash ?? []);
+        ctx.lineDashOffset = l.dashOffset ?? 0;
         const yes =
-          (l.fill !== "transparent" && ctx.isPointInPath(path, q.x, q.y)) ||
-          ctx.isPointInStroke(path, q.x, q.y);
+          (l.fill !== "transparent" &&
+            (l.fillOpacity ?? 1) > 0 &&
+            ctx.isPointInPath(path, q.x, q.y, l.fillRule ?? "nonzero")) ||
+          (l.stroke !== "transparent" &&
+            l.strokeWidth > 0 &&
+            (l.strokeOpacity ?? 1) > 0 &&
+            ctx.isPointInStroke(path, q.x, q.y));
         ctx.restore();
         return yes;
       }
@@ -629,16 +646,23 @@ export function ProCanvas({
       corner = target.closest("[data-corner]");
     if (tool === "direct" && selected && !isLocked(doc, selected.id) && !selected.pathData) {
       // Use a screen-space touch target without drawing oversized, overlapping handles.
-      const nearest = selected.anchors
-        .flatMap((a, index) =>
-          (["point", "incoming", "outgoing"] as const).flatMap((part) => {
-            const q = part === "point" ? a : a[part];
-            if (!q) return [];
-            const world = worldPoint(q, selected);
-            return [
-              { index, part, distance: Math.hypot(world.x - p.x, world.y - p.y) * fit * view.zoom },
-            ];
-          }),
+      const nearest = contours(selected)
+        .flatMap((c, contour) =>
+          c.anchors.flatMap((a, index) =>
+            (["point", "incoming", "outgoing"] as const).flatMap((part) => {
+              const q = part === "point" ? a : a[part];
+              if (!q) return [];
+              const world = worldPoint(q, selected);
+              return [
+                {
+                  index,
+                  part,
+                  contour,
+                  distance: Math.hypot(world.x - p.x, world.y - p.y) * fit * view.zoom,
+                },
+              ];
+            }),
+          ),
         )
         .sort((a, b) => a.distance - b.distance)[0];
       if (
@@ -649,7 +673,10 @@ export function ProCanvas({
           Math.hypot(splitPoint.x - p.x, splitPoint.y - p.y) * fit * view.zoom < nearest.distance)
       ) {
         try {
-          onCommit(splitAnchorSegment(doc, selected.id, splitSegment, 0.5), "Insert Bézier anchor");
+          onCommit(
+            splitAnchorSegment(doc, selected.id, splitSegment, 0.5, activeContour),
+            "Insert Bézier anchor",
+          );
           onSelectAnchor(splitSegment + 1);
         } catch (error) {
           onError((error as Error).message);
@@ -657,17 +684,21 @@ export function ProCanvas({
         return;
       }
       const index = anchor ? Number(anchor.getAttribute("data-anchor")) : nearest?.index,
+        contour = anchor
+          ? Number(anchor.getAttribute("data-contour") ?? activeContour)
+          : (nearest?.contour ?? activeContour),
         part = anchor ? (anchor.getAttribute("data-part") ?? "point") : nearest?.part;
       if (
         index !== undefined &&
         (anchor || (nearest && nearest.distance <= (e.pointerType === "touch" ? 22 : 10)))
       ) {
-        onSelectAnchor(index);
+        onSelectAnchor(index, contour);
         gesture.current = {
           ...base,
           type: "anchor",
           id: selected.id,
           index,
+          contour,
           part,
         };
         return;
@@ -680,6 +711,7 @@ export function ProCanvas({
         existing = layer("shape", doc.width, doc.height);
         existing.name = "Bézier path";
         existing.shape = "path";
+        existing.vectorOverflow = true;
         existing.fill = "transparent";
         existing.stroke = brush.color;
         next = { ...doc, layers: [...doc.layers, existing] };
@@ -868,7 +900,8 @@ export function ProCanvas({
     }
     if (g.type === "pen" || g.type === "anchor") {
       const a = localPoint(p, l),
-        anchors = [...l.anchors],
+        subpath = contourAt(l, g.contour ?? 0),
+        anchors = [...subpath.anchors],
         old = anchors[g.index!]!;
       if (g.type === "pen") {
         const dx = a.x - old.x,
@@ -889,7 +922,7 @@ export function ProCanvas({
       else {
         anchors[g.index!] = editedAnchor(old, { kind: "move", point: a });
       }
-      next = { ...l, anchors };
+      next = withContour(l, g.contour ?? 0, { anchors, closed: subpath.closed });
     }
     if (g.type === "paint" || g.type === "repair") {
       const s = g.stroke!,
@@ -1414,7 +1447,7 @@ export function ProCanvas({
                     />
                   )}
                   {tool === "direct" &&
-                    selected.anchors.map((a, i) => {
+                    selectedPath!.anchors.map((a, i) => {
                       const p = worldPoint(a, selected);
                       return (
                         <g key={i}>
@@ -1433,6 +1466,7 @@ export function ProCanvas({
                                 />
                                 <circle
                                   data-anchor={i}
+                                  data-contour={activeContour}
                                   data-part={part}
                                   cx={q.x}
                                   cy={q.y}
@@ -1444,6 +1478,7 @@ export function ProCanvas({
                           })}
                           <circle
                             data-anchor={i}
+                            data-contour={activeContour}
                             data-part="point"
                             cx={p.x}
                             cy={p.y}
@@ -1457,7 +1492,7 @@ export function ProCanvas({
                     splitPoint &&
                     selected.kind === "shape" &&
                     selected.shape === "path" &&
-                    selected.anchors.length < 1000 &&
+                    contours(selected).reduce((n, c) => n + c.anchors.length, 0) < 1000 &&
                     !isLocked(doc, selected.id) && (
                       <g data-split-segment={splitSegment} className="pro-anchor-insert">
                         <title>Insert an exact midpoint anchor</title>

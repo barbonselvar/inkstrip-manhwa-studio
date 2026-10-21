@@ -1,6 +1,14 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { Anchor, Layer, ProDocument } from "@/lib/studio/pro/model";
+import {
+  contourAt,
+  contours,
+  withContour,
+  type Anchor,
+  type Layer,
+  type ProDocument,
+} from "@/lib/studio/pro/model";
+import { convertPath, fitVectorFrame } from "@/lib/studio/pro/compound";
 import { editAnchor, reverseAnchors, type AnchorEdit } from "@/lib/studio/pro/anchor-edit";
 import {
   anchorCurve,
@@ -12,7 +20,9 @@ import { ProNumber } from "./pro-properties";
 
 export function ProAnchors({
   doc,
-  layer,
+  layer: sourceLayer,
+  contour = 0,
+  onSelectContour,
   index,
   onSelect,
   onChange,
@@ -20,11 +30,14 @@ export function ProAnchors({
 }: {
   doc: ProDocument;
   layer: Layer;
+  contour?: number;
+  onSelectContour: (index: number) => void;
   index: number;
   onSelect: (index: number) => void;
   onChange: (d: ProDocument, label: string, group?: string) => void;
   onError: (message: string) => void;
 }) {
+  const layer = { ...sourceLayer, ...contourAt(sourceLayer, contour) };
   const [parameter, setParameter] = useState(50),
     [measure, setMeasure] = useState("parameter"),
     a = layer.anchors[index],
@@ -43,7 +56,11 @@ export function ProAnchors({
   }, [layer.anchors, layer.pathData, segment]);
   const run = (fn: () => ProDocument, label: string, group?: string) => {
     try {
-      onChange(fn(), label, group ? `${layer.id}:anchor-${index}-${group}` : undefined);
+      onChange(
+        fn(),
+        label,
+        group ? `${layer.id}:contour-${contour}-anchor-${index}-${group}` : undefined,
+      );
       return true;
     } catch (e) {
       onError((e as Error).message);
@@ -51,17 +68,75 @@ export function ProAnchors({
     }
   };
   const edit = (edit: AnchorEdit, label: string, group?: string) =>
-    run(() => editAnchor(doc, layer.id, index, edit), label, group);
+    run(() => editAnchor(doc, layer.id, index, edit, contour), label, group);
   if (layer.pathData)
     return (
-      <p className="pro-help">
-        Imported SVG geometry is preserved. Native anchor editing requires path conversion, which is
-        not yet supported.
-      </p>
+      <>
+        <p className="pro-help">
+          Convert SVG data into editable cubic contours. Lines and Béziers stay exact; arcs use
+          bounded cubic interpolation. Undo restores the preserved SVG path.
+        </p>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            if (run(() => convertPath(doc, layer.id), "Convert SVG path to native contours"))
+              onSelectContour(0);
+          }}
+        >
+          Convert SVG path to editable contours
+        </Button>
+      </>
     );
-  if (!a) return <p className="pro-help">Use the Pen tool to add anchors to this path.</p>;
+  const subpathSelect = (
+    <label className="pro-field">
+      Selected subpath
+      <select
+        className="field"
+        aria-label="Selected subpath"
+        value={contour}
+        onChange={(e) => onSelectContour(+e.target.value)}
+      >
+        {contours(sourceLayer).map((c, i) => (
+          <option key={i} value={i}>
+            Subpath {i + 1} · {c.closed ? "closed" : "open"} · {c.anchors.length} anchors
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  if (!a)
+    return (
+      <>
+        {subpathSelect}
+        <p className="pro-help">
+          This subpath has no anchors. Select another subpath or use the Pen tool to create a path.
+        </p>
+      </>
+    );
   return (
     <section aria-label="Bézier anchor editing">
+      {subpathSelect}
+      <label className="pro-check">
+        <input
+          type="checkbox"
+          aria-label="Close Bézier path"
+          checked={layer.closed}
+          onChange={(e) =>
+            run(
+              () => ({
+                ...doc,
+                layers: doc.layers.map((l) =>
+                  l.id === layer.id
+                    ? withContour(l, contour, { anchors: layer.anchors, closed: e.target.checked })
+                    : l,
+                ),
+              }),
+              "Change subpath closure",
+            )
+          }
+        />
+        Closed subpath
+      </label>
       <p className="pro-help">
         Direct select: drag an anchor or handle. Smooth keeps opposite handle length; symmetric
         mirrors it. Alt/Option-drag breaks coupling. Tap the curve’s diamond to insert an exact
@@ -133,6 +208,12 @@ export function ProAnchors({
         </div>
       ))}
       <div className="pro-actions">
+        <Button
+          variant="ghost"
+          onClick={() => run(() => fitVectorFrame(doc, layer.id), "Fit vector source frame")}
+        >
+          Fit vector frame to content
+        </Button>
         <Button variant="ghost" onClick={() => edit({ kind: "clear" }, "Remove Bézier handles")}>
           Remove handles
         </Button>
@@ -142,7 +223,7 @@ export function ProAnchors({
           onClick={() => {
             if (
               run(
-                () => editAnchor(doc, layer.id, index, { kind: "delete" }),
+                () => editAnchor(doc, layer.id, index, { kind: "delete" }, contour),
                 "Delete Bézier anchor",
               )
             )
@@ -186,7 +267,9 @@ export function ProAnchors({
       <div className="pro-actions">
         <Button
           variant="secondary"
-          disabled={segment < 0 || layer.anchors.length >= 1000}
+          disabled={
+            segment < 0 || contours(sourceLayer).reduce((n, c) => n + c.anchors.length, 0) >= 1000
+          }
           onClick={() => {
             const changed = run(() => {
               if (measure === "distance" && !metric)
@@ -197,7 +280,7 @@ export function ProAnchors({
                   : parameter / 100;
               if (t <= 0 || t >= 1)
                 throw new Error("Choose an interior position on a nonzero-length segment.");
-              return splitAnchorSegment(doc, layer.id, segment, t);
+              return splitAnchorSegment(doc, layer.id, segment, t, contour);
             }, "Insert Bézier anchor");
             if (changed) onSelect(segment + 1);
           }}
@@ -207,7 +290,10 @@ export function ProAnchors({
         <Button
           variant="ghost"
           onClick={() => {
-            const changed = run(() => reverseAnchors(doc, layer.id), "Reverse Bézier path");
+            const changed = run(
+              () => reverseAnchors(doc, layer.id, contour),
+              "Reverse Bézier path",
+            );
             if (changed)
               onSelect(
                 layer.closed

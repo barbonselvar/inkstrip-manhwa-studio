@@ -357,3 +357,20 @@ conversion of imported raw SVG paths. Pathfinder, compound paths, artboards,
 advanced snapping/appearance, text-on-path and SVG expansion remain missing or
 partial as described there. Phase D is an unreleased draft; Phase C remains the
 verified production release.
+
+
+## Phase D Increment A — compound paths and SVG conversion (unreleased)
+
+[Increment A contracts](PHASE_D_COMPOUND_SVG.md) supersede the previous missing
+states for compound paths, fill rules and native SVG path conversion. Multiple
+editable open/closed contours, holes/nesting, evenodd/nonzero rendering/hit tests,
+create/release, subpath selection/editing, affine source-frame fitting, SVG command
+conversion (including arcs), transform/viewBox/group/stroke handling and native
+persistence are implemented. New feature files use a v2 envelope; legacy v1 files
+remain supported. Native export no longer copies unused history assets.
+
+Pathfinder, multiple artboards, precision snapping/distribution, multiple
+fills/strokes, text-on-path and general SVG gradients/clipping/masks remain
+**missing/partial**. Existing simple fill/stroke controls and captured SVG stroke
+metadata do not imply complete advanced appearance. Phase D stays draft; no new
+production release is claimed.

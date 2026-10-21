@@ -65,8 +65,8 @@ perspective coordinates, mask/clip/source preservation and SVG cubic output.
 ## Remaining Phase D scope
 
 - Remaining path editing: join/split open paths, multi-anchor selection, explicit
-  native conversion of imported raw SVG paths and additional keyboard modifiers.
-- Robust Pathfinder Boolean operations and compound-path fill rules.
+  additional keyboard modifiers.
+- Robust Pathfinder Boolean operations. Compound fill rules are implemented in Increment A.
 - Multiple artboards and artboard-aware native output.
 - Precision object/anchor snapping and alignment.
 - Expanded stroke/fill/appearance behavior, preserving editable objects.
@@ -76,16 +76,13 @@ perspective coordinates, mask/clip/source preservation and SVG cubic output.
 - Full native/history/export/mobile/AI/3D regression and release gates before
   merging; live production verification before the following phase.
 
-Existing functionality is extended in place. Raw imported SVG `pathData` remains
-preserved and deliberately read-only in the anchor editor until a real converter
-is implemented. Handle removal and deletion change geometry; they do not promise
-curve-preserving simplification. The midpoint diamond uses cubic parameter 0.5,
-while the numeric distance option uses bounded arc-distance inversion. Very
-complex/degenerate paths can exceed the documented arc precision/work budget;
-those operations fail explicitly. No multi-anchor editing or precision anchor
-snapping is claimed by this increment. Existing SVG export restrictions on masks,
-clipping, effects and nonlinear transforms remain explicit; native/raster output
-preserves those features.
+Compound paths and SVG conversion are implemented in [Increment A](PHASE_D_COMPOUND_SVG.md),
+including independent contours, winding, safe native/PNG/SVG persistence, affine
+vector rendering and source-frame fitting. Raw legacy SVG data has an explicit
+undoable native conversion. Handle removal and deletion still change geometry;
+no curve-preserving simplification is claimed. Multi-anchor editing, join/split,
+precision snapping and the remaining vector phase are unfinished. General SVG
+clips/masks, gradients, effects and nonlinear export remain explicit limitations.
 
 The original foundation passed 497 automated tests. The editor increment adds
 17 algorithm/document/history tests (514 total, including 215 Pro tests).
@@ -97,7 +94,7 @@ checks Chromium CDP touch at 320px and 390px, cancellation, pinch/pan and no pag
 scroll/overflow. This is emulation, not physical Android testing. The full phase
 release gates remain pending with the remaining Phase D implementation.
 
-Increment validation: all **514 automated tests** passed. TypeScript, production
+Earlier anchor-editing increment validation: all **514 automated tests** passed. TypeScript, production
 build, build configuration and auth invariants passed; lint has only the existing
 shared Button fast-refresh warning. All **14 supported Chromium suites** passed
 against built output: studio AI, editor, adjustments, retouch, workflow, UI, Pro,
@@ -108,3 +105,12 @@ editor screenshots were inspected. The initial vector test fixture incorrectly
 discarded remapped asset IDs on native reopen; preserving the actual exported
 asset map fixed the fixture, and the full suite then passed. No tests were skipped
 or tolerances/timeouts relaxed to obtain these results.
+
+Increment A validation: **542 automated tests (243 Pro)** and **15 Chromium
+suites** pass, including new compound/SVG references, native/history/export,
+Chapter/Raster/Vector, repair, real neural AI, homepage 3D and 320px/390px touch.
+TypeScript, lint, build/configuration and auth checks pass with the existing
+shared Button lint warning. [Increment A](PHASE_D_COMPOUND_SVG.md) records
+geometry/persistence limits and investigated fixture/readiness failures.
+Phase D remains incomplete and must stay draft until Increments B–E pass release
+validation; main and production have not been changed by this increment.

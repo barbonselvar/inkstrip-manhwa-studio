@@ -9,8 +9,16 @@
 - Corner/smooth/symmetric handles, numeric anchor/handle coordinates, touch-aware
   Direct Select, Alt to break coupling, path reversal and guarded anchor deletion.
 - Existing history/native/export/Chapter integration and desktop/320px/390px
-  Chromium regression suite. Pathfinder/compound paths/artboards/text-on-path and
+  Chromium regression suite. Pathfinder/artboards/text-on-path and
   the remaining vector phase are still pending; no Phase D production release.
+- Increment A: editable compound contours/holes, evenodd/nonzero rules,
+  create/release, subpath controls, safe SVG path/arc conversion, affine/stroke/
+  viewBox/group import and SVG output. Direct document-resolution vector rendering
+  and source-frame fitting preserve editing quality.
+- Backward-compatible native reading plus v2 feature-bearing envelopes prevent
+  older releases silently dropping holes/styles. Native files exclude unused
+  history assets while retaining current, hidden, original and clone/mask sources.
+- [Compound/SVG contracts and limits](PHASE_D_COMPOUND_SVG.md).
 - [Phase D status and remaining scope](PHASE_D_VECTOR_ENGINE.md).
 
 ## Phase C — editable gradient, effect and adjustment layers

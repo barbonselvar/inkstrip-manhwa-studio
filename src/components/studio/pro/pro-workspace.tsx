@@ -40,6 +40,9 @@ import { Button } from "@/components/ui/button";
 import { ProCanvas, type ProTool } from "./pro-canvas";
 import { ProAnchors } from "./pro-anchors";
 import { editAnchor } from "@/lib/studio/pro/anchor-edit";
+import { createCompound, releaseCompound } from "@/lib/studio/pro/compound";
+import { documentSources } from "@/lib/studio/pro/raster-budget";
+import { contourAt } from "@/lib/studio/pro/model";
 import {
   transformDocument,
   transformForest,
@@ -209,7 +212,7 @@ export default function ProWorkspace({
     [session, setSession] = useState<ProSession | null>(null),
     sessionRef = useRef<ProSession | null>(null),
     [selectedIds, setSelectedIds] = useState<string[]>([]),
-    [anchorSelection, setAnchorSelection] = useState({ id: "", index: 0 }),
+    [anchorSelection, setAnchorSelection] = useState({ id: "", index: 0, contour: 0 }),
     [tool, setTool] = useState<ProTool>(initialMode === "raster" ? "brush" : "pen"),
     [transformDraft, setTransformDraft] = useState<TransformDraft | null>(null),
     transformRef = useRef<TransformDraft | null>(null),
@@ -289,11 +292,19 @@ export default function ProWorkspace({
     }, [transient, history?.present.doc, transformDraft]),
     selection = doc?.selection ?? EMPTY_SELECTION,
     active = doc?.layers.find((l) => l.id === selectedIds[0]);
+  const activeContour =
+    active && anchorSelection.id === active.id
+      ? Math.min(anchorSelection.contour, active.subpaths?.length ?? 0)
+      : 0;
   const activeAnchor =
     active && anchorSelection.id === active.id
-      ? Math.max(0, Math.min(active.anchors.length - 1, anchorSelection.index))
+      ? Math.max(
+          0,
+          Math.min(contourAt(active, activeContour).anchors.length - 1, anchorSelection.index),
+        )
       : 0;
-  const selectAnchor = (index: number) => setAnchorSelection({ id: active?.id ?? "", index });
+  const selectAnchor = (index: number, contour = activeContour) =>
+    setAnchorSelection({ id: active?.id ?? "", index, contour });
   useEffect(() => {
     if (before && doc && !sourceReference(doc)) setBefore(false);
   }, [before, doc]);
@@ -937,9 +948,43 @@ export default function ProWorkspace({
         setStatus("Native document imported into this Pro draft. Chapter unchanged.");
       } else if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
         if (file.size > 1_000_000) throw new Error("SVG import limit is 1MB.");
+        setStatus("Importing SVG vectors…");
         const imported = importSvg(await file.text());
-        commit({ ...doc, layers: [...doc.layers, ...imported.layers] }, "Import sanitized vectors");
+        if (imported.width * imported.height > maxArea)
+          throw new Error("SVG viewport exceeds this device’s memory budget.");
+        // Keep the source viewport when placing an SVG into a differently sized Chapter.
+        // Each leaf retains a recoverable source mask; group affine motion carries it too.
+        if (imported.width !== doc.width || imported.height !== doc.height) {
+          for (const l of imported.layers)
+            if (l.kind !== "group")
+              l.mask = {
+                enabled: true,
+                strokes: [],
+                selection: toLocalSelection(
+                  {
+                    regions: [
+                      {
+                        kind: "rectangle",
+                        operation: "add",
+                        points: [
+                          { x: 0, y: 0 },
+                          { x: imported.width, y: imported.height },
+                        ],
+                      },
+                    ],
+                    inverted: false,
+                    feather: 0,
+                  },
+                  l,
+                  { width: imported.width, height: imported.height },
+                ),
+              };
+        }
+        const candidate = { ...doc, layers: [...doc.layers, ...imported.layers] };
+        documentSources(candidate, maxArea);
+        commit(candidate, "Import sanitized vectors");
         setSelectedIds([imported.layers.at(-1)!.id]);
+        setStatus("SVG vectors imported. Chapter unchanged.");
       } else if (["image/png", "image/jpeg", "image/webp"].includes(file.type))
         await addAsset(file, file.name);
       else throw new Error("Choose PNG, JPEG, WebP, basic SVG or an .inkstrip document.");
@@ -965,6 +1010,26 @@ export default function ProWorkspace({
       } catch (e) {
         setError(storageMessage(e));
       }
+    }
+  };
+  const compound = (operation: "create" | "release") => {
+    if (!doc || busyRef.current || transformRef.current) return;
+    try {
+      if (operation === "create") {
+        const result = createCompound(doc, selectedIds);
+        documentSources(result.document, maxArea);
+        commit(result.document, "Create compound path");
+        setSelectedIds([result.id]);
+      } else {
+        const result = releaseCompound(doc, active?.id ?? "");
+        documentSources(result.document, maxArea);
+        commit(result.document, "Release compound path");
+        setSelectedIds(result.ids);
+      }
+      setMaskMode(false);
+      setTab("properties");
+    } catch (e) {
+      setError(storageMessage(e));
     }
   };
   const cancelTransform = () => {
@@ -1215,7 +1280,7 @@ export default function ProWorkspace({
       ) {
         try {
           commit(
-            editAnchor(d, active.id, activeAnchor, { kind: "delete" }),
+            editAnchor(d, active.id, activeAnchor, { kind: "delete" }, activeContour),
             "Delete Bézier anchor",
           );
           selectAnchor(Math.max(0, activeAnchor - 1));
@@ -1597,6 +1662,7 @@ export default function ProWorkspace({
                 activeId={selectedIds[0] ?? ""}
                 selectedIds={selectedIds}
                 activeAnchor={activeAnchor}
+                activeContour={activeContour}
                 onSelectAnchor={selectAnchor}
                 onError={setError}
                 tool={tool}
@@ -1683,8 +1749,13 @@ export default function ProWorkspace({
                             doc={doc}
                             layer={active}
                             index={activeAnchor}
+                            contour={activeContour}
+                            onSelectContour={(contour) => selectAnchor(0, contour)}
                             onSelect={selectAnchor}
-                            onChange={commit}
+                            onChange={(next, label, group) => {
+                              documentSources(next, maxArea);
+                              commit(next, label, group);
+                            }}
                             onError={setError}
                           />
                         ) : undefined
@@ -1778,6 +1849,7 @@ export default function ProWorkspace({
                           onDelete={remove}
                           onGroup={groupSelected}
                           onUngroup={ungroup}
+                          onCompound={compound}
                           onMerge={(mode) => void merge(mode)}
                           onAdd={add}
                           disabled={busy || !!transformDraft}
@@ -1953,9 +2025,10 @@ export default function ProWorkspace({
                         />
                       </label>
                       <p className="pro-help">
-                        SVG supports basic paths, shapes and simple text only. Unsafe or unsupported
-                        markup is rejected. Native import replaces the editable draft, not the
-                        chapter.
+                        SVG imports editable paths, compound contours, affine transforms, nested
+                        groups and basic text. Gradients, clipping paths, masks and other unsafe or
+                        unsupported markup are rejected. Native import replaces this draft; Chapter
+                        artwork is retained.
                       </p>
                       {project?.characters?.length ? (
                         project.characters.map((c) => (

@@ -42,6 +42,7 @@ export function ProLayers({
   onDelete,
   onGroup,
   onUngroup,
+  onCompound,
   onMerge,
   onAdd,
   disabled,
@@ -57,6 +58,7 @@ export function ProLayers({
   onDelete: () => void;
   onGroup: () => void;
   onUngroup: () => void;
+  onCompound: (operation: "create" | "release") => void;
   onMerge: (mode: MergeMode) => void;
   onAdd: (kind: "paint" | "text" | "gradient" | "adjustment") => void;
   disabled: boolean;
@@ -513,6 +515,26 @@ export function ProLayers({
       <div ref={tree} className="pro-layer-tree" role="group" aria-label="Layer stack">
         {branch()}
       </div>
+      <div className="pro-actions">
+        <Button
+          variant="secondary"
+          disabled={disabled || selectedIds.length < 2}
+          onClick={() => onCompound("create")}
+        >
+          Create compound path
+        </Button>
+        <Button
+          variant="ghost"
+          disabled={disabled || !active?.subpaths?.length}
+          onClick={() => onCompound("release")}
+        >
+          Release compound path
+        </Button>
+      </div>
+      <p className="pro-help">
+        Compound paths use the bottom selected shape’s fill and stroke. Releasing fills holes as
+        separate shapes. Both operations change appearance and are undoable.
+      </p>
       <div className="pro-actions">
         <Button variant="secondary" disabled={disabled} onClick={() => onAdd("paint")}>
           Paint layer

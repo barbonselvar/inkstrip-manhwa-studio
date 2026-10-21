@@ -381,14 +381,17 @@ export function ProProperties({
                 />
                 {selected.shape === "path" && (
                   <>
-                    <label className="pro-check">
-                      <input
-                        type="checkbox"
-                        aria-label="Close Bézier path"
-                        checked={selected.closed}
-                        onChange={(e) => onPatch({ closed: e.target.checked })}
-                      />{" "}
-                      Closed path
+                    <label className="pro-field">
+                      Path fill rule
+                      <select
+                        className="field"
+                        aria-label="Path fill rule"
+                        value={selected.fillRule ?? "nonzero"}
+                        onChange={(e) => onPatch({ fillRule: e.target.value as Layer["fillRule"] })}
+                      >
+                        <option value="nonzero">Non-zero winding</option>
+                        <option value="evenodd">Even-odd · alternating holes</option>
+                      </select>
                     </label>
                     {anchorControls}
                   </>
