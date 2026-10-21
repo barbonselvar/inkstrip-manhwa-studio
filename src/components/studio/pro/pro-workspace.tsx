@@ -574,8 +574,12 @@ export default function ProWorkspace({
     if (!d || transformRef.current) return;
     const object = layer(
       kind,
-      kind === "paint" || kind === "group" ? d.width : Math.min(280, d.width * 0.7),
-      kind === "paint" || kind === "group" ? d.height : Math.min(180, d.height * 0.4),
+      ["paint", "group", "gradient", "adjustment"].includes(kind)
+        ? d.width
+        : Math.min(280, d.width * 0.7),
+      ["paint", "group", "gradient", "adjustment"].includes(kind)
+        ? d.height
+        : Math.min(180, d.height * 0.4),
     );
     if (shape) {
       object.shape = shape;
@@ -587,7 +591,7 @@ export default function ProWorkspace({
       object.fill = "#172420";
       object.strokeWidth = 0;
     }
-    if (kind !== "paint" && kind !== "group")
+    if (!["paint", "group", "gradient", "adjustment"].includes(kind))
       object.transform = { ...object.transform, x: d.width * 0.1, y: d.height * 0.1 };
     commit({ ...d, layers: [...d.layers, object] }, `Add ${shape ?? kind}`);
     setSelectedIds([object.id]);

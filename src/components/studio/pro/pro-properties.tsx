@@ -1,3 +1,4 @@
+import { ProAppearance } from "./pro-appearance";
 import { ProColor } from "./pro-color";
 import type { Layer, Selection, Stroke } from "@/lib/studio/pro/model";
 import { Button } from "@/components/ui/button";
@@ -590,6 +591,7 @@ export function ProProperties({
                 onPatch={onPatch}
               />
             )}
+            <ProAppearance layer={selected} onPatch={onPatch} />
             {selected.kind !== "group" && (
               <ToolSection title="Layer mask">
                 <p className="pro-help">

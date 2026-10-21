@@ -3,6 +3,8 @@ import { validateGeometry, type Crop, type ImageSize } from "./geometry.ts";
 import type { Adjustments } from "../editor/adjustments";
 import { NEUTRAL, validateAdjustments } from "../editor/adjustments.ts";
 import { validateColor, type ColorAdjustments } from "./color.ts";
+import { defaultGradient, validateGradient, type Gradient } from "./gradient.ts";
+import { validateEffects, type Effect } from "./effects.ts";
 export type Point = { x: number; y: number };
 export type Transform = {
   x: number;
@@ -94,7 +96,7 @@ export type Shape =
 export type Layer = {
   id: string;
   name: string;
-  kind: "raster" | "paint" | "shape" | "text" | "group";
+  kind: "raster" | "paint" | "shape" | "text" | "group" | "gradient" | "adjustment";
   parentId?: string;
   /** Consecutive clipped siblings share the nearest unclipped base below. */
   clipped?: boolean;
@@ -108,6 +110,8 @@ export type Layer = {
   height: number;
   transform: Transform;
   mask?: Mask;
+  gradient?: Gradient;
+  effects?: Effect[];
   assetId?: string;
   strokes: Stroke[];
   adjustments: Adjustments;
@@ -181,6 +185,7 @@ export function layer(
     height,
     transform: { ...TRANSFORM },
     strokes: [],
+    ...(kind === "gradient" ? { gradient: defaultGradient() } : {}),
     adjustments: { ...NEUTRAL },
     hue: 0,
     black: 0,
@@ -397,6 +402,16 @@ export function validateDocument(d: ProDocument) {
     throw new Error("Invalid original source reference.");
   validateGeometry(d);
   if (d.selection !== undefined) validateSelection(d.selection);
+  for (let i = 0; i < d.layers.length; i++) {
+    const l = d.layers[i]!;
+    if (l.kind === "adjustment" && !l.clipped) {
+      const next = d.layers.slice(i + 1).find((n) => n.parentId === l.parentId);
+      if (next?.clipped)
+        throw new Error(
+          "An adjustment cannot be a clipping base; clip it to artwork below instead.",
+        );
+    }
+  }
   const ids = new Set<string>();
   let commands = 0;
   for (const l of d.layers) {
@@ -407,7 +422,7 @@ export function validateDocument(d: ProDocument) {
       ids.has(l.id) ||
       typeof l.name !== "string" ||
       l.name.length > 100 ||
-      !["raster", "paint", "shape", "text", "group"].includes(l.kind) ||
+      !["raster", "paint", "shape", "text", "group", "gradient", "adjustment"].includes(l.kind) ||
       typeof l.visible !== "boolean" ||
       typeof l.locked !== "boolean" ||
       (l.clipped !== undefined && typeof l.clipped !== "boolean") ||
@@ -420,6 +435,12 @@ export function validateDocument(d: ProDocument) {
       l.width * l.height > 16_000_000
     )
       throw new Error("Invalid or oversized layer.");
+    if (l.kind === "gradient") validateGradient(l.gradient!);
+    else if (l.gradient !== undefined)
+      throw new Error("Gradient parameters require a gradient layer.");
+    if (l.effects !== undefined) validateEffects(l.effects);
+    if (l.kind === "adjustment" && l.effects?.length)
+      throw new Error("Adjustment layers process the backdrop and cannot have artwork effects.");
     ids.add(l.id);
     const t = l.transform;
     validateTransform(t);

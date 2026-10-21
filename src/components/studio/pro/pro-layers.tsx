@@ -58,7 +58,7 @@ export function ProLayers({
   onGroup: () => void;
   onUngroup: () => void;
   onMerge: (mode: MergeMode) => void;
-  onAdd: (kind: "paint" | "text") => void;
+  onAdd: (kind: "paint" | "text" | "gradient" | "adjustment") => void;
   disabled: boolean;
   maxArea: number;
 }) {
@@ -519,6 +519,12 @@ export function ProLayers({
         </Button>
         <Button variant="secondary" disabled={disabled} onClick={() => onAdd("text")}>
           Text layer
+        </Button>
+        <Button variant="secondary" disabled={disabled} onClick={() => onAdd("gradient")}>
+          Gradient layer
+        </Button>
+        <Button variant="secondary" disabled={disabled} onClick={() => onAdd("adjustment")}>
+          Adjustment layer
         </Button>
         <Button
           variant="ghost"

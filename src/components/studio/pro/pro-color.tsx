@@ -22,7 +22,7 @@ const DEFAULTS: Required<ColorAdjustments> = {
   threshold: 128,
   posterize: 8,
 };
-/** Stops shared by color mapping and future gradient layers. Endpoints remain anchored. */
+/** Stops shared by color mapping, editable gradient layers and gradient overlays. Endpoints remain anchored. */
 export function GradientStops({
   stops,
   onChange,
@@ -168,9 +168,12 @@ export function ProColor({
   return (
     <ToolSection title="Professional color adjustments">
       <p className="pro-help">
-        Editable RGB operations on this layer. Live preview and native-resolution exports share the
-        same pipeline: Balance → Vibrance → Mixer → Shadows/Highlights → Gradient Map → Threshold →
-        Posterize. Layer masks, opacity, clipping and blend modes apply afterward.
+        {layer.kind === "adjustment"
+          ? "Editable RGB operations on the visible backdrop below this adjustment layer."
+          : "Editable RGB operations on this layer."}{" "}
+        Live preview and native-resolution exports share the same pipeline: Balance → Vibrance →
+        Mixer → Shadows/Highlights → Gradient Map → Threshold → Posterize. Layer masks, opacity,
+        clipping and blend modes apply afterward.
       </p>
       {documentSize && (
         <label className="pro-check">
@@ -345,8 +348,10 @@ export function ProColor({
       </Button>
       <p className="pro-help">
         Shadows/Highlights uses luminance weights, without a spatial local-contrast filter.
-        Adjustments apply to this layer, not a separate stack adjustment layer. Original assets and
-        editable text/vector geometry remain intact.
+        {layer.kind === "adjustment"
+          ? "This independent layer filters visible siblings below in the same isolated group; its coverage mask and opacity control the result."
+          : "These parameters affect this layer. Add an Adjustment layer to filter the visible backdrop independently."}{" "}
+        Original assets and editable text/vector geometry remain intact.
       </p>
     </ToolSection>
   );

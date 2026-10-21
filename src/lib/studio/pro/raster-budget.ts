@@ -1,6 +1,12 @@
+import { effectPadding } from "./effects.ts";
 import { sourceReference, type ProDocument } from "./model.ts";
 /** Validate active sources before decoding, including proposed merge documents. */
 export function documentSources(doc: ProDocument, maxArea: number) {
+  const padding = effectPadding(doc);
+  if (padding > 2048 || (doc.width + 2 * padding) * (doc.height + 2 * padding) > maxArea * 3)
+    throw new Error(
+      "Layer effects exceed this device’s padded rendering budget. Reduce effect radius/distance or export a native backup.",
+    );
   const dimensions = new Map<string, { width: number; height: number }>();
   for (const l of doc.layers) {
     if (l.width * l.height > maxArea)

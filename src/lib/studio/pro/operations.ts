@@ -35,6 +35,8 @@ export function reorderLayer(d: ProDocument, fromId: string, toId: string): ProD
 export function ungroupLayers(d: ProDocument, id: string): ProDocument {
   const g = d.layers.find((l) => l.id === id);
   if (!g || g.kind !== "group") return d;
+  if (g.effects?.some((e) => e.enabled))
+    throw new Error("Remove group effects or merge the group before ungrouping.");
   if (isLocked(d, id) || !g.visible || g.opacity !== 1 || g.blend !== "source-over")
     throw new Error(
       "To ungroup without changing appearance, unlock/show the group and set its opacity to 100% and blend to Normal first.",
@@ -45,7 +47,10 @@ export function ungroupLayers(d: ProDocument, id: string): ProDocument {
       d.layers.filter((l) => l.parentId === g.parentId).indexOf(g) + 1
     ]?.clipped ||
     d.layers.filter((l) => l.parentId === id)[0]?.clipped ||
-    d.layers.some((l) => l.parentId === id && !l.clipped && l.blend !== "source-over")
+    d.layers.some(
+      (l) =>
+        l.parentId === id && !l.clipped && (l.blend !== "source-over" || l.kind === "adjustment"),
+    )
   )
     throw new Error(
       "This group has clipping or backdrop-dependent blend modes. Merge it or release those relationships before ungrouping.",

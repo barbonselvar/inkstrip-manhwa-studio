@@ -79,6 +79,14 @@ export const escapeXml = (s: string) =>
   );
 /** Explicit vector-only export. Reject unsupported vector effects instead of silently changing them. */
 export function vectorSvg(d: ProDocument): string {
+  if (
+    d.layers.some(
+      (l) => l.kind === "gradient" || l.kind === "adjustment" || l.effects?.some((e) => e.enabled),
+    )
+  )
+    throw new Error(
+      "SVG export does not support gradient layers, adjustment layers or layer effects yet. Export native or PNG to preserve them.",
+    );
   if (d.layers.some((l) => l.clipped))
     throw new Error(
       "SVG export does not support clipping stacks. Export PNG or a native document to preserve them.",

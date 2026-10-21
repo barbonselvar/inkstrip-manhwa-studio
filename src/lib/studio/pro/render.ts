@@ -1,3 +1,6 @@
+import { gradientPixels } from "./gradient";
+import { effectPadding, effectPixels } from "./effects";
+import { NEUTRAL } from "../editor/adjustments";
 import { affine } from "./transform";
 import { projectSurface, sampleSurface } from "./transform-surface";
 import {
@@ -235,6 +238,12 @@ async function surface(
   const out = canvas(l.width * scale, l.height * scale),
     ctx = out.getContext("2d")!;
   ctx.scale(scale, scale);
+  if (l.kind === "gradient")
+    ctx.putImageData(
+      new ImageData(gradientPixels(out.width, out.height, l.gradient!), out.width, out.height),
+      0,
+      0,
+    );
   if (l.kind === "raster") ctx.drawImage(await asset(l.assetId!, scale), 0, 0, l.width, l.height);
   if (l.kind === "paint")
     for (const s of l.strokes) {
@@ -423,7 +432,10 @@ export async function composite(
   progress: (done: number, total: number) => void,
 ) {
   validateDocument(d);
-  const output = canvas(d.width * scale, d.height * scale);
+  const padding = effectPadding(d, scale),
+    nativeWidth = Math.max(1, Math.round(d.width * scale)),
+    nativeHeight = Math.max(1, Math.round(d.height * scale)),
+    output = canvas(nativeWidth + 2 * padding, nativeHeight + 2 * padding);
   let done = 0;
   const total = visibleLayerIds(d).size;
   const release = (c: OffscreenCanvas) => {
@@ -442,11 +454,15 @@ export async function composite(
     ctx.globalAlpha = opacity;
     ctx.globalCompositeOperation = blend;
     if (!projected && l.kind !== "group" && l.transform.deform) {
-      const mapped = projectSurface(bitmap, l.transform, target.width, target.height, scale);
+      const mapped = projectSurface(bitmap, l.transform, target.width, target.height, scale, {
+        x: -padding / scale,
+        y: -padding / scale,
+      });
       ctx.drawImage(mapped, 0, 0);
       mapped.width = mapped.height = 1;
     } else {
       if (!projected && l.kind !== "group") {
+        ctx.translate(padding, padding);
         const m = affine(l.transform);
         ctx.transform(m[0], m[1], m[2], m[3], m[4] * scale, m[5] * scale);
       }
@@ -459,35 +475,107 @@ export async function composite(
     progress(++done, total);
     await new Promise((resolve) => setTimeout(resolve, 0));
   };
+  const project = (bitmap: OffscreenCanvas, l: Layer) => {
+    if (l.kind === "group" || l.effects?.some((e) => e.enabled)) return bitmap;
+    const full = canvas(output.width, output.height);
+    draw(full, bitmap, l, false, 1, "source-over");
+    release(bitmap);
+    return full;
+  };
   const node = async (l: Layer): Promise<OffscreenCanvas> => {
     if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
-    if (l.kind !== "group") return surface(l, scale, asset);
-    const bitmap = canvas(output.width, output.height);
+    let bitmap =
+      l.kind === "group" ? canvas(output.width, output.height) : await surface(l, scale, asset);
     try {
-      await branch(bitmap, l.id);
+      if (l.kind === "group") await branch(bitmap, l.id);
+      if (l.effects?.some((e) => e.enabled)) {
+        // Project the original masked artwork once; render styles in document pixels.
+        if (l.kind !== "group") {
+          const full = canvas(output.width, output.height);
+          draw(full, bitmap, l, false, 1, "source-over");
+          release(bitmap);
+          bitmap = full;
+        }
+        const ctx = bitmap.getContext("2d")!,
+          image = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+        image.data.set(effectPixels(image.data, bitmap.width, bitmap.height, l.effects, scale));
+        ctx.putImageData(image, 0, 0);
+      }
       return bitmap;
     } catch (e) {
       release(bitmap);
       throw e;
     }
   };
-  const project = (bitmap: OffscreenCanvas, l: Layer) => {
-    if (l.kind === "group") return bitmap;
+  const adjust = async (target: OffscreenCanvas, l: Layer) => {
+    const ctx = target.getContext("2d")!,
+      image = ctx.getImageData(0, 0, target.width, target.height),
+      filtered = applyAdjustments(image.data, target.width, target.height, l.adjustments, scale);
+    tonePixels(filtered, l);
+    if (l.color) colorPixels(filtered, l.color);
+    let coverage = await surface(
+      {
+        ...l,
+        kind: "shape",
+        shape: "rectangle",
+        fill: "#ffffff",
+        strokeWidth: 0,
+        adjustments: { ...NEUTRAL },
+        color: undefined,
+        colorSelection: undefined,
+        hue: 0,
+        black: 0,
+        white: 255,
+        gamma: 1,
+        curve: [0, 64, 128, 192, 255],
+        effects: undefined,
+      },
+      scale,
+      asset,
+    );
+    if (l.colorSelection) {
+      const stencil = selectionCanvas(l.colorSelection, l.width, l.height, scale),
+        c = coverage.getContext("2d")!;
+      c.globalCompositeOperation = "destination-in";
+      c.drawImage(stencil, 0, 0);
+      release(stencil);
+    }
+    // Adjustment layers are operations; their transformed white plane defines coverage only.
     const full = canvas(output.width, output.height);
-    draw(full, bitmap, l, false, 1, "source-over");
-    release(bitmap);
-    return full;
+    draw(full, coverage, l, false, 1, "source-over");
+    release(coverage);
+    coverage = full;
+    const mask = coverage
+      .getContext("2d")!
+      .getImageData(0, 0, coverage.width, coverage.height).data;
+    for (let i = 0; i < filtered.length; i += 4)
+      filtered[i + 3] = image.data[i + 3]
+        ? (mask[i + 3]! * filtered[i + 3]!) / image.data[i + 3]!
+        : 0;
+    image.data.set(blendClippedPixels(image.data, filtered, l.opacity, l.blend));
+    ctx.putImageData(image, 0, 0);
+    release(coverage);
   };
   const branch = async (target: OffscreenCanvas, parent?: string) => {
     for (const { base, clips } of stacks(siblings(d, parent))) {
       // An orphan or a hidden base hides every clipped sibling. Group boundaries reset the chain.
       if (!base?.visible) continue;
+      if (base.kind === "adjustment") {
+        await adjust(target, base);
+        await checkpoint();
+        continue;
+      }
       let bitmap = await node(base);
       try {
         if (clips.length) {
           bitmap = project(bitmap, base);
           for (const clip of clips) {
             if (!clip.visible) continue;
+            if (clip.kind === "adjustment") {
+              await adjust(bitmap, clip);
+              await checkpoint();
+              continue;
+            }
             const source = project(await node(clip), clip);
             try {
               const ctx = bitmap.getContext("2d", { willReadFrequently: true })!,
@@ -503,7 +591,7 @@ export async function composite(
             await checkpoint();
           }
         }
-        draw(target, bitmap, base, clips.length > 0);
+        draw(target, bitmap, base, clips.length > 0 || !!base.effects?.some((e) => e.enabled));
       } finally {
         release(bitmap);
       }
@@ -513,10 +601,16 @@ export async function composite(
   const ctx = output.getContext("2d")!;
   if (d.background !== "transparent") {
     ctx.fillStyle = d.background;
-    ctx.fillRect(0, 0, output.width, output.height);
+    ctx.fillRect(padding, padding, nativeWidth, nativeHeight);
   }
   try {
     await branch(output);
+    if (padding) {
+      const cropped = canvas(nativeWidth, nativeHeight);
+      cropped.getContext("2d")!.drawImage(output, -padding, -padding);
+      release(output);
+      return cropped;
+    }
     return output;
   } catch (e) {
     output.width = output.height = 1;
