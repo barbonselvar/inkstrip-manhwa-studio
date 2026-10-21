@@ -1,3 +1,5 @@
+import { affine } from "./transform";
+import { projectSurface, sampleSurface } from "./transform-surface";
 import {
   type ProDocument,
   type Layer,
@@ -78,8 +80,11 @@ export function selectionCanvas(s: Selection, w: number, h: number, scale = 1) {
   if (s.frame) {
     const { width, height, transform } = s.frame,
       source = selectionCanvas({ ...s, frame: undefined }, width, height, scale);
-    ctx.setTransform(...cloneSourceMatrix({ transform }, { x: 0, y: 0 }, scale));
-    ctx.drawImage(source, 0, 0);
+    if (transform.deform) sampleSurface(source, output, transform, scale);
+    else {
+      ctx.setTransform(...cloneSourceMatrix({ transform }, { x: 0, y: 0 }, scale));
+      ctx.drawImage(source, 0, 0);
+    }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     source.width = source.height = 1;
     return output;
@@ -242,14 +247,14 @@ async function surface(
             x: s.clone.source.x - s.clone.destination.x,
             y: s.clone.source.y - s.clone.destination.y,
           };
-        sourceCtx.setTransform(
-          ...cloneSourceMatrix(
-            s.clone.targetTransform ? { transform: s.clone.targetTransform } : l,
-            offset,
-            scale,
-          ),
-        );
-        sourceCtx.drawImage(source, 0, 0);
+        const sampledTransform = s.clone.targetTransform ?? l.transform;
+        if (sampledTransform.deform) sampleSurface(source, cloned, sampledTransform, scale, offset);
+        else {
+          sourceCtx.setTransform(
+            ...cloneSourceMatrix({ transform: sampledTransform }, offset, scale),
+          );
+          sourceCtx.drawImage(source, 0, 0);
+        }
         if (s.clone.mode === "heal") {
           // Use the immutable full-resolution sample as both the donor texture
           // and the target tone reference. Shift the donor's average RGB toward
@@ -269,8 +274,11 @@ async function surface(
           if (right > left && bottom > top) {
             const reference = canvas(out.width, out.height),
               referenceCtx = reference.getContext("2d", { willReadFrequently: true })!;
-            referenceCtx.setTransform(...cloneSourceMatrix(l, { x: 0, y: 0 }, scale));
-            referenceCtx.drawImage(source, 0, 0);
+            if (l.transform.deform) sampleSurface(source, reference, l.transform, scale);
+            else {
+              referenceCtx.setTransform(...cloneSourceMatrix(l, { x: 0, y: 0 }, scale));
+              referenceCtx.drawImage(source, 0, 0);
+            }
             const width = right - left,
               height = bottom - top,
               sampledPixels = sourceCtx.getImageData(left, top, width, height),
@@ -411,12 +419,17 @@ export async function composite(
     ctx.save();
     ctx.globalAlpha = opacity;
     ctx.globalCompositeOperation = blend;
-    if (!projected && l.kind !== "group") {
-      ctx.translate(l.transform.x * scale, l.transform.y * scale);
-      ctx.rotate((l.transform.rotation * Math.PI) / 180);
-      ctx.scale(l.transform.scaleX, l.transform.scaleY);
+    if (!projected && l.kind !== "group" && l.transform.deform) {
+      const mapped = projectSurface(bitmap, l.transform, target.width, target.height, scale);
+      ctx.drawImage(mapped, 0, 0);
+      mapped.width = mapped.height = 1;
+    } else {
+      if (!projected && l.kind !== "group") {
+        const m = affine(l.transform);
+        ctx.transform(m[0], m[1], m[2], m[3], m[4] * scale, m[5] * scale);
+      }
+      ctx.drawImage(bitmap, 0, 0);
     }
-    ctx.drawImage(bitmap, 0, 0);
     ctx.restore();
   };
   const checkpoint = async () => {

@@ -1,17 +1,15 @@
-import { localPoint, type ProDocument, type Layer, type Point } from "./model.ts";
+import { affine, inverse } from "./transform.ts";
+import { type ProDocument, type Layer, type Point } from "./model.ts";
 /** Canvas transform mapping sampled document pixels into a target layer's local surface. */
 export function cloneSourceMatrix(layer: Pick<Layer, "transform">, offset: Point, scale: number) {
-  const angle = (-layer.transform.rotation * Math.PI) / 180,
-    cos = Math.cos(angle),
-    sin = Math.sin(angle),
-    origin = localPoint({ x: -offset.x, y: -offset.y }, layer);
+  const m = inverse(affine(layer.transform));
   return [
-    cos / layer.transform.scaleX,
-    sin / layer.transform.scaleY,
-    -sin / layer.transform.scaleX,
-    cos / layer.transform.scaleY,
-    origin.x * scale,
-    origin.y * scale,
+    m[0],
+    m[1],
+    m[2],
+    m[3],
+    (m[4] - m[0] * offset.x - m[2] * offset.y) * scale,
+    (m[5] - m[1] * offset.x - m[3] * offset.y) * scale,
   ] as const;
 }
 export function isLocked(d: ProDocument, id: string): boolean {

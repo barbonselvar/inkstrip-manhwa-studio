@@ -1,8 +1,21 @@
+import { mapping, validateTransform, type Deformation } from "./transform.ts";
 import { validateGeometry, type Crop, type ImageSize } from "./geometry.ts";
 import type { Adjustments } from "../editor/adjustments";
 import { NEUTRAL, validateAdjustments } from "../editor/adjustments.ts";
 export type Point = { x: number; y: number };
-export type Transform = { x: number; y: number; scaleX: number; scaleY: number; rotation: number };
+export type Transform = {
+  x: number;
+  y: number;
+  scaleX: number;
+  scaleY: number;
+  rotation: number;
+  shearX?: number;
+  shearY?: number;
+  flipX?: boolean;
+  flipY?: boolean;
+  pivot?: Point;
+  deform?: Deformation;
+};
 export type Anchor = Point & { incoming?: Point; outgoing?: Point };
 export type Region = {
   kind: "rectangle" | "ellipse" | "lasso" | "pixels";
@@ -221,6 +234,7 @@ export function validateSelection(s: Selection) {
     throw new Error("Invalid selection.");
   if (s.frame) {
     const { width, height, transform: t } = s.frame;
+    validateTransform(t);
     if (
       !Number.isInteger(width) ||
       !Number.isInteger(height) ||
@@ -335,6 +349,7 @@ function validateStroke(s: Stroke) {
     throw new Error("Invalid Clone Stamp source.");
   if (s.clone?.targetTransform !== undefined) {
     const t = s.clone.targetTransform;
+    validateTransform(t);
     if (
       !t ||
       !point(t) ||
@@ -403,6 +418,9 @@ export function validateDocument(d: ProDocument) {
       throw new Error("Invalid or oversized layer.");
     ids.add(l.id);
     const t = l.transform;
+    validateTransform(t);
+    if (t.deform && (t.deform.width !== l.width || t.deform.height !== l.height))
+      throw new Error("Deformation dimensions must match the layer source geometry.");
     if (
       !t ||
       !point(t) ||
@@ -419,6 +437,12 @@ export function validateDocument(d: ProDocument) {
         l.transform.x ||
         l.transform.y ||
         l.transform.rotation ||
+        l.transform.shearX ||
+        l.transform.shearY ||
+        l.transform.flipX ||
+        l.transform.flipY ||
+        l.transform.pivot ||
+        l.transform.deform ||
         l.transform.scaleX !== 1 ||
         l.transform.scaleY !== 1 ||
         Object.values(l.adjustments).some((n) => n !== 0) ||
@@ -554,22 +578,10 @@ export function validateAssets(session: ProSession) {
         throw new Error("A Clone Stamp source is missing; existing artwork is unchanged.");
 }
 export function localPoint(p: Point, l: Pick<Layer, "transform">): Point {
-  const r = (-l.transform.rotation * Math.PI) / 180,
-    x = p.x - l.transform.x,
-    y = p.y - l.transform.y;
-  return {
-    x: (x * Math.cos(r) - y * Math.sin(r)) / l.transform.scaleX,
-    y: (x * Math.sin(r) + y * Math.cos(r)) / l.transform.scaleY,
-  };
+  return mapping(l.transform).backward(p);
 }
-export function worldPoint(p: Point, l: Layer): Point {
-  const r = (l.transform.rotation * Math.PI) / 180,
-    x = p.x * l.transform.scaleX,
-    y = p.y * l.transform.scaleY;
-  return {
-    x: l.transform.x + x * Math.cos(r) - y * Math.sin(r),
-    y: l.transform.y + x * Math.sin(r) + y * Math.cos(r),
-  };
+export function worldPoint(p: Point, l: Pick<Layer, "transform">): Point {
+  return mapping(l.transform).forward(p);
 }
 export function pathData(l: Layer): string {
   if (l.pathData) return l.pathData;

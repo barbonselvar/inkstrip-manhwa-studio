@@ -6,6 +6,7 @@ import {
   type ProDocument,
   type Layer,
 } from "./model.ts";
+import { affine } from "./transform.ts";
 import { outputMatrix, outputSize } from "./geometry.ts";
 import { shapePath } from "./paths.ts";
 function encode(bytes: Uint8Array) {
@@ -82,6 +83,10 @@ export function vectorSvg(d: ProDocument): string {
     throw new Error(
       "SVG export does not support clipping stacks. Export PNG or a native document to preserve them.",
     );
+  if (d.layers.some((l) => ["shape", "text"].includes(l.kind) && l.transform.deform))
+    throw new Error(
+      "SVG export cannot represent perspective or warp without flattening. Use PNG or native to preserve the document.",
+    );
   const included = d.layers.filter(
     (l) => l.kind === "shape" || l.kind === "text" || l.kind === "group",
   );
@@ -100,7 +105,7 @@ export function vectorSvg(d: ProDocument): string {
         "SVG export does not support masks, adjustments or non-normal blend modes. Export PNG or a native document to preserve them.",
       );
   const attrs = (l: Layer) =>
-    `opacity="${l.opacity}" transform="translate(${l.transform.x} ${l.transform.y}) rotate(${l.transform.rotation}) scale(${l.transform.scaleX} ${l.transform.scaleY})" fill="${l.fill}" stroke="${l.stroke}" stroke-width="${l.strokeWidth}"`;
+    `opacity="${l.opacity}" transform="matrix(${affine(l.transform).join(" ")})" fill="${l.fill}" stroke="${l.stroke}" stroke-width="${l.strokeWidth}"`;
   const branch = (parent?: string): string =>
     included
       .filter((l) => l.parentId === parent && l.visible)
