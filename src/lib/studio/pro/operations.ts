@@ -1,4 +1,17 @@
-import type { ProDocument, Layer } from "./model.ts";
+import { affine, inverse } from "./transform.ts";
+import { type ProDocument, type Layer, type Point } from "./model.ts";
+/** Canvas transform mapping sampled document pixels into a target layer's local surface. */
+export function cloneSourceMatrix(layer: Pick<Layer, "transform">, offset: Point, scale: number) {
+  const m = inverse(affine(layer.transform));
+  return [
+    m[0],
+    m[1],
+    m[2],
+    m[3],
+    (m[4] - m[0] * offset.x - m[2] * offset.y) * scale,
+    (m[5] - m[1] * offset.x - m[3] * offset.y) * scale,
+  ] as const;
+}
 export function isLocked(d: ProDocument, id: string): boolean {
   let l = d.layers.find((l) => l.id === id);
   while (l) {
@@ -25,6 +38,17 @@ export function ungroupLayers(d: ProDocument, id: string): ProDocument {
   if (isLocked(d, id) || !g.visible || g.opacity !== 1 || g.blend !== "source-over")
     throw new Error(
       "To ungroup without changing appearance, unlock/show the group and set its opacity to 100% and blend to Normal first.",
+    );
+  if (
+    g.clipped ||
+    d.layers.filter((l) => l.parentId === g.parentId)[
+      d.layers.filter((l) => l.parentId === g.parentId).indexOf(g) + 1
+    ]?.clipped ||
+    d.layers.filter((l) => l.parentId === id)[0]?.clipped ||
+    d.layers.some((l) => l.parentId === id && !l.clipped && l.blend !== "source-over")
+  )
+    throw new Error(
+      "This group has clipping or backdrop-dependent blend modes. Merge it or release those relationships before ungrouping.",
     );
   const children = d.layers
       .filter((l) => l.parentId === id)

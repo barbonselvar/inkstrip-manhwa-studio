@@ -6,6 +6,8 @@ import {
   type ProDocument,
   type Layer,
 } from "./model.ts";
+import { affine } from "./transform.ts";
+import { outputMatrix, outputSize } from "./geometry.ts";
 import { shapePath } from "./paths.ts";
 function encode(bytes: Uint8Array) {
   let s = "";
@@ -77,12 +79,21 @@ export const escapeXml = (s: string) =>
   );
 /** Explicit vector-only export. Reject unsupported vector effects instead of silently changing them. */
 export function vectorSvg(d: ProDocument): string {
+  if (d.layers.some((l) => l.clipped))
+    throw new Error(
+      "SVG export does not support clipping stacks. Export PNG or a native document to preserve them.",
+    );
+  if (d.layers.some((l) => ["shape", "text"].includes(l.kind) && l.transform.deform))
+    throw new Error(
+      "SVG export cannot represent perspective or warp without flattening. Use PNG or native to preserve the document.",
+    );
   const included = d.layers.filter(
     (l) => l.kind === "shape" || l.kind === "text" || l.kind === "group",
   );
   for (const l of included)
     if (
       l.mask ||
+      (l.color && Object.keys(l.color).length > 0) ||
       l.blend !== "source-over" ||
       Object.values(l.adjustments).some((n) => n !== 0) ||
       l.hue ||
@@ -95,7 +106,7 @@ export function vectorSvg(d: ProDocument): string {
         "SVG export does not support masks, adjustments or non-normal blend modes. Export PNG or a native document to preserve them.",
       );
   const attrs = (l: Layer) =>
-    `opacity="${l.opacity}" transform="translate(${l.transform.x} ${l.transform.y}) rotate(${l.transform.rotation}) scale(${l.transform.scaleX} ${l.transform.scaleY})" fill="${l.fill}" stroke="${l.stroke}" stroke-width="${l.strokeWidth}"`;
+    `opacity="${l.opacity}" transform="matrix(${affine(l.transform).join(" ")})" fill="${l.fill}" stroke="${l.stroke}" stroke-width="${l.strokeWidth}"`;
   const branch = (parent?: string): string =>
     included
       .filter((l) => l.parentId === parent && l.visible)
@@ -113,7 +124,8 @@ export function vectorSvg(d: ProDocument): string {
                 .join("")}</text>`,
       )
       .join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${d.width}" height="${d.height}" viewBox="0 0 ${d.width} ${d.height}">${branch()}</svg>`;
+  const size = outputSize(d);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}" viewBox="0 0 ${size.width} ${size.height}"><defs><clipPath id="canvas"><rect width="${d.width}" height="${d.height}"/></clipPath></defs><g transform="matrix(${outputMatrix(d).join(" ")})" clip-path="url(#canvas)">${branch()}</g></svg>`;
 }
 
 /** Import is one undoable metadata action; old raster bytes retain immutable IDs. */
@@ -126,9 +138,30 @@ export function mergeNativeSession(current: ProSession, incoming: ProSession): P
   const document: ProDocument = {
     ...incoming.document,
     source: original ? { ...original, assetId: mapping.get(original.assetId)! } : undefined,
-    layers: incoming.document.layers.map((l) =>
-      l.assetId ? { ...l, assetId: mapping.get(l.assetId)! } : l,
-    ),
+    layers: incoming.document.layers.map((l) => ({
+      ...l,
+      ...(l.assetId ? { assetId: mapping.get(l.assetId)! } : {}),
+      strokes: l.strokes.map((stroke) =>
+        stroke.clone
+          ? { ...stroke, clone: { ...stroke.clone, assetId: mapping.get(stroke.clone.assetId)! } }
+          : stroke,
+      ),
+      ...(l.mask
+        ? {
+            mask: {
+              ...l.mask,
+              strokes: l.mask.strokes.map((stroke) =>
+                stroke.clone
+                  ? {
+                      ...stroke,
+                      clone: { ...stroke.clone, assetId: mapping.get(stroke.clone.assetId)! },
+                    }
+                  : stroke,
+              ),
+            },
+          }
+        : {}),
+    })),
   };
   const next = { ...current, document, assets };
   validateAssets(next);

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fromPanel, layer, toLocalSelection, worldPoint } from "./model.ts";
-import { isLocked, reorderLayer, ungroupLayers } from "./operations.ts";
+import { fromPanel, layer, localPoint, toLocalSelection, worldPoint } from "./model.ts";
+import { cloneSourceMatrix, isLocked, reorderLayer, ungroupLayers } from "./operations.ts";
 const doc = () => fromPanel({ id: "p", name: "art", width: 128, height: 96 });
 test("drag reorder inserts instead of swapping unrelated objects", () => {
   const d = doc(),
@@ -65,4 +65,36 @@ test("rotated layer rectangle mask maps all four world corners accurately", () =
       [30, 90],
     ],
   );
+});
+test("Clone Stamp source mapping follows scaled and rotated paint layers", () => {
+  const l = layer("paint", 300, 200);
+  l.transform = { x: 47, y: -13, scaleX: 1.6, scaleY: 0.75, rotation: 31 };
+  const source = { x: 112, y: 83 },
+    delta = { x: 27, y: -9 },
+    scale = 0.5,
+    [a, b, c, d, e, f] = cloneSourceMatrix(l, delta, scale),
+    mapped = (p: { x: number; y: number }) => ({
+      x: a! * p.x * scale + c! * p.y * scale + e!,
+      y: b! * p.x * scale + d! * p.y * scale + f!,
+    }),
+    sourceAtDestination = mapped({ x: source.x, y: source.y }),
+    expectedDestination = localPoint({ x: source.x - delta.x, y: source.y - delta.y }, l);
+  assert.ok(Math.abs(sourceAtDestination.x / scale - expectedDestination.x) < 1e-10);
+  assert.ok(Math.abs(sourceAtDestination.y / scale - expectedDestination.y) < 1e-10);
+});
+
+test("ungroup preserves isolated clip blends and refuses orphan clips that would bind outside", () => {
+  const d = doc(),
+    g = layer("group", 128, 96, "g"),
+    base = layer("shape", 10, 10, "base"),
+    clip = layer("shape", 10, 10, "clip");
+  base.parentId = clip.parentId = "g";
+  clip.clipped = true;
+  clip.blend = "multiply";
+  d.layers.push(g, base, clip);
+  const ungrouped = ungroupLayers(d, "g");
+  assert.equal(ungrouped.layers.at(-1)!.clipped, true);
+  assert.equal(ungrouped.layers.at(-1)!.blend, "multiply");
+  base.clipped = true;
+  assert.throws(() => ungroupLayers(d, "g"), /clipping/);
 });

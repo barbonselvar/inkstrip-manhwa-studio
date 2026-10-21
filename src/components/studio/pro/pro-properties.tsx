@@ -1,7 +1,10 @@
+import { ProColor } from "./pro-color";
 import type { Layer, Selection, Stroke } from "@/lib/studio/pro/model";
 import { Button } from "@/components/ui/button";
 import { ADJUSTMENT_FIELDS } from "@/lib/studio/editor/adjustments";
 import { ToolSection } from "../design/tool-section";
+import type { BrushPreset, BrushSettings } from "@/lib/studio/pro/brush-presets";
+import type { CloneSource } from "@/lib/studio/pro/model";
 export function ProNumber({
   label,
   value,
@@ -39,28 +42,140 @@ export function ProNumber({
 }
 export function ProProperties({
   selected,
+  documentSize,
   onPatch,
   selection,
   onSelection,
   onMask,
   brush,
   onBrush,
+  brushPresets,
+  onApplyBrushPreset,
+  onSaveBrushPreset,
+  onDeleteBrushPreset,
+  cloneSource,
+  cloneSampleArmed,
+  onArmCloneSample,
+  onCloneAlignment,
   maskMode,
   setMaskMode,
 }: {
   selected?: Layer;
+  documentSize?: { width: number; height: number };
   onPatch: (p: Partial<Layer>, group?: string) => void;
   selection: Selection;
   onSelection: (s: Selection) => void;
   onMask: () => void;
   brush: Omit<Stroke, "points" | "erase">;
   onBrush: (p: Partial<Stroke>) => void;
+  brushPresets: BrushPreset[];
+  onApplyBrushPreset: (settings: BrushSettings) => void;
+  onSaveBrushPreset: (name: string) => void;
+  onDeleteBrushPreset: (name: string) => void;
+  cloneSource: CloneSource | null;
+  cloneSampleArmed: boolean;
+  onArmCloneSample: () => void;
+  onCloneAlignment: (aligned: boolean) => void;
   maskMode: boolean;
   setMaskMode: (v: boolean) => void;
 }) {
   return (
     <div className="pro-properties-content">
       <ToolSection title="Brush & selection" defaultOpen>
+        <ToolSection title="Clone & Healing source" defaultOpen={false}>
+          <p className="pro-help">
+            Clone Stamp copies the sampled pixels. Healing Brush uses the same full-resolution
+            texture sample and blends its tone using the undamaged surrounding pixels; it does not
+            use generative AI. Desktop: hold Alt/Option and click a source point. Touch: arm source
+            selection, then tap the canvas.
+          </p>
+          <Button variant={cloneSampleArmed ? "secondary" : "ghost"} onClick={onArmCloneSample}>
+            {cloneSampleArmed ? "Tap canvas to set source" : "Set sample source"}
+          </Button>
+          <p className="pro-help" role="status">
+            {cloneSource
+              ? `Source ${Math.round(cloneSource.point.x)}, ${Math.round(cloneSource.point.y)} · ${cloneSource.width} × ${cloneSource.height} px`
+              : "No source sampled yet."}
+          </p>
+          <label className="pro-check">
+            <input
+              type="checkbox"
+              aria-label="Aligned Clone Stamp"
+              checked={cloneSource?.aligned ?? true}
+              disabled={!cloneSource}
+              onChange={(e) => onCloneAlignment(e.target.checked)}
+            />
+            Aligned sampling
+          </label>
+          <p className="pro-help">
+            Painting creates editable Clone Stamp strokes in a separate paint layer; the sampled
+            composite is embedded in the native project.
+          </p>
+        </ToolSection>
+        <p className="pro-help">
+          Spot Healing automatically searches nearby opaque texture. Patch Repair: draw a
+          destination rectangle, then tap the matching source region center. Hardness controls
+          patch-edge softness. Repairs use traditional pixel processing, with the active selection
+          and target layer mask preserved.
+        </p>
+        <label className="pro-check">
+          <input
+            type="checkbox"
+            aria-label="Pen pressure size"
+            checked={brush.sizePressure ?? false}
+            onChange={(e) => onBrush({ sizePressure: e.target.checked })}
+          />{" "}
+          Pen pressure controls size
+        </label>
+        <ProNumber
+          label="Stroke smoothing"
+          value={(brush.smoothing ?? 0) * 100}
+          min={0}
+          max={95}
+          onChange={(n) => onBrush({ smoothing: n / 100 })}
+        />
+        <label className="pro-field">
+          Brush preset
+          <select
+            className="field"
+            aria-label="Brush preset"
+            value=""
+            onChange={(e) => {
+              const preset = brushPresets.find((item) => item.name === e.target.value);
+              if (preset) onApplyBrushPreset(preset.settings);
+            }}
+          >
+            <option value="" disabled>
+              Choose a preset
+            </option>
+            {brushPresets.map((preset) => (
+              <option key={preset.name} value={preset.name}>
+                {preset.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="pro-actions">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const name = window.prompt("Name this brush preset");
+              if (name?.trim()) onSaveBrushPreset(name.trim());
+            }}
+          >
+            Save current preset
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={brushPresets.length <= 3}
+            onClick={() => {
+              const name = window.prompt("Enter the exact name of the custom preset to delete");
+              if (name?.trim()) onDeleteBrushPreset(name.trim());
+            }}
+          >
+            Delete custom preset
+          </Button>
+        </div>
         <div className="pro-number-grid">
           <ProNumber
             label="Brush size"
@@ -466,6 +581,14 @@ export function ProProperties({
                   Black & white
                 </Button>
               </ToolSection>
+            )}
+            {selected.kind !== "group" && (
+              <ProColor
+                layer={selected}
+                selection={selection}
+                documentSize={documentSize}
+                onPatch={onPatch}
+              />
             )}
             {selected.kind !== "group" && (
               <ToolSection title="Layer mask">

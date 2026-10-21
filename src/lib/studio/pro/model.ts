@@ -1,23 +1,79 @@
+import { mapping, validateTransform, type Deformation } from "./transform.ts";
+import { validateGeometry, type Crop, type ImageSize } from "./geometry.ts";
 import type { Adjustments } from "../editor/adjustments";
 import { NEUTRAL, validateAdjustments } from "../editor/adjustments.ts";
+import { validateColor, type ColorAdjustments } from "./color.ts";
 export type Point = { x: number; y: number };
-export type Transform = { x: number; y: number; scaleX: number; scaleY: number; rotation: number };
+export type Transform = {
+  x: number;
+  y: number;
+  scaleX: number;
+  scaleY: number;
+  rotation: number;
+  shearX?: number;
+  shearY?: number;
+  flipX?: boolean;
+  flipY?: boolean;
+  pivot?: Point;
+  deform?: Deformation;
+};
 export type Anchor = Point & { incoming?: Point; outgoing?: Point };
 export type Region = {
-  kind: "rectangle" | "ellipse" | "lasso";
+  kind: "rectangle" | "ellipse" | "lasso" | "pixels";
+  inverted?: boolean;
+  /** Row-bounded RLE coverage; points define the affine image frame. */
+  pixels?: { width: number; height: number; runs: number[] };
   points: Point[];
   operation: "add" | "subtract" | "intersect";
 };
-export type Selection = { regions: Region[]; inverted: boolean; feather: number };
+export type Selection = {
+  regions: Region[];
+  inverted: boolean;
+  feather: number;
+  /** Selection captured in document space; map the completed mask into this layer. */
+  frame?: { width: number; height: number; transform: Transform };
+};
+export type CloneSource = {
+  assetId: string;
+  width: number;
+  height: number;
+  point: Point;
+  aligned: boolean;
+};
 export type Stroke = {
-  points: Point[];
+  points: (Point & { pressure?: number })[];
+  sizePressure?: boolean;
+  smoothing?: number;
+  /** Patch footprint in the target layer; normal strokes continue using brush dabs. */
+  patch?: Selection;
+  /** New repair strokes embed their processed native-size donor texture. */
+  repair?: {
+    kind: "spot" | "patch" | "heal";
+    source: Point;
+    destination: Point;
+    algorithm: "spatial-v1";
+  };
   size: number;
   hardness: number;
   opacity: number;
   flow: number;
   color: string;
   erase: boolean;
+  /** Square, hard-edged tip used by the pencil tool. Older native strokes default to round. */
+  tip?: "round" | "square";
   clip?: Selection;
+  /** Immutable merged-document snapshot sampled for Clone Stamp. */
+  clone?: {
+    assetId: string;
+    width: number;
+    height: number;
+    source: Point;
+    destination: Point;
+    /** Mapping captured when the texture is painted; later layer transforms move its pixels. */
+    targetTransform?: Transform;
+    /** Color-match sampled texture to the target neighborhood (traditional healing). */
+    mode?: "clone" | "heal";
+  };
 };
 export type Mask = {
   selection: Selection;
@@ -40,6 +96,10 @@ export type Layer = {
   name: string;
   kind: "raster" | "paint" | "shape" | "text" | "group";
   parentId?: string;
+  /** Consecutive clipped siblings share the nearest unclipped base below. */
+  clipped?: boolean;
+  /** Members translate together; no pixel or artwork data is shared. */
+  linkId?: string;
   visible: boolean;
   locked: boolean;
   opacity: number;
@@ -51,6 +111,9 @@ export type Layer = {
   assetId?: string;
   strokes: Stroke[];
   adjustments: Adjustments;
+  /** Optional additive v1 color pipeline; absent in older native documents. */
+  color?: ColorAdjustments;
+  colorSelection?: Selection;
   hue: number;
   black: number;
   white: number;
@@ -74,6 +137,11 @@ export type Layer = {
 };
 export type SourceReference = { assetId: string; width: number; height: number };
 export type ProDocument = {
+  /** Non-destructive output frame in full canvas coordinates. */
+  crop?: Crop;
+  /** Final composite resampling; source layers and masks retain native coordinates. */
+  imageSize?: ImageSize;
+  selection?: Selection;
   source?: SourceReference;
   version: 1;
   id: string;
@@ -168,17 +236,74 @@ export function validateSelection(s: Selection) {
     !finite(s.feather, 0, 100)
   )
     throw new Error("Invalid selection.");
-  for (const r of s.regions)
+  if (s.frame) {
+    const { width, height, transform: t } = s.frame;
+    validateTransform(t);
+    if (
+      !Number.isInteger(width) ||
+      !Number.isInteger(height) ||
+      !finite(width, 1, 16384) ||
+      !finite(height, 1, 16384) ||
+      width * height > 16_000_000 ||
+      !t ||
+      !point(t) ||
+      !finite(t.scaleX, 0.01, 100) ||
+      !finite(t.scaleY, 0.01, 100) ||
+      !finite(t.rotation, -360, 360)
+    )
+      throw new Error("Invalid selection coordinate frame.");
+  }
+  for (const r of s.regions) {
     if (
       !r ||
-      !["rectangle", "ellipse", "lasso"].includes(r.kind) ||
+      !["rectangle", "ellipse", "lasso", "pixels"].includes(r.kind) ||
       !["add", "subtract", "intersect"].includes(r.operation) ||
+      (r.inverted !== undefined && typeof r.inverted !== "boolean") ||
       !Array.isArray(r.points) ||
       r.points.length < 2 ||
       r.points.length > 5000 ||
       !r.points.every(point)
     )
       throw new Error("Invalid selection region.");
+    if (r.kind === "pixels") {
+      const p = r.pixels;
+      if (
+        !p ||
+        r.points.length !== 3 ||
+        !Number.isInteger(p.width) ||
+        !Number.isInteger(p.height) ||
+        !finite(p.width, 1, 16384) ||
+        !finite(p.height, 1, 16384) ||
+        p.width * p.height > 16_000_000 ||
+        !Array.isArray(p.runs) ||
+        p.runs.length % 3 ||
+        p.runs.length > 600_000
+      )
+        throw new Error("Invalid pixel selection.");
+      const [a, b, c] = r.points;
+      if (Math.abs((b!.x - a!.x) * (c!.y - a!.y) - (c!.x - a!.x) * (b!.y - a!.y)) < 1e-10)
+        throw new Error("Invalid pixel selection frame.");
+      let end = 0;
+      for (let i = 0; i < p.runs.length; i += 3) {
+        const start = p.runs[i]!,
+          length = p.runs[i + 1]!,
+          alpha = p.runs[i + 2]!;
+        if (
+          !Number.isInteger(start) ||
+          !Number.isInteger(length) ||
+          !Number.isInteger(alpha) ||
+          start < end ||
+          length < 1 ||
+          start + length > p.width * p.height ||
+          Math.floor(start / p.width) !== Math.floor((start + length - 1) / p.width) ||
+          alpha < 1 ||
+          alpha > 255
+        )
+          throw new Error("Invalid pixel selection runs.");
+        end = start + length;
+      }
+    } else if (r.pixels !== undefined) throw new Error("Unexpected pixel selection data.");
+  }
 }
 function validateStroke(s: Stroke) {
   if (
@@ -186,16 +311,58 @@ function validateStroke(s: Stroke) {
     !Array.isArray(s.points) ||
     s.points.length < 1 ||
     s.points.length > 10000 ||
-    !s.points.every(point) ||
+    !s.points.every((p) => point(p) && (p.pressure === undefined || finite(p.pressure, 0.05, 1))) ||
+    (s.sizePressure !== undefined && typeof s.sizePressure !== "boolean") ||
+    (s.smoothing !== undefined && !finite(s.smoothing, 0, 0.95)) ||
     !finite(s.size, 1, 1000) ||
     !finite(s.hardness, 0, 1) ||
     !finite(s.opacity, 0, 1) ||
     !finite(s.flow, 0.01, 1) ||
     !validColor(s.color) ||
-    typeof s.erase !== "boolean"
+    typeof s.erase !== "boolean" ||
+    (s.tip !== undefined && s.tip !== "round" && s.tip !== "square")
   )
     throw new Error("Invalid brush stroke.");
   if (s.clip) validateSelection(s.clip);
+  if (s.patch) {
+    validateSelection(s.patch);
+    if (!s.clone) throw new Error("Patch repair texture is missing.");
+  }
+  if (
+    s.repair &&
+    (!s.clone ||
+      !["spot", "patch", "heal"].includes(s.repair.kind) ||
+      s.repair.algorithm !== "spatial-v1" ||
+      !point(s.repair.source) ||
+      !point(s.repair.destination))
+  )
+    throw new Error("Invalid repair metadata.");
+  if (
+    s.clone &&
+    (typeof s.clone.assetId !== "string" ||
+      !s.clone.assetId ||
+      !finite(s.clone.width, 1, 16384) ||
+      !Number.isInteger(s.clone.width) ||
+      !finite(s.clone.height, 1, 16384) ||
+      !Number.isInteger(s.clone.height) ||
+      s.clone.width * s.clone.height > 16_000_000 ||
+      !point(s.clone.source) ||
+      !point(s.clone.destination) ||
+      (s.clone.mode !== undefined && s.clone.mode !== "clone" && s.clone.mode !== "heal"))
+  )
+    throw new Error("Invalid Clone Stamp source.");
+  if (s.clone?.targetTransform !== undefined) {
+    const t = s.clone.targetTransform;
+    validateTransform(t);
+    if (
+      !t ||
+      !point(t) ||
+      !finite(t.scaleX, 0.01, 100) ||
+      !finite(t.scaleY, 0.01, 100) ||
+      !finite(t.rotation, -360, 360)
+    )
+      throw new Error("Invalid sampled texture transform.");
+  }
 }
 export function validateDocument(d: ProDocument) {
   if (
@@ -228,6 +395,8 @@ export function validateDocument(d: ProDocument) {
       d.source.width * d.source.height > 16_000_000)
   )
     throw new Error("Invalid original source reference.");
+  validateGeometry(d);
+  if (d.selection !== undefined) validateSelection(d.selection);
   const ids = new Set<string>();
   let commands = 0;
   for (const l of d.layers) {
@@ -241,6 +410,9 @@ export function validateDocument(d: ProDocument) {
       !["raster", "paint", "shape", "text", "group"].includes(l.kind) ||
       typeof l.visible !== "boolean" ||
       typeof l.locked !== "boolean" ||
+      (l.clipped !== undefined && typeof l.clipped !== "boolean") ||
+      (l.linkId !== undefined &&
+        (typeof l.linkId !== "string" || !l.linkId || l.linkId.length > 128)) ||
       !finite(l.opacity, 0, 1) ||
       !["source-over", "multiply", "screen", "overlay", "darken", "lighten"].includes(l.blend) ||
       !finite(l.width, 1, 16384) ||
@@ -250,6 +422,9 @@ export function validateDocument(d: ProDocument) {
       throw new Error("Invalid or oversized layer.");
     ids.add(l.id);
     const t = l.transform;
+    validateTransform(t);
+    if (t.deform && (t.deform.width !== l.width || t.deform.height !== l.height))
+      throw new Error("Deformation dimensions must match the layer source geometry.");
     if (
       !t ||
       !point(t) ||
@@ -260,12 +435,22 @@ export function validateDocument(d: ProDocument) {
       throw new Error("Invalid layer transform.");
     if (!l.adjustments) throw new Error("Layer adjustments are missing.");
     validateAdjustments(l.adjustments);
+    if (l.color !== undefined) validateColor(l.color);
+    if (l.colorSelection !== undefined) validateSelection(l.colorSelection);
     if (
       l.kind === "group" &&
       (l.mask ||
+        l.color ||
+        l.colorSelection ||
         l.transform.x ||
         l.transform.y ||
         l.transform.rotation ||
+        l.transform.shearX ||
+        l.transform.shearY ||
+        l.transform.flipX ||
+        l.transform.flipY ||
+        l.transform.pivot ||
+        l.transform.deform ||
         l.transform.scaleX !== 1 ||
         l.transform.scaleY !== 1 ||
         Object.values(l.adjustments).some((n) => n !== 0) ||
@@ -395,24 +580,16 @@ export function validateAssets(session: ProSession) {
         !(session.assets[l.assetId] instanceof Blob))
     )
       throw new Error("A raster source is missing; existing artwork is unchanged.");
+  for (const l of session.document.layers)
+    for (const stroke of [...l.strokes, ...(l.mask?.strokes ?? [])])
+      if (stroke.clone && !Object.hasOwn(session.assets, stroke.clone.assetId))
+        throw new Error("A Clone Stamp source is missing; existing artwork is unchanged.");
 }
-export function localPoint(p: Point, l: Layer): Point {
-  const r = (-l.transform.rotation * Math.PI) / 180,
-    x = p.x - l.transform.x,
-    y = p.y - l.transform.y;
-  return {
-    x: (x * Math.cos(r) - y * Math.sin(r)) / l.transform.scaleX,
-    y: (x * Math.sin(r) + y * Math.cos(r)) / l.transform.scaleY,
-  };
+export function localPoint(p: Point, l: Pick<Layer, "transform">): Point {
+  return mapping(l.transform).backward(p);
 }
-export function worldPoint(p: Point, l: Layer): Point {
-  const r = (l.transform.rotation * Math.PI) / 180,
-    x = p.x * l.transform.scaleX,
-    y = p.y * l.transform.scaleY;
-  return {
-    x: l.transform.x + x * Math.cos(r) - y * Math.sin(r),
-    y: l.transform.y + x * Math.sin(r) + y * Math.cos(r),
-  };
+export function worldPoint(p: Point, l: Pick<Layer, "transform">): Point {
+  return mapping(l.transform).forward(p);
 }
 export function pathData(l: Layer): string {
   if (l.pathData) return l.pathData;
@@ -447,7 +624,14 @@ export function removeLayer(d: ProDocument, id: string): ProDocument {
     for (const l of d.layers) if (l.parentId && ids.has(l.parentId)) ids.add(l.id);
   return { ...d, layers: d.layers.filter((l) => !ids.has(l.id)) };
 }
-export function toLocalSelection(s: Selection, l: Layer): Selection {
+export function toLocalSelection(
+  s: Selection,
+  l: Layer,
+  bounds?: { width: number; height: number },
+): Selection {
+  // Rasterize booleans and feather in document space before applying the inverse
+  // layer transform. This preserves the world-space radius under nonuniform scale.
+  if (bounds) return { ...s, frame: { ...bounds, transform: { ...l.transform } } };
   return {
     ...s,
     regions: s.regions.map((r) => {
@@ -469,7 +653,11 @@ export function toLocalSelection(s: Selection, l: Layer): Selection {
             y: (first.y + last.y) / 2 + (Math.abs(last.y - first.y) / 2) * Math.sin(angle),
           };
         });
-      return { ...r, kind: "lasso", points: points.map((p) => localPoint(p, l)) };
+      return {
+        ...r,
+        kind: r.kind === "pixels" ? "pixels" : "lasso",
+        points: points.map((p) => localPoint(p, l)),
+      };
     }),
   };
 }

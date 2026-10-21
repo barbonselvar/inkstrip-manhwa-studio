@@ -1,3 +1,25 @@
+import type { TransformDraft } from "./pro-transform";
+import {
+  affine,
+  applyMatrix,
+  bounds,
+  dragTransform,
+  mapping,
+  transformHandles,
+} from "@/lib/studio/pro/transform";
+import {
+  CROP_HANDLES,
+  cropHandlePoint,
+  cropLocal,
+  cropPoint,
+  dragCrop,
+  outputSize,
+  type Crop,
+  type CropHandle,
+} from "@/lib/studio/pro/geometry";
+import { brushPoint } from "@/lib/studio/pro/brush-dynamics";
+import { patchSelection, type RepairRequest, type RepairKind } from "@/lib/studio/pro/repair";
+import { appendSelection } from "@/lib/studio/pro/selection";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointer } from "react";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Scan, Hand } from "lucide-react";
@@ -12,13 +34,23 @@ import {
   type Selection,
   type Stroke,
   type Region,
+  type CloneSource,
 } from "@/lib/studio/pro/model";
+import { translateLayers, translationIds, visibleLayerIds } from "@/lib/studio/pro/layers";
 import { isLocked } from "@/lib/studio/pro/operations";
+import { selectionCanvas } from "@/lib/studio/pro/render";
 import { shapePath } from "@/lib/studio/pro/paths";
 export type ProTool =
+  | "transform"
+  | "crop"
   | "move"
   | "hand"
   | "brush"
+  | "pencil"
+  | "clone"
+  | "heal"
+  | "spot"
+  | "patch"
   | "eraser"
   | "eyedropper"
   | "rectangle"
@@ -30,16 +62,24 @@ export type ProTool =
   | "text"
   | "select-rect"
   | "select-ellipse"
+  | "wand"
+  | "color-range"
   | "lasso"
   | "poly-lasso";
 type View = { zoom: number; x: number; y: number };
 type Gesture = {
+  transform?: TransformDraft;
+  transformHandle?: string;
+  crop?: Crop;
+  cropHandle?: CropHandle;
   type: string;
   start: Point;
   screen: Point;
   doc: ProDocument;
   id?: string;
+  ids?: string[];
   stroke?: Stroke;
+  repairKind?: RepairKind;
   region?: Region;
   index?: number;
   part?: string;
@@ -49,7 +89,18 @@ type Gesture = {
 };
 export function ProCanvas({
   doc,
+  transformDraft,
+  onTransformDraft,
+  onApplyTransform,
+  onCancelTransform,
+  cropDraft,
+  cropRatio,
+  onCropDraft,
+  onCancelCrop,
+  onApplyCrop,
   activeId,
+  selectedIds,
+  onError,
   tool,
   selection,
   onSelection,
@@ -67,9 +118,26 @@ export function ProCanvas({
   onColor,
   disabled,
   rendering,
+  cloneSource,
+  cloneSampleArmed,
+  onColorSelect,
+  onCloneSample,
+  onCloneAdvance,
+  onRepair,
 }: {
   doc: ProDocument;
+  transformDraft: TransformDraft | null;
+  onTransformDraft: (d: TransformDraft) => void;
+  onApplyTransform: () => void;
+  onCancelTransform: () => void;
+  cropDraft: Crop | null;
+  cropRatio: number;
+  onCropDraft: (c: Crop) => void;
+  onCancelCrop: () => void;
+  onApplyCrop: () => void;
   activeId: string;
+  selectedIds: string[];
+  onError: (message: string) => void;
   tool: ProTool;
   selection: Selection;
   onSelection: (s: Selection) => void;
@@ -87,10 +155,17 @@ export function ProCanvas({
   onColor: (c: string) => void;
   disabled: boolean;
   rendering: boolean;
+  cloneSource: CloneSource | null;
+  cloneSampleArmed: boolean;
+  onColorSelect: (p: Point) => void;
+  onCloneSample: (p: Point) => void;
+  onCloneAdvance: (delta: Point) => void;
+  onRepair: (request: RepairRequest) => void;
 }) {
   const viewport = useRef<HTMLDivElement>(null),
     board = useRef<HTMLDivElement>(null),
     mini = useRef<HTMLCanvasElement>(null),
+    selectionPreview = useRef<HTMLCanvasElement>(null),
     [size, setSize] = useState({ width: 600, height: 500 }),
     observer = useRef<ResizeObserver | null>(null);
   const measure = useCallback((node: HTMLDivElement | null) => {
@@ -104,47 +179,70 @@ export function ProCanvas({
     }
   }, []);
   useEffect(() => () => observer.current?.disconnect(), []);
+  const [patchDestination, setPatchDestination] = useState<Region | null>(null);
+  const [patchPreview, setPatchPreview] = useState<Region | null>(null);
+  const [selectionDraft, setSelectionDraft] = useState<Selection | null>(null);
+  const visibleSelection = selectionDraft ?? selection;
   const [view, setView] = useState<View>({ zoom: 1, x: 0, y: 0 }),
     gesture = useRef<Gesture | null>(null),
     pointers = useRef(new Map<number, Point>()),
     pinch = useRef<{ distance: number; view: View; center: Point } | null>(null),
     space = useRef(false),
     [polygon, setPolygon] = useState<Point[]>([]),
+    [cursor, setCursor] = useState<Point | null>(null),
     pathId = useRef(""),
     [context, setContext] = useState(false);
+  const transformActions = useRef({ onApplyTransform, onCancelTransform });
+  transformActions.current = { onApplyTransform, onCancelTransform };
+  const cropActions = useRef({ onCancelCrop, onApplyCrop });
+  cropActions.current = { onCancelCrop, onApplyCrop };
+  const shownCrop = cropDraft ?? doc.crop;
   const fit = Math.min(
       Math.max(1, size.width - 64) / doc.width,
       Math.max(1, size.height - 64) / doc.height,
     ),
-    selected = doc.layers.find((l) => l.id === activeId);
+    selected = doc.layers.find((l) => l.id === activeId),
+    transformTarget =
+      selected && transformDraft?.frame ? { ...selected, ...transformDraft.frame } : selected;
   useEffect(() => {
     pathId.current = "";
     setPolygon([]);
+    setPatchDestination(null);
+    setPatchPreview(null);
   }, [tool]);
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      if (tool === "transform" && e.key === "Escape") {
+        e.preventDefault();
+        transformActions.current.onCancelTransform();
+      }
+      if (tool === "transform" && e.key === "Enter") {
+        e.preventDefault();
+        transformActions.current.onApplyTransform();
+      }
+      if (tool === "crop" && e.key === "Escape") {
+        e.preventDefault();
+        cropActions.current.onCancelCrop();
+      }
+      if (tool === "crop" && e.key === "Enter") {
+        e.preventDefault();
+        cropActions.current.onApplyCrop();
+      }
       if ((e.target as HTMLElement)?.closest("input,textarea,select")) return;
       if (e.code === "Space") {
         e.preventDefault();
         space.current = true;
       }
       if (e.key === "Escape") {
+        setPatchDestination(null);
+        setPatchPreview(null);
+        setSelectionDraft(null);
         gesture.current = null;
         onTransient(null);
         setPolygon([]);
       }
       if (e.key === "Enter" && polygon.length >= 3) {
-        onSelection({
-          ...selection,
-          regions: [
-            ...selection.regions,
-            {
-              kind: "lasso",
-              operation,
-              points: polygon,
-            },
-          ],
-        });
+        onSelection(appendSelection(selection, { kind: "lasso", operation, points: polygon }));
         setPolygon([]);
       }
     };
@@ -155,6 +253,7 @@ export function ProCanvas({
     window.addEventListener("keyup", up);
     const blur = () => {
       space.current = false;
+      setSelectionDraft(null);
       gesture.current = null;
       pointers.current.clear();
       pinch.current = null;
@@ -166,7 +265,7 @@ export function ProCanvas({
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", blur);
     };
-  }, [polygon, selection, operation, onSelection, onTransient]);
+  }, [polygon, selection, operation, onSelection, onTransient, tool]);
   const docPoint = (p: Point): Point => {
     const r = board.current!.getBoundingClientRect();
     return {
@@ -217,10 +316,27 @@ export function ProCanvas({
       );
     }
   }, [canvasRef, renderVersion, doc.width, doc.height]);
+  useEffect(() => {
+    const target = selectionPreview.current;
+    if (!target) return;
+    const scale = Math.min(1, 1400 / Math.max(doc.width, doc.height));
+    const mask = selectionCanvas(visibleSelection, doc.width, doc.height, scale);
+    target.width = mask.width;
+    target.height = mask.height;
+    const ctx = target.getContext("2d")!;
+    ctx.clearRect(0, 0, target.width, target.height);
+    ctx.drawImage(mask, 0, 0);
+    ctx.globalCompositeOperation = "source-in";
+    ctx.fillStyle = "rgba(30, 140, 255, 0.35)";
+    ctx.fillRect(0, 0, target.width, target.height);
+    ctx.globalCompositeOperation = "source-over";
+    mask.width = mask.height = 1;
+  }, [visibleSelection, doc.width, doc.height, before]);
   const hit = (p: Point) => {
     const ctx = canvasRef.current?.getContext("2d");
+    const visible = visibleLayerIds(doc);
     return [...doc.layers].reverse().find((l) => {
-      if (!l.visible || l.locked || l.kind === "group") return false;
+      if (!visible.has(l.id) || l.locked || l.kind === "group") return false;
       let parent = l.parentId;
       while (parent) {
         const g = doc.layers.find((x) => x.id === parent);
@@ -244,6 +360,7 @@ export function ProCanvas({
   const begin = (e: ReactPointer<HTMLDivElement>) => {
     if (disabled || before || e.button !== 0) return;
     e.preventDefault();
+    e.currentTarget.focus({ preventScroll: true });
     e.currentTarget.setPointerCapture(e.pointerId);
     const screen = { x: e.clientX, y: e.clientY };
     pointers.current.set(e.pointerId, screen);
@@ -254,14 +371,62 @@ export function ProCanvas({
         view,
         center: { x: (a!.x + b!.x) / 2, y: (a!.y + b!.y) / 2 },
       };
+      if (gesture.current?.crop) onCropDraft(gesture.current.crop);
+      if (gesture.current?.transform) onTransformDraft(gesture.current.transform);
       gesture.current = null;
+      setSelectionDraft(null);
       onTransient(null);
       return;
     }
     const p = docPoint(screen),
       base: Gesture = { type: tool, start: p, screen, doc, view, selection };
+    setCursor(p);
     if (tool === "hand" || space.current) {
       gesture.current = { ...base, type: "pan" };
+      return;
+    }
+    if (tool === "transform" && transformDraft && selected) {
+      const handles = transformHandles(transformDraft, transformTarget!, fit * view.zoom).handles,
+        nearest = handles
+          .map((h) => ({ ...h, distance: Math.hypot(p.x - h.p.x, p.y - h.p.y) * fit * view.zoom }))
+          .sort((a, b) => a.distance - b.distance)[0],
+        handle = nearest && nearest.distance <= 22 ? nearest.id : "move";
+      gesture.current = {
+        ...base,
+        type: "free-transform",
+        transform: structuredClone(transformDraft),
+        transformHandle: handle,
+        id: selected.id,
+      };
+      return;
+    }
+    if (tool === "crop" && cropDraft) {
+      const local = cropLocal(cropDraft, p),
+        inside =
+          local.x >= 0 && local.y >= 0 && local.x <= cropDraft.width && local.y <= cropDraft.height,
+        core =
+          inside &&
+          local.x > cropDraft.width / 4 &&
+          local.x < (cropDraft.width * 3) / 4 &&
+          local.y > cropDraft.height / 4 &&
+          local.y < (cropDraft.height * 3) / 4,
+        nearest = CROP_HANDLES.map((h) => ({ h, p: cropHandlePoint(cropDraft, h) }))
+          .map(({ h, p: q }) => ({
+            h,
+            distance: Math.hypot(q.x - p.x, q.y - p.y) * fit * view.zoom,
+          }))
+          .sort((a, b) => a.distance - b.distance)[0]!,
+        handle: CropHandle = !core && nearest.distance <= 22 ? nearest.h : inside ? "move" : "draw";
+      gesture.current = {
+        ...base,
+        type: "crop",
+        crop: { ...cropDraft },
+        cropHandle: handle,
+      };
+      return;
+    }
+    if (tool === "wand" || tool === "color-range") {
+      onColorSelect(p);
       return;
     }
     if (tool === "eyedropper") {
@@ -277,6 +442,67 @@ export function ProCanvas({
           ).data;
         onColor("#" + [...rgba.slice(0, 3)].map((v) => v.toString(16).padStart(2, "0")).join(""));
       }
+      return;
+    }
+    if ((tool === "clone" || tool === "heal") && (e.altKey || cloneSampleArmed)) {
+      onCloneSample(p);
+      return;
+    }
+    if (tool === "patch") {
+      if (!selected || selected.kind !== "paint" || isLocked(doc, selected.id)) {
+        onError("Select an unlocked paint layer for Patch Repair.");
+        return;
+      }
+      gesture.current = {
+        ...base,
+        type: patchDestination ? "patch-source" : "patch-destination",
+        id: selected.id,
+        region: patchDestination ?? { kind: "rectangle", operation: "add", points: [p, p] },
+      };
+      return;
+    }
+    if (tool === "spot" || tool === "heal") {
+      if (!selected || selected.kind !== "paint" || isLocked(doc, selected.id) || maskMode) return;
+      if (tool === "heal" && !cloneSource) {
+        onError("Set a sample source before using Healing Brush.");
+        return;
+      }
+      gesture.current = {
+        ...base,
+        type: "repair",
+        repairKind: tool,
+        id: selected.id,
+        stroke: {
+          ...brush,
+          erase: false,
+          points: [
+            brushPoint(
+              undefined,
+              localPoint(p, selected),
+              e.pointerType,
+              e.pressure,
+              brush.sizePressure ?? false,
+              0,
+            ),
+          ],
+          clip:
+            selection.regions.length || selection.inverted
+              ? toLocalSelection(selection, selected, { width: doc.width, height: doc.height })
+              : undefined,
+          ...(tool === "heal" && cloneSource
+            ? {
+                clone: {
+                  assetId: cloneSource.assetId,
+                  width: cloneSource.width,
+                  height: cloneSource.height,
+                  source: cloneSource.point,
+                  destination: p,
+                  mode: "heal" as const,
+                },
+              }
+            : {}),
+        },
+      };
       return;
     }
     if (tool === "poly-lasso") {
@@ -296,7 +522,7 @@ export function ProCanvas({
       };
       return;
     }
-    if (tool === "brush" || tool === "eraser") {
+    if (tool === "brush" || tool === "pencil" || tool === "eraser") {
       if (
         !selected ||
         isLocked(doc, selected.id) ||
@@ -306,7 +532,7 @@ export function ProCanvas({
         return;
       const clip =
         selection.regions.length || selection.inverted
-          ? toLocalSelection(selection, selected)
+          ? toLocalSelection(selection, selected, { width: doc.width, height: doc.height })
           : undefined;
       gesture.current = {
         ...base,
@@ -314,9 +540,62 @@ export function ProCanvas({
         id: selected.id,
         stroke: {
           ...brush,
-          clip: maskMode ? undefined : clip,
+          ...(tool === "pencil" ? { hardness: 1, tip: "square" as const } : {}),
+          clip,
           erase: maskMode && selected.mask?.inverted ? tool !== "eraser" : tool === "eraser",
-          points: [localPoint(p, selected)],
+          points: [
+            brushPoint(
+              undefined,
+              localPoint(p, selected),
+              e.pointerType,
+              e.pressure,
+              brush.sizePressure ?? false,
+              0,
+            ),
+          ],
+        },
+      };
+      return;
+    }
+    if (tool === "clone") {
+      if (
+        !cloneSource ||
+        !selected ||
+        isLocked(doc, selected.id) ||
+        selected.kind !== "paint" ||
+        maskMode
+      )
+        return;
+      const clone = {
+        assetId: cloneSource.assetId,
+        width: cloneSource.width,
+        height: cloneSource.height,
+        source: cloneSource.point,
+        destination: p,
+        targetTransform: { ...selected.transform },
+      };
+      gesture.current = {
+        ...base,
+        type: "paint",
+        id: selected.id,
+        stroke: {
+          ...brush,
+          erase: false,
+          clone: { ...clone, mode: "clone" },
+          clip:
+            selection.regions.length || selection.inverted
+              ? toLocalSelection(selection, selected, { width: doc.width, height: doc.height })
+              : undefined,
+          points: [
+            brushPoint(
+              undefined,
+              localPoint(p, selected),
+              e.pointerType,
+              e.pressure,
+              brush.sizePressure ?? false,
+              0,
+            ),
+          ],
         },
       };
       return;
@@ -389,11 +668,24 @@ export function ProCanvas({
     }
     const chosen = hit(p);
     if (chosen) {
-      onSelect(chosen.id);
-      gesture.current = { ...base, type: "move", id: chosen.id };
+      let selectedAncestor = chosen.parentId;
+      while (selectedAncestor && !selectedIds.includes(selectedAncestor))
+        selectedAncestor = doc.layers.find((l) => l.id === selectedAncestor)?.parentId;
+      const ids = selectedIds.includes(chosen.id) || selectedAncestor ? selectedIds : [chosen.id];
+      if (
+        ids.some((id) => [...translationIds(doc, [id])].some((target) => isLocked(doc, target)))
+      ) {
+        onError("Unlock linked or selected layers before moving them.");
+        return;
+      }
+      if (!selectedIds.includes(chosen.id) && !selectedAncestor) onSelect(chosen.id);
+      gesture.current = { ...base, type: "move", id: chosen.id, ids };
     } else onSelect("");
   };
-  const update = (screen: Point): ProDocument | null => {
+  const update = (
+    screen: Point,
+    input?: { pointerType: string; pressure: number; shiftKey?: boolean; altKey?: boolean },
+  ): ProDocument | null => {
     const g = gesture.current;
     if (!g) return null;
     const p = docPoint(screen);
@@ -405,10 +697,66 @@ export function ProCanvas({
       });
       return null;
     }
+    if (g.type === "free-transform" && g.transform && g.id) {
+      const l = g.transform.frame ?? g.doc.layers.find((l) => l.id === g.id)!;
+      let point = p;
+      if (g.transformHandle === "move" && input?.shiftKey) {
+        point =
+          Math.abs(p.x - g.start.x) > Math.abs(p.y - g.start.y)
+            ? { x: p.x, y: g.start.y }
+            : { x: g.start.x, y: p.y };
+      }
+      try {
+        let value = dragTransform(
+          g.transform.value,
+          l.width,
+          l.height,
+          g.transformHandle!,
+          g.start,
+          point,
+          input?.shiftKey ? !g.transform.lock : g.transform.lock,
+          input?.altKey,
+          input?.shiftKey,
+        );
+        if (g.transformHandle === "move" && snapping) {
+          value = { ...value, x: Math.round(value.x / 10) * 10, y: Math.round(value.y / 10) * 10 };
+          const b = bounds(value, l.width, l.height),
+            cx = b.x + b.width / 2,
+            cy = b.y + b.height / 2,
+            threshold = 8 / (fit * view.zoom);
+          if (Math.abs(cx - doc.width / 2) < threshold) value.x += doc.width / 2 - cx;
+          if (Math.abs(cy - doc.height / 2) < threshold) value.y += doc.height / 2 - cy;
+        }
+        onTransformDraft({
+          ...g.transform,
+          value,
+          translation:
+            g.transformHandle === "move"
+              ? {
+                  x: g.transform.translation.x + value.x - g.transform.value.x,
+                  y: g.transform.translation.y + value.y - g.transform.value.y,
+                }
+              : g.transform.translation,
+        });
+      } catch (error) {
+        onError((error as Error).message);
+      }
+      return null;
+    }
+    if (g.type === "crop" && g.crop) {
+      onCropDraft(dragCrop(g.crop, g.cropHandle!, g.start, p, cropRatio));
+      return null;
+    }
+    if (g.type === "patch-destination") {
+      g.region = { ...g.region!, points: [g.start, p] };
+      setPatchPreview(g.region);
+      return null;
+    }
+    if (g.type === "patch-source") return null;
     if (g.type === "selection") {
       const r = g.region!;
       g.region = { ...r, points: r.kind === "lasso" ? [...r.points, p] : [g.start, p] };
-      onSelection({ ...g.selection, regions: [...g.selection.regions, g.region] });
+      setSelectionDraft(appendSelection(g.selection, g.region));
       return null;
     }
     const l = g.doc.layers.find((x) => x.id === g.id);
@@ -429,7 +777,15 @@ export function ProCanvas({
         if (Math.abs(center.y - doc.height / 2) < 8 / (fit * view.zoom))
           y += doc.height / 2 - center.y;
       }
-      next = { ...l, transform: { ...l.transform, x, y } };
+      try {
+        return translateLayers(g.doc, g.ids ?? [l.id], {
+          x: x - l.transform.x,
+          y: y - l.transform.y,
+        });
+      } catch (e) {
+        onError((e as Error).message);
+        return null;
+      }
     }
     if (g.type === "shape") {
       const w = Math.abs(p.x - g.start.x),
@@ -443,10 +799,12 @@ export function ProCanvas({
         };
     }
     if (g.type === "resize") {
-      const q = localPoint(p, l);
-      const sx = Math.max(0.01, Math.min(100, (q.x / l.width) * l.transform.scaleX)),
-        sy = Math.max(0.01, Math.min(100, (q.y / l.height) * l.transform.scaleY));
-      next = { ...l, transform: { ...l.transform, scaleX: sx, scaleY: sy } };
+      try {
+        next = { ...l, transform: dragTransform(l.transform, l.width, l.height, "se", g.start, p) };
+      } catch (error) {
+        onError((error as Error).message);
+        return null;
+      }
     }
     if (g.type === "pen" || g.type === "anchor") {
       const a = localPoint(p, l),
@@ -470,9 +828,22 @@ export function ProCanvas({
       }
       next = { ...l, anchors };
     }
-    if (g.type === "paint") {
-      const s = g.stroke!;
-      s.points.push(localPoint(p, l));
+    if (g.type === "paint" || g.type === "repair") {
+      const s = g.stroke!,
+        previous = s.points.at(-1)!,
+        q = localPoint(p, l);
+      if (Math.hypot(q.x - previous.x, q.y - previous.y) > 0.001)
+        s.points.push(
+          brushPoint(
+            previous,
+            q,
+            input?.pointerType ?? "mouse",
+            input?.pressure ?? 1,
+            s.sizePressure ?? false,
+            s.smoothing ?? 0,
+          ),
+        );
+      if (g.type === "repair") return null;
       next = maskMode
         ? {
             ...l,
@@ -489,6 +860,7 @@ export function ProCanvas({
   };
   const move = (e: ReactPointer<HTMLDivElement>) => {
     const screen = { x: e.clientX, y: e.clientY };
+    setCursor(docPoint(screen));
     if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, screen);
     if (pinch.current && pointers.current.size >= 2) {
       const [a, b] = [...pointers.current.values()],
@@ -507,7 +879,21 @@ export function ProCanvas({
       });
       return;
     }
-    const next = update(screen);
+    const samples =
+      gesture.current?.type === "paint" || gesture.current?.type === "repair"
+        ? (e.nativeEvent.getCoalescedEvents?.() ?? [])
+        : [];
+    let next: ProDocument | null = null;
+    for (const sample of samples.length ? samples : [e])
+      next = update(
+        { x: sample.clientX, y: sample.clientY },
+        {
+          pointerType: sample.pointerType,
+          pressure: sample.pressure,
+          shiftKey: sample.shiftKey,
+          altKey: sample.altKey,
+        },
+      );
     if (next) onTransient(next);
   };
   const end = (e: ReactPointer<HTMLDivElement>, cancel = false) => {
@@ -518,20 +904,93 @@ export function ProCanvas({
     }
     const g = gesture.current;
     if (!g) return;
+    if (cancel && g.transform) onTransformDraft(g.transform);
+    if (cancel && g.crop) onCropDraft(g.crop);
     if (!cancel) {
-      const next = update({ x: e.clientX, y: e.clientY });
+      const next = update(
+        { x: e.clientX, y: e.clientY },
+        {
+          pointerType: e.pointerType,
+          shiftKey: e.shiftKey,
+          altKey: e.altKey,
+          pressure:
+            e.pointerType === "pen"
+              ? (g.stroke?.points.at(-1)?.pressure ?? e.pressure)
+              : e.pressure,
+        },
+      );
+      if (g.type === "repair" && g.stroke && g.id)
+        onRepair({ kind: g.repairKind!, layerId: g.id, stroke: g.stroke });
+      if (g.type === "patch-destination" && g.region) {
+        const [a, b] = g.region.points;
+        if (Math.abs(a!.x - b!.x) >= 2 && Math.abs(a!.y - b!.y) >= 2) setPatchDestination(g.region);
+        else onError("Draw a destination at least two pixels wide and high.");
+        setPatchPreview(null);
+      }
+      if (g.type === "patch-source" && g.region && g.id) {
+        const target = g.doc.layers.find((l) => l.id === g.id)!,
+          a = g.region.points[0]!,
+          b = g.region.points[1]!,
+          corners = [a, { x: b.x, y: a.y }, b, { x: a.x, y: b.y }],
+          feather =
+            (1 - brush.hardness) * Math.min(Math.abs(b.x - a.x), Math.abs(b.y - a.y)) * 0.25;
+        onRepair({
+          kind: "patch",
+          layerId: g.id,
+          source: docPoint({ x: e.clientX, y: e.clientY }),
+          stroke: {
+            ...brush,
+            erase: false,
+            points: corners.map((p) => localPoint(p, target)),
+            patch: toLocalSelection(patchSelection(a, b, Math.min(100, feather)), target, {
+              width: doc.width,
+              height: doc.height,
+            }),
+            clip:
+              selection.regions.length || selection.inverted
+                ? toLocalSelection(selection, target, { width: doc.width, height: doc.height })
+                : undefined,
+            clone: {
+              assetId: "pending-repair",
+              width: 1,
+              height: 1,
+              source: { x: 0, y: 0 },
+              destination: a,
+              mode: "clone",
+            },
+          },
+        });
+        setPatchDestination(null);
+      }
       if (next)
         onCommit(
           next,
           g.type === "paint"
             ? maskMode
               ? "Paint mask"
-              : "Brush stroke"
+              : g.stroke?.clone
+                ? g.stroke.clone.mode === "heal"
+                  ? "Healing Brush"
+                  : "Clone Stamp"
+                : g.stroke?.tip === "square"
+                  ? "Pencil stroke"
+                  : "Brush stroke"
             : g.type === "pen"
               ? "Add Bézier anchor"
               : `Edit ${g.type}`,
         );
-    } else if (g.type === "selection") onSelection(g.selection);
+      if (g.type === "paint" && g.stroke?.clone && cloneSource?.aligned) {
+        const layer = g.doc.layers.find((l) => l.id === g.id);
+        if (layer) {
+          const first = worldPoint(g.stroke.points[0]!, layer),
+            last = worldPoint(g.stroke.points.at(-1)!, layer);
+          onCloneAdvance({ x: last.x - first.x, y: last.y - first.y });
+        }
+      }
+      if (g.type === "selection" && g.region) onSelection(appendSelection(g.selection, g.region));
+    }
+    setSelectionDraft(null);
+    setPatchPreview(null);
     gesture.current = null;
     onTransient(null);
   };
@@ -567,7 +1026,13 @@ export function ProCanvas({
           </Button>
         </div>
         <span role="status">
-          {rendering ? "Rendering preview…" : `${doc.width} × ${doc.height} px`}
+          {tool === "patch"
+            ? patchDestination
+              ? "Tap the source region center · Esc cancels"
+              : "Draw the destination rectangle"
+            : rendering
+              ? "Rendering preview…"
+              : `${doc.width} × ${doc.height} canvas · ${outputSize(doc).width} × ${outputSize(doc).height} output`}
         </span>
       </div>
       <div
@@ -579,6 +1044,7 @@ export function ProCanvas({
         onPointerMove={move}
         onPointerUp={(e) => end(e)}
         onPointerCancel={(e) => end(e, true)}
+        onPointerLeave={() => setCursor(null)}
         onLostPointerCapture={(e) => {
           if (gesture.current) end(e, true);
         }}
@@ -588,10 +1054,7 @@ export function ProCanvas({
         }}
         onDoubleClick={() => {
           if (polygon.length >= 3) {
-            onSelection({
-              ...selection,
-              regions: [...selection.regions, { kind: "lasso", operation, points: polygon }],
-            });
+            onSelection(appendSelection(selection, { kind: "lasso", operation, points: polygon }));
             setPolygon([]);
           }
         }}
@@ -609,45 +1072,255 @@ export function ProCanvas({
             } as React.CSSProperties
           }
         >
-          <canvas ref={canvasRef} aria-label="Pro composite preview" />
+          <canvas
+            ref={canvasRef}
+            aria-label="Pro composite preview"
+            aria-busy={rendering || disabled}
+          />
+          {!before && (
+            <canvas
+              ref={selectionPreview}
+              className="pro-selection-preview"
+              aria-label="Selected coverage preview"
+            />
+          )}
           {!before && (
             <svg
               className="pro-overlays"
               viewBox={`0 0 ${doc.width} ${doc.height}`}
               aria-label="Pro selection overlays"
             >
+              {cursor && ["brush", "pencil", "eraser", "clone", "heal", "spot"].includes(tool) ? (
+                <circle
+                  cx={cursor.x}
+                  cy={cursor.y}
+                  r={Math.max(0.5, brush.size / 2)}
+                  className="pro-brush-cursor"
+                />
+              ) : null}
+              {tool === "patch" &&
+                (patchPreview ?? patchDestination) &&
+                (() => {
+                  const r = (patchPreview ?? patchDestination)!,
+                    a = r.points[0]!,
+                    b = r.points[1]!,
+                    w = Math.abs(b.x - a.x),
+                    h = Math.abs(b.y - a.y);
+                  return (
+                    <g className="pro-patch-preview">
+                      <rect x={Math.min(a.x, b.x)} y={Math.min(a.y, b.y)} width={w} height={h} />
+                      {patchDestination && cursor && (
+                        <rect
+                          className="pro-patch-source"
+                          x={cursor.x - w / 2}
+                          y={cursor.y - h / 2}
+                          width={w}
+                          height={h}
+                        />
+                      )}
+                    </g>
+                  );
+                })()}
+              {gesture.current?.type === "repair" && selected && gesture.current.stroke && (
+                <polyline
+                  className="pro-repair-preview"
+                  points={poly(gesture.current.stroke.points.map((p) => worldPoint(p, selected)))}
+                  strokeWidth={
+                    brush.size * Math.max(selected.transform.scaleX, selected.transform.scaleY)
+                  }
+                />
+              )}
+              {(tool === "clone" || tool === "heal") && cloneSource ? (
+                <g className="pro-clone-source-marker" aria-label="Clone Stamp source point">
+                  <circle
+                    cx={cloneSource.point.x}
+                    cy={cloneSource.point.y}
+                    r={6 / (fit * view.zoom)}
+                  />
+                  <path
+                    d={`M${cloneSource.point.x - 10 / (fit * view.zoom)} ${cloneSource.point.y} H${cloneSource.point.x + 10 / (fit * view.zoom)} M${cloneSource.point.x} ${cloneSource.point.y - 10 / (fit * view.zoom)} V${cloneSource.point.y + 10 / (fit * view.zoom)}`}
+                  />
+                </g>
+              ) : null}
               {snapping && gesture.current?.type === "move" ? (
                 <g className="pro-center-guides">
                   <line x1={doc.width / 2} y1={0} x2={doc.width / 2} y2={doc.height} />
                   <line x1={0} y1={doc.height / 2} x2={doc.width} y2={doc.height / 2} />
                 </g>
               ) : null}
-              {selection.regions.map((r, i) =>
-                r.kind === "rectangle" ? (
-                  <rect
-                    key={i}
-                    x={Math.min(r.points[0]!.x, r.points.at(-1)!.x)}
-                    y={Math.min(r.points[0]!.y, r.points.at(-1)!.y)}
-                    width={Math.abs(r.points[0]!.x - r.points.at(-1)!.x)}
-                    height={Math.abs(r.points[0]!.y - r.points.at(-1)!.y)}
-                    className="pro-selection-outline"
-                  />
-                ) : r.kind === "ellipse" ? (
-                  <ellipse
-                    key={i}
-                    cx={(r.points[0]!.x + r.points.at(-1)!.x) / 2}
-                    cy={(r.points[0]!.y + r.points.at(-1)!.y) / 2}
-                    rx={Math.abs(r.points[0]!.x - r.points.at(-1)!.x) / 2}
-                    ry={Math.abs(r.points[0]!.y - r.points.at(-1)!.y) / 2}
-                    className="pro-selection-outline"
-                  />
-                ) : (
-                  <polygon key={i} points={poly(r.points)} className="pro-selection-outline" />
-                ),
-              )}
               {polygon.length > 0 && (
                 <polyline points={poly(polygon)} className="pro-selection-outline" />
               )}
+              {tool === "move" &&
+                [...translationIds(doc, selectedIds)]
+                  .filter((id) => id !== activeId)
+                  .map((id) => {
+                    const l = doc.layers.find((l) => l.id === id);
+                    return l && l.kind !== "group" ? (
+                      <polygon
+                        key={id}
+                        className="pro-linked-outline"
+                        points={[
+                          { x: 0, y: 0 },
+                          { x: l.width, y: 0 },
+                          { x: l.width, y: l.height },
+                          { x: 0, y: l.height },
+                        ]
+                          .map((p) => worldPoint(p, l))
+                          .map((p) => `${p.x},${p.y}`)
+                          .join(" ")}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1 / (fit * view.zoom)}
+                        strokeDasharray="4 4"
+                      />
+                    ) : null;
+                  })}
+              {transformDraft &&
+                selected &&
+                (() => {
+                  const t = transformDraft.value,
+                    h = transformHandles(transformDraft, transformTarget!, fit * view.zoom),
+                    r = 5 / (fit * view.zoom),
+                    m = mapping(t),
+                    curve = (axis: number, v: number) =>
+                      poly(
+                        Array.from({ length: 33 }, (_, i) =>
+                          m.forward({
+                            x: (axis ? v : i / 32) * transformTarget!.width,
+                            y: (axis ? i / 32 : v) * transformTarget!.height,
+                          }),
+                        ),
+                      ),
+                    cage = t.deform?.points.map((p) =>
+                      applyMatrix(affine(t), {
+                        x: p.x * transformTarget!.width,
+                        y: p.y * transformTarget!.height,
+                      }),
+                    );
+                  return (
+                    <g className="pro-transform-overlay" aria-label="Free Transform handles">
+                      <polygon
+                        className="pro-object-outline"
+                        points={poly([h.points[0]!, h.points[2]!, h.points[4]!, h.points[6]!])}
+                      />
+                      {snapping && gesture.current?.type === "free-transform" && (
+                        <g className="pro-center-guides">
+                          <line x1={doc.width / 2} y1={0} x2={doc.width / 2} y2={doc.height} />
+                          <line x1={0} y1={doc.height / 2} x2={doc.width} y2={doc.height / 2} />
+                        </g>
+                      )}
+                      {transformDraft.mode === "warp" &&
+                        [0, 0.5, 1].flatMap((v) =>
+                          [0, 1].map((axis) => (
+                            <polyline
+                              className="pro-transform-mesh"
+                              key={`${axis}:${v}`}
+                              points={curve(axis, v)}
+                            />
+                          )),
+                        )}
+                      {transformDraft.mode === "perspective" && cage && (
+                        <polygon className="pro-transform-mesh" points={poly(cage)} />
+                      )}
+                      <line
+                        className="pro-handle-line"
+                        x1={h.points[1]!.x}
+                        y1={h.points[1]!.y}
+                        x2={h.rotation.x}
+                        y2={h.rotation.y}
+                      />
+                      {h.handles.map(({ id, p }) => (
+                        <g key={id}>
+                          {id === "pivot" ? (
+                            <g className="pro-transform-pivot">
+                              <circle cx={p.x} cy={p.y} r={r * 1.4} />
+                              <path
+                                d={`M${p.x - r * 2} ${p.y}H${p.x + r * 2}M${p.x} ${p.y - r * 2}V${p.y + r * 2}`}
+                              />
+                            </g>
+                          ) : id === "rotate" ? (
+                            <circle className="pro-anchor" cx={p.x} cy={p.y} r={r} />
+                          ) : (
+                            <rect
+                              className="pro-anchor"
+                              x={p.x - r}
+                              y={p.y - r}
+                              width={r * 2}
+                              height={r * 2}
+                            />
+                          )}
+                          <circle
+                            data-transform-handle={id}
+                            aria-label={`Transform ${id} handle`}
+                            className="pro-transform-hit"
+                            cx={p.x}
+                            cy={p.y}
+                            r={22 / (fit * view.zoom)}
+                          />
+                        </g>
+                      ))}
+                    </g>
+                  );
+                })()}
+              {shownCrop &&
+                (() => {
+                  const c = shownCrop,
+                    corners = ["nw", "ne", "se", "sw"].map((h) => cropHandlePoint(c, h)),
+                    points = poly(corners),
+                    hitSize = 44 / (fit * view.zoom),
+                    line = 1 / (fit * view.zoom);
+                  return (
+                    <g className="pro-crop-overlay" aria-label="Crop boundaries">
+                      <path
+                        className="pro-crop-shade"
+                        fillRule="evenodd"
+                        d={`M0 0H${doc.width}V${doc.height}H0Z M${corners.map((p) => `${p.x} ${p.y}`).join("L")}Z`}
+                      />
+                      <polygon className="pro-crop-outline" points={points} strokeWidth={line} />
+                      {tool === "crop" && (
+                        <>
+                          {[1, 2].map((n) => {
+                            const a = cropPoint(c, { x: (c.width * n) / 3, y: 0 }),
+                              b = cropPoint(c, { x: (c.width * n) / 3, y: c.height }),
+                              e = cropPoint(c, { x: 0, y: (c.height * n) / 3 }),
+                              f = cropPoint(c, { x: c.width, y: (c.height * n) / 3 });
+                            return (
+                              <g className="pro-crop-thirds" key={n} strokeWidth={line}>
+                                <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
+                                <line x1={e.x} y1={e.y} x2={f.x} y2={f.y} />
+                              </g>
+                            );
+                          })}
+                          {CROP_HANDLES.map((h) => {
+                            const p = cropHandlePoint(c, h);
+                            return (
+                              <g key={h}>
+                                <rect
+                                  className="pro-crop-handle-mark"
+                                  x={p.x - hitSize / 11}
+                                  y={p.y - hitSize / 11}
+                                  width={(hitSize * 2) / 11}
+                                  height={(hitSize * 2) / 11}
+                                  strokeWidth={line}
+                                />
+                                <rect
+                                  className="pro-crop-handle-hit"
+                                  data-crop-handle={h}
+                                  aria-label={`Crop ${h} handle`}
+                                  x={p.x - hitSize / 2}
+                                  y={p.y - hitSize / 2}
+                                  width={hitSize}
+                                  height={hitSize}
+                                />
+                              </g>
+                            );
+                          })}
+                        </>
+                      )}
+                    </g>
+                  );
+                })()}
               {selected && selected.kind !== "group" && ["move", "direct"].includes(tool) && (
                 <>
                   <polygon

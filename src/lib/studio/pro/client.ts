@@ -1,4 +1,15 @@
-import type { ProDocument, ProSession } from "./model";
+import type { RepairRequest } from "./repair";
+import type { ColorSelectionOptions } from "./selection";
+import type { ProDocument, ProSession, Region } from "./model";
+type RenderReply = {
+  bitmap?: ImageBitmap;
+  blob?: Blob;
+  region?: Region;
+  document?: ProDocument;
+  assetId?: string;
+  layerId?: string;
+  thumbnails?: { id: string; blob: Blob }[];
+};
 export class ProRenderer {
   private worker: Worker;
   private serial = 0;
@@ -7,7 +18,7 @@ export class ProRenderer {
     number,
     {
       type: string;
-      resolve: (r: { bitmap?: ImageBitmap; blob?: Blob }) => void;
+      resolve: (r: RenderReply) => void;
       reject: (e: Error) => void;
       progress?: (n: number, total: number) => void;
     }
@@ -59,7 +70,7 @@ export class ProRenderer {
         this.pending.delete(id);
       }
     const id = ++this.serial;
-    return new Promise<{ bitmap?: ImageBitmap; blob?: Blob }>((resolve, reject) => {
+    return new Promise<RenderReply>((resolve, reject) => {
       this.pending.set(id, { type, resolve, reject, progress });
       this.worker.postMessage({ id, type, ...input });
     });
@@ -76,8 +87,32 @@ export class ProRenderer {
     mime: string,
     quality: number,
     progress: (n: number, t: number) => void,
+    fullCanvas = false,
   ) {
-    return this.request("export", { document, maxArea, mime, quality }, progress);
+    return this.request("export", { document, maxArea, mime, quality, fullCanvas }, progress);
+  }
+  select(
+    document: ProDocument,
+    maxArea: number,
+    point: { x: number; y: number },
+    options: ColorSelectionOptions,
+  ) {
+    return this.request("select", { document, maxArea, point, options });
+  }
+  repair(document: ProDocument, maxArea: number, request: RepairRequest) {
+    return this.request("repair", { document, maxArea, request });
+  }
+  thumbnails(document: ProDocument, maxArea: number) {
+    return this.request("thumbnails", { document, maxArea });
+  }
+  merge(
+    document: ProDocument,
+    maxArea: number,
+    mode: "selected" | "visible" | "flatten",
+    ids: string[],
+    progress: (n: number, total: number) => void,
+  ) {
+    return this.request("merge", { document, maxArea, mode, ids }, progress);
   }
   dispose(reason: Error = new DOMException("Processing cancelled.", "AbortError")) {
     this.stopped = true;

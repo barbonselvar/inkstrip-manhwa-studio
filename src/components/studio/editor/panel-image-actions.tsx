@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil, Sparkles, Layers3 } from "lucide-react";
+import { Pencil, Sparkles, Layers3, Paintbrush, PenTool } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { LONG_PRESS_MS, withinPress } from "@/lib/studio/editor/gestures";
@@ -13,6 +13,7 @@ export function PanelImageActions({
   onEdit,
   onEnhance,
   onPro,
+  onStudio,
 }: {
   panel: Panel;
   thumb?: string;
@@ -21,6 +22,7 @@ export function PanelImageActions({
   onEdit: () => void;
   onEnhance: () => void;
   onPro: () => void;
+  onStudio: (mode: "raster" | "vector") => void;
 }) {
   const [menu, setMenu] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -180,6 +182,26 @@ export function PanelImageActions({
           >
             <Pencil className="size-4" />
             Edit Image
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setMenu(false);
+              onStudio("raster");
+            }}
+          >
+            <Paintbrush className="size-4" />
+            Open in Raster Studio
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setMenu(false);
+              onStudio("vector");
+            }}
+          >
+            <PenTool className="size-4" />
+            Open in Vector Studio
           </Button>
           <Button
             variant="secondary"

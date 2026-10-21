@@ -28,6 +28,8 @@ import {
   ScanLine,
   ScanFace,
   SlidersHorizontal,
+  Paintbrush,
+  PenTool,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 
@@ -60,6 +62,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const [batchTargets, setBatchTargets] = useState<Panel[] | null>(null);
   const [faceTargets, setFaceTargets] = useState<Panel[] | null>(null);
   const [proPanel, setProPanel] = useState<Panel | null>(null);
+  const [studioMode, setStudioMode] = useState<"raster" | "vector">("raster");
   const [editorPanel, setEditorPanel] = useState<Panel | null>(null);
   const [enhancePanels, setEnhancePanels] = useState<Panel[] | null>(null);
   const [pane, setPane] = useState<"panels" | "page">("panels");
@@ -284,10 +287,35 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
               variant="secondary"
               className="pro-launch"
               disabled={busy || !checked.length}
-              onClick={() => setProPanel(list.find((p) => checkedSet.has(p.id)) ?? null)}
+              onClick={() => {
+                setStudioMode("raster");
+                setProPanel(list.find((p) => checkedSet.has(p.id)) ?? null);
+              }}
             >
               <Layers3 className="size-4" /> Pro Studio · layers & vectors
             </Button>
+            <div className="studio-launch-grid" aria-label="Open selected image in an editor">
+              <Button
+                variant="secondary"
+                disabled={busy || !checked.length}
+                onClick={() => {
+                  setStudioMode("raster");
+                  setProPanel(list.find((p) => checkedSet.has(p.id)) ?? null);
+                }}
+              >
+                <Paintbrush className="size-4" /> Open in Raster Studio
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={busy || !checked.length}
+                onClick={() => {
+                  setStudioMode("vector");
+                  setProPanel(list.find((p) => checkedSet.has(p.id)) ?? null);
+                }}
+              >
+                <PenTool className="size-4" /> Open in Vector Studio
+              </Button>
+            </div>
             <div className="chapter-tool-grid">
               <Button
                 intent="ai"
@@ -492,7 +520,14 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                       disabled={busy}
                       onToggle={() => toggleSelected(chapter.id, panel.id)}
                       onEdit={() => setEditorPanel(panel)}
-                      onPro={() => setProPanel(panel)}
+                      onPro={() => {
+                        setStudioMode("raster");
+                        setProPanel(panel);
+                      }}
+                      onStudio={(mode) => {
+                        setStudioMode(mode);
+                        setProPanel(panel);
+                      }}
                       onEnhance={() => setEnhancePanels([panel])}
                     />
                     <div className="panel-order-actions flex shrink-0 flex-col">
@@ -706,6 +741,8 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
           <ProWorkspace
             panel={proPanel}
             projectId={projectId}
+            mode={studioMode}
+            onModeChange={setStudioMode}
             onClose={() => setProPanel(null)}
             onContinue={(mode) => {
               const current = useStudio.getState().panels.find((p) => p.id === proPanel.id);
