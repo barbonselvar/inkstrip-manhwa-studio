@@ -87,8 +87,9 @@ export class ProRenderer {
     mime: string,
     quality: number,
     progress: (n: number, t: number) => void,
+    fullCanvas = false,
   ) {
-    return this.request("export", { document, maxArea, mime, quality }, progress);
+    return this.request("export", { document, maxArea, mime, quality, fullCanvas }, progress);
   }
   select(
     document: ProDocument,

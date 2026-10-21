@@ -1,3 +1,4 @@
+import { validateGeometry, type Crop, type ImageSize } from "./geometry.ts";
 import type { Adjustments } from "../editor/adjustments";
 import { NEUTRAL, validateAdjustments } from "../editor/adjustments.ts";
 export type Point = { x: number; y: number };
@@ -119,6 +120,10 @@ export type Layer = {
 };
 export type SourceReference = { assetId: string; width: number; height: number };
 export type ProDocument = {
+  /** Non-destructive output frame in full canvas coordinates. */
+  crop?: Crop;
+  /** Final composite resampling; source layers and masks retain native coordinates. */
+  imageSize?: ImageSize;
   selection?: Selection;
   source?: SourceReference;
   version: 1;
@@ -371,6 +376,7 @@ export function validateDocument(d: ProDocument) {
       d.source.width * d.source.height > 16_000_000)
   )
     throw new Error("Invalid original source reference.");
+  validateGeometry(d);
   if (d.selection !== undefined) validateSelection(d.selection);
   const ids = new Set<string>();
   let commands = 0;

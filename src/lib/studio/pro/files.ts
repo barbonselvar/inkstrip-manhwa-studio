@@ -6,6 +6,7 @@ import {
   type ProDocument,
   type Layer,
 } from "./model.ts";
+import { outputMatrix, outputSize } from "./geometry.ts";
 import { shapePath } from "./paths.ts";
 function encode(bytes: Uint8Array) {
   let s = "";
@@ -117,7 +118,8 @@ export function vectorSvg(d: ProDocument): string {
                 .join("")}</text>`,
       )
       .join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${d.width}" height="${d.height}" viewBox="0 0 ${d.width} ${d.height}">${branch()}</svg>`;
+  const size = outputSize(d);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}" viewBox="0 0 ${size.width} ${size.height}"><defs><clipPath id="canvas"><rect width="${d.width}" height="${d.height}"/></clipPath></defs><g transform="matrix(${outputMatrix(d).join(" ")})" clip-path="url(#canvas)">${branch()}</g></svg>`;
 }
 
 /** Import is one undoable metadata action; old raster bytes retain immutable IDs. */

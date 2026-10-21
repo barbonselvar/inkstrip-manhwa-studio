@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { renderOutput } from "./output";
 import { renderRepair } from "./repair-worker";
 import { selectColor } from "./selection";
 import { composite } from "./render";
@@ -184,7 +185,7 @@ self.onmessage = async ({ data }) => {
       }
       return;
     }
-    const output = await composite(
+    let output = await composite(
       doc,
       scale,
       get,
@@ -225,6 +226,8 @@ self.onmessage = async ({ data }) => {
       const bitmap = output.transferToImageBitmap();
       self.postMessage({ id, type: "preview", bitmap }, [bitmap]);
     } else {
+      if (!data.fullCanvas)
+        output = renderOutput(output, doc, data.maxArea, data.mime === "image/jpeg");
       const blob = await output.convertToBlob({ type: data.mime, quality: data.quality });
       if (blob.type !== data.mime)
         throw new Error(
