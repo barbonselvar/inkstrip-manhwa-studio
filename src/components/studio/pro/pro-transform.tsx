@@ -4,6 +4,8 @@ import { bounds, MESH, QUAD, withPivot, type TransformMode } from "@/lib/studio/
 import type { Layer, Point, Transform } from "@/lib/studio/pro/model";
 export type TransformDraft = {
   layerId: string;
+  ids?: string[];
+  frame?: { width: number; height: number };
   value: Transform;
   base: Transform;
   mode: TransformMode;
@@ -27,9 +29,7 @@ export function ProTransform({
 }) {
   if (!draft || !layer)
     return (
-      <p className="pro-help">
-        Select an unlocked raster, paint, shape or text layer and choose Free Transform (F).
-      </p>
+      <p className="pro-help">Select unlocked layers or a group and choose Free Transform (F).</p>
     );
   const t = draft.value,
     box = bounds(t, layer.width, layer.height),
@@ -46,8 +46,9 @@ export function ProTransform({
     <fieldset className="pro-geometry" disabled={disabled}>
       <h3>Free Transform</h3>
       <p className="pro-help">
-        Live preview · {layer.name}. Apply records one undo step; Cancel restores the saved
-        geometry. Source artwork, editable objects and masks are retained.
+        Live preview · {draft.ids ? "Selected layers / group (affine)" : layer.name}. Apply records
+        one undo step; Cancel restores the saved geometry. Source artwork, editable objects and
+        masks are retained.
       </p>
       <label className="pro-field">
         Transform mode
@@ -76,8 +77,8 @@ export function ProTransform({
           }}
         >
           <option value="affine">Affine · move, scale, rotate, shear</option>
-          <option value="perspective">Perspective · four corners</option>
-          <option value="warp">Warp · smooth 3 × 3 mesh</option>
+          {!draft.ids && <option value="perspective">Perspective · four corners</option>}
+          {!draft.ids && <option value="warp">Warp · smooth 3 × 3 mesh</option>}
         </select>
       </label>
       <p className="pro-help">

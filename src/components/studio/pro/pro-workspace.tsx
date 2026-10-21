@@ -38,7 +38,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProCanvas, type ProTool } from "./pro-canvas";
-import { transformDocument } from "@/lib/studio/pro/transform-transaction";
+import {
+  transformDocument,
+  transformForest,
+  forestFrame,
+} from "@/lib/studio/pro/transform-transaction";
 import { ProTransform, type TransformDraft } from "./pro-transform";
 import { validateTransform, withPivot, bounds } from "@/lib/studio/pro/transform";
 import { ProGeometry } from "./pro-geometry";
@@ -271,12 +275,14 @@ export default function ProWorkspace({
   const doc = useMemo(() => {
       const current = transient ?? history?.present.doc;
       if (!current || !transformDraft) return current;
-      return transformDocument(
-        current,
-        transformDraft.layerId,
-        transformDraft.value,
-        transformDraft.translation,
-      );
+      return transformDraft.ids
+        ? transformForest(current, transformDraft.ids, transformDraft.base, transformDraft.value)
+        : transformDocument(
+            current,
+            transformDraft.layerId,
+            transformDraft.value,
+            transformDraft.translation,
+          );
     }, [transient, history?.present.doc, transformDraft]),
     selection = doc?.selection ?? EMPTY_SELECTION,
     active = doc?.layers.find((l) => l.id === selectedIds[0]);
@@ -957,13 +963,17 @@ export default function ProWorkspace({
   const changeTransform = (value: TransformDraft) => {
     try {
       validateTransform(value.value);
-      if (historyRef.current)
-        transformDocument(
-          historyRef.current.present.doc,
-          value.layerId,
-          value.value,
-          value.translation,
-        );
+      if (historyRef.current) {
+        if (value.ids)
+          transformForest(historyRef.current.present.doc, value.ids, value.base, value.value);
+        else
+          transformDocument(
+            historyRef.current.present.doc,
+            value.layerId,
+            value.value,
+            value.translation,
+          );
+      }
       transformRef.current = value;
       setTransformDraft(value);
       setError("");
@@ -978,7 +988,9 @@ export default function ProWorkspace({
       current = historyRef.current?.present.doc;
     if (!draft || !current || busyRef.current) return;
     try {
-      const next = transformDocument(current, draft.layerId, draft.value, draft.translation);
+      const next = draft.ids
+        ? transformForest(current, draft.ids, draft.base, draft.value)
+        : transformDocument(current, draft.layerId, draft.value, draft.translation);
       validateDocument(next);
       cancelTransform();
       commit(next, "Apply layer transform");
@@ -994,11 +1006,22 @@ export default function ProWorkspace({
       return;
     }
     if (id === "transform") {
-      if (!doc || !active || active.kind === "group" || isLocked(doc, active.id)) {
-        setError("Select an unlocked raster, paint, shape or text layer for Free Transform.");
+      if (!doc || !active || isLocked(doc, active.id)) {
+        setError("Select unlocked layers or a group for Free Transform.");
         return;
       }
-      const original = historyRef.current!.present.doc.layers.find((l) => l.id === active.id)!;
+      const current = historyRef.current!.present.doc,
+        multiple = selectedIds.length > 1 || active.kind === "group";
+      let frame: ReturnType<typeof forestFrame> | undefined;
+      try {
+        if (multiple) frame = forestFrame(current, selectedIds);
+      } catch (e) {
+        setError(storageMessage(e));
+        return;
+      }
+      const original = frame
+        ? { ...active, ...frame }
+        : current.layers.find((l) => l.id === active.id)!;
       let value = original.transform.pivot
         ? structuredClone(original.transform)
         : withPivot(original.transform, { x: original.width / 2, y: original.height / 2 });
@@ -1010,6 +1033,9 @@ export default function ProWorkspace({
       if (
         !changeTransform({
           layerId: original.id,
+          ...(frame
+            ? { ids: [...selectedIds], frame: { width: frame.width, height: frame.height } }
+            : {}),
           value,
           base: structuredClone(original.transform),
           mode: value.deform?.kind ?? "affine",
@@ -1791,7 +1817,11 @@ export default function ProWorkspace({
                   )}
                   {tab === "transform" && (
                     <ProTransform
-                      layer={active}
+                      layer={
+                        active && transformDraft?.frame
+                          ? { ...active, ...transformDraft.frame }
+                          : active
+                      }
                       draft={transformDraft}
                       onDraft={changeTransform}
                       onApply={applyTransform}

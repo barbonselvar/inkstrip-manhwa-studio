@@ -67,6 +67,26 @@ export function withPivot(t: Transform, pivot: Point): Transform {
     m = affine(next);
   return { ...next, x: t.x + old[4] - m[4], y: t.y + old[5] - m[5] };
 }
+/** Exact QR factorization back into editable fields; deformation remains in the source plane. */
+export function fromAffine(m: Matrix, original: Transform): Transform {
+  const sx = Math.hypot(m[0], m[1]),
+    sy = (m[0] * m[3] - m[1] * m[2]) / sx,
+    pivot = original.pivot ?? { x: 0, y: 0 },
+    result: Transform = {
+      ...original,
+      x: m[4] - pivot.x + m[0] * pivot.x + m[2] * pivot.y,
+      y: m[5] - pivot.y + m[1] * pivot.x + m[3] * pivot.y,
+      scaleX: sx,
+      scaleY: Math.abs(sy),
+      rotation: (Math.atan2(m[1], m[0]) * 180) / Math.PI,
+      shearX: (Math.atan((m[0] * m[2] + m[1] * m[3]) / (sx * sy)) * 180) / Math.PI,
+      shearY: 0,
+      flipX: false,
+      flipY: sy < 0,
+    };
+  validateTransform(result);
+  return result;
+}
 export const pivotWorld = (t: Transform): Point => ({
   x: t.x + (t.pivot?.x ?? 0),
   y: t.y + (t.pivot?.y ?? 0),

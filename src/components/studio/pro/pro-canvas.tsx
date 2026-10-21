@@ -201,7 +201,9 @@ export function ProCanvas({
       Math.max(1, size.width - 64) / doc.width,
       Math.max(1, size.height - 64) / doc.height,
     ),
-    selected = doc.layers.find((l) => l.id === activeId);
+    selected = doc.layers.find((l) => l.id === activeId),
+    transformTarget =
+      selected && transformDraft?.frame ? { ...selected, ...transformDraft.frame } : selected;
   useEffect(() => {
     pathId.current = "";
     setPolygon([]);
@@ -384,7 +386,7 @@ export function ProCanvas({
       return;
     }
     if (tool === "transform" && transformDraft && selected) {
-      const handles = transformHandles(transformDraft, selected, fit * view.zoom).handles,
+      const handles = transformHandles(transformDraft, transformTarget!, fit * view.zoom).handles,
         nearest = handles
           .map((h) => ({ ...h, distance: Math.hypot(p.x - h.p.x, p.y - h.p.y) * fit * view.zoom }))
           .sort((a, b) => a.distance - b.distance)[0],
@@ -696,7 +698,7 @@ export function ProCanvas({
       return null;
     }
     if (g.type === "free-transform" && g.transform && g.id) {
-      const l = g.doc.layers.find((l) => l.id === g.id)!;
+      const l = g.transform.frame ?? g.doc.layers.find((l) => l.id === g.id)!;
       let point = p;
       if (g.transformHandle === "move" && input?.shiftKey) {
         point =
@@ -1178,20 +1180,23 @@ export function ProCanvas({
                 selected &&
                 (() => {
                   const t = transformDraft.value,
-                    h = transformHandles(transformDraft, selected, fit * view.zoom),
+                    h = transformHandles(transformDraft, transformTarget!, fit * view.zoom),
                     r = 5 / (fit * view.zoom),
                     m = mapping(t),
                     curve = (axis: number, v: number) =>
                       poly(
                         Array.from({ length: 33 }, (_, i) =>
                           m.forward({
-                            x: (axis ? v : i / 32) * selected.width,
-                            y: (axis ? i / 32 : v) * selected.height,
+                            x: (axis ? v : i / 32) * transformTarget!.width,
+                            y: (axis ? i / 32 : v) * transformTarget!.height,
                           }),
                         ),
                       ),
                     cage = t.deform?.points.map((p) =>
-                      applyMatrix(affine(t), { x: p.x * selected.width, y: p.y * selected.height }),
+                      applyMatrix(affine(t), {
+                        x: p.x * transformTarget!.width,
+                        y: p.y * transformTarget!.height,
+                      }),
                     );
                   return (
                     <g className="pro-transform-overlay" aria-label="Free Transform handles">
