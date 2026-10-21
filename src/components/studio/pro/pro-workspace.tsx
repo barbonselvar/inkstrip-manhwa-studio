@@ -1,9 +1,10 @@
 import type { RepairRequest } from "@/lib/studio/pro/repair";
 import { appendSelection } from "@/lib/studio/pro/selection";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Crop as CropIcon,
+  Scan,
   ArrowLeft,
   MousePointer2,
   Hand,
@@ -37,6 +38,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProCanvas, type ProTool } from "./pro-canvas";
+import { transformDocument } from "@/lib/studio/pro/transform-transaction";
+import { ProTransform, type TransformDraft } from "./pro-transform";
+import { validateTransform, withPivot, bounds } from "@/lib/studio/pro/transform";
 import { ProGeometry } from "./pro-geometry";
 import { fullCrop, outputSize, type Crop } from "@/lib/studio/pro/geometry";
 import { ProProperties, ProNumber } from "./pro-properties";
@@ -84,6 +88,7 @@ import {
 type Entry = { doc: ProDocument; label: string };
 const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush }> = [
   { id: "move", name: "Move", key: "V", Icon: MousePointer2 },
+  { id: "transform", name: "Free Transform", key: "F", Icon: Scan },
   { id: "crop", name: "Crop", key: "C", Icon: CropIcon },
   { id: "hand", name: "Hand", key: "H", Icon: Hand },
   { id: "brush", name: "Brush", key: "B", Icon: Brush },
@@ -109,6 +114,7 @@ const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush 
   { id: "text", name: "Text", key: "T", Icon: Type },
 ];
 const RASTER_TOOL_IDS = new Set<ProTool>([
+  "transform",
   "crop",
   "move",
   "hand",
@@ -135,6 +141,7 @@ const RASTER_TOOL_IDS = new Set<ProTool>([
   "text",
 ]);
 const VECTOR_TOOL_IDS = new Set<ProTool>([
+  "transform",
   "crop",
   "move",
   "hand",
@@ -197,6 +204,8 @@ export default function ProWorkspace({
     sessionRef = useRef<ProSession | null>(null),
     [selectedIds, setSelectedIds] = useState<string[]>([]),
     [tool, setTool] = useState<ProTool>(initialMode === "raster" ? "brush" : "pen"),
+    [transformDraft, setTransformDraft] = useState<TransformDraft | null>(null),
+    transformRef = useRef<TransformDraft | null>(null),
     [cropDraft, setCropDraft] = useState<Crop | null>(null),
     [cropRatio, setCropRatio] = useState(0),
     [tolerance, setTolerance] = useState(32),
@@ -222,7 +231,7 @@ export default function ProWorkspace({
     [snapping, setSnapping] = useState(true),
     [before, setBefore] = useState(false),
     [tab, setTab] = useState<
-      "properties" | "geometry" | "layers" | "history" | "assets" | "ai" | "export"
+      "properties" | "transform" | "geometry" | "layers" | "history" | "assets" | "ai" | "export"
     >("layers"),
     [panelOpen, setPanelOpen] = useState(true),
     [panelWidth, setPanelWidth] = useState(300),
@@ -239,6 +248,8 @@ export default function ProWorkspace({
     [mime, setMime] = useState("image/png"),
     [quality, setQuality] = useState(0.95),
     [geometryRevision, setGeometryRevision] = useState(0);
+  const displayedDocument = useRef<ProDocument | null>(null),
+    displayedBefore = useRef(false);
   const canvas = useRef<HTMLCanvasElement>(null),
     renderer = useRef<ProRenderer | null>(null),
     root = useRef<HTMLDivElement>(null),
@@ -257,7 +268,16 @@ export default function ProWorkspace({
     (typeof matchMedia !== "undefined" && matchMedia("(pointer:coarse)").matches)
       ? 4_000_000
       : 16_000_000;
-  const doc = transient ?? history?.present.doc,
+  const doc = useMemo(() => {
+      const current = transient ?? history?.present.doc;
+      if (!current || !transformDraft) return current;
+      return transformDocument(
+        current,
+        transformDraft.layerId,
+        transformDraft.value,
+        transformDraft.translation,
+      );
+    }, [transient, history?.present.doc, transformDraft]),
     selection = doc?.selection ?? EMPTY_SELECTION,
     active = doc?.layers.find((l) => l.id === selectedIds[0]);
   useEffect(() => {
@@ -428,6 +448,8 @@ export default function ProWorkspace({
             c.width = r.bitmap.width;
             c.height = r.bitmap.height;
             c.getContext("2d")!.drawImage(r.bitmap, 0, 0);
+            displayedDocument.current = doc;
+            displayedBefore.current = before;
             setVersion((v) => v + 1);
           }
           r.bitmap.close();
@@ -462,7 +484,7 @@ export default function ProWorkspace({
   }, []);
   const commit = useCallback(
     (next: ProDocument, label: string, group?: string) => {
-      if (busyRef.current) return;
+      if (busyRef.current || transformRef.current) return;
       try {
         validateDocument(next);
         if (
@@ -543,7 +565,7 @@ export default function ProWorkspace({
   };
   const add = (kind: Layer["kind"], shape?: Layer["shape"]) => {
     const d = historyRef.current?.present.doc;
-    if (!d) return;
+    if (!d || transformRef.current) return;
     const object = layer(
       kind,
       kind === "paint" || kind === "group" ? d.width : Math.min(280, d.width * 0.7),
@@ -569,7 +591,7 @@ export default function ProWorkspace({
     setBefore(false);
   };
   const duplicate = () => {
-    if (!doc || busyRef.current) return;
+    if (!doc || busyRef.current || transformRef.current) return;
     try {
       const result = duplicateLayers(doc, selectedIds);
       commit(result.document, "Duplicate layers");
@@ -579,7 +601,7 @@ export default function ProWorkspace({
     }
   };
   const remove = () => {
-    if (!doc || busyRef.current) return;
+    if (!doc || busyRef.current || transformRef.current) return;
     try {
       commit(deleteLayers(doc, selectedIds), "Delete layers");
       setSelectedIds([]);
@@ -642,6 +664,10 @@ export default function ProWorkspace({
     }
   };
   const saveNow = useCallback(async () => {
+    if (transformRef.current) {
+      setStatus("Apply or cancel the transform before saving.");
+      return;
+    }
     const current = historyRef.current?.present.doc;
     if (current) {
       await persist(current);
@@ -662,7 +688,7 @@ export default function ProWorkspace({
   const apply = async () => {
     const d = historyRef.current?.present.doc,
       s = sessionRef.current;
-    if (!d || !s || busyRef.current || !renderer.current) return false;
+    if (!d || !s || busyRef.current || transformRef.current || !renderer.current) return false;
     const run = ++operationRun.current;
     busyRef.current = true;
     setBusy(true);
@@ -709,7 +735,8 @@ export default function ProWorkspace({
     }
   };
   const adoptLatestImage = async () => {
-    if (busyRef.current || !historyRef.current || !sessionRef.current) return;
+    if (busyRef.current || transformRef.current || !historyRef.current || !sessionRef.current)
+      return;
     busyRef.current = true;
     setBusy(true);
     setProgress("Saving latest chapter image as a new base…");
@@ -784,7 +811,8 @@ export default function ProWorkspace({
     if (!doc || !sessionRef.current || busyRef.current) return;
     setError("");
     try {
-      if (cropDraft) throw new Error("Apply or cancel the crop draft before exporting.");
+      if (cropDraft || transformRef.current)
+        throw new Error("Apply or cancel the crop/transform draft before exporting.");
       if (kind === "native") {
         download(
           await nativeFile({ ...sessionRef.current, document: doc }),
@@ -827,10 +855,11 @@ export default function ProWorkspace({
   const addAsset = async (blob: Blob, name: string) => {
     let d = historyRef.current?.present.doc,
       s = sessionRef.current;
-    if (!d || !s || busyRef.current) return;
+    if (!d || !s || busyRef.current || transformRef.current) return;
     const decoded = await decodeBlob(blob);
     try {
-      if (!alive.current || busyRef.current || closeInProgress.current) return;
+      if (!alive.current || busyRef.current || closeInProgress.current || transformRef.current)
+        return;
       d = historyRef.current?.present.doc;
       s = sessionRef.current;
       if (!d || !s) return;
@@ -863,12 +892,14 @@ export default function ProWorkspace({
     }
   };
   const importFile = async (file?: File) => {
-    if (!file || !doc || !sessionRef.current || busyRef.current) return;
+    if (!file || !doc || !sessionRef.current || busyRef.current || transformRef.current) return;
     setError("");
     try {
       if (file.name.toLowerCase().endsWith(".inkstrip")) {
+        setStatus("Importing editable native document…");
         const imported = await readNative(file, panel.id, sessionRef.current.acceptedBlobId);
-        if (!alive.current || busyRef.current || closeInProgress.current) return;
+        if (!alive.current || busyRef.current || closeInProgress.current || transformRef.current)
+          return;
         const next = mergeNativeSession(sessionRef.current, imported);
         validateAssets(next);
         if (
@@ -899,7 +930,7 @@ export default function ProWorkspace({
     }
   };
   const groupSelected = () => {
-    if (!doc || busyRef.current) return;
+    if (!doc || busyRef.current || transformRef.current) return;
     try {
       const result = groupLayers(doc, selectedIds);
       commit(result.document, "Group layers");
@@ -918,7 +949,83 @@ export default function ProWorkspace({
       }
     }
   };
+  const cancelTransform = () => {
+    transformRef.current = null;
+    setTransformDraft(null);
+    setTool("move");
+  };
+  const changeTransform = (value: TransformDraft) => {
+    try {
+      validateTransform(value.value);
+      if (historyRef.current)
+        transformDocument(
+          historyRef.current.present.doc,
+          value.layerId,
+          value.value,
+          value.translation,
+        );
+      transformRef.current = value;
+      setTransformDraft(value);
+      setError("");
+      return true;
+    } catch (e) {
+      setError(storageMessage(e));
+      return false;
+    }
+  };
+  const applyTransform = () => {
+    const draft = transformRef.current,
+      current = historyRef.current?.present.doc;
+    if (!draft || !current || busyRef.current) return;
+    try {
+      const next = transformDocument(current, draft.layerId, draft.value, draft.translation);
+      validateDocument(next);
+      cancelTransform();
+      commit(next, "Apply layer transform");
+      setStatus("Transform applied. Source artwork, masks and editable objects retained.");
+    } catch (e) {
+      setError(storageMessage(e));
+    }
+  };
   const chooseTool = (id: ProTool) => {
+    if (id === "transform" && transformRef.current) {
+      setTab("transform");
+      setPanelOpen(true);
+      return;
+    }
+    if (id === "transform") {
+      if (!doc || !active || active.kind === "group" || isLocked(doc, active.id)) {
+        setError("Select an unlocked raster, paint, shape or text layer for Free Transform.");
+        return;
+      }
+      const original = historyRef.current!.present.doc.layers.find((l) => l.id === active.id)!;
+      let value = original.transform.pivot
+        ? structuredClone(original.transform)
+        : withPivot(original.transform, { x: original.width / 2, y: original.height / 2 });
+      try {
+        validateTransform(value);
+      } catch {
+        value = structuredClone(original.transform);
+      }
+      if (
+        !changeTransform({
+          layerId: original.id,
+          value,
+          base: structuredClone(original.transform),
+          mode: value.deform?.kind ?? "affine",
+          lock: true,
+          translation: { x: 0, y: 0 },
+        })
+      )
+        return;
+      setCropDraft(null);
+      setTool("transform");
+      setBefore(false);
+      setTab("transform");
+      setPanelOpen(true);
+      return;
+    }
+    if (transformRef.current) cancelTransform();
     setCropDraft(id === "crop" && doc ? { ...(doc.crop ?? fullCrop(doc)) } : null);
     if (id === "crop") {
       setTab("geometry");
@@ -1050,10 +1157,12 @@ export default function ProWorkspace({
   actions.current = {
     save: saveNow,
     undo: () => {
+      if (transformRef.current) cancelTransform();
       if (cropDraft) cancelCrop();
       if (historyRef.current) setHist(undo(historyRef.current));
     },
     redo: () => {
+      if (transformRef.current) cancelTransform();
       if (cropDraft) cancelCrop();
       if (historyRef.current) setHist(redo(historyRef.current));
     },
@@ -1111,7 +1220,8 @@ export default function ProWorkspace({
           style={{ "--pro-panel-width": `${panelWidth}px` } as React.CSSProperties}
           onEscapeKeyDown={(e) => {
             e.preventDefault();
-            if (!busyRef.current && tool !== "patch" && tool !== "crop") void close();
+            if (!busyRef.current && tool !== "patch" && tool !== "crop" && tool !== "transform")
+              void close();
           }}
           onBlurCapture={() => {
             const h = historyRef.current;
@@ -1147,6 +1257,7 @@ export default function ProWorkspace({
                 onClick={() => {
                   setMode("raster");
                   onModeChange("raster");
+                  if (transformRef.current) cancelTransform();
                   setCropDraft(null);
                   setTool("brush");
                   setBefore(false);
@@ -1162,6 +1273,7 @@ export default function ProWorkspace({
                 onClick={() => {
                   setMode("vector");
                   onModeChange("vector");
+                  if (transformRef.current) cancelTransform();
                   setCropDraft(null);
                   setTool("pen");
                   setBefore(false);
@@ -1202,7 +1314,7 @@ export default function ProWorkspace({
             <Button
               variant="secondary"
               className="pro-save-button"
-              disabled={!doc || busy}
+              disabled={!doc || busy || !!transformDraft}
               onClick={() => void saveNow().catch((e) => setError(storageMessage(e)))}
             >
               <Save />
@@ -1210,7 +1322,7 @@ export default function ProWorkspace({
             </Button>
             <Button
               intent="save"
-              disabled={!doc || busy || stale || !ready || !!cropDraft}
+              disabled={!doc || busy || stale || !ready || !!cropDraft || !!transformDraft}
               onClick={() => void apply()}
             >
               <Layers3 />
@@ -1268,6 +1380,16 @@ export default function ProWorkspace({
             </div>
           ) : null}
           <div className="pro-context-bar">
+            {transformDraft && (
+              <div className="pro-crop-actions">
+                <Button disabled={busy} onClick={applyTransform}>
+                  Apply transform
+                </Button>
+                <Button variant="secondary" onClick={cancelTransform}>
+                  Cancel transform
+                </Button>
+              </div>
+            )}
             {cropDraft && (
               <div className="pro-crop-actions">
                 <Button onClick={applyCrop} disabled={busy}>
@@ -1405,6 +1527,10 @@ export default function ProWorkspace({
             </nav>
             {doc ? (
               <ProCanvas
+                transformDraft={transformDraft}
+                onTransformDraft={changeTransform}
+                onApplyTransform={applyTransform}
+                onCancelTransform={cancelTransform}
                 cropDraft={cropDraft}
                 cropRatio={cropRatio}
                 onCropDraft={setCropDraft}
@@ -1428,12 +1554,18 @@ export default function ProWorkspace({
                 onTransient={setTransient}
                 onCommit={commit}
                 onSelect={(id) => {
+                  if (transformRef.current) return;
                   setSelectedIds(id ? [id] : []);
                   setMaskMode(false);
                 }}
                 onColor={(color) => setBrush((b) => ({ ...b, color }))}
                 disabled={busy}
-                rendering={rendering}
+                rendering={
+                  rendering ||
+                  !ready ||
+                  displayedDocument.current !== doc ||
+                  displayedBefore.current !== before
+                }
                 cloneSource={cloneSource}
                 cloneSampleArmed={cloneSampleArmed}
                 onColorSelect={(point) => void sampleSelection(point)}
@@ -1463,6 +1595,7 @@ export default function ProWorkspace({
                   {(
                     [
                       "properties",
+                      "transform",
                       "geometry",
                       "layers",
                       "history",
@@ -1485,7 +1618,9 @@ export default function ProWorkspace({
                   {tab === "properties" && (
                     <ProProperties
                       selected={
-                        active && doc ? { ...active, locked: isLocked(doc, active.id) } : active
+                        active && doc
+                          ? { ...active, locked: isLocked(doc, active.id) || !!transformDraft }
+                          : active
                       }
                       onPatch={patch}
                       selection={selection}
@@ -1560,6 +1695,7 @@ export default function ProWorkspace({
                           session={session}
                           selectedIds={selectedIds}
                           onSelect={(ids) => {
+                            if (transformRef.current) return;
                             setSelectedIds(ids);
                             setMaskMode(false);
                           }}
@@ -1571,7 +1707,7 @@ export default function ProWorkspace({
                           onUngroup={ungroup}
                           onMerge={(mode) => void merge(mode)}
                           onAdd={add}
-                          disabled={busy}
+                          disabled={busy || !!transformDraft}
                           maxArea={maxArea}
                         />
                       )}
@@ -1597,22 +1733,33 @@ export default function ProWorkspace({
                             variant="secondary"
                             disabled={!active || active.kind === "group"}
                             onClick={() =>
-                              active && patch({ transform: { ...active.transform, x: 0 } })
+                              active &&
+                              patch({
+                                transform: {
+                                  ...active.transform,
+                                  x:
+                                    active.transform.x -
+                                    bounds(active.transform, active.width, active.height).x,
+                                },
+                              })
                             }
                           >
                             Left
                           </Button>
                           <Button
                             variant="secondary"
-                            disabled={
-                              !active || active.kind === "group" || !!active.transform.rotation
-                            }
+                            disabled={!active || active.kind === "group"}
                             onClick={() =>
                               active &&
                               patch({
                                 transform: {
                                   ...active.transform,
-                                  x: (doc.width - active.width * active.transform.scaleX) / 2,
+                                  x:
+                                    active.transform.x +
+                                    (doc.width -
+                                      bounds(active.transform, active.width, active.height).width) /
+                                      2 -
+                                    bounds(active.transform, active.width, active.height).x,
                                 },
                               })
                             }
@@ -1621,15 +1768,17 @@ export default function ProWorkspace({
                           </Button>
                           <Button
                             variant="secondary"
-                            disabled={
-                              !active || active.kind === "group" || !!active.transform.rotation
-                            }
+                            disabled={!active || active.kind === "group"}
                             onClick={() =>
                               active &&
                               patch({
                                 transform: {
                                   ...active.transform,
-                                  x: doc.width - active.width * active.transform.scaleX,
+                                  x:
+                                    active.transform.x +
+                                    doc.width -
+                                    bounds(active.transform, active.width, active.height).width -
+                                    bounds(active.transform, active.width, active.height).x,
                                 },
                               })
                             }
@@ -1639,6 +1788,16 @@ export default function ProWorkspace({
                         </div>
                       </ToolSection>
                     </>
+                  )}
+                  {tab === "transform" && (
+                    <ProTransform
+                      layer={active}
+                      draft={transformDraft}
+                      onDraft={changeTransform}
+                      onApply={applyTransform}
+                      onCancel={cancelTransform}
+                      disabled={busy}
+                    />
                   )}
                   {tab === "geometry" && doc && (
                     <ProGeometry
@@ -1653,6 +1812,7 @@ export default function ProWorkspace({
                       onCancel={cancelCrop}
                       onReset={() => {
                         commit({ ...doc, crop: undefined }, "Reset non-destructive crop");
+                        if (transformRef.current) cancelTransform();
                         if (cropDraft) cancelCrop();
                       }}
                       onCommit={commit}
@@ -1706,6 +1866,7 @@ export default function ProWorkspace({
                         Import image / SVG / native
                         <input
                           aria-label="Import Pro asset"
+                          disabled={busy || !!transformDraft}
                           type="file"
                           accept="image/png,image/jpeg,image/webp,image/svg+xml,.inkstrip"
                           onChange={(e) => {
@@ -1762,7 +1923,7 @@ export default function ProWorkspace({
                       </p>
                       <Button
                         intent="ai"
-                        disabled={busy || stale}
+                        disabled={busy || stale || !!transformDraft}
                         onClick={() =>
                           void apply().then((ok) => {
                             if (ok) onContinue("enhance");
@@ -1777,7 +1938,7 @@ export default function ProWorkspace({
                       </p>
                       <Button
                         variant="secondary"
-                        disabled={busy || stale}
+                        disabled={busy || stale || !!transformDraft}
                         onClick={() =>
                           void apply().then((ok) => {
                             if (ok) onContinue("image");
@@ -1793,7 +1954,7 @@ export default function ProWorkspace({
                       </p>
                       <Button
                         variant="secondary"
-                        disabled={busy || stale}
+                        disabled={busy || stale || !!transformDraft}
                         onClick={() =>
                           void apply().then((ok) => {
                             if (ok) onContinue("face");

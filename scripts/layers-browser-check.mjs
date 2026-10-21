@@ -98,7 +98,12 @@ async function values(p, x, y, expected) {
   );
 }
 async function preview(p) {
-  await p.waitForTimeout(180);
+  await p.waitForFunction(
+    () =>
+      document
+        .querySelector('canvas[aria-label="Pro composite preview"]')
+        ?.getAttribute("aria-busy") === "false",
+  );
   return p
     .locator('canvas[aria-label="Pro composite preview"]')
     .evaluate((c) => [...c.getContext("2d").getImageData(0, 0, c.width, c.height).data]);
@@ -109,6 +114,13 @@ function samePixels(a, b, tolerance = 1) {
   for (let i = 0; i < a.length; i++)
     if (i % 4 === 3 || a[i - (i % 4) + 3] || b[i - (i % 4) + 3])
       max = Math.max(max, Math.abs(a[i] - b[i]));
+  if (max > tolerance) {
+    const changed = [];
+    for (let i = 0; i < a.length && changed.length < 8; i += 4)
+      if (a.slice(i, i + 4).some((n, j) => Math.abs(n - b[i + j]) > tolerance))
+        changed.push({ pixel: i / 4, before: a.slice(i, i + 4), after: b.slice(i, i + 4) });
+    console.error({ max, changed });
+  }
   assert.ok(max <= tolerance, `Pixel difference ${max} exceeds ${tolerance}`);
 }
 async function selected(p, ids) {

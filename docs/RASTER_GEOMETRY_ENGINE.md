@@ -83,7 +83,12 @@ Dev/production smoke had clean consoles, no overflow or baseline divergence.
 Playwright was used because agent-browser is unavailable. The existing generic
 canvas/game-card branding warnings remain unrelated to this editor increment.
 
-## Partial and missing
+## Partial and missing at the crop/output-sizing milestone
+
+This section records the earlier increment. Phase B2 now implements the
+active-layer affine/perspective/bounded warp features listed in
+[PRO_TRANSFORM_ENGINE.md](PRO_TRANSFORM_ENGINE.md); its remaining limits apply
+to the current branch.
 
 This completes a crop and output-sizing increment, **not all of Phase B**.
 

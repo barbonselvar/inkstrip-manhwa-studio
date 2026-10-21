@@ -1091,3 +1091,25 @@
     min-height: 2.75rem;
   }
 }
+
+.pro-transform-mesh {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.pro-transform-pivot {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.pro-transform-hit {
+  fill: transparent;
+  pointer-events: all;
+  cursor: move;
+}
+.pro-transform-pivot :is(circle, path) {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.5px;
+}

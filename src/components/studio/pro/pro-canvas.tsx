@@ -1,3 +1,12 @@
+import type { TransformDraft } from "./pro-transform";
+import {
+  affine,
+  applyMatrix,
+  bounds,
+  dragTransform,
+  mapping,
+  transformHandles,
+} from "@/lib/studio/pro/transform";
 import {
   CROP_HANDLES,
   cropHandlePoint,
@@ -32,6 +41,7 @@ import { isLocked } from "@/lib/studio/pro/operations";
 import { selectionCanvas } from "@/lib/studio/pro/render";
 import { shapePath } from "@/lib/studio/pro/paths";
 export type ProTool =
+  | "transform"
   | "crop"
   | "move"
   | "hand"
@@ -58,6 +68,8 @@ export type ProTool =
   | "poly-lasso";
 type View = { zoom: number; x: number; y: number };
 type Gesture = {
+  transform?: TransformDraft;
+  transformHandle?: string;
   crop?: Crop;
   cropHandle?: CropHandle;
   type: string;
@@ -77,6 +89,10 @@ type Gesture = {
 };
 export function ProCanvas({
   doc,
+  transformDraft,
+  onTransformDraft,
+  onApplyTransform,
+  onCancelTransform,
   cropDraft,
   cropRatio,
   onCropDraft,
@@ -110,6 +126,10 @@ export function ProCanvas({
   onRepair,
 }: {
   doc: ProDocument;
+  transformDraft: TransformDraft | null;
+  onTransformDraft: (d: TransformDraft) => void;
+  onApplyTransform: () => void;
+  onCancelTransform: () => void;
   cropDraft: Crop | null;
   cropRatio: number;
   onCropDraft: (c: Crop) => void;
@@ -172,6 +192,8 @@ export function ProCanvas({
     [cursor, setCursor] = useState<Point | null>(null),
     pathId = useRef(""),
     [context, setContext] = useState(false);
+  const transformActions = useRef({ onApplyTransform, onCancelTransform });
+  transformActions.current = { onApplyTransform, onCancelTransform };
   const cropActions = useRef({ onCancelCrop, onApplyCrop });
   cropActions.current = { onCancelCrop, onApplyCrop };
   const shownCrop = cropDraft ?? doc.crop;
@@ -188,6 +210,14 @@ export function ProCanvas({
   }, [tool]);
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      if (tool === "transform" && e.key === "Escape") {
+        e.preventDefault();
+        transformActions.current.onCancelTransform();
+      }
+      if (tool === "transform" && e.key === "Enter") {
+        e.preventDefault();
+        transformActions.current.onApplyTransform();
+      }
       if (tool === "crop" && e.key === "Escape") {
         e.preventDefault();
         cropActions.current.onCancelCrop();
@@ -340,6 +370,7 @@ export function ProCanvas({
         center: { x: (a!.x + b!.x) / 2, y: (a!.y + b!.y) / 2 },
       };
       if (gesture.current?.crop) onCropDraft(gesture.current.crop);
+      if (gesture.current?.transform) onTransformDraft(gesture.current.transform);
       gesture.current = null;
       setSelectionDraft(null);
       onTransient(null);
@@ -350,6 +381,21 @@ export function ProCanvas({
     setCursor(p);
     if (tool === "hand" || space.current) {
       gesture.current = { ...base, type: "pan" };
+      return;
+    }
+    if (tool === "transform" && transformDraft && selected) {
+      const handles = transformHandles(transformDraft, selected, fit * view.zoom).handles,
+        nearest = handles
+          .map((h) => ({ ...h, distance: Math.hypot(p.x - h.p.x, p.y - h.p.y) * fit * view.zoom }))
+          .sort((a, b) => a.distance - b.distance)[0],
+        handle = nearest && nearest.distance <= 22 ? nearest.id : "move";
+      gesture.current = {
+        ...base,
+        type: "free-transform",
+        transform: structuredClone(transformDraft),
+        transformHandle: handle,
+        id: selected.id,
+      };
       return;
     }
     if (tool === "crop" && cropDraft) {
@@ -636,7 +682,7 @@ export function ProCanvas({
   };
   const update = (
     screen: Point,
-    input?: { pointerType: string; pressure: number },
+    input?: { pointerType: string; pressure: number; shiftKey?: boolean; altKey?: boolean },
   ): ProDocument | null => {
     const g = gesture.current;
     if (!g) return null;
@@ -647,6 +693,52 @@ export function ProCanvas({
         x: g.view.x + screen.x - g.screen.x,
         y: g.view.y + screen.y - g.screen.y,
       });
+      return null;
+    }
+    if (g.type === "free-transform" && g.transform && g.id) {
+      const l = g.doc.layers.find((l) => l.id === g.id)!;
+      let point = p;
+      if (g.transformHandle === "move" && input?.shiftKey) {
+        point =
+          Math.abs(p.x - g.start.x) > Math.abs(p.y - g.start.y)
+            ? { x: p.x, y: g.start.y }
+            : { x: g.start.x, y: p.y };
+      }
+      try {
+        let value = dragTransform(
+          g.transform.value,
+          l.width,
+          l.height,
+          g.transformHandle!,
+          g.start,
+          point,
+          input?.shiftKey ? !g.transform.lock : g.transform.lock,
+          input?.altKey,
+          input?.shiftKey,
+        );
+        if (g.transformHandle === "move" && snapping) {
+          value = { ...value, x: Math.round(value.x / 10) * 10, y: Math.round(value.y / 10) * 10 };
+          const b = bounds(value, l.width, l.height),
+            cx = b.x + b.width / 2,
+            cy = b.y + b.height / 2,
+            threshold = 8 / (fit * view.zoom);
+          if (Math.abs(cx - doc.width / 2) < threshold) value.x += doc.width / 2 - cx;
+          if (Math.abs(cy - doc.height / 2) < threshold) value.y += doc.height / 2 - cy;
+        }
+        onTransformDraft({
+          ...g.transform,
+          value,
+          translation:
+            g.transformHandle === "move"
+              ? {
+                  x: g.transform.translation.x + value.x - g.transform.value.x,
+                  y: g.transform.translation.y + value.y - g.transform.value.y,
+                }
+              : g.transform.translation,
+        });
+      } catch (error) {
+        onError((error as Error).message);
+      }
       return null;
     }
     if (g.type === "crop" && g.crop) {
@@ -705,10 +797,12 @@ export function ProCanvas({
         };
     }
     if (g.type === "resize") {
-      const q = localPoint(p, l);
-      const sx = Math.max(0.01, Math.min(100, (q.x / l.width) * l.transform.scaleX)),
-        sy = Math.max(0.01, Math.min(100, (q.y / l.height) * l.transform.scaleY));
-      next = { ...l, transform: { ...l.transform, scaleX: sx, scaleY: sy } };
+      try {
+        next = { ...l, transform: dragTransform(l.transform, l.width, l.height, "se", g.start, p) };
+      } catch (error) {
+        onError((error as Error).message);
+        return null;
+      }
     }
     if (g.type === "pen" || g.type === "anchor") {
       const a = localPoint(p, l),
@@ -791,7 +885,12 @@ export function ProCanvas({
     for (const sample of samples.length ? samples : [e])
       next = update(
         { x: sample.clientX, y: sample.clientY },
-        { pointerType: sample.pointerType, pressure: sample.pressure },
+        {
+          pointerType: sample.pointerType,
+          pressure: sample.pressure,
+          shiftKey: sample.shiftKey,
+          altKey: sample.altKey,
+        },
       );
     if (next) onTransient(next);
   };
@@ -803,12 +902,15 @@ export function ProCanvas({
     }
     const g = gesture.current;
     if (!g) return;
+    if (cancel && g.transform) onTransformDraft(g.transform);
     if (cancel && g.crop) onCropDraft(g.crop);
     if (!cancel) {
       const next = update(
         { x: e.clientX, y: e.clientY },
         {
           pointerType: e.pointerType,
+          shiftKey: e.shiftKey,
+          altKey: e.altKey,
           pressure:
             e.pointerType === "pen"
               ? (g.stroke?.points.at(-1)?.pressure ?? e.pressure)
@@ -968,7 +1070,11 @@ export function ProCanvas({
             } as React.CSSProperties
           }
         >
-          <canvas ref={canvasRef} aria-label="Pro composite preview" />
+          <canvas
+            ref={canvasRef}
+            aria-label="Pro composite preview"
+            aria-busy={rendering || disabled}
+          />
           {!before && (
             <canvas
               ref={selectionPreview}
@@ -1068,6 +1174,90 @@ export function ProCanvas({
                       />
                     ) : null;
                   })}
+              {transformDraft &&
+                selected &&
+                (() => {
+                  const t = transformDraft.value,
+                    h = transformHandles(transformDraft, selected, fit * view.zoom),
+                    r = 5 / (fit * view.zoom),
+                    m = mapping(t),
+                    curve = (axis: number, v: number) =>
+                      poly(
+                        Array.from({ length: 33 }, (_, i) =>
+                          m.forward({
+                            x: (axis ? v : i / 32) * selected.width,
+                            y: (axis ? i / 32 : v) * selected.height,
+                          }),
+                        ),
+                      ),
+                    cage = t.deform?.points.map((p) =>
+                      applyMatrix(affine(t), { x: p.x * selected.width, y: p.y * selected.height }),
+                    );
+                  return (
+                    <g className="pro-transform-overlay" aria-label="Free Transform handles">
+                      <polygon
+                        className="pro-object-outline"
+                        points={poly([h.points[0]!, h.points[2]!, h.points[4]!, h.points[6]!])}
+                      />
+                      {snapping && gesture.current?.type === "free-transform" && (
+                        <g className="pro-center-guides">
+                          <line x1={doc.width / 2} y1={0} x2={doc.width / 2} y2={doc.height} />
+                          <line x1={0} y1={doc.height / 2} x2={doc.width} y2={doc.height / 2} />
+                        </g>
+                      )}
+                      {transformDraft.mode === "warp" &&
+                        [0, 0.5, 1].flatMap((v) =>
+                          [0, 1].map((axis) => (
+                            <polyline
+                              className="pro-transform-mesh"
+                              key={`${axis}:${v}`}
+                              points={curve(axis, v)}
+                            />
+                          )),
+                        )}
+                      {transformDraft.mode === "perspective" && cage && (
+                        <polygon className="pro-transform-mesh" points={poly(cage)} />
+                      )}
+                      <line
+                        className="pro-handle-line"
+                        x1={h.points[1]!.x}
+                        y1={h.points[1]!.y}
+                        x2={h.rotation.x}
+                        y2={h.rotation.y}
+                      />
+                      {h.handles.map(({ id, p }) => (
+                        <g key={id}>
+                          {id === "pivot" ? (
+                            <g className="pro-transform-pivot">
+                              <circle cx={p.x} cy={p.y} r={r * 1.4} />
+                              <path
+                                d={`M${p.x - r * 2} ${p.y}H${p.x + r * 2}M${p.x} ${p.y - r * 2}V${p.y + r * 2}`}
+                              />
+                            </g>
+                          ) : id === "rotate" ? (
+                            <circle className="pro-anchor" cx={p.x} cy={p.y} r={r} />
+                          ) : (
+                            <rect
+                              className="pro-anchor"
+                              x={p.x - r}
+                              y={p.y - r}
+                              width={r * 2}
+                              height={r * 2}
+                            />
+                          )}
+                          <circle
+                            data-transform-handle={id}
+                            aria-label={`Transform ${id} handle`}
+                            className="pro-transform-hit"
+                            cx={p.x}
+                            cy={p.y}
+                            r={22 / (fit * view.zoom)}
+                          />
+                        </g>
+                      ))}
+                    </g>
+                  );
+                })()}
               {shownCrop &&
                 (() => {
                   const c = shownCrop,
