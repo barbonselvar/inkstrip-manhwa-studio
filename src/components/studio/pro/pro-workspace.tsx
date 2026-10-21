@@ -1643,6 +1643,7 @@ export default function ProWorkspace({
                 <div className="pro-panel-content">
                   {tab === "properties" && (
                     <ProProperties
+                      documentSize={doc ? { width: doc.width, height: doc.height } : undefined}
                       selected={
                         active && doc
                           ? { ...active, locked: isLocked(doc, active.id) || !!transformDraft }

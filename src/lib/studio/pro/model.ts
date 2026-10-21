@@ -2,6 +2,7 @@ import { mapping, validateTransform, type Deformation } from "./transform.ts";
 import { validateGeometry, type Crop, type ImageSize } from "./geometry.ts";
 import type { Adjustments } from "../editor/adjustments";
 import { NEUTRAL, validateAdjustments } from "../editor/adjustments.ts";
+import { validateColor, type ColorAdjustments } from "./color.ts";
 export type Point = { x: number; y: number };
 export type Transform = {
   x: number;
@@ -110,6 +111,9 @@ export type Layer = {
   assetId?: string;
   strokes: Stroke[];
   adjustments: Adjustments;
+  /** Optional additive v1 color pipeline; absent in older native documents. */
+  color?: ColorAdjustments;
+  colorSelection?: Selection;
   hue: number;
   black: number;
   white: number;
@@ -431,9 +435,13 @@ export function validateDocument(d: ProDocument) {
       throw new Error("Invalid layer transform.");
     if (!l.adjustments) throw new Error("Layer adjustments are missing.");
     validateAdjustments(l.adjustments);
+    if (l.color !== undefined) validateColor(l.color);
+    if (l.colorSelection !== undefined) validateSelection(l.colorSelection);
     if (
       l.kind === "group" &&
       (l.mask ||
+        l.color ||
+        l.colorSelection ||
         l.transform.x ||
         l.transform.y ||
         l.transform.rotation ||

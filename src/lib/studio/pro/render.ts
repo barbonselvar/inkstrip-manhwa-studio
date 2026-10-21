@@ -9,6 +9,7 @@ import {
 } from "./model";
 import { shapePath } from "./paths";
 import { applyAdjustments, hasAdjustments } from "../editor/adjustments";
+import { colorPixels } from "./color";
 import { tonePixels } from "./pixels";
 import { cloneSourceMatrix } from "./operations";
 import { matchRepairColor } from "./repair";
@@ -361,6 +362,7 @@ async function surface(
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (
+    l.color ||
     hasAdjustments(l.adjustments) ||
     l.hue ||
     l.black ||
@@ -371,6 +373,26 @@ async function surface(
     const image = ctx.getImageData(0, 0, out.width, out.height);
     const pixels = applyAdjustments(image.data, out.width, out.height, l.adjustments, scale);
     image.data.set(tonePixels(pixels, l));
+    if (l.color) {
+      if (l.colorSelection) {
+        const before = new Uint8ClampedArray(image.data),
+          mask = selectionCanvas(l.colorSelection, l.width, l.height, scale),
+          coverage = mask.getContext("2d")!.getImageData(0, 0, mask.width, mask.height).data;
+        colorPixels(image.data, l.color);
+        for (let i = 0; i < image.data.length; i += 4) {
+          const w = coverage[i + 3]! / 255,
+            a = before[i + 3]! * (1 - w) + image.data[i + 3]! * w;
+          for (let c = 0; c < 3; c++)
+            image.data[i + c] = a
+              ? (before[i + c]! * before[i + 3]! * (1 - w) +
+                  image.data[i + c]! * image.data[i + 3]! * w) /
+                a
+              : 0;
+          image.data[i + 3] = a;
+        }
+        mask.width = mask.height = 1;
+      } else colorPixels(image.data, l.color);
+    }
     ctx.putImageData(image, 0, 0);
   }
   if (l.mask?.enabled) {

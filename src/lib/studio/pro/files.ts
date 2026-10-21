@@ -93,6 +93,7 @@ export function vectorSvg(d: ProDocument): string {
   for (const l of included)
     if (
       l.mask ||
+      (l.color && Object.keys(l.color).length > 0) ||
       l.blend !== "source-over" ||
       Object.values(l.adjustments).some((n) => n !== 0) ||
       l.hue ||

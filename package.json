@@ -32,7 +32,8 @@
     "test:layers:browser": "node --experimental-strip-types scripts/layers-browser-check.mjs",
     "test:repair:browser": "node --experimental-strip-types scripts/repair-browser-check.mjs",
     "test:geometry:browser": "node --experimental-strip-types scripts/geometry-browser-check.mjs",
-    "test:transform:browser": "node --experimental-strip-types scripts/transform-browser-check.mjs"
+    "test:transform:browser": "node --experimental-strip-types scripts/transform-browser-check.mjs",
+    "test:color:browser": "node --experimental-strip-types scripts/color-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

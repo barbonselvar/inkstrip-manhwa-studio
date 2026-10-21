@@ -1,3 +1,4 @@
+import { ProColor } from "./pro-color";
 import type { Layer, Selection, Stroke } from "@/lib/studio/pro/model";
 import { Button } from "@/components/ui/button";
 import { ADJUSTMENT_FIELDS } from "@/lib/studio/editor/adjustments";
@@ -41,6 +42,7 @@ export function ProNumber({
 }
 export function ProProperties({
   selected,
+  documentSize,
   onPatch,
   selection,
   onSelection,
@@ -59,6 +61,7 @@ export function ProProperties({
   setMaskMode,
 }: {
   selected?: Layer;
+  documentSize?: { width: number; height: number };
   onPatch: (p: Partial<Layer>, group?: string) => void;
   selection: Selection;
   onSelection: (s: Selection) => void;
@@ -578,6 +581,14 @@ export function ProProperties({
                   Black & white
                 </Button>
               </ToolSection>
+            )}
+            {selected.kind !== "group" && (
+              <ProColor
+                layer={selected}
+                selection={selection}
+                documentSize={documentSize}
+                onPatch={onPatch}
+              />
             )}
             {selected.kind !== "group" && (
               <ToolSection title="Layer mask">

@@ -119,7 +119,7 @@ Preview completion is tracked against the document actually drawn and exposed
 through `aria-busy`, so layer comparisons wait for the current render instead
 of a fixed delay. Playwright was used because agent-browser is unavailable.
 
-## Remaining limits and recommended next work
+## B2 milestone limits (historical; updated in the color increment)
 
 This is an initial professional transform implementation, not Adobe feature
 parity. Warp remains a bounded 3×3 quadratic surface; arbitrary mesh density,
@@ -140,3 +140,8 @@ not the prior undo timeline. The next transform increment should add group/multi
 object transactions and higher-quality projective minification, then broader
 meshes with explicit fold handling. Phase C non-destructive color/effects remain
 separate future work.
+
+
+The subsequent [group/projective/color increment](PRO_COLOR_ENGINE.md) adds affine
+group/multi-object transactions and multilevel projective minification. Its scope
+and remaining-limit descriptions supersede those two missing items above.
