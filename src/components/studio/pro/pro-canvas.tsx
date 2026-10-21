@@ -336,7 +336,8 @@ export function ProCanvas({
     const ctx = canvasRef.current?.getContext("2d");
     const visible = visibleLayerIds(doc);
     return [...doc.layers].reverse().find((l) => {
-      if (!visible.has(l.id) || l.locked || l.kind === "group") return false;
+      if (!visible.has(l.id) || l.locked || l.kind === "group" || l.kind === "adjustment")
+        return false;
       let parent = l.parentId;
       while (parent) {
         const g = doc.layers.find((x) => x.id === parent);

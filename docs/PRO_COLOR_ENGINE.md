@@ -126,3 +126,8 @@ performance remains unverified. Dev/production desktop/mobile smoke and screensh
 review found clean consoles, no overflow and no baseline divergence. The generic
 canvas/game-card branding warnings are unchanged. Playwright was used because
 agent-browser is unavailable.
+
+
+The subsequent [Phase C completion](PHASE_C_LAYERS.md) implements the standalone
+gradient layers, independent adjustment layers and seven editable effects listed
+as missing at this earlier milestone. Its current contracts supersede that scope.
