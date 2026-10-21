@@ -82,9 +82,9 @@ export function ProProperties({
         <ToolSection title="Clone & Healing source" defaultOpen={false}>
           <p className="pro-help">
             Clone Stamp copies the sampled pixels. Healing Brush uses the same full-resolution
-            texture sample and color-matches it to the target patch with a traditional local
-            pixel algorithm; it does not use generative AI. Desktop: hold Alt/Option and click a
-            source point. Touch: arm source selection, then tap the canvas.
+            texture sample and blends its tone using the undamaged surrounding pixels; it does not
+            use generative AI. Desktop: hold Alt/Option and click a source point. Touch: arm source
+            selection, then tap the canvas.
           </p>
           <Button variant={cloneSampleArmed ? "secondary" : "ghost"} onClick={onArmCloneSample}>
             {cloneSampleArmed ? "Tap canvas to set source" : "Set sample source"}
@@ -109,6 +109,28 @@ export function ProProperties({
             composite is embedded in the native project.
           </p>
         </ToolSection>
+        <p className="pro-help">
+          Spot Healing automatically searches nearby opaque texture. Patch Repair: draw a
+          destination rectangle, then tap the matching source region center. Hardness controls
+          patch-edge softness. Repairs use traditional pixel processing, with the active selection
+          and target layer mask preserved.
+        </p>
+        <label className="pro-check">
+          <input
+            type="checkbox"
+            aria-label="Pen pressure size"
+            checked={brush.sizePressure ?? false}
+            onChange={(e) => onBrush({ sizePressure: e.target.checked })}
+          />{" "}
+          Pen pressure controls size
+        </label>
+        <ProNumber
+          label="Stroke smoothing"
+          value={(brush.smoothing ?? 0) * 100}
+          min={0}
+          max={95}
+          onChange={(n) => onBrush({ smoothing: n / 100 })}
+        />
         <label className="pro-field">
           Brush preset
           <select

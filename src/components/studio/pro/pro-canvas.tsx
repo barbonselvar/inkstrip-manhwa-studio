@@ -1,3 +1,5 @@
+import { brushPoint } from "@/lib/studio/pro/brush-dynamics";
+import { patchSelection, type RepairRequest, type RepairKind } from "@/lib/studio/pro/repair";
 import { appendSelection } from "@/lib/studio/pro/selection";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointer } from "react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,8 @@ export type ProTool =
   | "pencil"
   | "clone"
   | "heal"
+  | "spot"
+  | "patch"
   | "eraser"
   | "eyedropper"
   | "rectangle"
@@ -50,6 +54,7 @@ type Gesture = {
   id?: string;
   ids?: string[];
   stroke?: Stroke;
+  repairKind?: RepairKind;
   region?: Region;
   index?: number;
   part?: string;
@@ -84,6 +89,7 @@ export function ProCanvas({
   onColorSelect,
   onCloneSample,
   onCloneAdvance,
+  onRepair,
 }: {
   doc: ProDocument;
   activeId: string;
@@ -111,6 +117,7 @@ export function ProCanvas({
   onColorSelect: (p: Point) => void;
   onCloneSample: (p: Point) => void;
   onCloneAdvance: (delta: Point) => void;
+  onRepair: (request: RepairRequest) => void;
 }) {
   const viewport = useRef<HTMLDivElement>(null),
     board = useRef<HTMLDivElement>(null),
@@ -129,6 +136,8 @@ export function ProCanvas({
     }
   }, []);
   useEffect(() => () => observer.current?.disconnect(), []);
+  const [patchDestination, setPatchDestination] = useState<Region | null>(null);
+  const [patchPreview, setPatchPreview] = useState<Region | null>(null);
   const [selectionDraft, setSelectionDraft] = useState<Selection | null>(null);
   const visibleSelection = selectionDraft ?? selection;
   const [view, setView] = useState<View>({ zoom: 1, x: 0, y: 0 }),
@@ -148,6 +157,8 @@ export function ProCanvas({
   useEffect(() => {
     pathId.current = "";
     setPolygon([]);
+    setPatchDestination(null);
+    setPatchPreview(null);
   }, [tool]);
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -157,6 +168,8 @@ export function ProCanvas({
         space.current = true;
       }
       if (e.key === "Escape") {
+        setPatchDestination(null);
+        setPatchPreview(null);
         setSelectionDraft(null);
         gesture.current = null;
         onTransient(null);
@@ -326,6 +339,63 @@ export function ProCanvas({
       onCloneSample(p);
       return;
     }
+    if (tool === "patch") {
+      if (!selected || selected.kind !== "paint" || isLocked(doc, selected.id)) {
+        onError("Select an unlocked paint layer for Patch Repair.");
+        return;
+      }
+      gesture.current = {
+        ...base,
+        type: patchDestination ? "patch-source" : "patch-destination",
+        id: selected.id,
+        region: patchDestination ?? { kind: "rectangle", operation: "add", points: [p, p] },
+      };
+      return;
+    }
+    if (tool === "spot" || tool === "heal") {
+      if (!selected || selected.kind !== "paint" || isLocked(doc, selected.id) || maskMode) return;
+      if (tool === "heal" && !cloneSource) {
+        onError("Set a sample source before using Healing Brush.");
+        return;
+      }
+      gesture.current = {
+        ...base,
+        type: "repair",
+        repairKind: tool,
+        id: selected.id,
+        stroke: {
+          ...brush,
+          erase: false,
+          points: [
+            brushPoint(
+              undefined,
+              localPoint(p, selected),
+              e.pointerType,
+              e.pressure,
+              brush.sizePressure ?? false,
+              0,
+            ),
+          ],
+          clip:
+            selection.regions.length || selection.inverted
+              ? toLocalSelection(selection, selected, { width: doc.width, height: doc.height })
+              : undefined,
+          ...(tool === "heal" && cloneSource
+            ? {
+                clone: {
+                  assetId: cloneSource.assetId,
+                  width: cloneSource.width,
+                  height: cloneSource.height,
+                  source: cloneSource.point,
+                  destination: p,
+                  mode: "heal" as const,
+                },
+              }
+            : {}),
+        },
+      };
+      return;
+    }
     if (tool === "poly-lasso") {
       setPolygon((a) => [...a, p]);
       return;
@@ -362,14 +432,23 @@ export function ProCanvas({
         stroke: {
           ...brush,
           ...(tool === "pencil" ? { hardness: 1, tip: "square" as const } : {}),
-          clip: maskMode ? undefined : clip,
+          clip,
           erase: maskMode && selected.mask?.inverted ? tool !== "eraser" : tool === "eraser",
-          points: [localPoint(p, selected)],
+          points: [
+            brushPoint(
+              undefined,
+              localPoint(p, selected),
+              e.pointerType,
+              e.pressure,
+              brush.sizePressure ?? false,
+              0,
+            ),
+          ],
         },
       };
       return;
     }
-    if (tool === "clone" || tool === "heal") {
+    if (tool === "clone") {
       if (
         !cloneSource ||
         !selected ||
@@ -384,6 +463,7 @@ export function ProCanvas({
         height: cloneSource.height,
         source: cloneSource.point,
         destination: p,
+        targetTransform: { ...selected.transform },
       };
       gesture.current = {
         ...base,
@@ -392,12 +472,21 @@ export function ProCanvas({
         stroke: {
           ...brush,
           erase: false,
-          clone: { ...clone, mode: tool === "heal" ? "heal" : "clone" },
+          clone: { ...clone, mode: "clone" },
           clip:
             selection.regions.length || selection.inverted
               ? toLocalSelection(selection, selected, { width: doc.width, height: doc.height })
               : undefined,
-          points: [localPoint(p, selected)],
+          points: [
+            brushPoint(
+              undefined,
+              localPoint(p, selected),
+              e.pointerType,
+              e.pressure,
+              brush.sizePressure ?? false,
+              0,
+            ),
+          ],
         },
       };
       return;
@@ -484,7 +573,10 @@ export function ProCanvas({
       gesture.current = { ...base, type: "move", id: chosen.id, ids };
     } else onSelect("");
   };
-  const update = (screen: Point): ProDocument | null => {
+  const update = (
+    screen: Point,
+    input?: { pointerType: string; pressure: number },
+  ): ProDocument | null => {
     const g = gesture.current;
     if (!g) return null;
     const p = docPoint(screen);
@@ -496,6 +588,12 @@ export function ProCanvas({
       });
       return null;
     }
+    if (g.type === "patch-destination") {
+      g.region = { ...g.region!, points: [g.start, p] };
+      setPatchPreview(g.region);
+      return null;
+    }
+    if (g.type === "patch-source") return null;
     if (g.type === "selection") {
       const r = g.region!;
       g.region = { ...r, points: r.kind === "lasso" ? [...r.points, p] : [g.start, p] };
@@ -569,9 +667,22 @@ export function ProCanvas({
       }
       next = { ...l, anchors };
     }
-    if (g.type === "paint") {
-      const s = g.stroke!;
-      s.points.push(localPoint(p, l));
+    if (g.type === "paint" || g.type === "repair") {
+      const s = g.stroke!,
+        previous = s.points.at(-1)!,
+        q = localPoint(p, l);
+      if (Math.hypot(q.x - previous.x, q.y - previous.y) > 0.001)
+        s.points.push(
+          brushPoint(
+            previous,
+            q,
+            input?.pointerType ?? "mouse",
+            input?.pressure ?? 1,
+            s.sizePressure ?? false,
+            s.smoothing ?? 0,
+          ),
+        );
+      if (g.type === "repair") return null;
       next = maskMode
         ? {
             ...l,
@@ -607,7 +718,16 @@ export function ProCanvas({
       });
       return;
     }
-    const next = update(screen);
+    const samples =
+      gesture.current?.type === "paint" || gesture.current?.type === "repair"
+        ? (e.nativeEvent.getCoalescedEvents?.() ?? [])
+        : [];
+    let next: ProDocument | null = null;
+    for (const sample of samples.length ? samples : [e])
+      next = update(
+        { x: sample.clientX, y: sample.clientY },
+        { pointerType: sample.pointerType, pressure: sample.pressure },
+      );
     if (next) onTransient(next);
   };
   const end = (e: ReactPointer<HTMLDivElement>, cancel = false) => {
@@ -619,7 +739,59 @@ export function ProCanvas({
     const g = gesture.current;
     if (!g) return;
     if (!cancel) {
-      const next = update({ x: e.clientX, y: e.clientY });
+      const next = update(
+        { x: e.clientX, y: e.clientY },
+        {
+          pointerType: e.pointerType,
+          pressure:
+            e.pointerType === "pen"
+              ? (g.stroke?.points.at(-1)?.pressure ?? e.pressure)
+              : e.pressure,
+        },
+      );
+      if (g.type === "repair" && g.stroke && g.id)
+        onRepair({ kind: g.repairKind!, layerId: g.id, stroke: g.stroke });
+      if (g.type === "patch-destination" && g.region) {
+        const [a, b] = g.region.points;
+        if (Math.abs(a!.x - b!.x) >= 2 && Math.abs(a!.y - b!.y) >= 2) setPatchDestination(g.region);
+        else onError("Draw a destination at least two pixels wide and high.");
+        setPatchPreview(null);
+      }
+      if (g.type === "patch-source" && g.region && g.id) {
+        const target = g.doc.layers.find((l) => l.id === g.id)!,
+          a = g.region.points[0]!,
+          b = g.region.points[1]!,
+          corners = [a, { x: b.x, y: a.y }, b, { x: a.x, y: b.y }],
+          feather =
+            (1 - brush.hardness) * Math.min(Math.abs(b.x - a.x), Math.abs(b.y - a.y)) * 0.25;
+        onRepair({
+          kind: "patch",
+          layerId: g.id,
+          source: docPoint({ x: e.clientX, y: e.clientY }),
+          stroke: {
+            ...brush,
+            erase: false,
+            points: corners.map((p) => localPoint(p, target)),
+            patch: toLocalSelection(patchSelection(a, b, Math.min(100, feather)), target, {
+              width: doc.width,
+              height: doc.height,
+            }),
+            clip:
+              selection.regions.length || selection.inverted
+                ? toLocalSelection(selection, target, { width: doc.width, height: doc.height })
+                : undefined,
+            clone: {
+              assetId: "pending-repair",
+              width: 1,
+              height: 1,
+              source: { x: 0, y: 0 },
+              destination: a,
+              mode: "clone",
+            },
+          },
+        });
+        setPatchDestination(null);
+      }
       if (next)
         onCommit(
           next,
@@ -648,6 +820,7 @@ export function ProCanvas({
       if (g.type === "selection" && g.region) onSelection(appendSelection(g.selection, g.region));
     }
     setSelectionDraft(null);
+    setPatchPreview(null);
     gesture.current = null;
     onTransient(null);
   };
@@ -683,7 +856,13 @@ export function ProCanvas({
           </Button>
         </div>
         <span role="status">
-          {rendering ? "Rendering preview…" : `${doc.width} × ${doc.height} px`}
+          {tool === "patch"
+            ? patchDestination
+              ? "Tap the source region center · Esc cancels"
+              : "Draw the destination rectangle"
+            : rendering
+              ? "Rendering preview…"
+              : `${doc.width} × ${doc.height} px`}
         </span>
       </div>
       <div
@@ -737,7 +916,7 @@ export function ProCanvas({
               viewBox={`0 0 ${doc.width} ${doc.height}`}
               aria-label="Pro selection overlays"
             >
-              {cursor && ["brush", "pencil", "eraser", "clone", "heal"].includes(tool) ? (
+              {cursor && ["brush", "pencil", "eraser", "clone", "heal", "spot"].includes(tool) ? (
                 <circle
                   cx={cursor.x}
                   cy={cursor.y}
@@ -745,6 +924,38 @@ export function ProCanvas({
                   className="pro-brush-cursor"
                 />
               ) : null}
+              {tool === "patch" &&
+                (patchPreview ?? patchDestination) &&
+                (() => {
+                  const r = (patchPreview ?? patchDestination)!,
+                    a = r.points[0]!,
+                    b = r.points[1]!,
+                    w = Math.abs(b.x - a.x),
+                    h = Math.abs(b.y - a.y);
+                  return (
+                    <g className="pro-patch-preview">
+                      <rect x={Math.min(a.x, b.x)} y={Math.min(a.y, b.y)} width={w} height={h} />
+                      {patchDestination && cursor && (
+                        <rect
+                          className="pro-patch-source"
+                          x={cursor.x - w / 2}
+                          y={cursor.y - h / 2}
+                          width={w}
+                          height={h}
+                        />
+                      )}
+                    </g>
+                  );
+                })()}
+              {gesture.current?.type === "repair" && selected && gesture.current.stroke && (
+                <polyline
+                  className="pro-repair-preview"
+                  points={poly(gesture.current.stroke.points.map((p) => worldPoint(p, selected)))}
+                  strokeWidth={
+                    brush.size * Math.max(selected.transform.scaleX, selected.transform.scaleY)
+                  }
+                />
+              )}
               {(tool === "clone" || tool === "heal") && cloneSource ? (
                 <g className="pro-clone-source-marker" aria-label="Clone Stamp source point">
                   <circle

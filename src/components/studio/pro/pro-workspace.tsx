@@ -1,3 +1,4 @@
+import type { RepairRequest } from "@/lib/studio/pro/repair";
 import { appendSelection } from "@/lib/studio/pro/selection";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -27,6 +28,7 @@ import {
   Save,
   Maximize2,
   Sparkles,
+  Bandage,
   MessageCircle,
   PanelRightClose,
   PanelRightOpen,
@@ -84,6 +86,8 @@ const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush 
   { id: "pencil", name: "Pencil", key: "N", Icon: Pencil },
   { id: "clone", name: "Clone Stamp", key: "S", Icon: Stamp },
   { id: "heal", name: "Healing Brush", key: "J", Icon: Brush },
+  { id: "spot", name: "Spot Healing Brush", key: "", Icon: Bandage },
+  { id: "patch", name: "Patch Repair", key: "", Icon: ScanLine },
   { id: "eraser", name: "Eraser", key: "E", Icon: Eraser },
   { id: "eyedropper", name: "Eyedropper", key: "I", Icon: Pipette },
   { id: "select-rect", name: "Rectangle selection", key: "M", Icon: ScanLine },
@@ -107,6 +111,8 @@ const RASTER_TOOL_IDS = new Set<ProTool>([
   "pencil",
   "clone",
   "heal",
+  "spot",
+  "patch",
   "eraser",
   "eyedropper",
   "select-rect",
@@ -195,6 +201,8 @@ export default function ProWorkspace({
       opacity: 1,
       flow: 1,
       color: "#a4efd6",
+      sizePressure: true,
+      smoothing: 0,
     }),
     [brushPresets, setBrushPresets] = useState<BrushPreset[]>(() =>
       loadBrushPresets(browserBrushStorage()),
@@ -889,12 +897,12 @@ export default function ProWorkspace({
   };
   const chooseTool = (id: ProTool) => {
     if (
-      (id === "brush" || id === "pencil" || id === "eraser" || id === "clone" || id === "heal") &&
-      !maskMode &&
+      ["brush", "pencil", "eraser", "clone", "heal", "spot", "patch"].includes(id) &&
+      (!maskMode || ["clone", "heal", "spot", "patch"].includes(id)) &&
       active?.kind !== "paint"
     )
       add("paint");
-    if (id === "clone" || id === "heal") setMaskMode(false);
+    if (["clone", "heal", "spot", "patch"].includes(id)) setMaskMode(false);
     setTool(id);
     setBefore(false);
   };
@@ -934,6 +942,52 @@ export default function ProWorkspace({
     } finally {
       busyRef.current = false;
       setBusy(false);
+      setProgress("");
+    }
+  };
+  const repair = async (request: RepairRequest) => {
+    const document = historyRef.current?.present.doc,
+      worker = renderer.current;
+    if (!document || !worker || busyRef.current || !sessionRef.current) return;
+    const run = ++operationRun.current;
+    busyRef.current = true;
+    setBusy(true);
+    ++generation.current;
+    setCancellable(true);
+    setError("");
+    setProgress("Analyzing local texture at native resolution…");
+    try {
+      const result = await worker.repair(document, maxArea, request);
+      if (!alive.current || run !== operationRun.current) return;
+      if (!result.blob || !result.document || !result.assetId)
+        throw new Error("Repair returned no texture. Nothing was changed.");
+      if (historyRef.current?.present.doc !== document)
+        throw new Error("Document changed during repair. Retry the stroke.");
+      const next = {
+        ...sessionRef.current,
+        document: result.document,
+        assets: { ...sessionRef.current.assets, [result.assetId]: result.blob },
+      };
+      validateAssets(next);
+      sessionRef.current = next;
+      setSession(next);
+      busyRef.current = false;
+      commit(
+        result.document,
+        request.kind === "spot"
+          ? "Spot Healing Brush"
+          : request.kind === "patch"
+            ? "Patch Repair"
+            : "Spatial Healing Brush",
+      );
+      setAssetEpoch((n) => n + 1);
+      setStatus("Repair complete at native resolution. Undo restores the previous artwork.");
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") setError(storageMessage(e));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+      setCancellable(false);
       setProgress("");
     }
   };
@@ -1006,7 +1060,7 @@ export default function ProWorkspace({
           style={{ "--pro-panel-width": `${panelWidth}px` } as React.CSSProperties}
           onEscapeKeyDown={(e) => {
             e.preventDefault();
-            if (!busyRef.current) void close();
+            if (!busyRef.current && tool !== "patch") void close();
           }}
           onBlurCapture={() => {
             const h = historyRef.current;
@@ -1316,6 +1370,7 @@ export default function ProWorkspace({
                 cloneSampleArmed={cloneSampleArmed}
                 onColorSelect={(point) => void sampleSelection(point)}
                 onCloneSample={(point) => void captureCloneSource(point)}
+                onRepair={(request) => void repair(request)}
                 onCloneAdvance={(delta) =>
                   setCloneSource((source) =>
                     source && source.aligned
