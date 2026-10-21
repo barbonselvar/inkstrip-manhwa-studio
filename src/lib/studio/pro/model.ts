@@ -19,7 +19,12 @@ export type Transform = {
   pivot?: Point;
   deform?: Deformation;
 };
-export type Anchor = Point & { incoming?: Point; outgoing?: Point };
+export type Anchor = Point & {
+  incoming?: Point;
+  outgoing?: Point;
+  /** Omitted in older documents: independently editable corner handles. */
+  mode?: "corner" | "smooth" | "symmetric";
+};
 export type Region = {
   kind: "rectangle" | "ellipse" | "lasso" | "pixels";
   inverted?: boolean;
@@ -521,7 +526,12 @@ export function validateDocument(d: ProDocument) {
       }
     }
     for (const a of l.anchors)
-      if (!point(a) || (a.incoming && !point(a.incoming)) || (a.outgoing && !point(a.outgoing)))
+      if (
+        !point(a) ||
+        (a.incoming && !point(a.incoming)) ||
+        (a.outgoing && !point(a.outgoing)) ||
+        (a.mode !== undefined && !["corner", "smooth", "symmetric"].includes(a.mode))
+      )
         throw new Error("Invalid path anchor.");
     if (
       ![

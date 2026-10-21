@@ -142,7 +142,15 @@ export function splitAnchorSegment(
     [left, right] = splitCubic(anchorCurve(a, b), t);
   a.outgoing = left[1];
   b.incoming = right[2];
-  anchors.splice(index + 1, 0, { ...left[3], incoming: left[2], outgoing: right[1] });
+  // Subdivision shortens just one side of adjacent symmetric anchors.
+  if (a.mode === "symmetric") a.mode = "smooth";
+  if (b.mode === "symmetric") b.mode = "smooth";
+  anchors.splice(index + 1, 0, {
+    ...left[3],
+    incoming: left[2],
+    outgoing: right[1],
+    mode: "smooth",
+  });
   const result = { ...doc, layers: doc.layers.map((n) => (n.id === id ? { ...n, anchors } : n)) };
   validateDocument(result);
   return result;
