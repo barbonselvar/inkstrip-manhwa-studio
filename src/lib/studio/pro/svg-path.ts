@@ -170,8 +170,10 @@ export function parseSvgPath(
           }
           const ux = xp / rx,
             uy = yp / ry,
-            denominator = ux * ux + uy * uy,
-            factor =
+            denominator = ux * ux + uy * uy;
+          if (![rx, ry, scale, denominator].every(Number.isFinite) || denominator === 0)
+            throw new Error("SVG arc exceeds floating-point precision limits.");
+          const factor =
               (large === sweep ? -1 : 1) * Math.sqrt(Math.max(0, (1 - denominator) / denominator)),
             cxp = factor * rx * uy,
             cyp = -factor * ry * ux,
@@ -181,6 +183,8 @@ export function parseSvgPath(
             b = { x: (-xp - cxp) / rx, y: (-yp - cyp) / ry },
             theta = Math.atan2(a.y, a.x);
           let delta = Math.atan2(a.x * b.y - a.y * b.x, a.x * b.x + a.y * b.y);
+          if (![cx, cy, theta, delta].every(Number.isFinite))
+            throw new Error("SVG arc exceeds floating-point precision limits.");
           if (!sweep && delta > 0) delta -= 2 * Math.PI;
           if (sweep && delta < 0) delta += 2 * Math.PI;
           let n = Math.max(1, Math.ceil(Math.abs(delta) / (Math.PI / 2)));

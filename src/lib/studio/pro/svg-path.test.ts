@@ -136,6 +136,8 @@ test("malformed, oversized, nonfinite and exhausted conversion budgets fail expl
     "M0 0X1 2",
     "M0 0L1e999 0",
     "M0 0A1 1 0 2 0 2 2",
+    "M0 0A1e-310 1e-310 0 0 1 1 0",
+    "M0 0A1 1 0 0 1 1e-200 0",
     "M0 0L,1 2",
     "M0 0,",
     "M0 0L1,,2",
