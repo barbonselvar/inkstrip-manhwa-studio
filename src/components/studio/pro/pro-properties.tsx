@@ -1,4 +1,5 @@
 import { ProAppearance } from "./pro-appearance";
+import type { ReactNode } from "react";
 import { ProColor } from "./pro-color";
 import type { Layer, Selection, Stroke } from "@/lib/studio/pro/model";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ export function ProNumber({
   min = -100000,
   max = 100000,
   step = 1,
+  disabled = false,
   onChange,
 }: {
   label: string;
@@ -19,6 +21,7 @@ export function ProNumber({
   min?: number;
   max?: number;
   step?: number;
+  disabled?: boolean;
   onChange: (n: number) => void;
 }) {
   return (
@@ -27,6 +30,7 @@ export function ProNumber({
       <input
         className="field"
         type="number"
+        disabled={disabled}
         aria-label={label}
         value={Math.round(value * 1000) / 1000}
         min={min}
@@ -42,6 +46,7 @@ export function ProNumber({
   );
 }
 export function ProProperties({
+  anchorControls,
   selected,
   documentSize,
   onPatch,
@@ -61,6 +66,7 @@ export function ProProperties({
   maskMode,
   setMaskMode,
 }: {
+  anchorControls?: ReactNode;
   selected?: Layer;
   documentSize?: { width: number; height: number };
   onPatch: (p: Partial<Layer>, group?: string) => void;
@@ -341,57 +347,65 @@ export function ProProperties({
             )}
             {selected.kind === "shape" && (
               <ToolSection title="Vector appearance" defaultOpen>
-                <label className="pro-field">
-                  Fill
-                  <input
-                    type="color"
-                    aria-label="Object fill"
-                    value={selected.fill === "transparent" ? "#f3efe6" : selected.fill}
-                    onChange={(e) => onPatch({ fill: e.target.value }, "fill")}
+                <fieldset disabled={selected.appearance !== undefined}>
+                  {selected.appearance !== undefined && (
+                    <p className="pro-help">
+                      This object uses an editable Appearance stack. Edit its paints in the
+                      Appearance panel; Reset there restores basic styling.
+                    </p>
+                  )}
+                  <label className="pro-field">
+                    Fill
+                    <input
+                      type="color"
+                      aria-label="Object fill"
+                      value={selected.fill === "transparent" ? "#f3efe6" : selected.fill}
+                      onChange={(e) => onPatch({ fill: e.target.value }, "fill")}
+                    />
+                  </label>
+                  <label className="pro-check">
+                    <input
+                      type="checkbox"
+                      checked={selected.fill === "transparent"}
+                      onChange={(e) =>
+                        onPatch({ fill: e.target.checked ? "transparent" : "#f3efe6" })
+                      }
+                    />{" "}
+                    No fill
+                  </label>
+                  <label className="pro-field">
+                    Stroke
+                    <input
+                      type="color"
+                      aria-label="Object stroke"
+                      value={selected.stroke === "transparent" ? "#172420" : selected.stroke}
+                      onChange={(e) => onPatch({ stroke: e.target.value }, "stroke")}
+                    />
+                  </label>
+                  <ProNumber
+                    label="Stroke width"
+                    value={selected.strokeWidth}
+                    min={0}
+                    max={100}
+                    onChange={(n) => onPatch({ strokeWidth: n }, "stroke")}
                   />
-                </label>
-                <label className="pro-check">
-                  <input
-                    type="checkbox"
-                    checked={selected.fill === "transparent"}
-                    onChange={(e) =>
-                      onPatch({ fill: e.target.checked ? "transparent" : "#f3efe6" })
-                    }
-                  />{" "}
-                  No fill
-                </label>
-                <label className="pro-field">
-                  Stroke
-                  <input
-                    type="color"
-                    aria-label="Object stroke"
-                    value={selected.stroke === "transparent" ? "#172420" : selected.stroke}
-                    onChange={(e) => onPatch({ stroke: e.target.value }, "stroke")}
-                  />
-                </label>
-                <ProNumber
-                  label="Stroke width"
-                  value={selected.strokeWidth}
-                  min={0}
-                  max={100}
-                  onChange={(n) => onPatch({ strokeWidth: n }, "stroke")}
-                />
+                </fieldset>
                 {selected.shape === "path" && (
                   <>
-                    <label className="pro-check">
-                      <input
-                        type="checkbox"
-                        aria-label="Close Bézier path"
-                        checked={selected.closed}
-                        onChange={(e) => onPatch({ closed: e.target.checked })}
-                      />{" "}
-                      Closed path
+                    <label className="pro-field">
+                      Path fill rule
+                      <select
+                        className="field"
+                        aria-label="Path fill rule"
+                        disabled={selected.appearance !== undefined}
+                        value={selected.fillRule ?? "nonzero"}
+                        onChange={(e) => onPatch({ fillRule: e.target.value as Layer["fillRule"] })}
+                      >
+                        <option value="nonzero">Non-zero winding</option>
+                        <option value="evenodd">Even-odd · alternating holes</option>
+                      </select>
                     </label>
-                    <p className="pro-help">
-                      Pen: click anchors, drag for curve handles. Direct select: drag anchors or
-                      handles. Imported SVG paths retain their geometry; native anchors are
-                      editable.
-                    </p>
+                    {anchorControls}
                   </>
                 )}
                 {["bubble", "thought"].includes(selected.shape) && (
@@ -416,6 +430,7 @@ export function ProProperties({
             )}
             {selected.kind === "text" && (
               <ToolSection title="Editable typography" defaultOpen>
+                {selected.textPath && anchorControls}
                 <label className="pro-field">
                   Text
                   <textarea
@@ -458,6 +473,7 @@ export function ProProperties({
                   />
                   <ProNumber
                     label="Text line height"
+                    disabled={!!selected.textPath}
                     value={selected.lineHeight}
                     min={0.5}
                     max={3}
@@ -486,11 +502,17 @@ export function ProProperties({
                     ))}
                   </select>
                 </label>
+                {selected.appearance !== undefined && (
+                  <p className="pro-help">
+                    Edit this text object’s paints in Vector Studio’s Appearance panel.
+                  </p>
+                )}
                 <label className="pro-field">
                   Text fill
                   <input
                     type="color"
                     aria-label="Text fill"
+                    disabled={selected.appearance !== undefined}
                     value={selected.fill === "transparent" ? "#172420" : selected.fill}
                     onChange={(e) => onPatch({ fill: e.target.value }, "fill")}
                   />

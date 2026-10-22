@@ -1,3 +1,18 @@
+import { ProVectorAppearance } from "./pro-vector-appearance";
+import { ProTextPath } from "./pro-text-path";
+import { attachText } from "@/lib/studio/pro/text-path";
+import type { AppearanceItem } from "@/lib/studio/pro/vector-appearance";
+import { ProArtboards } from "./pro-artboards";
+import { ProPrecision } from "./pro-precision";
+import {
+  artboards,
+  layout,
+  workspaceFrame,
+  unionFrames,
+  artboardFilename,
+  type Artboard,
+  type Frame,
+} from "@/lib/studio/pro/artboards";
 import type { RepairRequest } from "@/lib/studio/pro/repair";
 import { appendSelection } from "@/lib/studio/pro/selection";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -38,6 +53,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProCanvas, type ProTool } from "./pro-canvas";
+import { ProAnchors } from "./pro-anchors";
+import { ProPathfinder } from "./pro-pathfinder";
+import { PathfinderJob } from "@/lib/studio/pro/pathfinder-client";
+import type { PathfinderOperation, PathfinderOptions } from "@/lib/studio/pro/pathfinder";
+import { editAnchor } from "@/lib/studio/pro/anchor-edit";
+import { createCompound, releaseCompound } from "@/lib/studio/pro/compound";
+import { documentSources } from "@/lib/studio/pro/raster-budget";
+import { contourAt } from "@/lib/studio/pro/model";
 import {
   transformDocument,
   transformForest,
@@ -91,6 +114,9 @@ import {
 } from "@/lib/studio/pro/brush-presets";
 type Entry = { doc: ProDocument; label: string };
 const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush }> = [
+  { id: "gradient", name: "Vector Gradient", key: "G", Icon: ScanLine },
+  { id: "text-path", name: "Text on Path", key: "Shift+T", Icon: Type },
+  { id: "artboard", name: "Artboard Tool", key: "Q", Icon: Scan },
   { id: "move", name: "Move", key: "V", Icon: MousePointer2 },
   { id: "transform", name: "Free Transform", key: "F", Icon: Scan },
   { id: "crop", name: "Crop", key: "C", Icon: CropIcon },
@@ -145,6 +171,9 @@ const RASTER_TOOL_IDS = new Set<ProTool>([
   "text",
 ]);
 const VECTOR_TOOL_IDS = new Set<ProTool>([
+  "gradient",
+  "text-path",
+  "artboard",
   "transform",
   "crop",
   "move",
@@ -207,6 +236,7 @@ export default function ProWorkspace({
     [session, setSession] = useState<ProSession | null>(null),
     sessionRef = useRef<ProSession | null>(null),
     [selectedIds, setSelectedIds] = useState<string[]>([]),
+    [anchorSelection, setAnchorSelection] = useState({ id: "", index: 0, contour: 0 }),
     [tool, setTool] = useState<ProTool>(initialMode === "raster" ? "brush" : "pen"),
     [transformDraft, setTransformDraft] = useState<TransformDraft | null>(null),
     transformRef = useRef<TransformDraft | null>(null),
@@ -231,11 +261,27 @@ export default function ProWorkspace({
     [cloneSource, setCloneSource] = useState<CloneSource | null>(null),
     [cloneSampleArmed, setCloneSampleArmed] = useState(false),
     [maskMode, setMaskMode] = useState(false),
-    [grid, setGrid] = useState(false),
-    [snapping, setSnapping] = useState(true),
+    [appearanceId, setAppearanceId] = useState(""),
+    [appearanceClipboard, setAppearanceClipboard] = useState<AppearanceItem[] | null>(null),
+    [activeBoardId, setActiveBoardId] = useState(""),
+    [viewScope, setViewScope] = useState(""),
+    [moveArtwork, setMoveArtwork] = useState(false),
+    [fitRequest, setFitRequest] = useState<{ frame: Frame; serial: number } | null>(null),
     [before, setBefore] = useState(false),
     [tab, setTab] = useState<
-      "properties" | "transform" | "geometry" | "layers" | "history" | "assets" | "ai" | "export"
+      | "properties"
+      | "transform"
+      | "geometry"
+      | "layers"
+      | "pathfinder"
+      | "artboards"
+      | "precision"
+      | "appearance"
+      | "typography"
+      | "history"
+      | "assets"
+      | "ai"
+      | "export"
     >("layers"),
     [panelOpen, setPanelOpen] = useState(true),
     [panelWidth, setPanelWidth] = useState(300),
@@ -252,6 +298,8 @@ export default function ProWorkspace({
     [mime, setMime] = useState("image/png"),
     [quality, setQuality] = useState(0.95),
     [geometryRevision, setGeometryRevision] = useState(0);
+  const pathfinderJob = useRef<PathfinderJob | null>(null);
+  useEffect(() => () => pathfinderJob.current?.cancel(), []);
   const displayedDocument = useRef<ProDocument | null>(null),
     displayedBefore = useRef(false);
   const canvas = useRef<HTMLCanvasElement>(null),
@@ -286,6 +334,32 @@ export default function ProWorkspace({
     }, [transient, history?.present.doc, transformDraft]),
     selection = doc?.selection ?? EMPTY_SELECTION,
     active = doc?.layers.find((l) => l.id === selectedIds[0]);
+  const activeBoard = doc
+    ? (artboards(doc).find((b) => b.id === activeBoardId) ?? artboards(doc)[0])
+    : undefined;
+  const viewportFrame = useMemo(() => {
+    const d = history?.present.doc;
+    if (!d) return undefined;
+    if (mode === "raster") return { x: 0, y: 0, width: d.width, height: d.height };
+    const boards = artboards(d);
+    if (viewScope === "all" && boards.length) return unionFrames(boards);
+    return boards.find((b) => b.id === viewScope) ?? workspaceFrame(d);
+  }, [history?.present.doc, mode, viewScope]);
+  const grid = !!doc && layout(doc).grid,
+    snapping = !doc || layout(doc).snapping;
+  const activeContour =
+    active && anchorSelection.id === active.id
+      ? Math.min(anchorSelection.contour, active.subpaths?.length ?? 0)
+      : 0;
+  const activeAnchor =
+    active && anchorSelection.id === active.id
+      ? Math.max(
+          0,
+          Math.min(contourAt(active, activeContour).anchors.length - 1, anchorSelection.index),
+        )
+      : 0;
+  const selectAnchor = (index: number, contour = activeContour) =>
+    setAnchorSelection({ id: active?.id ?? "", index, contour });
   useEffect(() => {
     if (before && doc && !sourceReference(doc)) setBefore(false);
   }, [before, doc]);
@@ -442,7 +516,7 @@ export default function ProWorkspace({
     const document = before ? { ...doc, layers: raw ? [raw] : [] } : doc;
     const timer = setTimeout(() => {
       void renderer.current
-        ?.render(document, maxArea)
+        ?.render(document, maxArea, mode === "vector" ? viewportFrame : undefined)
         .then((r) => {
           if (!r.bitmap) return;
           if (id !== generation.current || !alive.current) {
@@ -475,7 +549,7 @@ export default function ProWorkspace({
     return () => {
       clearTimeout(timer);
     };
-  }, [doc, ready, before, busy, maxArea]);
+  }, [doc, ready, before, busy, maxArea, mode, viewportFrame]);
   useEffect(() => {
     const current = history?.present.doc;
     if (!current) return;
@@ -817,6 +891,64 @@ export default function ProWorkspace({
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
+  const exportBoards = async (boards: Artboard[], format: string, scale: number) => {
+    if (!doc || busyRef.current || !boards.length || !renderer.current) return;
+    setError("");
+    try {
+      if (cropDraft || transformRef.current)
+        throw Error("Apply or cancel the active draft before exporting artboards.");
+      if (!["image/png", "image/jpeg", "image/webp", "image/svg+xml"].includes(format))
+        throw Error("Unsupported artboard export format.");
+      for (const b of boards)
+        if (
+          format !== "image/svg+xml" &&
+          Math.ceil(b.width * scale) * Math.ceil(b.height * scale) > maxArea
+        )
+          throw Error(
+            "An artboard export exceeds this device’s memory budget. Reduce the raster export scale.",
+          );
+      const firstSvg = format === "image/svg+xml" ? vectorSvg(doc, boards[0]!) : undefined;
+      if (firstSvg && firstSvg.length * boards.length > 24_000_000)
+        throw Error("SVG batch exceeds the text memory budget. Export fewer artboards at a time.");
+      busyRef.current = true;
+      setBusy(true);
+      setCancellable(true);
+      ++generation.current;
+      const run = ++operationRun.current;
+      for (let i = 0; i < boards.length; i++) {
+        if (run !== operationRun.current || !alive.current)
+          throw new DOMException("Export cancelled", "AbortError");
+        const b = boards[i]!;
+        setProgress(`Exporting artboard ${i + 1} / ${boards.length}`);
+        const blob =
+          firstSvg !== undefined
+            ? new Blob([i === 0 ? firstSvg : vectorSvg(doc, b)], { type: format })
+            : (await renderer.current.exportArtboard(doc, maxArea, b, scale, format, quality)).blob;
+        if (run !== operationRun.current || !alive.current)
+          throw new DOMException("Export cancelled", "AbortError");
+        if (blob)
+          download(
+            blob,
+            artboardFilename(
+              b,
+              artboards(doc).findIndex((n) => n.id === b.id),
+              format === "image/svg+xml" ? "svg" : format.split("/")[1]!,
+            ),
+          );
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      setStatus(
+        `Exported ${boards.length} artboard${boards.length === 1 ? "" : "s"} at native bounds. Original artwork retained.`,
+      );
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") setError(storageMessage(e));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+      setCancellable(false);
+      setProgress("");
+    }
+  };
   const exportFile = async (kind: "raster" | "native" | "svg") => {
     if (!doc || !sessionRef.current || busyRef.current) return;
     setError("");
@@ -858,6 +990,7 @@ export default function ProWorkspace({
   };
   const cancel = () => {
     ++operationRun.current;
+    pathfinderJob.current?.cancel();
     renderer.current?.dispose();
     setAssetEpoch((n) => n + 1);
     setStatus("Rendering cancelled. Document retained.");
@@ -929,9 +1062,47 @@ export default function ProWorkspace({
         setStatus("Native document imported into this Pro draft. Chapter unchanged.");
       } else if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
         if (file.size > 1_000_000) throw new Error("SVG import limit is 1MB.");
+        setStatus("Importing SVG vectors…");
         const imported = importSvg(await file.text());
-        commit({ ...doc, layers: [...doc.layers, ...imported.layers] }, "Import sanitized vectors");
+        if (imported.width * imported.height > maxArea)
+          throw new Error("SVG viewport exceeds this device’s memory budget.");
+        // Keep the source viewport when placing an SVG into a differently sized Chapter.
+        // Each leaf retains a recoverable source mask; group affine motion carries it too.
+        if (imported.width !== doc.width || imported.height !== doc.height) {
+          for (const l of imported.layers)
+            if (l.kind !== "group")
+              l.mask = {
+                enabled: true,
+                strokes: [],
+                selection: toLocalSelection(
+                  {
+                    regions: [
+                      {
+                        kind: "rectangle",
+                        operation: "add",
+                        points: [
+                          { x: 0, y: 0 },
+                          { x: imported.width, y: imported.height },
+                        ],
+                      },
+                    ],
+                    inverted: false,
+                    feather: 0,
+                  },
+                  l,
+                  { width: imported.width, height: imported.height },
+                ),
+              };
+        }
+        const candidate = { ...doc, layers: [...doc.layers, ...imported.layers] };
+        documentSources(candidate, maxArea);
+        commit(candidate, "Import sanitized vectors");
         setSelectedIds([imported.layers.at(-1)!.id]);
+        setStatus(
+          imported.warnings.length
+            ? `SVG vectors imported with compatibility notes: ${imported.warnings.join(" ")} Chapter unchanged.`
+            : "SVG vectors imported. Chapter unchanged.",
+        );
       } else if (["image/png", "image/jpeg", "image/webp"].includes(file.type))
         await addAsset(file, file.name);
       else throw new Error("Choose PNG, JPEG, WebP, basic SVG or an .inkstrip document.");
@@ -957,6 +1128,71 @@ export default function ProWorkspace({
       } catch (e) {
         setError(storageMessage(e));
       }
+    }
+  };
+  const runPathfinder = async (operation: PathfinderOperation, options: PathfinderOptions) => {
+    const d = historyRef.current?.present.doc,
+      s = sessionRef.current;
+    if (!d || !s || busyRef.current || transformRef.current || mode !== "vector") return;
+    const run = ++operationRun.current;
+    busyRef.current = true;
+    setBusy(true);
+    ++generation.current;
+    setCancellable(true);
+    setError("");
+    setProgress(`Computing Pathfinder ${operation}…`);
+    setStatus(
+      "Computing editable vector geometry. Source objects remain unchanged until validation completes.",
+    );
+    try {
+      const job = new PathfinderJob(d, selectedIds, operation, options);
+      pathfinderJob.current = job;
+      const result = await job.result;
+      if (!alive.current || run !== operationRun.current) return;
+      if (historyRef.current?.present.doc !== d)
+        throw new Error("Document changed during Pathfinder. Source objects retained.");
+      documentSources(result.document, maxArea);
+      validateAssets({ ...s, document: result.document });
+      busyRef.current = false;
+      commit(result.document, `Pathfinder ${operation}`);
+      setSelectedIds(result.ids);
+      setTool("move");
+      setMaskMode(false);
+      setBefore(false);
+      setStatus(
+        `Pathfinder ${operation}: ${result.ids.length} editable object(s). Undo restores all source objects. Chapter unchanged.`,
+      );
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        setError(storageMessage(error));
+        setStatus("Pathfinder failed. Source objects and Chapter unchanged.");
+      }
+    } finally {
+      pathfinderJob.current = null;
+      busyRef.current = false;
+      setBusy(false);
+      setCancellable(false);
+      setProgress("");
+    }
+  };
+  const compound = (operation: "create" | "release") => {
+    if (!doc || busyRef.current || transformRef.current) return;
+    try {
+      if (operation === "create") {
+        const result = createCompound(doc, selectedIds);
+        documentSources(result.document, maxArea);
+        commit(result.document, "Create compound path");
+        setSelectedIds([result.id]);
+      } else {
+        const result = releaseCompound(doc, active?.id ?? "");
+        documentSources(result.document, maxArea);
+        commit(result.document, "Release compound path");
+        setSelectedIds(result.ids);
+      }
+      setMaskMode(false);
+      setTab("properties");
+    } catch (e) {
+      setError(storageMessage(e));
     }
   };
   const cancelTransform = () => {
@@ -1003,7 +1239,38 @@ export default function ProWorkspace({
       setError(storageMessage(e));
     }
   };
+  const createPathText = () => {
+    if (!doc || !active) return;
+    try {
+      const result = attachText(doc, active.id, activeContour);
+      commit(result.document, "Create editable text on contour");
+      setSelectedIds([result.id]);
+      setTool("move");
+      setTab("typography");
+    } catch (e) {
+      setError(storageMessage(e));
+    }
+  };
   const chooseTool = (id: ProTool) => {
+    if (id === "text-path") {
+      setTab("typography");
+      setPanelOpen(true);
+      if (active?.kind === "shape") createPathText();
+      return;
+    }
+    if (id === "gradient") {
+      setTab("appearance");
+      setPanelOpen(true);
+      if (!active?.appearance?.some((a) => a.paint.gradient)) {
+        setError("Add a linear or radial paint in Appearance before editing gradient handles.");
+        return;
+      }
+    }
+
+    if (id === "artboard") {
+      setTab("artboards");
+      setPanelOpen(true);
+    }
     if (id === "transform" && transformRef.current) {
       setTab("transform");
       setPanelOpen(true);
@@ -1196,7 +1463,26 @@ export default function ProWorkspace({
       if (cropDraft) cancelCrop();
       if (historyRef.current) setHist(redo(historyRef.current));
     },
-    remove,
+    remove: () => {
+      const d = historyRef.current?.present.doc;
+      if (
+        tool === "direct" &&
+        (active?.kind === "shape" || !!active?.textPath) &&
+        active.shape === "path" &&
+        d &&
+        !transformRef.current
+      ) {
+        try {
+          commit(
+            editAnchor(d, active.id, activeAnchor, { kind: "delete" }, activeContour),
+            "Delete Bézier anchor",
+          );
+          selectAnchor(Math.max(0, activeAnchor - 1));
+        } catch (e) {
+          setError(storageMessage(e));
+        }
+      } else remove();
+    },
     selectTool: chooseTool,
   };
   useEffect(() => {
@@ -1219,12 +1505,22 @@ export default function ProWorkspace({
         else actions.current.undo();
       } else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
-        actions.current.remove();
+        if (tool === "artboard") {
+          const d = historyRef.current?.present.doc;
+          if (d && activeBoard)
+            commit(
+              { ...d, artboards: artboards(d).filter((b) => b.id !== activeBoard.id) },
+              "Delete artboard boundary",
+            );
+        } else actions.current.remove();
       } else if (!e.ctrlKey && !e.metaKey) {
         const allowedTools = mode === "raster" ? RASTER_TOOL_IDS : VECTOR_TOOL_IDS;
-        const t = TOOLS.find(
-          (t) => allowedTools.has(t.id) && t.key.toLowerCase() === e.key.toLowerCase(),
-        );
+        const t =
+          e.shiftKey && e.key.toLowerCase() === "t" && mode === "vector"
+            ? TOOLS.find((t) => t.id === "text-path")
+            : TOOLS.find(
+                (t) => allowedTools.has(t.id) && t.key.toLowerCase() === e.key.toLowerCase(),
+              );
         if (t) {
           e.preventDefault();
           actions.current.selectTool(t.id);
@@ -1233,7 +1529,7 @@ export default function ProWorkspace({
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [mode]);
+  }, [mode, tool, activeBoard, commit]);
   const stale = !!session && livePanel?.blobId !== session.acceptedBlobId;
   return (
     <Dialog.Root
@@ -1250,7 +1546,14 @@ export default function ProWorkspace({
           style={{ "--pro-panel-width": `${panelWidth}px` } as React.CSSProperties}
           onEscapeKeyDown={(e) => {
             e.preventDefault();
-            if (!busyRef.current && tool !== "patch" && tool !== "crop" && tool !== "transform")
+            if (
+              !busyRef.current &&
+              tool !== "patch" &&
+              tool !== "crop" &&
+              tool !== "transform" &&
+              tool !== "artboard" &&
+              !transient
+            )
               void close();
           }}
           onBlurCapture={() => {
@@ -1286,6 +1589,12 @@ export default function ProWorkspace({
                 disabled={busy}
                 onClick={() => {
                   setMode("raster");
+                  if (
+                    ["pathfinder", "artboards", "precision", "appearance", "typography"].includes(
+                      tab,
+                    )
+                  )
+                    setTab("layers");
                   onModeChange("raster");
                   if (transformRef.current) cancelTransform();
                   setCropDraft(null);
@@ -1432,14 +1741,30 @@ export default function ProWorkspace({
             )}
             <span>{TOOLS.find((t) => t.id === tool)?.name ?? "Move"}</span>
             <label className="pro-check">
-              <input type="checkbox" checked={grid} onChange={(e) => setGrid(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={grid}
+                onChange={(e) =>
+                  doc &&
+                  commit(
+                    { ...doc, layout: { ...layout(doc), grid: e.target.checked } },
+                    "Show grid",
+                  )
+                }
+              />
               Grid
             </label>
             <label className="pro-check">
               <input
                 type="checkbox"
                 checked={snapping}
-                onChange={(e) => setSnapping(e.target.checked)}
+                onChange={(e) =>
+                  doc &&
+                  commit(
+                    { ...doc, layout: { ...layout(doc), snapping: e.target.checked } },
+                    "Toggle snapping",
+                  )
+                }
               />
               Snap
             </label>
@@ -1546,7 +1871,12 @@ export default function ProWorkspace({
                   aria-label={`${name} tool`}
                   title={`${name}${key ? ` (${key})` : ""}`}
                   aria-pressed={tool === id}
-                  disabled={busy}
+                  disabled={
+                    busy ||
+                    (id === "text-path" &&
+                      (active?.kind !== "shape" || isLocked(doc!, active.id))) ||
+                    (id === "gradient" && !active?.appearance?.some((a) => a.paint.gradient))
+                  }
                   onClick={() => {
                     chooseTool(id);
                   }}
@@ -1557,6 +1887,13 @@ export default function ProWorkspace({
             </nav>
             {doc ? (
               <ProCanvas
+                appearanceId={appearanceId}
+                viewportFrame={viewportFrame!}
+                onFitCanvas={() => setViewScope("")}
+                fitRequest={fitRequest}
+                artboardId={activeBoard?.id ?? ""}
+                onArtboard={setActiveBoardId}
+                moveArtwork={moveArtwork}
                 transformDraft={transformDraft}
                 onTransformDraft={changeTransform}
                 onApplyTransform={applyTransform}
@@ -1569,6 +1906,9 @@ export default function ProWorkspace({
                 doc={doc}
                 activeId={selectedIds[0] ?? ""}
                 selectedIds={selectedIds}
+                activeAnchor={activeAnchor}
+                activeContour={activeContour}
+                onSelectAnchor={selectAnchor}
                 onError={setError}
                 tool={tool}
                 selection={selection}
@@ -1628,25 +1968,129 @@ export default function ProWorkspace({
                       "transform",
                       "geometry",
                       "layers",
+                      "pathfinder",
+                      "artboards",
+                      "precision",
+                      "appearance",
+                      "typography",
                       "history",
                       "assets",
                       "ai",
                       "export",
                     ] as const
-                  ).map((t) => (
-                    <button
-                      type="button"
-                      key={t}
-                      aria-pressed={tab === t}
-                      onClick={() => setTab(t)}
-                    >
-                      {t === "ai" ? "AI tools" : t[0]!.toUpperCase() + t.slice(1)}
-                    </button>
-                  ))}
+                  )
+                    .filter(
+                      (t) =>
+                        ![
+                          "pathfinder",
+                          "artboards",
+                          "precision",
+                          "appearance",
+                          "typography",
+                        ].includes(t) || mode === "vector",
+                    )
+                    .map((t) => (
+                      <button
+                        type="button"
+                        key={t}
+                        aria-pressed={tab === t}
+                        onClick={() => setTab(t)}
+                      >
+                        {t === "ai" ? "AI tools" : t[0]!.toUpperCase() + t.slice(1)}
+                      </button>
+                    ))}
                 </nav>
                 <div className="pro-panel-content">
+                  {tab === "appearance" && (
+                    <ProVectorAppearance
+                      layer={
+                        active
+                          ? {
+                              ...active,
+                              locked: isLocked(doc!, active.id) || busy || !!transformDraft,
+                            }
+                          : undefined
+                      }
+                      selectedId={appearanceId}
+                      onSelect={setAppearanceId}
+                      onPatch={patch}
+                      clipboard={appearanceClipboard}
+                      onCopy={setAppearanceClipboard}
+                      onGradient={() => chooseTool("gradient")}
+                    />
+                  )}
+                  {tab === "typography" && (
+                    <ProTextPath
+                      layer={
+                        active
+                          ? {
+                              ...active,
+                              locked: isLocked(doc!, active.id) || busy || !!transformDraft,
+                            }
+                          : undefined
+                      }
+                      onCreate={createPathText}
+                      onPatch={patch}
+                      onDirect={() => chooseTool("direct")}
+                    />
+                  )}
+                  {tab === "artboards" && mode === "vector" && doc && (
+                    <ProArtboards
+                      doc={doc}
+                      activeId={activeBoard?.id ?? ""}
+                      onActive={setActiveBoardId}
+                      onCommit={commit}
+                      onError={setError}
+                      onTool={() => chooseTool("artboard")}
+                      onFit={(frame, id) => {
+                        setViewScope(id ?? "all");
+                        setFitRequest({ frame, serial: Date.now() });
+                      }}
+                      moveArtwork={moveArtwork}
+                      onMoveArtwork={setMoveArtwork}
+                      disabled={busy || !!transformDraft || !!cropDraft}
+                      onExport={(boards, format, scale) => void exportBoards(boards, format, scale)}
+                    />
+                  )}
+                  {tab === "precision" && mode === "vector" && doc && (
+                    <ProPrecision
+                      doc={doc}
+                      ids={selectedIds}
+                      boardId={activeBoard?.id ?? ""}
+                      onCommit={commit}
+                      onError={setError}
+                      disabled={busy || !!transformDraft || !!cropDraft}
+                    />
+                  )}
+                  {tab === "pathfinder" && mode === "vector" && doc && (
+                    <ProPathfinder
+                      doc={doc}
+                      ids={selectedIds}
+                      disabled={busy || !!transformDraft}
+                      onRun={(operation, options) => void runPathfinder(operation, options)}
+                    />
+                  )}
+
                   {tab === "properties" && (
                     <ProProperties
+                      anchorControls={
+                        active && doc && active.shape === "path" ? (
+                          <ProAnchors
+                            key={active.id}
+                            doc={doc}
+                            layer={active}
+                            index={activeAnchor}
+                            contour={activeContour}
+                            onSelectContour={(contour) => selectAnchor(0, contour)}
+                            onSelect={selectAnchor}
+                            onChange={(next, label, group) => {
+                              documentSources(next, maxArea);
+                              commit(next, label, group);
+                            }}
+                            onError={setError}
+                          />
+                        ) : undefined
+                      }
                       documentSize={doc ? { width: doc.width, height: doc.height } : undefined}
                       selected={
                         active && doc
@@ -1736,6 +2180,7 @@ export default function ProWorkspace({
                           onDelete={remove}
                           onGroup={groupSelected}
                           onUngroup={ungroup}
+                          onCompound={compound}
                           onMerge={(mode) => void merge(mode)}
                           onAdd={add}
                           disabled={busy || !!transformDraft}
@@ -1911,9 +2356,10 @@ export default function ProWorkspace({
                         />
                       </label>
                       <p className="pro-help">
-                        SVG supports basic paths, shapes and simple text only. Unsafe or unsupported
-                        markup is rejected. Native import replaces the editable draft, not the
-                        chapter.
+                        SVG imports editable paths, compound contours, affine transforms, nested
+                        groups and basic text. Gradients, clipping paths, masks and other unsafe or
+                        unsupported markup are rejected. Native import replaces this draft; Chapter
+                        artwork is retained.
                       </p>
                       {project?.characters?.length ? (
                         project.characters.map((c) => (

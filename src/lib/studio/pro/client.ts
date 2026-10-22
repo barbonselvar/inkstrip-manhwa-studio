@@ -1,3 +1,4 @@
+import type { Frame, Artboard } from "./artboards";
 import type { RepairRequest } from "./repair";
 import type { ColorSelectionOptions } from "./selection";
 import type { ProDocument, ProSession, Region } from "./model";
@@ -78,8 +79,8 @@ export class ProRenderer {
   init(session: ProSession, maxArea = 16_000_000) {
     return this.request("init", { session, maxArea });
   }
-  render(document: ProDocument, maxArea: number) {
-    return this.request("preview", { document, maxArea });
+  render(document: ProDocument, maxArea: number, frame?: Frame) {
+    return this.request("preview", { document, maxArea, frame });
   }
   export(
     document: ProDocument,
@@ -90,6 +91,23 @@ export class ProRenderer {
     fullCanvas = false,
   ) {
     return this.request("export", { document, maxArea, mime, quality, fullCanvas }, progress);
+  }
+  exportArtboard(
+    document: ProDocument,
+    maxArea: number,
+    board: Artboard,
+    scale: number,
+    mime: string,
+    quality: number,
+  ) {
+    return this.request("artboard-export", {
+      document,
+      maxArea,
+      board,
+      exportScale: scale,
+      mime,
+      quality,
+    });
   }
   select(
     document: ProDocument,

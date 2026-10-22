@@ -243,6 +243,20 @@
 .pro-anchor {
   fill: var(--color-accent);
 }
+.pro-anchor-selected {
+  fill: var(--color-bg);
+  stroke-width: 3px;
+}
+.pro-anchor-insert {
+  pointer-events: all;
+  cursor: copy;
+  fill: var(--color-bg);
+  stroke: var(--color-accent);
+  stroke-width: 1.5px;
+}
+.pro-anchor-insert path {
+  vector-effect: non-scaling-stroke;
+}
 .pro-canvas-foot {
   flex-shrink: 0;
   display: flex;
@@ -1112,4 +1126,143 @@
 .pro-transform-pivot :is(circle, path) {
   vector-effect: non-scaling-stroke;
   stroke-width: 1.5px;
+}
+
+.pro-pathfinder-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.pro-pathfinder-actions .studio-button {
+  min-height: 2.75rem;
+  min-width: 0;
+}
+.pro-pathfinder-settings {
+  border: 0;
+  padding: 0;
+  margin: 1rem 0;
+  min-width: 0;
+}
+.pro-pathfinder-settings .pro-check {
+  white-space: normal;
+}
+
+/* Phase D: artboard metadata, precision controls and acquired document guides. */
+.pro-layout-panel {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.pro-layout-panel .pro-check {
+  white-space: normal;
+  min-height: 44px;
+}
+.pro-layout-panel .studio-button {
+  min-height: 44px;
+  height: auto;
+  white-space: normal;
+}
+.pro-layout-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.pro-layout-panel .field {
+  min-width: 0;
+  width: 100%;
+}
+.pro-guide-row {
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+.pro-board-boundary {
+  stroke: var(--color-muted);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.pro-board-boundary.is-active {
+  stroke: var(--color-accent);
+}
+.pro-board-boundary > rect {
+  vector-effect: non-scaling-stroke;
+}
+.pro-board-boundary text {
+  fill: var(--color-fg);
+  stroke: none;
+}
+.pro-board-hit {
+  fill: transparent;
+  pointer-events: all;
+  cursor: move;
+}
+.pro-board-label {
+  pointer-events: all;
+  cursor: move;
+}
+.pro-board-handle {
+  pointer-events: all;
+  cursor: crosshair;
+}
+.pro-board-handle rect:last-child {
+  fill: var(--color-bg);
+  stroke: var(--color-accent);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+.pro-document-guide,
+.pro-smart-guides {
+  pointer-events: none;
+}
+.pro-document-guide > line {
+  stroke: var(--color-accent);
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1px;
+  stroke-dasharray: 4 4;
+}
+.pro-document-guide > .pro-guide-hit {
+  pointer-events: stroke;
+  stroke: transparent;
+  vector-effect: none;
+  cursor: move;
+  stroke-dasharray: none;
+}
+.pro-smart-guides line {
+  stroke: var(--color-accent);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.pro-artboard[data-grid="true"]::after {
+  background-position: var(--pro-grid-x) var(--pro-grid-y);
+}
+.pro-vector-gradient-handles {
+  stroke: var(--color-accent);
+  stroke-width: 1px;
+  pointer-events: none;
+}
+.pro-vector-gradient-handles line,
+.pro-vector-gradient-handles circle {
+  vector-effect: non-scaling-stroke;
+}
+.pro-vector-gradient-handles circle {
+  fill: var(--color-bg);
+}
+.pro-vector-gradient-handles .pro-gradient-hit {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+}
+.pro-vector-gradient-handles text {
+  fill: var(--color-fg);
+  stroke: none;
+}
+.pro-panel-content fieldset {
+  min-width: 0;
 }

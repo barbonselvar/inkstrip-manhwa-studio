@@ -1,7 +1,10 @@
+import { appearanceSvg } from "./vector-svg.ts";
+import type { Artboard } from "./artboards.ts";
 import {
   MAX_ASSET_BYTES,
   sourceReference,
   validateAssets,
+  validateDocument,
   type ProSession,
   type ProDocument,
   type Layer,
@@ -17,16 +20,54 @@ function encode(bytes: Uint8Array) {
 }
 export async function nativeFile(s: ProSession): Promise<Blob> {
   validateAssets(s);
+  // History stays in the session's immutable pool. Native files carry the current
+  // document, not the undo timeline; exporting unused history assets makes repeated
+  // import/export exponentially duplicate the same bytes under fresh immutable IDs.
+  const referenced = new Set<string>();
+  const original = sourceReference(s.document);
+  if (original) referenced.add(original.assetId);
+  for (const l of s.document.layers) {
+    if (l.assetId) referenced.add(l.assetId);
+    for (const stroke of [...l.strokes, ...(l.mask?.strokes ?? [])])
+      if (stroke.clone) referenced.add(stroke.clone.assetId);
+  }
   const assets = Object.fromEntries(
     await Promise.all(
-      Object.entries(s.assets).map(async ([id, b]) => [
-        id,
-        { mime: b.type, data: encode(new Uint8Array(await b.arrayBuffer())) },
-      ]),
+      Object.entries(s.assets)
+        .filter(([id]) => referenced.has(id))
+        .map(async ([id, b]) => [
+          id,
+          { mime: b.type, data: encode(new Uint8Array(await b.arrayBuffer())) },
+        ]),
     ),
   );
+  // Older releases accept extra v1 fields and would silently omit holes/stroke styles.
+  // Curve/style features use envelope v2; artboards/layout use v3. Old readers
+  // reject newer envelopes safely; v4 adds appearance, path text and binary clips.
+  // Internal v1 geometry and legacy files still work.
+  const version = s.document.layers.some(
+    (l) => l.appearance !== undefined || l.textPath !== undefined || l.vectorClips !== undefined,
+  )
+    ? 4
+    : s.document.artboards !== undefined || s.document.layout !== undefined
+      ? 3
+      : s.document.layers.some(
+            (l) =>
+              l.subpaths?.length ||
+              l.vectorOverflow ||
+              l.fillRule === "evenodd" ||
+              l.lineCap !== undefined ||
+              l.lineJoin !== undefined ||
+              l.miterLimit !== undefined ||
+              l.dash !== undefined ||
+              l.dashOffset !== undefined ||
+              l.fillOpacity !== undefined ||
+              l.strokeOpacity !== undefined,
+          )
+        ? 2
+        : 1;
   return new Blob(
-    [JSON.stringify({ format: "inkstrip-pro", version: 1, document: s.document, assets })],
+    [JSON.stringify({ format: "inkstrip-pro", version, document: s.document, assets })],
     { type: "application/json" },
   );
 }
@@ -40,12 +81,14 @@ export async function readNative(
   if (
     !value ||
     value.format !== "inkstrip-pro" ||
-    value.version !== 1 ||
+    ![1, 2, 3, 4].includes(value.version) ||
     !value.assets ||
     typeof value.assets !== "object" ||
     Array.isArray(value.assets)
   )
-    throw new Error("Unsupported native document. Use an Inkstrip Pro version 1 file.");
+    throw new Error(
+      "Unsupported native document. This editor supports Inkstrip Pro native versions 1, 2, 3 and 4.",
+    );
   const assets: Record<string, Blob> = Object.create(null);
   let total = 0;
   for (const [id, entry] of Object.entries(value.assets)) {
@@ -78,7 +121,9 @@ export const escapeXml = (s: string) =>
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]!,
   );
 /** Explicit vector-only export. Reject unsupported vector effects instead of silently changing them. */
-export function vectorSvg(d: ProDocument): string {
+export function vectorSvg(d: ProDocument, board?: Artboard): string {
+  validateDocument(d);
+  const definitions: string[] = [];
   if (
     d.layers.some(
       (l) => l.kind === "gradient" || l.kind === "adjustment" || l.effects?.some((e) => e.enabled),
@@ -114,26 +159,47 @@ export function vectorSvg(d: ProDocument): string {
         "SVG export does not support masks, adjustments or non-normal blend modes. Export PNG or a native document to preserve them.",
       );
   const attrs = (l: Layer) =>
-    `opacity="${l.opacity}" transform="matrix(${affine(l.transform).join(" ")})" fill="${l.fill}" stroke="${l.stroke}" stroke-width="${l.strokeWidth}"`;
+    `opacity="${l.opacity}" transform="matrix(${affine(l.transform).join(" ")})" fill="${l.fill}" stroke="${l.stroke}" stroke-width="${l.strokeWidth}" fill-rule="${l.fillRule ?? "nonzero"}" stroke-linecap="${l.lineCap ?? "butt"}" stroke-linejoin="${l.lineJoin ?? (l.kind === "text" ? "miter" : "round")}" stroke-miterlimit="${l.miterLimit ?? 10}" stroke-dasharray="${l.dash?.length ? l.dash.join(" ") : "none"}" stroke-dashoffset="${l.dashOffset ?? 0}" fill-opacity="${l.fillOpacity ?? 1}" stroke-opacity="${l.strokeOpacity ?? 1}"`;
   const branch = (parent?: string): string =>
     included
       .filter((l) => l.parentId === parent && l.visible)
       .map((l) =>
         l.kind === "group"
           ? `<g opacity="${l.opacity}">${branch(l.id)}</g>`
-          : l.kind === "shape"
-            ? `<path ${attrs(l)} d="${shapePath(l)}"/>`
-            : `<text ${attrs(l)} font-family="${l.fontFamily}" font-size="${l.fontSize}" font-weight="${l.fontWeight}" letter-spacing="${l.letterSpacing}" text-anchor="${l.align === "left" ? "start" : l.align === "center" ? "middle" : "end"}">${l.text
-                .split("\n")
-                .map(
-                  (line, i) =>
-                    `<tspan x="${l.align === "left" ? 0 : l.align === "center" ? l.width / 2 : l.width}" y="${l.fontSize + i * l.fontSize * l.lineHeight}">${escapeXml(line)}</tspan>`,
-                )
-                .join("")}</text>`,
+          : l.appearance !== undefined || l.textPath || l.vectorClips?.some((c) => c.enabled)
+            ? appearanceSvg(l, definitions)
+            : l.kind === "shape"
+              ? `<path ${attrs(l)} d="${shapePath(l)}"/>`
+              : `<text ${attrs(l)} font-family="${l.fontFamily}" font-size="${l.fontSize}" font-weight="${l.fontWeight}" letter-spacing="${l.letterSpacing}" text-anchor="${l.align === "left" ? "start" : l.align === "center" ? "middle" : "end"}">${l.text
+                  .split("\n")
+                  .map(
+                    (line, i) =>
+                      `<tspan x="${l.align === "left" ? 0 : l.align === "center" ? l.width / 2 : l.width}" y="${l.fontSize + i * l.fontSize * l.lineHeight}">${escapeXml(line)}</tspan>`,
+                  )
+                  .join("")}</text>`,
       )
       .join("");
+  const content = branch(),
+    paintDefinitions = definitions.length ? `<defs>${definitions.join("")}</defs>` : "";
+  if (board) {
+    const actual = d.artboards?.find((b) => b.id === board.id);
+    if (!actual || JSON.stringify(actual) !== JSON.stringify(board))
+      throw Error("Select an existing artboard to export.");
+    const background =
+      board.background === "transparent"
+        ? ""
+        : `<rect x="${board.x}" y="${board.y}" width="${board.width}" height="${board.height}" fill="${board.background}"/>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${board.width}" height="${board.height}" viewBox="${board.x} ${board.y} ${board.width} ${board.height}" overflow="hidden">${paintDefinitions}${background}${content}</svg>`;
+  }
   const size = outputSize(d);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}" viewBox="0 0 ${size.width} ${size.height}"><defs><clipPath id="canvas"><rect width="${d.width}" height="${d.height}"/></clipPath></defs><g transform="matrix(${outputMatrix(d).join(" ")})" clip-path="url(#canvas)">${branch()}</g></svg>`;
+  if (!d.crop)
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}" viewBox="0 0 ${d.width} ${d.height}" preserveAspectRatio="none">${paintDefinitions}${content}</svg>`;
+  // With no crop the SVG viewport already clips the original canvas (also after resize).
+  // Keep explicit source clipping for rotated/outside crop bounds.
+  const clip = d.crop
+    ? `<defs><clipPath id="canvas"><rect width="${d.width}" height="${d.height}"/></clipPath></defs>`
+    : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}" viewBox="0 0 ${size.width} ${size.height}">${clip}${paintDefinitions}<g transform="matrix(${outputMatrix(d).join(" ")})"${d.crop ? ' clip-path="url(#canvas)"' : ""}>${content}</g></svg>`;
 }
 
 /** Import is one undoable metadata action; old raster bytes retain immutable IDs. */

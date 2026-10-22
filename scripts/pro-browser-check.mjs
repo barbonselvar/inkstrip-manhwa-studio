@@ -471,7 +471,7 @@ try {
   const download = await dl,
     native = JSON.parse((await readFile(await download.path())).toString());
   assert.equal(native.document.layers.length, 3);
-  assert.equal(native.assets.source.data, data);
+  assert.equal(native.assets[native.document.source.assetId].data, data);
   console.log("Testing exact raster export dimensions and transparent/opaque formats…");
   const transparent = structuredClone(d);
   transparent.layers[0].visible = false;

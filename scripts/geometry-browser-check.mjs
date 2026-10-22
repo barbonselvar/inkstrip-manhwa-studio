@@ -248,7 +248,7 @@ try {
     rotation: 0,
   });
   assert.equal(croppedNative.value.document.layers[0].width, 128);
-  assert.equal(croppedNative.value.assets.source.data, source);
+  assert.equal(croppedNative.value.assets[croppedNative.value.document.source.assetId].data, source);
   await p.getByRole("button", { name: "Pro undo", exact: true }).click();
   sameImage(await raster(p), original);
   await p.getByRole("button", { name: "Pro redo", exact: true }).click();
