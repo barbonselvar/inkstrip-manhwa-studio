@@ -347,41 +347,49 @@ export function ProProperties({
             )}
             {selected.kind === "shape" && (
               <ToolSection title="Vector appearance" defaultOpen>
-                <label className="pro-field">
-                  Fill
-                  <input
-                    type="color"
-                    aria-label="Object fill"
-                    value={selected.fill === "transparent" ? "#f3efe6" : selected.fill}
-                    onChange={(e) => onPatch({ fill: e.target.value }, "fill")}
+                <fieldset disabled={selected.appearance !== undefined}>
+                  {selected.appearance !== undefined && (
+                    <p className="pro-help">
+                      This object uses an editable Appearance stack. Edit its paints in the
+                      Appearance panel; Reset there restores basic styling.
+                    </p>
+                  )}
+                  <label className="pro-field">
+                    Fill
+                    <input
+                      type="color"
+                      aria-label="Object fill"
+                      value={selected.fill === "transparent" ? "#f3efe6" : selected.fill}
+                      onChange={(e) => onPatch({ fill: e.target.value }, "fill")}
+                    />
+                  </label>
+                  <label className="pro-check">
+                    <input
+                      type="checkbox"
+                      checked={selected.fill === "transparent"}
+                      onChange={(e) =>
+                        onPatch({ fill: e.target.checked ? "transparent" : "#f3efe6" })
+                      }
+                    />{" "}
+                    No fill
+                  </label>
+                  <label className="pro-field">
+                    Stroke
+                    <input
+                      type="color"
+                      aria-label="Object stroke"
+                      value={selected.stroke === "transparent" ? "#172420" : selected.stroke}
+                      onChange={(e) => onPatch({ stroke: e.target.value }, "stroke")}
+                    />
+                  </label>
+                  <ProNumber
+                    label="Stroke width"
+                    value={selected.strokeWidth}
+                    min={0}
+                    max={100}
+                    onChange={(n) => onPatch({ strokeWidth: n }, "stroke")}
                   />
-                </label>
-                <label className="pro-check">
-                  <input
-                    type="checkbox"
-                    checked={selected.fill === "transparent"}
-                    onChange={(e) =>
-                      onPatch({ fill: e.target.checked ? "transparent" : "#f3efe6" })
-                    }
-                  />{" "}
-                  No fill
-                </label>
-                <label className="pro-field">
-                  Stroke
-                  <input
-                    type="color"
-                    aria-label="Object stroke"
-                    value={selected.stroke === "transparent" ? "#172420" : selected.stroke}
-                    onChange={(e) => onPatch({ stroke: e.target.value }, "stroke")}
-                  />
-                </label>
-                <ProNumber
-                  label="Stroke width"
-                  value={selected.strokeWidth}
-                  min={0}
-                  max={100}
-                  onChange={(n) => onPatch({ strokeWidth: n }, "stroke")}
-                />
+                </fieldset>
                 {selected.shape === "path" && (
                   <>
                     <label className="pro-field">
@@ -421,6 +429,7 @@ export function ProProperties({
             )}
             {selected.kind === "text" && (
               <ToolSection title="Editable typography" defaultOpen>
+                {selected.textPath && anchorControls}
                 <label className="pro-field">
                   Text
                   <textarea

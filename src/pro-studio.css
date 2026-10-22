@@ -1242,3 +1242,27 @@
 .pro-artboard[data-grid="true"]::after {
   background-position: var(--pro-grid-x) var(--pro-grid-y);
 }
+.pro-vector-gradient-handles {
+  stroke: var(--color-accent);
+  stroke-width: 1px;
+  pointer-events: none;
+}
+.pro-vector-gradient-handles line,
+.pro-vector-gradient-handles circle {
+  vector-effect: non-scaling-stroke;
+}
+.pro-vector-gradient-handles circle {
+  fill: var(--color-bg);
+}
+.pro-vector-gradient-handles .pro-gradient-hit {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+}
+.pro-vector-gradient-handles text {
+  fill: var(--color-fg);
+  stroke: none;
+}
+.pro-panel-content fieldset {
+  min-width: 0;
+}

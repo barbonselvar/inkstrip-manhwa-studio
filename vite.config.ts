@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Plugin } from "vite";
@@ -143,7 +144,18 @@ function authPopupPlugin(): Plugin {
 // `0.0.0.0:8080` is the live-preview contract — don't change host/port.
 // The dev server starts once `src/router.tsx` and `src/routes/` exist — see
 // AGENTS.md § "First scaffold".
+const releaseSha = (() => {
+  const supplied = process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA;
+  if (supplied && /^[a-f0-9]{40}$/i.test(supplied)) return supplied;
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  } catch {
+    return "unavailable";
+  }
+})();
+
 export default defineConfig(({ command, isPreview }) => ({
+  define: { "import.meta.env.INKSTRIP_RELEASE_SHA": JSON.stringify(releaseSha) },
   server: {
     host: "0.0.0.0",
     port: 8080,

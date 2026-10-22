@@ -1,6 +1,16 @@
 # Inkstrip release changelog
 
-## Unreleased — Phase D vector geometry and anchor editing
+## Phase D — complete vector engine implementation (release gated in PR #3)
+
+- Increment D: native v4 editable fill/stroke stacks, aligned and dashed strokes,
+  affine linear/radial vector gradients, on-canvas handles/stops, appearance
+  clipboard, and editable Unicode text on owned Bézier baselines.
+- Increment E: bounded data-only SVG gradients/clips/binary masks/textPath and
+  validated stacked appearance interchange, weak geometry/arc caches, measured
+  40,000-anchor benchmarks, full rendering/touch regressions, and non-secret
+  commit metadata for exact live release verification.
+- [Final feature audit, compatibility limits and validation contracts](PHASE_D_FINAL_RELEASE.md).
+  Existing Raster/Vector/Chapter/AI/3D engines and immutable sources are retained.
 
 - Increment C: real multi-artboard metadata and interactive editing, DPI-aware
   presets, virtual work-area rendering, clipped individual/range raster/SVG exports,

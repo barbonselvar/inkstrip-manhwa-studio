@@ -1,3 +1,6 @@
+import { clipPath } from "@/lib/studio/pro/vector-clip";
+import { gradientHandles, moveGradientHandle } from "@/lib/studio/pro/vector-appearance";
+import { measureTextPath } from "@/lib/studio/pro/text-path";
 import {
   artboards,
   changeArtboard,
@@ -42,6 +45,7 @@ import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Scan, Hand } from "lucide-react";
 import {
   layer,
+  validateDocument,
   localPoint,
   toLocalSelection,
   worldPoint,
@@ -61,6 +65,8 @@ import { isLocked } from "@/lib/studio/pro/operations";
 import { selectionCanvas } from "@/lib/studio/pro/render";
 import { shapePath } from "@/lib/studio/pro/paths";
 export type ProTool =
+  | "gradient"
+  | "text-path"
   | "artboard"
   | "transform"
   | "crop"
@@ -89,6 +95,7 @@ export type ProTool =
   | "poly-lasso";
 type View = { zoom: number; x: number; y: number };
 type Gesture = {
+  appearanceIndex?: number;
   snap?: SnapIndex;
   moveFrame?: Frame;
   board?: Artboard;
@@ -117,6 +124,7 @@ type Gesture = {
 export function ProCanvas({
   doc,
   viewportFrame,
+  appearanceId,
   onFitCanvas,
   fitRequest,
   artboardId,
@@ -163,6 +171,7 @@ export function ProCanvas({
 }: {
   doc: ProDocument;
   viewportFrame: Frame;
+  appearanceId: string;
   onFitCanvas: () => void;
   fitRequest: { frame: Frame; serial: number } | null;
   artboardId: string;
@@ -442,6 +451,52 @@ export function ProCanvas({
         parent = g.parentId;
       }
       const q = localPoint(p, l);
+      if (
+        ctx &&
+        l.vectorClips?.some((c) => c.enabled && !ctx.isPointInPath(clipPath(c), q.x, q.y, c.rule))
+      )
+        return false;
+      if (l.textPath) {
+        const m = measureTextPath(l);
+        for (let i = 1; i < m.points.length; i++) {
+          const a = m.points[i - 1]!,
+            b = m.points[i]!,
+            dx = b.x - a.x,
+            dy = b.y - a.y,
+            t = Math.max(
+              0,
+              Math.min(1, ((q.x - a.x) * dx + (q.y - a.y) * dy) / (dx * dx + dy * dy || 1)),
+            );
+          if (
+            Math.hypot(q.x - a.x - t * dx, q.y - a.y - t * dy) <=
+            l.fontSize + Math.abs(l.textPath.baseline)
+          )
+            return true;
+        }
+        return false;
+      }
+      if (l.kind === "shape" && ctx && l.appearance) {
+        const path = new Path2D(shapePath(l));
+        return l.appearance.some((a) => {
+          if (!a.visible || !a.opacity || (!a.paint.gradient && a.paint.color === "transparent"))
+            return false;
+          if (a.kind === "fill") return ctx.isPointInPath(path, q.x, q.y, a.fillRule);
+          ctx.save();
+          ctx.lineWidth = a.width * (a.alignment === "center" ? 1 : 2);
+          ctx.lineCap = a.cap;
+          ctx.lineJoin = a.join;
+          ctx.miterLimit = a.miterLimit;
+          ctx.setLineDash(a.dash);
+          ctx.lineDashOffset = a.dashOffset;
+          const yes =
+            a.width > 0 &&
+            ctx.isPointInStroke(path, q.x, q.y) &&
+            (a.alignment === "center" ||
+              ctx.isPointInPath(path, q.x, q.y, a.fillRule) === (a.alignment === "inside"));
+          ctx.restore();
+          return yes;
+        });
+      }
       if (l.kind === "shape" && ctx) {
         const path = new Path2D(shapePath(l));
         ctx.save();
@@ -525,6 +580,40 @@ export function ProCanvas({
           snap: buildSnapIndex(doc, [], b.id),
         };
       }
+      return;
+    }
+    if (tool === "gradient" && selected && !isLocked(doc, selected.id)) {
+      const index =
+          selected.appearance?.findIndex((a) => a.id === appearanceId && a.paint.gradient) ?? -1,
+        chosen =
+          index >= 0 ? index : (selected.appearance?.findIndex((a) => a.paint.gradient) ?? -1);
+      const g = selected.appearance?.[chosen]?.paint.gradient;
+      if (!g) return;
+      const handles = gradientHandles(g, selected),
+        entries =
+          g.kind === "linear"
+            ? ([
+                ["from", handles.from],
+                ["to", handles.to],
+              ] as const)
+            : ([
+                ["center", handles.center],
+                ["radius", handles.to],
+                ["from", handles.from],
+              ] as const);
+      const stopHandles = handles.stops.slice(1, -1).map((p, i) => [`stop:${i + 1}`, p] as const);
+      const nearest = [...entries, ...stopHandles]
+        .map(([part, q]) => ({ part, q: worldPoint(q, selected) }))
+        .map((h) => ({ ...h, distance: Math.hypot(h.q.x - p.x, h.q.y - p.y) * fit * view.zoom }))
+        .sort((a, b) => a.distance - b.distance)[0];
+      if (nearest && nearest.distance <= 22)
+        gesture.current = {
+          ...base,
+          type: "gradient",
+          id: selected.id,
+          part: nearest.part,
+          appearanceIndex: chosen,
+        };
       return;
     }
     if (tool === "transform" && transformDraft && selected) {
@@ -1060,6 +1149,50 @@ export function ProCanvas({
     const l = g.doc.layers.find((x) => x.id === g.id);
     if (!l) return null;
     let next = l;
+    if (g.type === "gradient") {
+      const a = l.appearance![g.appearanceIndex!]!,
+        gradient = a.paint.gradient!,
+        handles = gradientHandles(gradient, l),
+        start = g.part?.startsWith("stop:")
+          ? handles.stops[Number(g.part.slice(5))]!
+          : g.part === "radius"
+            ? handles.to
+            : g.part === "center"
+              ? handles.center
+              : g.part === "from"
+                ? handles.from
+                : handles.to;
+      const world = worldPoint(start, l),
+        target = localPoint({ x: world.x + p.x - g.start.x, y: world.y + p.y - g.start.y }, l);
+      const candidate = {
+        ...g.doc,
+        layers: g.doc.layers.map((n) =>
+          n.id === l.id
+            ? {
+                ...l,
+                appearance: l.appearance!.map((a, i) =>
+                  i === g.appearanceIndex
+                    ? {
+                        ...a,
+                        paint: {
+                          ...a.paint,
+                          gradient: moveGradientHandle(gradient, l, g.part!, target),
+                        },
+                      }
+                    : a,
+                ),
+              }
+            : n,
+        ),
+      };
+      try {
+        validateDocument(candidate);
+        return candidate;
+      } catch (e) {
+        onError((e as Error).message);
+        return null;
+      }
+    }
     if (g.type === "move") {
       let x = l.transform.x + p.x - g.start.x,
         y = l.transform.y + p.y - g.start.y;
@@ -1516,6 +1649,69 @@ export function ProCanvas({
                 </g>
               )}
 
+              {tool === "gradient" &&
+                selected &&
+                (() => {
+                  const a =
+                      selected.appearance?.find((a) => a.id === appearanceId && a.paint.gradient) ??
+                      selected.appearance?.find((a) => a.paint.gradient),
+                    gradient = a?.paint.gradient;
+                  if (!gradient) return null;
+                  const h = gradientHandles(gradient, selected),
+                    points =
+                      gradient.kind === "linear"
+                        ? ([
+                            ["from", h.from],
+                            ["to", h.to],
+                          ] as const)
+                        : ([
+                            ["center", h.center],
+                            ["radius", h.to],
+                            ["from", h.from],
+                          ] as const);
+                  const world = [
+                    ...points,
+                    ...h.stops.slice(1, -1).map((p, i) => [`stop:${i + 1}`, p] as const),
+                  ].map(([name, p]) => ({ name, p: worldPoint(p, selected) }));
+                  return (
+                    <g className="pro-vector-gradient-handles" aria-label="Vector gradient handles">
+                      <line
+                        x1={world[0]!.p.x}
+                        y1={world[0]!.p.y}
+                        x2={world[1]!.p.x}
+                        y2={world[1]!.p.y}
+                      />
+                      {world
+                        .filter(
+                          (h) =>
+                            h.name !== "from" ||
+                            gradient.kind === "linear" ||
+                            Math.hypot(h.p.x - world[0]!.p.x, h.p.y - world[0]!.p.y) *
+                              fit *
+                              view.zoom >
+                              14,
+                        )
+                        .map((h, i) => (
+                          <g key={h.name}>
+                            <circle
+                              cx={h.p.x}
+                              cy={h.p.y}
+                              r={22 / (fit * view.zoom)}
+                              className="pro-gradient-hit"
+                            />
+                            <circle cx={h.p.x} cy={h.p.y} r={5 / (fit * view.zoom)} />
+                            <text
+                              x={h.p.x + 8 / (fit * view.zoom)}
+                              y={h.p.y + (i % 2 ? 16 : -8) / (fit * view.zoom)}
+                              fontSize={11 / (fit * view.zoom)}
+                            >
+                              {h.name.startsWith("stop:") ? `stop ${h.name.slice(5)}` : h.name}
+                            </text>
+                          </g>
+                        ))}
+                    </g>
+                  );
+                })()}
               {cursor && ["brush", "pencil", "eraser", "clone", "heal", "spot"].includes(tool) ? (
                 <circle
                   cx={cursor.x}
@@ -1808,7 +2004,7 @@ export function ProCanvas({
                     })}
                   {tool === "direct" &&
                     splitPoint &&
-                    selected.kind === "shape" &&
+                    (selected.kind === "shape" || !!selected.textPath) &&
                     selected.shape === "path" &&
                     contours(selected).reduce((n, c) => n + c.anchors.length, 0) < 1000 &&
                     !isLocked(doc, selected.id) && (

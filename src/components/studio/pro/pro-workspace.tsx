@@ -1,3 +1,7 @@
+import { ProVectorAppearance } from "./pro-vector-appearance";
+import { ProTextPath } from "./pro-text-path";
+import { attachText } from "@/lib/studio/pro/text-path";
+import type { AppearanceItem } from "@/lib/studio/pro/vector-appearance";
 import { ProArtboards } from "./pro-artboards";
 import { ProPrecision } from "./pro-precision";
 import {
@@ -110,6 +114,8 @@ import {
 } from "@/lib/studio/pro/brush-presets";
 type Entry = { doc: ProDocument; label: string };
 const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush }> = [
+  { id: "gradient", name: "Vector Gradient", key: "G", Icon: ScanLine },
+  { id: "text-path", name: "Text on Path", key: "Shift+T", Icon: Type },
   { id: "artboard", name: "Artboard Tool", key: "Q", Icon: Scan },
   { id: "move", name: "Move", key: "V", Icon: MousePointer2 },
   { id: "transform", name: "Free Transform", key: "F", Icon: Scan },
@@ -165,6 +171,8 @@ const RASTER_TOOL_IDS = new Set<ProTool>([
   "text",
 ]);
 const VECTOR_TOOL_IDS = new Set<ProTool>([
+  "gradient",
+  "text-path",
   "artboard",
   "transform",
   "crop",
@@ -253,6 +261,8 @@ export default function ProWorkspace({
     [cloneSource, setCloneSource] = useState<CloneSource | null>(null),
     [cloneSampleArmed, setCloneSampleArmed] = useState(false),
     [maskMode, setMaskMode] = useState(false),
+    [appearanceId, setAppearanceId] = useState(""),
+    [appearanceClipboard, setAppearanceClipboard] = useState<AppearanceItem[] | null>(null),
     [activeBoardId, setActiveBoardId] = useState(""),
     [viewScope, setViewScope] = useState(""),
     [moveArtwork, setMoveArtwork] = useState(false),
@@ -266,6 +276,8 @@ export default function ProWorkspace({
       | "pathfinder"
       | "artboards"
       | "precision"
+      | "appearance"
+      | "typography"
       | "history"
       | "assets"
       | "ai"
@@ -1223,7 +1235,34 @@ export default function ProWorkspace({
       setError(storageMessage(e));
     }
   };
+  const createPathText = () => {
+    if (!doc || !active) return;
+    try {
+      const result = attachText(doc, active.id, activeContour);
+      commit(result.document, "Create editable text on contour");
+      setSelectedIds([result.id]);
+      setTool("move");
+      setTab("typography");
+    } catch (e) {
+      setError(storageMessage(e));
+    }
+  };
   const chooseTool = (id: ProTool) => {
+    if (id === "text-path") {
+      setTab("typography");
+      setPanelOpen(true);
+      if (active?.kind === "shape") createPathText();
+      return;
+    }
+    if (id === "gradient") {
+      setTab("appearance");
+      setPanelOpen(true);
+      if (!active?.appearance?.some((a) => a.paint.gradient)) {
+        setError("Add a linear or radial paint in Appearance before editing gradient handles.");
+        return;
+      }
+    }
+
     if (id === "artboard") {
       setTab("artboards");
       setPanelOpen(true);
@@ -1472,9 +1511,12 @@ export default function ProWorkspace({
         } else actions.current.remove();
       } else if (!e.ctrlKey && !e.metaKey) {
         const allowedTools = mode === "raster" ? RASTER_TOOL_IDS : VECTOR_TOOL_IDS;
-        const t = TOOLS.find(
-          (t) => allowedTools.has(t.id) && t.key.toLowerCase() === e.key.toLowerCase(),
-        );
+        const t =
+          e.shiftKey && e.key.toLowerCase() === "t" && mode === "vector"
+            ? TOOLS.find((t) => t.id === "text-path")
+            : TOOLS.find(
+                (t) => allowedTools.has(t.id) && t.key.toLowerCase() === e.key.toLowerCase(),
+              );
         if (t) {
           e.preventDefault();
           actions.current.selectTool(t.id);
@@ -1543,7 +1585,12 @@ export default function ProWorkspace({
                 disabled={busy}
                 onClick={() => {
                   setMode("raster");
-                  if (["pathfinder", "artboards", "precision"].includes(tab)) setTab("layers");
+                  if (
+                    ["pathfinder", "artboards", "precision", "appearance", "typography"].includes(
+                      tab,
+                    )
+                  )
+                    setTab("layers");
                   onModeChange("raster");
                   if (transformRef.current) cancelTransform();
                   setCropDraft(null);
@@ -1820,7 +1867,12 @@ export default function ProWorkspace({
                   aria-label={`${name} tool`}
                   title={`${name}${key ? ` (${key})` : ""}`}
                   aria-pressed={tool === id}
-                  disabled={busy}
+                  disabled={
+                    busy ||
+                    (id === "text-path" &&
+                      (active?.kind !== "shape" || isLocked(doc!, active.id))) ||
+                    (id === "gradient" && !active?.appearance?.some((a) => a.paint.gradient))
+                  }
                   onClick={() => {
                     chooseTool(id);
                   }}
@@ -1831,6 +1883,7 @@ export default function ProWorkspace({
             </nav>
             {doc ? (
               <ProCanvas
+                appearanceId={appearanceId}
                 viewportFrame={viewportFrame!}
                 onFitCanvas={() => setViewScope("")}
                 fitRequest={fitRequest}
@@ -1914,6 +1967,8 @@ export default function ProWorkspace({
                       "pathfinder",
                       "artboards",
                       "precision",
+                      "appearance",
+                      "typography",
                       "history",
                       "assets",
                       "ai",
@@ -1922,7 +1977,13 @@ export default function ProWorkspace({
                   )
                     .filter(
                       (t) =>
-                        !["pathfinder", "artboards", "precision"].includes(t) || mode === "vector",
+                        ![
+                          "pathfinder",
+                          "artboards",
+                          "precision",
+                          "appearance",
+                          "typography",
+                        ].includes(t) || mode === "vector",
                     )
                     .map((t) => (
                       <button
@@ -1936,6 +1997,39 @@ export default function ProWorkspace({
                     ))}
                 </nav>
                 <div className="pro-panel-content">
+                  {tab === "appearance" && (
+                    <ProVectorAppearance
+                      layer={
+                        active
+                          ? {
+                              ...active,
+                              locked: isLocked(doc!, active.id) || busy || !!transformDraft,
+                            }
+                          : undefined
+                      }
+                      selectedId={appearanceId}
+                      onSelect={setAppearanceId}
+                      onPatch={patch}
+                      clipboard={appearanceClipboard}
+                      onCopy={setAppearanceClipboard}
+                      onGradient={() => chooseTool("gradient")}
+                    />
+                  )}
+                  {tab === "typography" && (
+                    <ProTextPath
+                      layer={
+                        active
+                          ? {
+                              ...active,
+                              locked: isLocked(doc!, active.id) || busy || !!transformDraft,
+                            }
+                          : undefined
+                      }
+                      onCreate={createPathText}
+                      onPatch={patch}
+                      onDirect={() => chooseTool("direct")}
+                    />
+                  )}
                   {tab === "artboards" && mode === "vector" && doc && (
                     <ProArtboards
                       doc={doc}
