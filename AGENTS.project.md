@@ -29,6 +29,15 @@ merge/deployment approval. It does not authorize bypassing safety or validation.
 - Report completed features, tests, PR, merge SHA, production/live verification,
   limitations and next phase. Do not claim Adobe feature parity without evidence.
 
-Current sequence: finish Phase C gradient/effect/independent adjustment layers,
-then Phase D vector geometry/Boolean/compound paths/artboards/snapping/appearance/
-text-on-path/SVG. Extend existing cubic Pen/direct-anchor tools; do not recreate them.
+Current sequence: Phase C and Phase D are released. Phase D PR #3 merged normally
+as `a35e73ef90e71f79f711ce7830e8e8625e372aaa` and was verified on the existing
+Vercel Production domain. The baseline is 642 automated tests and 18 Chromium
+suites, including real AI and desktop/320px/390px workflows. See the final Phase D
+audit and `docs/PHASE_E_RASTER_REFINEMENT.md` before implementing anything.
+
+Next: audit and complete remaining professional Raster capabilities, starting
+with missing selection refinement, brush dynamics and mask/source-frame fidelity.
+Reuse the existing selection/repair/transform/color/effect/vector engines and
+native v4 persistence; do not duplicate completed tools. Future AI Studio is a
+separate later phase. Keep incomplete phase work on its development branch/draft
+PR and apply the release workflow above only when the entire phase is complete.
