@@ -108,13 +108,12 @@ export function svgGradient(
           Math.max(0, svgNumber(raw.replace(/%$/, ""), 0) / (raw.endsWith("%") ? 100 : 1)),
         ),
       ),
-      color = parseColor(attrs["stop-color"] ?? svgInherited(el, "stop-color", "#000000"));
+      color = parseColor(attrs["stop-color"] ?? "#000000");
     stops.push({
       position,
       color: color.color === "transparent" ? "#000000" : color.color,
       opacity:
-        (color.color === "transparent" ? 0 : color.opacity) *
-        svgNumber(attrs["stop-opacity"] ?? svgInherited(el, "stop-opacity", "1"), 1),
+        (color.color === "transparent" ? 0 : color.opacity) * svgNumber(attrs["stop-opacity"], 1),
     });
   }
   if (stops[0]!.position > 0) stops.unshift({ ...stops[0]!, position: 0 });

@@ -183,6 +183,32 @@ export function paintBounds(l: Layer) {
   boundsCache.set(l, result);
   return result;
 }
+/** Create valid paint geometry even for horizontal/vertical paths with zero-area bounds. */
+export function initialVectorGradient(
+  l: Layer,
+  kind: VectorGradient["kind"],
+  previous?: VectorGradient,
+): VectorGradient {
+  const b = paintBounds(l),
+    base = previous ?? defaultVectorGradient(),
+    units =
+      base.units === "objectBoundingBox" && (!b.width || !b.height) ? "userSpaceOnUse" : base.units,
+    user = units === "userSpaceOnUse",
+    center = { x: user ? b.x + b.width / 2 : 0.5, y: user ? b.y + b.height / 2 : 0.5 };
+  return {
+    ...base,
+    kind,
+    units,
+    from: kind === "radial" ? center : user ? { x: b.x, y: b.y } : { x: 0, y: 0.5 },
+    to:
+      kind === "radial"
+        ? center
+        : user
+          ? { x: b.x + (b.width || (!b.height ? 1 : 0)), y: b.y + b.height }
+          : { x: 1, y: 0.5 },
+    radius: kind === "radial" ? (user ? Math.max(1, b.width, b.height) / 2 : 0.5) : base.radius,
+  };
+}
 export function gradientMatrix(g: VectorGradient, l: Layer): Matrix {
   const b = paintBounds(l);
   if (g.units === "objectBoundingBox" && (!b.width || !b.height))

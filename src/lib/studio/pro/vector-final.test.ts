@@ -5,6 +5,7 @@ import {
   appearance,
   appearanceItem,
   defaultVectorGradient,
+  initialVectorGradient,
   gradientHandles,
   gradientMatrix,
   moveGradientHandle,
@@ -466,4 +467,33 @@ test("fitting a native vector frame rebases user-space paints and clips without 
   );
   near(clipped.x + next.transform.x, 30 + l.transform.x);
   near(clipped.y + next.transform.y, 20 + l.transform.y);
+});
+
+test("gradient creation uses real user-space geometry for zero-area vertical/horizontal strokes", () => {
+  const l = layer("shape", 100, 80);
+  l.shape = "path";
+  l.closed = false;
+  l.anchors = [
+    { x: 32, y: 0 },
+    { x: 32, y: 80 },
+  ];
+  const g = initialVectorGradient(l, "linear");
+  assert.equal(g.units, "userSpaceOnUse");
+  assert.deepEqual(g.from, { x: 32, y: 0 });
+  assert.deepEqual(g.to, { x: 32, y: 80 });
+  validateVectorGradient(g);
+  const r = initialVectorGradient(l, "radial", g);
+  assert.deepEqual(r.from, { x: 32, y: 40 });
+  assert.equal(r.radius, 40);
+  validateVectorGradient(r);
+  const horizontal = {
+    ...l,
+    anchors: [
+      { x: 0, y: 12 },
+      { x: 100, y: 12 },
+    ],
+  };
+  const h = initialVectorGradient(horizontal, "linear");
+  assert.deepEqual(h.from, { x: 0, y: 12 });
+  assert.deepEqual(h.to, { x: 100, y: 12 });
 });

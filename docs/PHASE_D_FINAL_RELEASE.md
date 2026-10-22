@@ -95,7 +95,7 @@ strip workflows; this is not an unlimited document engine.
 The final PR records exact tested SHA, full test count, the existing 17 Chromium
 suites plus `test:vector-final:browser`, types/lint/build/configuration results,
 actual benchmark output, CI conclusions, merge SHA and verified production build.
-The new suite has 27 grouped scenarios, including direct SVG/native glyph-center
+The new suite has 28 grouped scenarios, including direct SVG/native glyph-center
 comparisons within 0.6 local px / one degree and premultiplied pixel comparisons.
 It exercises actual pixel/SVG reference rendering, aligned strokes,
 compound winding, paint blending, masked/clipped compositing, appearance CRUD,
@@ -121,8 +121,11 @@ warnings are unchanged; Inkstrip is an editor, so unrelated game branding was
 not added.
 
 The final SVG audit distinguishes mask fill winding from clip-path winding,
-resolves inherited stop color/opacity, handles user-space percentages in viewBox
+honors non-inherited SVG stop color/opacity defaults, handles user-space percentages in viewBox
 coordinates, rejects inherited graded/hidden mask sources transactionally, and
 reports default/generic font substitutions in the import status. Keyboard Delete
 in Direct Select edits a text baseline anchor while preserving its text object;
 vector-only frame fitting is disabled for text.
+
+Gradient creation automatically uses user-space coordinates for zero-area path
+bounds, so horizontal/vertical gradient strokes remain real editable paints.

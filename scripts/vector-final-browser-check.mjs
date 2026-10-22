@@ -368,6 +368,37 @@ try {
     same(before, await raster(p));
     passed("advanced appearance with raster masks and layer clipping");
   }
+  {
+    const d = fixture(),
+      l = d.layers[1];
+    l.shape = "path";
+    l.closed = false;
+    l.anchors = [
+      { x: 32, y: 0 },
+      { x: 32, y: 48 },
+    ];
+    l.strokeWidth = 4;
+    l.fill = "transparent";
+    l.stroke = "#ffffff";
+    await load(p, d, source);
+    await tab(p, "Layers");
+    await p.getByLabel("Select layer Appearance subject", { exact: true }).check();
+    await tab(p, "Appearance");
+    await p.getByLabel("Appearance item", { exact: true }).selectOption({ label: "2. stroke" });
+    await p.getByLabel("Vector paint type", { exact: true }).selectOption("linear");
+    const output = await raster(p);
+    assert.ok(
+      at(output, 64, 70)[0] - at(output, 64, 26)[0] > 150,
+      "vertical gradient stroke actually interpolates along its geometry",
+    );
+    const file = await native(p);
+    assert.equal(
+      file.value.document.layers[1].appearance[1].paint.gradient.units,
+      "userSpaceOnUse",
+    );
+    compare(output, await image(p, await svg(p)));
+    passed("creating and exporting a vertical gradient stroke uses a valid user-space fallback");
+  }
   // UI operations modify real native state, render pixels, and undo atomically.
   await load(p, fixture(), source);
   await tab(p, "Layers");

@@ -5,7 +5,7 @@ import { Plus, Copy, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 import {
   appearance,
   appearanceItem,
-  defaultVectorGradient,
+  initialVectorGradient,
   VECTOR_BLENDS,
   type AppearanceItem,
   type VectorGradient,
@@ -232,13 +232,7 @@ export function ProVectorAppearance({
                     gradient:
                       e.target.value === "solid"
                         ? undefined
-                        : {
-                            ...(gradient ?? defaultVectorGradient()),
-                            kind: e.target.value as "linear" | "radial",
-                            from:
-                              e.target.value === "radial" ? { x: 0.5, y: 0.5 } : { x: 0, y: 0.5 },
-                            to: e.target.value === "radial" ? { x: 0.5, y: 0.5 } : { x: 1, y: 0.5 },
-                          },
+                        : initialVectorGradient(l, e.target.value as "linear" | "radial", gradient),
                   },
                 })
               }
