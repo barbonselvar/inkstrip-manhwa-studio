@@ -397,6 +397,7 @@ export function ProProperties({
                       <select
                         className="field"
                         aria-label="Path fill rule"
+                        disabled={selected.appearance !== undefined}
                         value={selected.fillRule ?? "nonzero"}
                         onChange={(e) => onPatch({ fillRule: e.target.value as Layer["fillRule"] })}
                       >
@@ -472,6 +473,7 @@ export function ProProperties({
                   />
                   <ProNumber
                     label="Text line height"
+                    disabled={!!selected.textPath}
                     value={selected.lineHeight}
                     min={0.5}
                     max={3}
@@ -500,11 +502,17 @@ export function ProProperties({
                     ))}
                   </select>
                 </label>
+                {selected.appearance !== undefined && (
+                  <p className="pro-help">
+                    Edit this text object’s paints in Vector Studio’s Appearance panel.
+                  </p>
+                )}
                 <label className="pro-field">
                   Text fill
                   <input
                     type="color"
                     aria-label="Text fill"
+                    disabled={selected.appearance !== undefined}
                     value={selected.fill === "transparent" ? "#172420" : selected.fill}
                     onChange={(e) => onPatch({ fill: e.target.value }, "fill")}
                   />

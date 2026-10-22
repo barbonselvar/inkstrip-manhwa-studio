@@ -518,6 +518,9 @@ try {
     t.appearance = [a];
     d.layers = [d.layers[0], t];
     await load(p, d, source);
+    await tab(p, "Properties");
+    assert.ok(await p.getByLabel("Text fill", { exact: true }).isDisabled());
+    assert.ok(await p.getByLabel("Text line height", { exact: true }).isDisabled());
     const output = await raster(p),
       exportedSvg = await svg(p);
     compare(output, await image(p, exportedSvg), { mean: 1.2, fraction: 0.04 });
