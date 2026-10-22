@@ -36,7 +36,8 @@
     "test:color:browser": "node --experimental-strip-types scripts/color-browser-check.mjs",
     "test:appearance:browser": "node --experimental-strip-types scripts/appearance-browser-check.mjs",
     "test:vector:browser": "node --experimental-strip-types scripts/vector-browser-check.mjs",
-    "test:compound:browser": "node --experimental-strip-types scripts/compound-browser-check.mjs"
+    "test:compound:browser": "node --experimental-strip-types scripts/compound-browser-check.mjs",
+    "test:pathfinder:browser": "node --experimental-strip-types scripts/pathfinder-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
@@ -70,10 +71,12 @@
     "@tanstack/react-start": "^1.168.60",
     "@tanstack/react-table": "^8.21.0",
     "@tanstack/router-plugin": "^1.168.0",
+    "@types/clipper-lib": "6.4.0",
     "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^5.2.0",
     "better-auth": "~1.6.30",
     "class-variance-authority": "^0.7.1",
+    "clipper-lib": "6.4.2",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.0.0",

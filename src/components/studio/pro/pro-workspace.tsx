@@ -39,6 +39,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { ProCanvas, type ProTool } from "./pro-canvas";
 import { ProAnchors } from "./pro-anchors";
+import { ProPathfinder } from "./pro-pathfinder";
+import { PathfinderJob } from "@/lib/studio/pro/pathfinder-client";
+import type { PathfinderOperation, PathfinderOptions } from "@/lib/studio/pro/pathfinder";
 import { editAnchor } from "@/lib/studio/pro/anchor-edit";
 import { createCompound, releaseCompound } from "@/lib/studio/pro/compound";
 import { documentSources } from "@/lib/studio/pro/raster-budget";
@@ -241,7 +244,15 @@ export default function ProWorkspace({
     [snapping, setSnapping] = useState(true),
     [before, setBefore] = useState(false),
     [tab, setTab] = useState<
-      "properties" | "transform" | "geometry" | "layers" | "history" | "assets" | "ai" | "export"
+      | "properties"
+      | "transform"
+      | "geometry"
+      | "layers"
+      | "pathfinder"
+      | "history"
+      | "assets"
+      | "ai"
+      | "export"
     >("layers"),
     [panelOpen, setPanelOpen] = useState(true),
     [panelWidth, setPanelWidth] = useState(300),
@@ -258,6 +269,8 @@ export default function ProWorkspace({
     [mime, setMime] = useState("image/png"),
     [quality, setQuality] = useState(0.95),
     [geometryRevision, setGeometryRevision] = useState(0);
+  const pathfinderJob = useRef<PathfinderJob | null>(null);
+  useEffect(() => () => pathfinderJob.current?.cancel(), []);
   const displayedDocument = useRef<ProDocument | null>(null),
     displayedBefore = useRef(false);
   const canvas = useRef<HTMLCanvasElement>(null),
@@ -877,6 +890,7 @@ export default function ProWorkspace({
   };
   const cancel = () => {
     ++operationRun.current;
+    pathfinderJob.current?.cancel();
     renderer.current?.dispose();
     setAssetEpoch((n) => n + 1);
     setStatus("Rendering cancelled. Document retained.");
@@ -1010,6 +1024,51 @@ export default function ProWorkspace({
       } catch (e) {
         setError(storageMessage(e));
       }
+    }
+  };
+  const runPathfinder = async (operation: PathfinderOperation, options: PathfinderOptions) => {
+    const d = historyRef.current?.present.doc,
+      s = sessionRef.current;
+    if (!d || !s || busyRef.current || transformRef.current || mode !== "vector") return;
+    const run = ++operationRun.current;
+    busyRef.current = true;
+    setBusy(true);
+    ++generation.current;
+    setCancellable(true);
+    setError("");
+    setProgress(`Computing Pathfinder ${operation}…`);
+    setStatus(
+      "Computing editable vector geometry. Source objects remain unchanged until validation completes.",
+    );
+    try {
+      const job = new PathfinderJob(d, selectedIds, operation, options);
+      pathfinderJob.current = job;
+      const result = await job.result;
+      if (!alive.current || run !== operationRun.current) return;
+      if (historyRef.current?.present.doc !== d)
+        throw new Error("Document changed during Pathfinder. Source objects retained.");
+      documentSources(result.document, maxArea);
+      validateAssets({ ...s, document: result.document });
+      busyRef.current = false;
+      commit(result.document, `Pathfinder ${operation}`);
+      setSelectedIds(result.ids);
+      setTool("move");
+      setMaskMode(false);
+      setBefore(false);
+      setStatus(
+        `Pathfinder ${operation}: ${result.ids.length} editable object(s). Undo restores all source objects. Chapter unchanged.`,
+      );
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        setError(storageMessage(error));
+        setStatus("Pathfinder failed. Source objects and Chapter unchanged.");
+      }
+    } finally {
+      pathfinderJob.current = null;
+      busyRef.current = false;
+      setBusy(false);
+      setCancellable(false);
+      setProgress("");
     }
   };
   const compound = (operation: "create" | "release") => {
@@ -1378,6 +1437,7 @@ export default function ProWorkspace({
                 disabled={busy}
                 onClick={() => {
                   setMode("raster");
+                  if (tab === "pathfinder") setTab("layers");
                   onModeChange("raster");
                   if (transformRef.current) cancelTransform();
                   setCropDraft(null);
@@ -1723,23 +1783,35 @@ export default function ProWorkspace({
                       "transform",
                       "geometry",
                       "layers",
+                      "pathfinder",
                       "history",
                       "assets",
                       "ai",
                       "export",
                     ] as const
-                  ).map((t) => (
-                    <button
-                      type="button"
-                      key={t}
-                      aria-pressed={tab === t}
-                      onClick={() => setTab(t)}
-                    >
-                      {t === "ai" ? "AI tools" : t[0]!.toUpperCase() + t.slice(1)}
-                    </button>
-                  ))}
+                  )
+                    .filter((t) => t !== "pathfinder" || mode === "vector")
+                    .map((t) => (
+                      <button
+                        type="button"
+                        key={t}
+                        aria-pressed={tab === t}
+                        onClick={() => setTab(t)}
+                      >
+                        {t === "ai" ? "AI tools" : t[0]!.toUpperCase() + t.slice(1)}
+                      </button>
+                    ))}
                 </nav>
                 <div className="pro-panel-content">
+                  {tab === "pathfinder" && mode === "vector" && doc && (
+                    <ProPathfinder
+                      doc={doc}
+                      ids={selectedIds}
+                      disabled={busy || !!transformDraft}
+                      onRun={(operation, options) => void runPathfinder(operation, options)}
+                    />
+                  )}
+
                   {tab === "properties" && (
                     <ProProperties
                       anchorControls={

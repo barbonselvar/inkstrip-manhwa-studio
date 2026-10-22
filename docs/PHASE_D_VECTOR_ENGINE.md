@@ -66,7 +66,7 @@ perspective coordinates, mask/clip/source preservation and SVG cubic output.
 
 - Remaining path editing: join/split open paths, multi-anchor selection, explicit
   additional keyboard modifiers.
-- Robust Pathfinder Boolean operations. Compound fill rules are implemented in Increment A.
+- Pathfinder: implemented in Increment B with bounded curve approximation and explicit relationship/complexity guards; future exact-curve or live Boolean stacks are not claimed. Compound fill rules are implemented in Increment A.
 - Multiple artboards and artboard-aware native output.
 - Precision object/anchor snapping and alignment.
 - Expanded stroke/fill/appearance behavior, preserving editable objects.
@@ -114,3 +114,18 @@ shared Button lint warning. [Increment A](PHASE_D_COMPOUND_SVG.md) records
 geometry/persistence limits and investigated fixture/readiness failures.
 Phase D remains incomplete and must stay draft until Increments B–E pass release
 validation; main and production have not been changed by this increment.
+
+
+Increment B adds [filled-region Pathfinder](PHASE_D_PATHFINDER.md): seven genuine
+Boolean operations, editable native outputs, bounded curve approximation, winding
+and hierarchy support, cancellable worker and desktop/mobile controls. This
+supersedes earlier missing Pathfinder states; the documented unsupported
+relationships and polygonal approximation remain explicit. Increments C–E and
+complete Phase D release validation are still required before merge/deployment.
+
+Increment B validation: **573 automated tests (274 Pro)**, including 31 new tests,
+and all **16 Chromium suites** pass. TypeScript, lint, production build,
+configuration and auth invariants pass (one existing shared Button lint warning).
+The final Pathfinder UI was rebuilt and retested on desktop/320px/390px, with
+native/history/exports and homepage/3D smoke. [Increment B](PHASE_D_PATHFINDER.md)
+records algorithm tolerances, supported cases, guards and investigated test issues.

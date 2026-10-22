@@ -374,3 +374,16 @@ fills/strokes, text-on-path and general SVG gradients/clipping/masks remain
 **missing/partial**. Existing simple fill/stroke controls and captured SVG stroke
 metadata do not imply complete advanced appearance. Phase D stays draft; no new
 production release is claimed.
+
+
+## Phase D Increment B — Pathfinder (unreleased)
+
+[Pathfinder contracts](PHASE_D_PATHFINDER.md) supersede earlier missing Boolean
+states. Unite, Subtract, Intersect, Exclude, Divide, Trim and Merge produce actual
+editable vector regions using Clipper integer geometry and bounded adaptive cubic
+approximation. Closed affine compound paths, holes, winding, neutral selected
+groups, history/native/SVG and desktop/touch controls are implemented with explicit
+relationship, precision and complexity guards. Original curves are approximated
+by editable line anchors; no exact curve preservation or live Boolean stack is
+claimed. Artboards, precision snapping, advanced appearance, text-on-path and
+broader SVG compatibility remain missing/partial. Phase D remains draft.

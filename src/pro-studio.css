@@ -1127,3 +1127,22 @@
   vector-effect: non-scaling-stroke;
   stroke-width: 1.5px;
 }
+
+.pro-pathfinder-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.pro-pathfinder-actions .studio-button {
+  min-height: 2.75rem;
+  min-width: 0;
+}
+.pro-pathfinder-settings {
+  border: 0;
+  padding: 0;
+  margin: 1rem 0;
+  min-width: 0;
+}
+.pro-pathfinder-settings .pro-check {
+  white-space: normal;
+}

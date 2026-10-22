@@ -2,6 +2,11 @@
 
 ## Unreleased — Phase D vector geometry and anchor editing
 
+- Increment B: genuine Unite/Subtract/Intersect/Exclude/Divide/Trim/Merge filled-region
+  geometry, bounded curve approximation, editable native results, neutral group
+  support, cancellable worker, touch/keyboard panel and explicit empty-result safety.
+  [Pathfinder contracts and limits](PHASE_D_PATHFINDER.md).
+
 - Exact cubic subdivision and bounded-error arc metrics/inversion.
 - Native open/closed segment-subdivision transaction with history/native tests.
 - Precise native curve insertion from the canvas and numeric parameter/arc
@@ -9,7 +14,7 @@
 - Corner/smooth/symmetric handles, numeric anchor/handle coordinates, touch-aware
   Direct Select, Alt to break coupling, path reversal and guarded anchor deletion.
 - Existing history/native/export/Chapter integration and desktop/320px/390px
-  Chromium regression suite. Pathfinder/artboards/text-on-path and
+  Chromium regression suite. Artboards/text-on-path and
   the remaining vector phase are still pending; no Phase D production release.
 - Increment A: editable compound contours/holes, evenodd/nonzero rules,
   create/release, subpath controls, safe SVG path/arc conversion, affine/stroke/
