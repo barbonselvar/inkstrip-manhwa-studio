@@ -8,6 +8,9 @@ function neutral(d: ProDocument, l: Layer) {
     l.clipped ||
     l.linkId ||
     l.mask ||
+    l.vectorClips?.length ||
+    l.appearance !== undefined ||
+    l.textPath !== undefined ||
     l.transform.deform ||
     l.strokes.length ||
     l.opacity !== 1 ||

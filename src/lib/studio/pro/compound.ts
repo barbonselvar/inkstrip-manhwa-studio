@@ -52,7 +52,18 @@ export function fitVectorFrame(doc: ProDocument, id: string): ProDocument {
       ]),
     );
   if (!points.length) throw new Error("The path has no geometry to fit.");
-  const margin = Math.max(1, l.strokeWidth * (l.lineJoin === "miter" ? (l.miterLimit ?? 10) : 1)),
+  const margin = Math.max(
+      1,
+      l.strokeWidth * (l.lineJoin === "miter" ? (l.miterLimit ?? 10) : 1),
+      ...(l.appearance ?? [])
+        .filter((a) => a.visible && a.kind === "stroke")
+        .map(
+          (a) =>
+            a.width *
+            (a.alignment === "inside" ? 0 : a.alignment === "outside" ? 1 : 0.5) *
+            (a.join === "miter" ? a.miterLimit : 1),
+        ),
+    ),
     x = Math.floor(Math.min(...points.map((p) => p.x)) - margin),
     y = Math.floor(Math.min(...points.map((p) => p.y)) - margin),
     width = Math.ceil(Math.max(...points.map((p) => p.x)) + margin) - x,
@@ -79,6 +90,24 @@ export function fitVectorFrame(doc: ProDocument, id: string): ProDocument {
               vectorOverflow: true,
               width,
               height,
+              appearance: l.appearance?.map((a) =>
+                a.paint.gradient?.units === "userSpaceOnUse"
+                  ? {
+                      ...a,
+                      paint: {
+                        ...a.paint,
+                        gradient: {
+                          ...a.paint.gradient,
+                          matrix: compose([1, 0, 0, 1, -x, -y], a.paint.gradient.matrix),
+                        },
+                      },
+                    }
+                  : a,
+              ),
+              vectorClips: l.vectorClips?.map((c) => ({
+                ...c,
+                matrix: compose([1, 0, 0, 1, -x, -y], c.matrix),
+              })),
               transform: fromAffine(compose(affine(l.transform), [1, 0, 0, 1, x, y]), {
                 ...l.transform,
                 pivot,
@@ -98,6 +127,9 @@ function neutral(d: ProDocument, l: Layer) {
     l.clipped ||
     l.linkId ||
     l.mask ||
+    l.vectorClips?.length ||
+    l.appearance !== undefined ||
+    l.textPath !== undefined ||
     l.transform.deform ||
     l.opacity !== 1 ||
     l.blend !== "source-over" ||

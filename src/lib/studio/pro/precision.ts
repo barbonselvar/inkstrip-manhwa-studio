@@ -1,12 +1,5 @@
-import {
-  contours,
-  worldPoint,
-  validateDocument,
-  type Layer,
-  type Point,
-  type ProDocument,
-} from "./model.ts";
-import { bounds } from "./transform.ts";
+import { contours, validateDocument, type Layer, type Point, type ProDocument } from "./model.ts";
+import { bounds, mapping } from "./transform.ts";
 import { nativePath } from "./compound.ts";
 import { anchorCurve, cubicPoint } from "./bezier.ts";
 import {
@@ -24,14 +17,16 @@ export type SnapIndex = { x: Candidate[]; y: Candidate[]; points: Point[]; boxes
  * Cubic derivative roots preserve extrema after affine transforms, not just control hulls. */
 export function layerBounds(l: Layer): Frame {
   if (l.kind !== "shape" || l.transform.deform) return bounds(l.transform, l.width, l.height);
-  const n = nativePath(l),
+  const n = l.shape === "path" && !l.pathData ? l : nativePath(l),
+    map = mapping(n.transform).forward,
     points: Point[] = [];
   for (const c of contours(n)) {
-    points.push(...c.anchors.map((a) => worldPoint(a, n)));
+    points.push(...c.anchors.map(map));
     for (let i = 0; i < c.anchors.length - (c.closed ? 0 : 1); i++) {
-      const curve = anchorCurve(c.anchors[i]!, c.anchors[(i + 1) % c.anchors.length]!).map((p) =>
-        worldPoint(p, n),
-      ) as ReturnType<typeof anchorCurve>;
+      const a = c.anchors[i]!,
+        b = c.anchors[(i + 1) % c.anchors.length]!;
+      if (!a.outgoing && !b.incoming) continue; // Line extrema are its already included endpoints.
+      const curve = anchorCurve(a, b).map(map) as ReturnType<typeof anchorCurve>;
       for (const axis of ["x", "y"] as const) {
         const [p, q, r, s] = curve.map((p) => p[axis]),
           a = -p! + 3 * q! - 3 * r! + s!,
@@ -98,8 +93,9 @@ export function buildSnapIndex(
       index.boxes.push(b);
     }
     if (s.modes.anchors && l.kind === "shape") {
-      const n = nativePath(l);
-      for (const c of contours(n)) for (const a of c.anchors) index.points.push(worldPoint(a, n));
+      const n = l.shape === "path" && !l.pathData ? l : nativePath(l),
+        map = mapping(n.transform).forward;
+      for (const c of contours(n)) for (const a of c.anchors) index.points.push(map(a));
     }
   }
   // Adjacent peers offer one stable equal-gap target between their facing edges.

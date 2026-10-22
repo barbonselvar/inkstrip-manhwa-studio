@@ -90,7 +90,12 @@ export function editedAnchor(
 function editable(doc: ProDocument, id: string): Layer {
   validateDocument(doc);
   const l = doc.layers.find((l) => l.id === id);
-  if (!l || l.kind !== "shape" || l.shape !== "path" || l.pathData)
+  if (
+    !l ||
+    (l.kind !== "shape" && !(l.kind === "text" && l.textPath)) ||
+    l.shape !== "path" ||
+    l.pathData
+  )
     throw new Error(
       "Choose a native Bézier path. Imported SVG paths need conversion before anchor editing.",
     );

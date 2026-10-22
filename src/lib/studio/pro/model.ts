@@ -1,3 +1,6 @@
+import { validateVectorClips, type VectorClip } from "./vector-clip.ts";
+import { validateAppearance, type AppearanceItem } from "./vector-appearance.ts";
+import { validateTextPath, checkPathText, type TextPath } from "./text-path.ts";
 import { mapping, validateTransform, type Deformation } from "./transform.ts";
 import { validateGeometry, type Crop, type ImageSize } from "./geometry.ts";
 import type { Adjustments } from "../editor/adjustments";
@@ -101,6 +104,9 @@ export type Shape =
   | "shout"
   | "caption";
 export type Layer = {
+  appearance?: AppearanceItem[];
+  vectorClips?: VectorClip[];
+  textPath?: TextPath;
   id: string;
   name: string;
   kind: "raster" | "paint" | "shape" | "text" | "group" | "gradient" | "adjustment";
@@ -457,6 +463,10 @@ export function validateDocument(d: ProDocument) {
       l.width * l.height > 16_000_000
     )
       throw new Error("Invalid or oversized layer.");
+    validateVectorClips(l);
+    validateAppearance(l);
+    validateTextPath(l);
+    if (l.textPath) checkPathText(l.text);
     if (l.kind === "gradient") validateGradient(l.gradient!);
     else if (l.gradient !== undefined)
       throw new Error("Gradient parameters require a gradient layer.");

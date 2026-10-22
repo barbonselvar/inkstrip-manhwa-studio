@@ -129,7 +129,7 @@ export function splitAnchorSegment(
     count = l ? l.anchors.length - (l.closed ? 0 : 1) : 0;
   if (
     !l ||
-    l.kind !== "shape" ||
+    (l.kind !== "shape" && !(l.kind === "text" && original?.textPath)) ||
     l.shape !== "path" ||
     l.pathData ||
     l.anchors.length < 2 ||

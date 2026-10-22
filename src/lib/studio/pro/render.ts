@@ -1,3 +1,5 @@
+import { maskVectorClips } from "./vector-clip";
+import { drawVectorAppearance } from "./vector-render";
 import type { Frame } from "./artboards.ts";
 import { gradientPixels } from "./gradient";
 import { effectPadding, effectPixels } from "./effects";
@@ -233,6 +235,13 @@ export function clippedStroke(ctx: Ctx, s: Stroke, width: number, height: number
 }
 /** Draw editable geometry directly into either a local or a document-resolution plane. */
 function vector(ctx: Ctx, l: Layer) {
+  ctx.save();
+  if (l.appearance !== undefined || l.textPath) {
+    drawVectorAppearance(ctx, l);
+    maskVectorClips(ctx, l);
+    ctx.restore();
+    return;
+  }
   if (l.kind === "shape") {
     const path = new Path2D(shapePath(l));
     ctx.fillStyle = l.fill;
@@ -297,6 +306,8 @@ function vector(ctx: Ctx, l: Layer) {
     }
   }
   ctx.globalAlpha = 1;
+  maskVectorClips(ctx, l);
+  ctx.restore();
 }
 async function surface(
   l: Layer,
@@ -463,6 +474,16 @@ export async function composite(
   frame?: Frame & { background?: string },
 ) {
   validateDocument(d);
+  // Resolve installed/fallback fonts before measuring or painting editable text.
+  if (typeof self !== "undefined" && "fonts" in self) {
+    const fonts = (self as unknown as { fonts: FontFaceSet }).fonts;
+    await Promise.all(
+      d.layers
+        .filter((l) => l.kind === "text" && l.visible)
+        .map((l) => fonts.load(`${l.fontWeight} ${l.fontSize}px ${l.fontFamily}`, l.text || " ")),
+    );
+    if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
+  }
   const padding = effectPadding(d, scale),
     nativeWidth = Math.max(1, Math.round((frame?.width ?? d.width) * scale)),
     nativeHeight = Math.max(1, Math.round((frame?.height ?? d.height) * scale)),
@@ -549,7 +570,7 @@ export async function composite(
         m[4] * scale + originX,
         m[5] * scale + originY,
       );
-      if (!l.vectorOverflow) {
+      if (!l.vectorOverflow && !l.textPath && !l.appearance) {
         ctx.beginPath();
         ctx.rect(0, 0, l.width, l.height);
         ctx.clip();
