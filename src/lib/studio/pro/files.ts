@@ -1,3 +1,4 @@
+import type { Artboard } from "./artboards.ts";
 import {
   MAX_ASSET_BYTES,
   sourceReference,
@@ -39,23 +40,26 @@ export async function nativeFile(s: ProSession): Promise<Blob> {
     ),
   );
   // Older releases accept extra v1 fields and would silently omit holes/stroke styles.
-  // Feature-bearing files use envelope v2 so old readers reject them safely. The
-  // internal document model and legacy v1 reader remain backward compatible.
-  const version = s.document.layers.some(
-    (l) =>
-      l.subpaths?.length ||
-      l.vectorOverflow ||
-      l.fillRule === "evenodd" ||
-      l.lineCap !== undefined ||
-      l.lineJoin !== undefined ||
-      l.miterLimit !== undefined ||
-      l.dash !== undefined ||
-      l.dashOffset !== undefined ||
-      l.fillOpacity !== undefined ||
-      l.strokeOpacity !== undefined,
-  )
-    ? 2
-    : 1;
+  // Curve/style features use envelope v2; artboards/layout use v3. Old readers
+  // reject newer envelopes safely; internal v1 geometry and legacy files still work.
+  const version =
+    s.document.artboards !== undefined || s.document.layout !== undefined
+      ? 3
+      : s.document.layers.some(
+            (l) =>
+              l.subpaths?.length ||
+              l.vectorOverflow ||
+              l.fillRule === "evenodd" ||
+              l.lineCap !== undefined ||
+              l.lineJoin !== undefined ||
+              l.miterLimit !== undefined ||
+              l.dash !== undefined ||
+              l.dashOffset !== undefined ||
+              l.fillOpacity !== undefined ||
+              l.strokeOpacity !== undefined,
+          )
+        ? 2
+        : 1;
   return new Blob(
     [JSON.stringify({ format: "inkstrip-pro", version, document: s.document, assets })],
     { type: "application/json" },
@@ -71,13 +75,13 @@ export async function readNative(
   if (
     !value ||
     value.format !== "inkstrip-pro" ||
-    ![1, 2].includes(value.version) ||
+    ![1, 2, 3].includes(value.version) ||
     !value.assets ||
     typeof value.assets !== "object" ||
     Array.isArray(value.assets)
   )
     throw new Error(
-      "Unsupported native document. This editor supports Inkstrip Pro native versions 1 and 2.",
+      "Unsupported native document. This editor supports Inkstrip Pro native versions 1, 2 and 3.",
     );
   const assets: Record<string, Blob> = Object.create(null);
   let total = 0;
@@ -111,7 +115,7 @@ export const escapeXml = (s: string) =>
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]!,
   );
 /** Explicit vector-only export. Reject unsupported vector effects instead of silently changing them. */
-export function vectorSvg(d: ProDocument): string {
+export function vectorSvg(d: ProDocument, board?: Artboard): string {
   if (
     d.layers.some(
       (l) => l.kind === "gradient" || l.kind === "adjustment" || l.effects?.some((e) => e.enabled),
@@ -165,6 +169,16 @@ export function vectorSvg(d: ProDocument): string {
                 .join("")}</text>`,
       )
       .join("");
+  if (board) {
+    const actual = d.artboards?.find((b) => b.id === board.id);
+    if (!actual || JSON.stringify(actual) !== JSON.stringify(board))
+      throw Error("Select an existing artboard to export.");
+    const background =
+      board.background === "transparent"
+        ? ""
+        : `<rect x="${board.x}" y="${board.y}" width="${board.width}" height="${board.height}" fill="${board.background}"/>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${board.width}" height="${board.height}" viewBox="${board.x} ${board.y} ${board.width} ${board.height}" overflow="hidden">${background}${branch()}</svg>`;
+  }
   const size = outputSize(d);
   if (!d.crop)
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}" viewBox="0 0 ${d.width} ${d.height}" preserveAspectRatio="none">${branch()}</svg>`;

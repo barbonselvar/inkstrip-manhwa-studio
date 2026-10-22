@@ -37,7 +37,8 @@
     "test:appearance:browser": "node --experimental-strip-types scripts/appearance-browser-check.mjs",
     "test:vector:browser": "node --experimental-strip-types scripts/vector-browser-check.mjs",
     "test:compound:browser": "node --experimental-strip-types scripts/compound-browser-check.mjs",
-    "test:pathfinder:browser": "node --experimental-strip-types scripts/pathfinder-browser-check.mjs"
+    "test:pathfinder:browser": "node --experimental-strip-types scripts/pathfinder-browser-check.mjs",
+    "test:artboards:browser": "node --experimental-strip-types scripts/artboards-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

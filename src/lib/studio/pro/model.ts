@@ -5,6 +5,7 @@ import { NEUTRAL, validateAdjustments } from "../editor/adjustments.ts";
 import { validateColor, type ColorAdjustments } from "./color.ts";
 import { defaultGradient, validateGradient, type Gradient } from "./gradient.ts";
 import { validateEffects, type Effect } from "./effects.ts";
+import { validateLayout, type Artboard, type Layout } from "./artboards.ts";
 export type Point = { x: number; y: number };
 export type Transform = {
   x: number;
@@ -159,6 +160,8 @@ export type Layer = {
 };
 export type SourceReference = { assetId: string; width: number; height: number };
 export type ProDocument = {
+  artboards?: Artboard[];
+  layout?: Layout;
   /** Non-destructive output frame in full canvas coordinates. */
   crop?: Crop;
   /** Final composite resampling; source layers and masks retain native coordinates. */
@@ -419,6 +422,7 @@ export function validateDocument(d: ProDocument) {
   )
     throw new Error("Invalid original source reference.");
   validateGeometry(d);
+  validateLayout(d);
   if (d.selection !== undefined) validateSelection(d.selection);
   for (let i = 0; i < d.layers.length; i++) {
     const l = d.layers[i]!;

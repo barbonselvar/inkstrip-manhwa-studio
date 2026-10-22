@@ -1,3 +1,18 @@
+import {
+  artboards,
+  changeArtboard,
+  layout,
+  type Frame,
+  type Artboard,
+} from "@/lib/studio/pro/artboards";
+import {
+  buildSnapIndex,
+  snapGeometry,
+  snapHandle,
+  selectionBounds,
+  type SnapIndex,
+  type SnapGuide,
+} from "@/lib/studio/pro/precision";
 import type { TransformDraft } from "./pro-transform";
 import {
   affine,
@@ -46,6 +61,7 @@ import { isLocked } from "@/lib/studio/pro/operations";
 import { selectionCanvas } from "@/lib/studio/pro/render";
 import { shapePath } from "@/lib/studio/pro/paths";
 export type ProTool =
+  | "artboard"
   | "transform"
   | "crop"
   | "move"
@@ -73,6 +89,11 @@ export type ProTool =
   | "poly-lasso";
 type View = { zoom: number; x: number; y: number };
 type Gesture = {
+  snap?: SnapIndex;
+  moveFrame?: Frame;
+  board?: Artboard;
+  preview?: ProDocument;
+  guideId?: string;
   transform?: TransformDraft;
   transformHandle?: string;
   crop?: Crop;
@@ -95,6 +116,12 @@ type Gesture = {
 };
 export function ProCanvas({
   doc,
+  viewportFrame,
+  onFitCanvas,
+  fitRequest,
+  artboardId,
+  onArtboard,
+  moveArtwork,
   transformDraft,
   onTransformDraft,
   onApplyTransform,
@@ -135,6 +162,12 @@ export function ProCanvas({
   onRepair,
 }: {
   doc: ProDocument;
+  viewportFrame: Frame;
+  onFitCanvas: () => void;
+  fitRequest: { frame: Frame; serial: number } | null;
+  artboardId: string;
+  onArtboard: (id: string) => void;
+  moveArtwork: boolean;
   transformDraft: TransformDraft | null;
   onTransformDraft: (d: TransformDraft) => void;
   onApplyTransform: () => void;
@@ -191,6 +224,7 @@ export function ProCanvas({
     }
   }, []);
   useEffect(() => () => observer.current?.disconnect(), []);
+  const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
   const [patchDestination, setPatchDestination] = useState<Region | null>(null);
   const [patchPreview, setPatchPreview] = useState<Region | null>(null);
   const [selectionDraft, setSelectionDraft] = useState<Selection | null>(null);
@@ -210,12 +244,34 @@ export function ProCanvas({
   cropActions.current = { onCancelCrop, onApplyCrop };
   const shownCrop = cropDraft ?? doc.crop;
   const fit = Math.min(
-      Math.max(1, size.width - 64) / doc.width,
-      Math.max(1, size.height - 64) / doc.height,
+      Math.max(1, size.width - 64) / viewportFrame.width,
+      Math.max(1, size.height - 64) / viewportFrame.height,
     ),
     selected = doc.layers.find((l) => l.id === activeId),
     transformTarget =
       selected && transformDraft?.frame ? { ...selected, ...transformDraft.frame } : selected;
+  const focusFrame = useRef({ viewportFrame, fit, size });
+  focusFrame.current = { viewportFrame, fit, size };
+  useEffect(() => {
+    if (!fitRequest) return;
+    const { frame } = fitRequest,
+      { viewportFrame: f, fit, size } = focusFrame.current;
+    const zoom = Math.max(
+      0.1,
+      Math.min(
+        12,
+        Math.min(
+          Math.max(1, size.width - 64) / frame.width,
+          Math.max(1, size.height - 64) / frame.height,
+        ) / fit,
+      ),
+    );
+    setView({
+      zoom,
+      x: (f.x + f.width / 2 - frame.x - frame.width / 2) * fit * zoom,
+      y: (f.y + f.height / 2 - frame.y - frame.height / 2) * fit * zoom,
+    });
+  }, [fitRequest]);
   const selectedPath = selected ? contourAt(selected, activeContour) : undefined;
   const splitSegment =
     selectedPath && selectedPath.anchors.length >= 2
@@ -236,10 +292,13 @@ export function ProCanvas({
       : null;
   useEffect(() => {
     pathId.current = "";
+    setSnapGuides([]);
+    gesture.current = null;
+    onTransient(null);
     setPolygon([]);
     setPatchDestination(null);
     setPatchPreview(null);
-  }, [tool]);
+  }, [tool, onTransient]);
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (tool === "transform" && e.key === "Escape") {
@@ -263,7 +322,14 @@ export function ProCanvas({
         e.preventDefault();
         space.current = true;
       }
+      if (e.key === "Enter" && tool === "artboard" && gesture.current?.preview) {
+        onCommit(gesture.current.preview, "Edit artboard / guide");
+        gesture.current = null;
+        onTransient(null);
+        setSnapGuides([]);
+      }
       if (e.key === "Escape") {
+        setSnapGuides([]);
         setPatchDestination(null);
         setPatchPreview(null);
         setSelectionDraft(null);
@@ -283,6 +349,7 @@ export function ProCanvas({
     window.addEventListener("keyup", up);
     const blur = () => {
       space.current = false;
+      setSnapGuides([]);
       setSelectionDraft(null);
       gesture.current = null;
       pointers.current.clear();
@@ -295,12 +362,12 @@ export function ProCanvas({
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", blur);
     };
-  }, [polygon, selection, operation, onSelection, onTransient, tool]);
+  }, [polygon, selection, operation, onSelection, onTransient, onCommit, tool]);
   const docPoint = (p: Point): Point => {
     const r = board.current!.getBoundingClientRect();
     return {
-      x: ((p.x - r.left) / r.width) * doc.width,
-      y: ((p.y - r.top) / r.height) * doc.height,
+      x: viewportFrame.x + ((p.x - r.left) / r.width) * viewportFrame.width,
+      y: viewportFrame.y + ((p.y - r.top) / r.height) * viewportFrame.height,
     };
   };
   const zoomAt = (zoom: number, client?: Point) => {
@@ -336,16 +403,16 @@ export function ProCanvas({
     if (mini.current && canvasRef.current) {
       const ctx = mini.current.getContext("2d")!;
       ctx.clearRect(0, 0, 160, 110);
-      const s = Math.min(160 / doc.width, 110 / doc.height);
+      const s = Math.min(160 / viewportFrame.width, 110 / viewportFrame.height);
       ctx.drawImage(
         canvasRef.current,
-        (160 - doc.width * s) / 2,
-        (110 - doc.height * s) / 2,
-        doc.width * s,
-        doc.height * s,
+        (160 - viewportFrame.width * s) / 2,
+        (110 - viewportFrame.height * s) / 2,
+        viewportFrame.width * s,
+        viewportFrame.height * s,
       );
     }
-  }, [canvasRef, renderVersion, doc.width, doc.height]);
+  }, [canvasRef, renderVersion, doc.width, doc.height, viewportFrame]);
   useEffect(() => {
     const target = selectionPreview.current;
     if (!target) return;
@@ -415,15 +482,49 @@ export function ProCanvas({
       if (gesture.current?.crop) onCropDraft(gesture.current.crop);
       if (gesture.current?.transform) onTransformDraft(gesture.current.transform);
       gesture.current = null;
+      setSnapGuides([]);
       setSelectionDraft(null);
       onTransient(null);
       return;
     }
+    setSnapGuides([]);
     const p = docPoint(screen),
       base: Gesture = { type: tool, start: p, screen, doc, view, selection };
+    // Legacy Direct Select never snapped. Enabling precision settings (or adding
+    // an artboard) explicitly opts the document into anchor/grid acquisition.
+    if (tool === "direct" && doc.layout) base.snap = buildSnapIndex(doc, [activeId]);
     setCursor(p);
     if (tool === "hand" || space.current) {
       gesture.current = { ...base, type: "pan" };
+      return;
+    }
+    const guideHit = (e.target as Element).closest("[data-guide-id]");
+    if (guideHit && tool === "artboard") {
+      const id = guideHit.getAttribute("data-guide-id")!,
+        guide = layout(doc).guides.find((g) => g.id === id);
+      if (guide && !guide.locked) gesture.current = { ...base, type: "guide", guideId: id };
+      return;
+    }
+    if (tool === "artboard") {
+      const target = (e.target as Element).closest("[data-artboard-id]"),
+        id =
+          target?.getAttribute("data-artboard-id") ??
+          artboards(doc)
+            .slice()
+            .reverse()
+            .find((b) => p.x >= b.x && p.y >= b.y && p.x <= b.x + b.width && p.y <= b.y + b.height)
+            ?.id;
+      const b = artboards(doc).find((b) => b.id === id);
+      if (b) {
+        onArtboard(b.id);
+        gesture.current = {
+          ...base,
+          type: "artboard",
+          board: b,
+          corner: target?.getAttribute("data-board-handle") ?? "move",
+          snap: buildSnapIndex(doc, [], b.id),
+        };
+      }
       return;
     }
     if (tool === "transform" && transformDraft && selected) {
@@ -435,6 +536,7 @@ export function ProCanvas({
       gesture.current = {
         ...base,
         type: "free-transform",
+        snap: buildSnapIndex(doc, transformDraft.ids ?? [selected.id]),
         transform: structuredClone(transformDraft),
         transformHandle: handle,
         id: selected.id,
@@ -476,8 +578,20 @@ export function ProCanvas({
         const rgba = c
           .getContext("2d")!
           .getImageData(
-            Math.max(0, Math.min(c.width - 1, Math.floor((p.x / doc.width) * c.width))),
-            Math.max(0, Math.min(c.height - 1, Math.floor((p.y / doc.height) * c.height))),
+            Math.max(
+              0,
+              Math.min(
+                c.width - 1,
+                Math.floor(((p.x - viewportFrame.x) / viewportFrame.width) * c.width),
+              ),
+            ),
+            Math.max(
+              0,
+              Math.min(
+                c.height - 1,
+                Math.floor(((p.y - viewportFrame.y) / viewportFrame.height) * c.height),
+              ),
+            ),
             1,
             1,
           ).data;
@@ -753,6 +867,7 @@ export function ProCanvas({
       gesture.current = {
         ...base,
         type: "resize",
+        snap: buildSnapIndex(doc, [selected.id]),
         id: selected.id,
         corner: corner.getAttribute("data-corner")!,
       };
@@ -771,7 +886,14 @@ export function ProCanvas({
         return;
       }
       if (!selectedIds.includes(chosen.id) && !selectedAncestor) onSelect(chosen.id);
-      gesture.current = { ...base, type: "move", id: chosen.id, ids };
+      gesture.current = {
+        ...base,
+        type: "move",
+        id: chosen.id,
+        ids,
+        snap: buildSnapIndex(doc, ids),
+        moveFrame: selectionBounds(doc, ids),
+      };
     } else onSelect("");
   };
   const update = (
@@ -789,6 +911,63 @@ export function ProCanvas({
       });
       return null;
     }
+    const acquire = (frame: Frame, pointOnly = false, axes: ("x" | "y")[] = ["x", "y"]) => {
+      if (!snapping || input?.altKey || !g.snap) {
+        setSnapGuides([]);
+        return { x: 0, y: 0 };
+      }
+      const result = snapGeometry(g.doc, g.snap, frame, fit * view.zoom, pointOnly, axes);
+      setSnapGuides(result.guides);
+      return result.delta;
+    };
+    if (g.type === "guide" && g.guideId) {
+      const s = layout(g.doc),
+        old = s.guides.find((n) => n.id === g.guideId)!;
+      return {
+        ...g.doc,
+        layout: {
+          ...s,
+          guides: s.guides.map((n) =>
+            n.id === old.id
+              ? { ...n, position: old.position + p[old.axis] - g.start[old.axis] }
+              : n,
+          ),
+        },
+      };
+    }
+    if (g.type === "artboard" && g.board) {
+      try {
+        const b = g.board;
+        let next = dragCrop({ ...b, rotation: 0 }, g.corner as CropHandle, g.start, p);
+        const axes: ("x" | "y")[] =
+          g.corner === "move"
+            ? ["x", "y"]
+            : [
+                ...(g.corner?.includes("w") || g.corner?.includes("e") ? ["x" as const] : []),
+                ...(g.corner?.includes("n") || g.corner?.includes("s") ? ["y" as const] : []),
+              ];
+        if (g.corner === "move") {
+          const delta = acquire(next);
+          next = { ...next, x: next.x + delta.x, y: next.y + delta.y };
+        } else {
+          const endpoint = cropHandlePoint(next, g.corner!),
+            delta = acquire({ ...endpoint, width: 0, height: 0 }, true, axes);
+          next = dragCrop({ ...b, rotation: 0 }, g.corner as CropHandle, g.start, {
+            x: p.x + delta.x,
+            y: p.y + delta.y,
+          });
+        }
+        return changeArtboard(
+          g.doc,
+          b.id,
+          { x: next.x, y: next.y, width: next.width, height: next.height },
+          moveArtwork,
+        );
+      } catch (e) {
+        onError((e as Error).message);
+        return null;
+      }
+    }
     if (g.type === "free-transform" && g.transform && g.id) {
       const l = g.transform.frame ?? g.doc.layers.find((l) => l.id === g.id)!;
       let point = p;
@@ -797,6 +976,38 @@ export function ProCanvas({
           Math.abs(p.x - g.start.x) > Math.abs(p.y - g.start.y)
             ? { x: p.x, y: g.start.y }
             : { x: g.start.x, y: p.y };
+      }
+      if (
+        snapping &&
+        !input?.altKey &&
+        g.snap &&
+        /^[nsew]{1,2}$/.test(g.transformHandle ?? "") &&
+        g.transform.mode === "affine"
+      ) {
+        const positionAt = (p: Point) => {
+          const value = dragTransform(
+            g.transform!.value,
+            l.width,
+            l.height,
+            g.transformHandle!,
+            g.start,
+            p,
+            input?.shiftKey ? !g.transform!.lock : g.transform!.lock,
+            input?.altKey,
+            input?.shiftKey,
+          );
+          return transformHandles({ value, mode: "affine" }, l, fit * view.zoom).handles.find(
+            (h) => h.id === g.transformHandle,
+          )!.p;
+        };
+        try {
+          const snapped = snapHandle(g.doc, g.snap, point, fit * view.zoom, positionAt);
+          point = snapped.pointer;
+          setSnapGuides(snapped.guides);
+        } catch (e) {
+          onError((e as Error).message);
+          return null;
+        }
       }
       try {
         let value = dragTransform(
@@ -810,14 +1021,9 @@ export function ProCanvas({
           input?.altKey,
           input?.shiftKey,
         );
-        if (g.transformHandle === "move" && snapping) {
-          value = { ...value, x: Math.round(value.x / 10) * 10, y: Math.round(value.y / 10) * 10 };
-          const b = bounds(value, l.width, l.height),
-            cx = b.x + b.width / 2,
-            cy = b.y + b.height / 2,
-            threshold = 8 / (fit * view.zoom);
-          if (Math.abs(cx - doc.width / 2) < threshold) value.x += doc.width / 2 - cx;
-          if (Math.abs(cy - doc.height / 2) < threshold) value.y += doc.height / 2 - cy;
+        if (g.transformHandle === "move") {
+          const delta = acquire(bounds(value, l.width, l.height));
+          value = { ...value, x: value.x + delta.x, y: value.y + delta.y };
         }
         onTransformDraft({
           ...g.transform,
@@ -857,18 +1063,10 @@ export function ProCanvas({
     if (g.type === "move") {
       let x = l.transform.x + p.x - g.start.x,
         y = l.transform.y + p.y - g.start.y;
-      if (snapping) {
-        x = Math.round(x / 10) * 10;
-        y = Math.round(y / 10) * 10;
-        const center = worldPoint(
-          { x: l.width / 2, y: l.height / 2 },
-          { ...l, transform: { ...l.transform, x, y } },
-        );
-        if (Math.abs(center.x - doc.width / 2) < 8 / (fit * view.zoom))
-          x += doc.width / 2 - center.x;
-        if (Math.abs(center.y - doc.height / 2) < 8 / (fit * view.zoom))
-          y += doc.height / 2 - center.y;
-      }
+      const b = g.moveFrame!,
+        delta = acquire({ ...b, x: b.x + p.x - g.start.x, y: b.y + p.y - g.start.y });
+      x += delta.x;
+      y += delta.y;
       try {
         return translateLayers(g.doc, g.ids ?? [l.id], {
           x: x - l.transform.x,
@@ -892,17 +1090,41 @@ export function ProCanvas({
     }
     if (g.type === "resize") {
       try {
-        next = { ...l, transform: dragTransform(l.transform, l.width, l.height, "se", g.start, p) };
+        let point = p;
+        if (snapping && !input?.altKey && g.snap) {
+          const positionAt = (p: Point) =>
+            worldPoint(
+              { x: l.width, y: l.height },
+              { transform: dragTransform(l.transform, l.width, l.height, "se", g.start, p) },
+            );
+          const snapped = snapHandle(g.doc, g.snap, p, fit * view.zoom, positionAt);
+          point = snapped.pointer;
+          setSnapGuides(snapped.guides);
+        }
+        next = {
+          ...l,
+          transform: dragTransform(l.transform, l.width, l.height, "se", g.start, point),
+        };
       } catch (error) {
         onError((error as Error).message);
         return null;
       }
     }
     if (g.type === "pen" || g.type === "anchor") {
-      const a = localPoint(p, l),
-        subpath = contourAt(l, g.contour ?? 0),
+      const subpath = contourAt(l, g.contour ?? 0),
         anchors = [...subpath.anchors],
         old = anchors[g.index!]!;
+      let target = p;
+      if (g.type === "anchor") {
+        const source = g.part === "incoming" || g.part === "outgoing" ? (old[g.part] ?? old) : old,
+          world = worldPoint(source, l);
+        target = { x: world.x + p.x - g.start.x, y: world.y + p.y - g.start.y };
+      }
+      const delta =
+        g.type === "anchor" && !["incoming", "outgoing"].includes(g.part ?? "")
+          ? acquire({ ...target, width: 0, height: 0 }, true)
+          : { x: 0, y: 0 };
+      const a = localPoint({ x: target.x + delta.x, y: target.y + delta.y }, l);
       if (g.type === "pen") {
         const dx = a.x - old.x,
           dy = a.y - old.y;
@@ -990,10 +1212,14 @@ export function ProCanvas({
           altKey: sample.altKey,
         },
       );
-    if (next) onTransient(next);
+    if (next) {
+      if (gesture.current) gesture.current.preview = next;
+      onTransient(next);
+    }
   };
   const end = (e: ReactPointer<HTMLDivElement>, cancel = false) => {
     pointers.current.delete(e.pointerId);
+    setSnapGuides([]);
     if (pinch.current) {
       if (!pointers.current.size) pinch.current = null;
       return;
@@ -1086,6 +1312,7 @@ export function ProCanvas({
       if (g.type === "selection" && g.region) onSelection(appendSelection(g.selection, g.region));
     }
     setSelectionDraft(null);
+    setSnapGuides([]);
     setPatchPreview(null);
     gesture.current = null;
     onTransient(null);
@@ -1116,7 +1343,10 @@ export function ProCanvas({
             size="icon"
             variant="ghost"
             aria-label="Fit Pro canvas"
-            onClick={() => setView({ zoom: 1, x: 0, y: 0 })}
+            onClick={() => {
+              onFitCanvas();
+              setView({ zoom: 1, x: 0, y: 0 });
+            }}
           >
             <Scan />
           </Button>
@@ -1161,9 +1391,12 @@ export function ProCanvas({
           data-grid={grid}
           style={
             {
-              "--pro-grid-size": `${10 * fit}px`,
-              width: doc.width * fit,
-              height: doc.height * fit,
+              "--pro-grid-size": `${layout(doc).spacing * fit}px`,
+              "--pro-grid-x": `${-viewportFrame.x * fit}px`,
+              "--pro-grid-y": `${-viewportFrame.y * fit}px`,
+              backgroundPosition: `${-viewportFrame.x * fit}px ${-viewportFrame.y * fit}px`,
+              width: viewportFrame.width * fit,
+              height: viewportFrame.height * fit,
               transform: `translate(-50%,-50%) translate(${view.x}px,${view.y}px) scale(${view.zoom})`,
             } as React.CSSProperties
           }
@@ -1177,15 +1410,112 @@ export function ProCanvas({
             <canvas
               ref={selectionPreview}
               className="pro-selection-preview"
+              style={{
+                left: `${(-viewportFrame.x / viewportFrame.width) * 100}%`,
+                top: `${(-viewportFrame.y / viewportFrame.height) * 100}%`,
+                width: `${(doc.width / viewportFrame.width) * 100}%`,
+                height: `${(doc.height / viewportFrame.height) * 100}%`,
+              }}
               aria-label="Selected coverage preview"
             />
           )}
           {!before && (
             <svg
               className="pro-overlays"
-              viewBox={`0 0 ${doc.width} ${doc.height}`}
+              viewBox={`${viewportFrame.x} ${viewportFrame.y} ${viewportFrame.width} ${viewportFrame.height}`}
               aria-label="Pro selection overlays"
             >
+              {layout(doc).boundaries &&
+                artboards(doc).map((b) => {
+                  const selected = b.id === artboardId,
+                    unit = 1 / (fit * view.zoom);
+                  return (
+                    <g key={b.id} className={`pro-board-boundary ${selected ? "is-active" : ""}`}>
+                      <rect
+                        x={b.x}
+                        y={b.y}
+                        width={b.width}
+                        height={b.height}
+                        data-artboard-id={b.id}
+                        className={tool === "artboard" ? "pro-board-hit" : ""}
+                      />
+                      <text
+                        x={b.x}
+                        y={b.y - 8 * unit}
+                        fontSize={12 * unit}
+                        data-artboard-id={b.id}
+                        className={tool === "artboard" ? "pro-board-label" : ""}
+                      >
+                        {b.name}
+                      </text>
+                      {selected &&
+                        tool === "artboard" &&
+                        CROP_HANDLES.map((h) => {
+                          const p = cropHandlePoint({ ...b, rotation: 0 }, h);
+                          return (
+                            <g
+                              key={h}
+                              data-artboard-id={b.id}
+                              data-board-handle={h}
+                              className="pro-board-handle"
+                            >
+                              <rect
+                                x={p.x - 22 * unit}
+                                y={p.y - 22 * unit}
+                                width={44 * unit}
+                                height={44 * unit}
+                                fill="transparent"
+                                stroke="none"
+                              />
+                              <rect
+                                x={p.x - 4 * unit}
+                                y={p.y - 4 * unit}
+                                width={8 * unit}
+                                height={8 * unit}
+                              />
+                            </g>
+                          );
+                        })}
+                    </g>
+                  );
+                })}
+              {layout(doc).guidesVisible &&
+                layout(doc).guides.map((g) => (
+                  <g key={g.id} className="pro-document-guide">
+                    <line
+                      x1={g.axis === "x" ? g.position : viewportFrame.x}
+                      y1={g.axis === "y" ? g.position : viewportFrame.y}
+                      x2={g.axis === "x" ? g.position : viewportFrame.x + viewportFrame.width}
+                      y2={g.axis === "y" ? g.position : viewportFrame.y + viewportFrame.height}
+                    />
+                    {tool === "artboard" && !g.locked && (
+                      <line
+                        data-guide-id={g.id}
+                        className="pro-guide-hit"
+                        x1={g.axis === "x" ? g.position : viewportFrame.x}
+                        y1={g.axis === "y" ? g.position : viewportFrame.y}
+                        x2={g.axis === "x" ? g.position : viewportFrame.x + viewportFrame.width}
+                        y2={g.axis === "y" ? g.position : viewportFrame.y + viewportFrame.height}
+                        strokeWidth={22 / (fit * view.zoom)}
+                      />
+                    )}
+                  </g>
+                ))}
+              {snapGuides.length > 0 && (
+                <g className="pro-smart-guides" aria-label="Acquired smart guides">
+                  {snapGuides.map((g, i) => (
+                    <line
+                      key={i}
+                      data-snap-kind={g.kind}
+                      x1={g.axis === "x" ? g.position : viewportFrame.x}
+                      y1={g.axis === "y" ? g.position : viewportFrame.y}
+                      x2={g.axis === "x" ? g.position : viewportFrame.x + viewportFrame.width}
+                      y2={g.axis === "y" ? g.position : viewportFrame.y + viewportFrame.height}
+                    />
+                  ))}
+                </g>
+              )}
+
               {cursor && ["brush", "pencil", "eraser", "clone", "heal", "spot"].includes(tool) ? (
                 <circle
                   cx={cursor.x}
@@ -1236,12 +1566,6 @@ export function ProCanvas({
                   <path
                     d={`M${cloneSource.point.x - 10 / (fit * view.zoom)} ${cloneSource.point.y} H${cloneSource.point.x + 10 / (fit * view.zoom)} M${cloneSource.point.x} ${cloneSource.point.y - 10 / (fit * view.zoom)} V${cloneSource.point.y + 10 / (fit * view.zoom)}`}
                   />
-                </g>
-              ) : null}
-              {snapping && gesture.current?.type === "move" ? (
-                <g className="pro-center-guides">
-                  <line x1={doc.width / 2} y1={0} x2={doc.width / 2} y2={doc.height} />
-                  <line x1={0} y1={doc.height / 2} x2={doc.width} y2={doc.height / 2} />
                 </g>
               ) : null}
               {polygon.length > 0 && (
@@ -1300,12 +1624,6 @@ export function ProCanvas({
                         className="pro-object-outline"
                         points={poly([h.points[0]!, h.points[2]!, h.points[4]!, h.points[6]!])}
                       />
-                      {snapping && gesture.current?.type === "free-transform" && (
-                        <g className="pro-center-guides">
-                          <line x1={doc.width / 2} y1={0} x2={doc.width / 2} y2={doc.height} />
-                          <line x1={0} y1={doc.height / 2} x2={doc.width} y2={doc.height / 2} />
-                        </g>
-                      )}
                       {transformDraft.mode === "warp" &&
                         [0, 0.5, 1].flatMap((v) =>
                           [0, 1].map((axis) => (
@@ -1526,13 +1844,13 @@ export function ProCanvas({
           onPointerDown={(e) => {
             e.stopPropagation();
             const r = e.currentTarget.getBoundingClientRect(),
-              s = Math.min(r.width / doc.width, r.height / doc.height),
-              x = (e.clientX - r.left - (r.width - doc.width * s) / 2) / s,
-              y = (e.clientY - r.top - (r.height - doc.height * s) / 2) / s;
+              s = Math.min(r.width / viewportFrame.width, r.height / viewportFrame.height),
+              x = (e.clientX - r.left - (r.width - viewportFrame.width * s) / 2) / s,
+              y = (e.clientY - r.top - (r.height - viewportFrame.height * s) / 2) / s;
             setView((v) => ({
               ...v,
-              x: (doc.width / 2 - x) * fit * v.zoom,
-              y: (doc.height / 2 - y) * fit * v.zoom,
+              x: (viewportFrame.width / 2 - x) * fit * v.zoom,
+              y: (viewportFrame.height / 2 - y) * fit * v.zoom,
             }));
           }}
         >
@@ -1559,6 +1877,7 @@ export function ProCanvas({
         <div className="pro-context" role="group" aria-label="Canvas context actions">
           <Button
             onClick={() => {
+              onFitCanvas();
               setView({ zoom: 1, x: 0, y: 0 });
               setContext(false);
             }}

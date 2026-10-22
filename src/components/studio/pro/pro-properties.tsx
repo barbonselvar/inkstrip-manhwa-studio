@@ -13,6 +13,7 @@ export function ProNumber({
   min = -100000,
   max = 100000,
   step = 1,
+  disabled = false,
   onChange,
 }: {
   label: string;
@@ -20,6 +21,7 @@ export function ProNumber({
   min?: number;
   max?: number;
   step?: number;
+  disabled?: boolean;
   onChange: (n: number) => void;
 }) {
   return (
@@ -28,6 +30,7 @@ export function ProNumber({
       <input
         className="field"
         type="number"
+        disabled={disabled}
         aria-label={label}
         value={Math.round(value * 1000) / 1000}
         min={min}

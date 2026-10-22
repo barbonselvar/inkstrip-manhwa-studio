@@ -67,8 +67,8 @@ perspective coordinates, mask/clip/source preservation and SVG cubic output.
 - Remaining path editing: join/split open paths, multi-anchor selection, explicit
   additional keyboard modifiers.
 - Pathfinder: implemented in Increment B with bounded curve approximation and explicit relationship/complexity guards; future exact-curve or live Boolean stacks are not claimed. Compound fill rules are implemented in Increment A.
-- Multiple artboards and artboard-aware native output.
-- Precision object/anchor snapping and alignment.
+- Artboards and precision: implemented in [Increment C](PHASE_D_ARTBOARDS_PRECISION.md), with documented shared-artwork/export/budget limits.
+- Optional precision extensions: tangent/curve-interior and nonlinear cage snapping, richer spacing constraints and artwork-copy duplication.
 - Expanded stroke/fill/appearance behavior, preserving editable objects.
 - Text-on-path layout using arc metrics and typography persistence/export.
 - SVG import/export for new vector geometry and appropriate Phase C gradients,
@@ -81,7 +81,7 @@ including independent contours, winding, safe native/PNG/SVG persistence, affine
 vector rendering and source-frame fitting. Raw legacy SVG data has an explicit
 undoable native conversion. Handle removal and deletion still change geometry;
 no curve-preserving simplification is claimed. Multi-anchor editing, join/split,
-precision snapping and the remaining vector phase are unfinished. General SVG
+the remaining appearance/text-on-path vector phase are unfinished. Precision snapping and artboards are implemented in Increment C. General SVG
 clips/masks, gradients, effects and nonlinear export remain explicit limitations.
 
 The original foundation passed 497 automated tests. The editor increment adds
@@ -114,7 +114,6 @@ shared Button lint warning. [Increment A](PHASE_D_COMPOUND_SVG.md) records
 geometry/persistence limits and investigated fixture/readiness failures.
 Phase D remains incomplete and must stay draft until Increments B–E pass release
 validation; main and production have not been changed by this increment.
-
 
 Increment B adds [filled-region Pathfinder](PHASE_D_PATHFINDER.md): seven genuine
 Boolean operations, editable native outputs, bounded curve approximation, winding

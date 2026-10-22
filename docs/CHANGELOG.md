@@ -2,6 +2,12 @@
 
 ## Unreleased — Phase D vector geometry and anchor editing
 
+- Increment C: real multi-artboard metadata and interactive editing, DPI-aware
+  presets, virtual work-area rendering, clipped individual/range raster/SVG exports,
+  native v3 with v1/v2 compatibility, precision grid/guide/object/anchor/board snapping,
+  acquired Smart Guides and geometric alignment/distribution. Original Chapter
+  canvas and source bytes are retained. [Contracts and limits](PHASE_D_ARTBOARDS_PRECISION.md).
+
 - Increment B: genuine Unite/Subtract/Intersect/Exclude/Divide/Trim/Merge filled-region
   geometry, bounded curve approximation, editable native results, neutral group
   support, cancellable worker, touch/keyboard panel and explicit empty-result safety.
@@ -14,7 +20,7 @@
 - Corner/smooth/symmetric handles, numeric anchor/handle coordinates, touch-aware
   Direct Select, Alt to break coupling, path reversal and guarded anchor deletion.
 - Existing history/native/export/Chapter integration and desktop/320px/390px
-  Chromium regression suite. Artboards/text-on-path and
+  Chromium regression suite. Advanced appearance/text-on-path and
   the remaining vector phase are still pending; no Phase D production release.
 - Increment A: editable compound contours/holes, evenodd/nonzero rules,
   create/release, subpath controls, safe SVG path/arc conversion, affine/stroke/

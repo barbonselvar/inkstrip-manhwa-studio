@@ -1,9 +1,11 @@
 /// <reference lib="webworker" />
+import { artboards } from "./artboards";
+import { effectPadding } from "./effects";
 import { renderOutput } from "./output";
 import { renderRepair } from "./repair-worker";
 import { selectColor } from "./selection";
 import { composite } from "./render";
-import { planMerge, finishMerge, descendants } from "./layers";
+import { planMerge, finishMerge, descendants, visibleLayerIds } from "./layers";
 import { documentSources } from "./raster-budget";
 import { type ProSession, type ProDocument, validateAssets } from "./model";
 let assets: ProSession["assets"] = {},
@@ -32,16 +34,70 @@ self.onmessage = async ({ data }) => {
       throw new Error(
         "This document exceeds the device memory budget. Export the native document or use the existing chapter strip workflow. No resolution was reduced.",
       );
+    const board =
+      type === "artboard-export" ? artboards(doc).find((b) => b.id === data.board?.id) : undefined;
+    if (
+      type === "artboard-export" &&
+      (!board ||
+        JSON.stringify(board) !== JSON.stringify(data.board) ||
+        !Number.isFinite(data.exportScale) ||
+        data.exportScale < 0.1 ||
+        data.exportScale > 8 ||
+        Math.ceil(board.width * data.exportScale) * Math.ceil(board.height * data.exportScale) >
+          data.maxArea)
+    )
+      throw Error(
+        "Invalid or oversized artboard export. Use 0.1–8× scale within the device budget.",
+      );
+    const frame =
+      type === "preview" && data.frame
+        ? data.frame
+        : board
+          ? { ...board, background: board.background }
+          : undefined;
     const dimensions = documentSources(doc, data.maxArea),
       scale =
         type === "preview" || type === "thumbnails"
-          ? Math.min(1, 1400 / Math.max(doc.width, doc.height))
-          : 1;
+          ? Math.min(1, 1400 / Math.max(frame?.width ?? doc.width, frame?.height ?? doc.height))
+          : board
+            ? data.exportScale
+            : 1;
     if (type === "repair" && data.request.stroke.clone) {
       const source = data.request.stroke.clone;
       dimensions.set(source.assetId, { width: source.width, height: source.height });
     }
+    if (
+      frame &&
+      (![frame.x, frame.y, frame.width, frame.height].every(Number.isFinite) ||
+        Math.abs(frame.x) > 200000 ||
+        Math.abs(frame.y) > 200000 ||
+        frame.width <= 0 ||
+        frame.height <= 0 ||
+        frame.width > 250000 ||
+        frame.height > 250000)
+    )
+      throw Error("Invalid render viewport.");
+    if (board) {
+      const padding = effectPadding(doc, scale),
+        visible = visibleLayerIds(doc);
+      if (
+        (Math.ceil(board.width * scale) + 2 * padding) *
+          (Math.ceil(board.height * scale) + 2 * padding) >
+          data.maxArea * 3 ||
+        doc.layers.some(
+          (l) =>
+            visible.has(l.id) &&
+            l.kind !== "group" &&
+            Math.ceil(l.width * scale) * Math.ceil(l.height * scale) > data.maxArea,
+        )
+      )
+        throw Error(
+          "Artboard scale exceeds the layer/effect rendering budget. Reduce export scale.",
+        );
+    }
     const get = async (assetId: string, s: number) => {
+      s = Math.min(1, s); // Upscaling never needs to decode more pixels than the immutable source.
+
       const size = dimensions.get(assetId);
       if (!size || !assets[assetId]) throw new Error("A raster asset is missing.");
       const key = `${assetId}:${size.width}x${size.height}:${s}`;
@@ -193,6 +249,7 @@ self.onmessage = async ({ data }) => {
       (done, total) => {
         if (type === "export") self.postMessage({ id, type: "progress", done, total });
       },
+      frame,
     );
     if (latest !== id) {
       output.width = output.height = 1;
@@ -226,7 +283,13 @@ self.onmessage = async ({ data }) => {
       const bitmap = output.transferToImageBitmap();
       self.postMessage({ id, type: "preview", bitmap }, [bitmap]);
     } else {
-      if (!data.fullCanvas)
+      if (board && data.mime === "image/jpeg") {
+        const ctx = output.getContext("2d")!;
+        ctx.globalCompositeOperation = "destination-over";
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, output.width, output.height);
+      }
+      if (!data.fullCanvas && !board)
         output = renderOutput(output, doc, data.maxArea, data.mime === "image/jpeg");
       const blob = await output.convertToBlob({ type: data.mime, quality: data.quality });
       if (blob.type !== data.mime)

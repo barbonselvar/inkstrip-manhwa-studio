@@ -1,3 +1,4 @@
+import type { Frame } from "./artboards.ts";
 import { gradientPixels } from "./gradient";
 import { effectPadding, effectPixels } from "./effects";
 import { NEUTRAL } from "../editor/adjustments";
@@ -459,11 +460,14 @@ export async function composite(
   asset: (id: string, scale: number) => Promise<ImageBitmap>,
   cancel: () => boolean,
   progress: (done: number, total: number) => void,
+  frame?: Frame & { background?: string },
 ) {
   validateDocument(d);
   const padding = effectPadding(d, scale),
-    nativeWidth = Math.max(1, Math.round(d.width * scale)),
-    nativeHeight = Math.max(1, Math.round(d.height * scale)),
+    nativeWidth = Math.max(1, Math.round((frame?.width ?? d.width) * scale)),
+    nativeHeight = Math.max(1, Math.round((frame?.height ?? d.height) * scale)),
+    originX = padding - (frame?.x ?? 0) * scale,
+    originY = padding - (frame?.y ?? 0) * scale,
     output = canvas(nativeWidth + 2 * padding, nativeHeight + 2 * padding);
   const documentPlanes = new WeakSet<OffscreenCanvas>();
   let done = 0;
@@ -486,14 +490,14 @@ export async function composite(
     ctx.globalCompositeOperation = blend;
     if (!projected && l.kind !== "group" && l.transform.deform) {
       const mapped = projectSurface(bitmap, l.transform, target.width, target.height, scale, {
-        x: -padding / scale,
-        y: -padding / scale,
+        x: (frame?.x ?? 0) - padding / scale,
+        y: (frame?.y ?? 0) - padding / scale,
       });
       ctx.drawImage(mapped, 0, 0);
       mapped.width = mapped.height = 1;
     } else {
       if (!projected && l.kind !== "group") {
-        ctx.translate(padding, padding);
+        ctx.translate(originX, originY);
         const m = affine(l.transform);
         ctx.transform(m[0], m[1], m[2], m[3], m[4] * scale, m[5] * scale);
       }
@@ -542,8 +546,8 @@ export async function composite(
         m[1] * scale,
         m[2] * scale,
         m[3] * scale,
-        m[4] * scale + padding,
-        m[5] * scale + padding,
+        m[4] * scale + originX,
+        m[5] * scale + originY,
       );
       if (!l.vectorOverflow) {
         ctx.beginPath();
@@ -667,9 +671,27 @@ export async function composite(
     }
   };
   const ctx = output.getContext("2d")!;
-  if (d.background !== "transparent") {
-    ctx.fillStyle = d.background;
-    ctx.fillRect(padding, padding, nativeWidth, nativeHeight);
+  if (frame?.background !== undefined) {
+    if (frame.background !== "transparent") {
+      ctx.fillStyle = frame.background;
+      ctx.fillRect(padding, padding, nativeWidth, nativeHeight);
+    }
+  } else {
+    if (d.background !== "transparent") {
+      ctx.fillStyle = d.background;
+      ctx.fillRect(originX, originY, d.width * scale, d.height * scale);
+    }
+    if (frame)
+      for (const b of d.artboards ?? []) {
+        const x = originX + b.x * scale,
+          y = originY + b.y * scale;
+        // Artboard backgrounds are independent export surfaces, including alpha.
+        ctx.clearRect(x, y, b.width * scale, b.height * scale);
+        if (b.background !== "transparent") {
+          ctx.fillStyle = b.background;
+          ctx.fillRect(x, y, b.width * scale, b.height * scale);
+        }
+      }
   }
   try {
     await branch(output);
