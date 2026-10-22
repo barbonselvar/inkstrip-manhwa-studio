@@ -29,6 +29,19 @@ export const localReference = (value: string) => {
   if (!match) throw Error("Only local SVG definition references are supported.");
   return (match[2] ?? match[3])!;
 };
+/** Resolve supported inherited presentation properties without attaching SVG to the DOM. */
+export function svgInherited(el: Element, name: string, fallback: string): string {
+  for (let node: Element | null = el; node; node = node.parentElement) {
+    let value = node.getAttribute(name);
+    for (const declaration of (node.getAttribute("style") ?? "").split(";")) {
+      const split = declaration.indexOf(":");
+      if (split >= 0 && declaration.slice(0, split).trim() === name)
+        value = declaration.slice(split + 1).trim();
+    }
+    if (value !== null && value !== "inherit") return value;
+  }
+  return fallback;
+}
 export function svgGradient(
   value: string,
   ids: Map<string, Element>,
@@ -95,12 +108,13 @@ export function svgGradient(
           Math.max(0, svgNumber(raw.replace(/%$/, ""), 0) / (raw.endsWith("%") ? 100 : 1)),
         ),
       ),
-      color = parseColor(attrs["stop-color"] ?? "#000000");
+      color = parseColor(attrs["stop-color"] ?? svgInherited(el, "stop-color", "#000000"));
     stops.push({
       position,
       color: color.color === "transparent" ? "#000000" : color.color,
       opacity:
-        (color.color === "transparent" ? 0 : color.opacity) * svgNumber(attrs["stop-opacity"], 1),
+        (color.color === "transparent" ? 0 : color.opacity) *
+        svgNumber(attrs["stop-opacity"] ?? svgInherited(el, "stop-opacity", "1"), 1),
     });
   }
   if (stops[0]!.position > 0) stops.unshift({ ...stops[0]!, position: 0 });

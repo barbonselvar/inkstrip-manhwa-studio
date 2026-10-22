@@ -210,6 +210,7 @@ export function ProAnchors({
       <div className="pro-actions">
         <Button
           variant="ghost"
+          disabled={layer.kind !== "shape"}
           onClick={() => run(() => fitVectorFrame(doc, layer.id), "Fit vector source frame")}
         >
           Fit vector frame to content

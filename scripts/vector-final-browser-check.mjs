@@ -418,6 +418,26 @@ try {
     await p.getByLabel("Path text content", { exact: true }).fill("Inkstrip曲");
     await p.getByLabel("Path text font size", { exact: true }).fill("12");
     await p.getByLabel("Path text letter spacing", { exact: true }).fill("0.5");
+    await p.getByRole("button", { name: "Edit text baseline anchors · A", exact: true }).click();
+    await tab(p, "Properties");
+    assert.ok(
+      await p
+        .getByRole("button", { name: "Fit vector frame to content", exact: true })
+        .isDisabled(),
+    );
+    await p
+      .getByRole("button", { name: "Insert anchor without changing curve", exact: true })
+      .click();
+    assert.equal((await native(p)).value.document.layers.at(-1).anchors.length, 3);
+    await p.locator(".pro-viewport").focus();
+    await p.keyboard.press("Delete");
+    let edited = (await native(p)).value.document;
+    assert.equal(edited.layers.length, 3);
+    assert.ok(edited.layers.at(-1).textPath);
+    assert.equal(edited.layers.at(-1).anchors.length, 2);
+    await p.getByRole("button", { name: "Pro undo", exact: true }).click();
+    await p.getByRole("button", { name: "Pro undo", exact: true }).click();
+    await p.getByRole("button", { name: "Move tool", exact: true }).click();
     n = await native(p);
     assert.ok(n.value.document.layers.at(-1).textPath);
     const before = await raster(p),
@@ -576,6 +596,15 @@ try {
   svgCases.push(
     '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96" viewBox="0 0 64 48"><defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0" stop-color="red"/><stop offset="1" stop-color="blue"/></linearGradient></defs><rect width="64" height="48" fill="url(#g)"/></svg>',
   );
+  svgCases.push(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96" stop-color="red" stop-opacity=".6"><defs><linearGradient id="g"><stop offset="0"/><stop offset="1" stop-color="blue"/></linearGradient></defs><rect x="10" y="10" width="108" height="76" fill="url(#g)"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96"><defs><clipPath id="c"><path fill-rule="evenodd" d="M10 10H118V86H10Z M30 30H90V65H30Z"/></clipPath></defs><rect width="128" height="96" fill="green" clip-path="url(#c)"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96"><defs><mask id="m" mask-type="alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="128" height="96"><path fill="white" fill-rule="nonzero" clip-rule="evenodd" d="M10 10H118V86H10Z M30 30H90V65H30Z"/></mask></defs><rect width="128" height="96" fill="purple" mask="url(#m)"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96"><text x="10" y="48" dy="6" font-family="Arial" font-size="22" fill="blue">Vector</text></svg>',
+  );
+  svgCases.push(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96"><g visibility="hidden" fill="red"><rect x="10" y="10" width="80" height="60" visibility="inherit"/><rect x="100" y="10" width="20" height="60" visibility="visible" fill="inherit"/></g></svg>',
+  );
   for (const [i, text] of svgCases.entries()) {
     const d = fixture();
     d.layers = [d.layers[0]];
@@ -596,12 +625,31 @@ try {
     '<svg xmlns="http://www.w3.org/2000/svg"><filter id="f"/><rect width="10" height="10"/></svg>',
     '<svg xmlns="http://www.w3.org/2000/svg"><defs><mask id="m"><rect width="10" height="10" fill="gray"/></mask></defs><rect width="10" height="10" mask="url(#m)"/></svg>',
   ];
+  unsafe.push(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96"><defs><mask id="m" opacity=".5"><rect width="128" height="96" fill="white"/></mask></defs><rect width="128" height="96" fill="blue" mask="url(#m)"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96" fill-opacity=".5"><defs><mask id="m"><rect width="128" height="96" fill="white"/></mask></defs><rect width="128" height="96" fill="blue" mask="url(#m)"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96"><defs><mask id="m"><rect width="128" height="96" fill="white" display="none"/></mask></defs><rect width="128" height="96" fill="blue" mask="url(#m)"/></svg>',
+  );
   for (const text of unsafe) {
     const before = (await native(p)).value.document;
     await importSvg(p, text, false);
     assert.deepEqual((await native(p)).value.document, before);
   }
   passed("unsafe and unrepresentable SVG rejection is transactional");
+  {
+    await tab(p, "Assets");
+    await p.getByLabel("Import Pro asset", { exact: true }).setInputFiles({
+      name: "font-fallback.svg",
+      mimeType: "image/svg+xml",
+      buffer: Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96"><text x="10" y="30">Font</text></svg>',
+      ),
+    });
+    await p.getByText(/^SVG vectors imported with compatibility notes:/).waitFor();
+    assert.equal((await native(p)).value.document.layers.at(-1).fontFamily, "Arial");
+    passed("generic/default font fallback is reported explicitly without losing editable text");
+  }
+
   {
     const d = fixture();
     d.width = d.height = 1024;

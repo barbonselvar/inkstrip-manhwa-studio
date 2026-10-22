@@ -1098,7 +1098,11 @@ export default function ProWorkspace({
         documentSources(candidate, maxArea);
         commit(candidate, "Import sanitized vectors");
         setSelectedIds([imported.layers.at(-1)!.id]);
-        setStatus("SVG vectors imported. Chapter unchanged.");
+        setStatus(
+          imported.warnings.length
+            ? `SVG vectors imported with compatibility notes: ${imported.warnings.join(" ")} Chapter unchanged.`
+            : "SVG vectors imported. Chapter unchanged.",
+        );
       } else if (["image/png", "image/jpeg", "image/webp"].includes(file.type))
         await addAsset(file, file.name);
       else throw new Error("Choose PNG, JPEG, WebP, basic SVG or an .inkstrip document.");
@@ -1463,7 +1467,7 @@ export default function ProWorkspace({
       const d = historyRef.current?.present.doc;
       if (
         tool === "direct" &&
-        active?.kind === "shape" &&
+        (active?.kind === "shape" || !!active?.textPath) &&
         active.shape === "path" &&
         d &&
         !transformRef.current

@@ -77,7 +77,7 @@ run with 40 paths, 40,000 anchors and 32 artboards measured:
 | Cached arc lookup + 420-glyph layout     |  0.076 ms |  0.160 ms |
 
 A Chromium 156 real-UI run with 40,000 anchors/32 artboards on a 1024×1024
-canvas measured 1465 ms native import plus preview and 697 ms PNG export plus
+canvas measured 1090 ms native import plus preview and 386 ms PNG export plus
 download. These are shared-machine observations, not mobile speed guarantees.
 The browser benchmark intentionally excludes transferring a four-million-element
 pixel array into Playwright; that test transport took roughly 16 seconds and
@@ -95,7 +95,7 @@ strip workflows; this is not an unlimited document engine.
 The final PR records exact tested SHA, full test count, the existing 17 Chromium
 suites plus `test:vector-final:browser`, types/lint/build/configuration results,
 actual benchmark output, CI conclusions, merge SHA and verified production build.
-The new suite has 21 grouped scenarios, including direct SVG/native glyph-center
+The new suite has 27 grouped scenarios, including direct SVG/native glyph-center
 comparisons within 0.6 local px / one degree and premultiplied pixel comparisons.
 It exercises actual pixel/SVG reference rendering, aligned strokes,
 compound winding, paint blending, masked/clipped compositing, appearance CRUD,
@@ -119,3 +119,10 @@ also corrected a test-only Artboard x/y label capitalization mismatch. Existing
 shared Button fast-refresh lint warning and generic game-card smoke branding
 warnings are unchanged; Inkstrip is an editor, so unrelated game branding was
 not added.
+
+The final SVG audit distinguishes mask fill winding from clip-path winding,
+resolves inherited stop color/opacity, handles user-space percentages in viewBox
+coordinates, rejects inherited graded/hidden mask sources transactionally, and
+reports default/generic font substitutions in the import status. Keyboard Delete
+in Direct Select edits a text baseline anchor while preserving its text object;
+vector-only frame fitting is disabled for text.

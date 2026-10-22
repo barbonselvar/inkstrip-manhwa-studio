@@ -1,4 +1,4 @@
-import { svgGradient, svgNumber, localReference } from "./svg-paint.ts";
+import { svgGradient, svgNumber, localReference, svgInherited } from "./svg-paint.ts";
 import {
   appearance,
   appearanceItem,
@@ -72,7 +72,13 @@ const STYLES = [
   "visibility",
 ];
 /** Strict data-only SVG import. Never attach markup or external resources to the DOM. */
-export function importSvg(text: string): { width: number; height: number; layers: Layer[] } {
+export function importSvg(text: string): {
+  width: number;
+  height: number;
+  layers: Layer[];
+  warnings: string[];
+} {
+  const warnings = new Set<string>();
   if (text.length > 1_000_000 || /<!DOCTYPE|<!ENTITY|<\?xml-stylesheet/i.test(text))
     throw new Error("SVG declarations or oversized input are not supported.");
   const xml = new DOMParser().parseFromString(text, "image/svg+xml"),
@@ -171,6 +177,8 @@ export function importSvg(text: string): { width: number; height: number; layers
     for (let parent = el.parentElement; parent; parent = parent.parentElement)
       if (++depth > 64) throw Error("SVG nesting exceeds the safe depth limit.");
     if (el !== root && el.localName === "svg") throw Error("Nested SVG viewports are unsupported.");
+    if (el.localName === "defs" && [...el.attributes].some((a) => a.name !== "id"))
+      throw Error("Styled SVG definition containers require explicit per-definition properties.");
     const id = el.getAttribute("id");
     if (id) {
       if (ids.has(id)) throw Error("Duplicate SVG definition ID.");
@@ -293,7 +301,13 @@ export function importSvg(text: string): { width: number; height: number; layers
         own[m[1]!] = m[2]!.trim();
       }
     for (const name of [...STYLES, "xml:space"])
-      if (own[name] !== undefined) style[name] = own[name]!;
+      if (own[name] !== undefined && !["inherit", "unset"].includes(own[name]!))
+        style[name] = own[name]!;
+    if (
+      style.visibility &&
+      !["visible", "hidden", "collapse", "initial"].includes(style.visibility)
+    )
+      throw Error("Unsupported SVG visibility value.");
     if (own["isolation"] && !["auto", "isolate"].includes(own["isolation"]))
       throw Error("Unsupported SVG isolation mode.");
     if (
@@ -515,6 +529,10 @@ export function importSvg(text: string): { width: number; height: number; layers
         ? spans.map((c) => run(c.textContent ?? "")).join("\n")
         : run((pathChild ?? el).textContent ?? "");
       const font = style["font-family"] ?? "Arial";
+      if (!style["font-family"] || ["serif", "sans-serif"].includes(font))
+        warnings.add(
+          "Generic/default SVG fonts are mapped to the native Arial/Georgia families; verify typography or use an explicit supported font.",
+        );
       l.fontFamily = (
         font === "sans-serif" ? "Arial" : font === "serif" ? "Georgia" : font
       ) as Layer["fontFamily"];
@@ -543,6 +561,10 @@ export function importSvg(text: string): { width: number; height: number; layers
           (pathChild.getAttribute("side") ?? "left") !== "left"
         )
           throw Error("Unsupported SVG text-path layout mode.");
+        if (n("x") || n("y") || ["x", "y", "dy"].some((name) => pathChild.hasAttribute(name)))
+          throw Error(
+            "SVG textPath per-run positioning needs explicit startOffset and text baseline dy.",
+          );
         const href = pathChild.getAttribute("href") ?? pathChild.getAttribute("xlink:href"),
           def = href ? ids.get(href.slice(1)) : undefined;
         if (!def || def.localName !== "path")
@@ -575,6 +597,8 @@ export function importSvg(text: string): { width: number; height: number; layers
           offset - (l.align === "center" ? length / 2 : l.align === "right" ? length : 0);
         l.textPath.baseline = n("dy");
       } else {
+        if (spans.length && n("dy"))
+          throw Error("Multi-line SVG dy positioning requires explicit span baselines.");
         if (
           (!l.letterSpacing && ![undefined, "auto", "normal"].includes(style["font-kerning"])) ||
           (![undefined, "normal"].includes(style["font-variant-ligatures"]) && !l.letterSpacing)
@@ -583,7 +607,7 @@ export function importSvg(text: string): { width: number; height: number; layers
             "Ordinary SVG text requires default font shaping; use native for explicit shaping controls.",
           );
         const x = spans.length ? numeric(spans[0]!.getAttribute("x"), n("x")) : n("x"),
-          y = spans.length ? numeric(spans[0]!.getAttribute("y"), n("y")) : n("y");
+          y = (spans.length ? numeric(spans[0]!.getAttribute("y"), n("y")) : n("y")) + n("dy");
         if (spans.length > 1) {
           const gap = numeric(spans[1]!.getAttribute("y"), 0) - y;
           l.lineHeight = gap / l.fontSize;
@@ -769,6 +793,23 @@ export function importSvg(text: string): { width: number; height: number; layers
       const shape = children[0]!;
       if (definition.hasAttribute("style") || shape.hasAttribute("style"))
         throw Error("Clip/mask style declarations are unsupported; use explicit attributes.");
+      if (
+        (definition.hasAttribute("opacity") &&
+          numeric(definition.getAttribute("opacity"), 1) !== 1) ||
+        numeric(svgInherited(shape, "fill-opacity", "1"), 1) !== 1 ||
+        numeric(shape.getAttribute("opacity"), 1) !== 1
+      )
+        throw Error("Graded SVG masks/clips cannot be converted to opaque binary geometry.");
+      if (c.mask && definition.hasAttribute("transform"))
+        throw Error("Place SVG mask transforms on its geometry source, not the mask server.");
+      if (
+        [definition, shape].some(
+          (node) =>
+            (node.hasAttribute("display") && node.getAttribute("display") !== "inline") ||
+            (node.hasAttribute("visibility") && node.getAttribute("visibility") !== "visible"),
+        )
+      )
+        throw Error("Hidden SVG mask/clip sources require explicit empty geometry.");
       if (["opacity", "fill-opacity"].some((a) => numeric(shape.getAttribute(a), 1) !== 1))
         throw Error("Graded clip/mask opacity cannot be converted to a binary vector clip.");
       const units =
@@ -781,7 +822,7 @@ export function importSvg(text: string): { width: number; height: number; layers
       if (
         c.mask &&
         (definition.getAttribute("mask-type") ?? "luminance") !== "alpha" &&
-        !["white", "#fff", "#ffffff"].includes(shape.getAttribute("fill") ?? "#000000")
+        !["white", "#fff", "#ffffff"].includes(svgInherited(shape, "fill", "#000000"))
       )
         throw Error(
           "Only opaque binary alpha/white luminance SVG masks are currently editable as vector clips.",
@@ -793,8 +834,8 @@ export function importSvg(text: string): { width: number; height: number; layers
         throw Error("Graded SVG masks require native/PNG; no alpha information was discarded.");
       if (
         c.mask &&
-        (color(shape.getAttribute("fill") ?? "#000000").opacity !== 1 ||
-          color(shape.getAttribute("fill") ?? "#000000").color === "transparent")
+        (color(svgInherited(shape, "fill", "#000000")).opacity !== 1 ||
+          color(svgInherited(shape, "fill", "#000000")).color === "transparent")
       )
         throw Error("Transparent/graded SVG masks require a native raster mask.");
       if (shape.hasAttribute("stroke") && shape.getAttribute("stroke") !== "none")
@@ -812,11 +853,11 @@ export function importSvg(text: string): { width: number; height: number; layers
           : compose(inverse(affine(l.transform)), c.matrix);
       const clip: VectorClip = {
         contours: contours(raw),
-        rule: (shape.getAttribute("clip-rule") ??
-          shape.getAttribute("fill-rule") ??
-          definition.getAttribute("clip-rule") ??
-          definition.getAttribute("fill-rule") ??
-          "nonzero") as VectorClip["rule"],
+        rule: svgInherited(
+          shape,
+          c.mask ? "fill-rule" : "clip-rule",
+          "nonzero",
+        ) as VectorClip["rule"],
         enabled: true,
         matrix: compose(
           base,
@@ -879,5 +920,5 @@ export function importSvg(text: string): { width: number; height: number; layers
     ...fromPanel({ id: "svg", name: "SVG", width: Math.round(width), height: Math.round(height) }),
     layers,
   });
-  return { width: Math.round(width), height: Math.round(height), layers };
+  return { width: Math.round(width), height: Math.round(height), layers, warnings: [...warnings] };
 }
