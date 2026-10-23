@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { chromium } from "playwright";
 import { fromPanel, layer } from "../src/lib/studio/pro/model.ts";
+import { BLEND_MODES } from "../src/lib/studio/pro/blend.ts";
 const base = process.argv[2] ?? "http://127.0.0.1:8080";
 assert.ok(["127.0.0.1", "localhost"].includes(new URL(base).hostname));
 const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
@@ -245,7 +246,7 @@ try {
   await values(p, 24, 24, [64, 128, 64, 128]);
   assert.equal((await native(p)).document.layers[0].assetId, mergedAsset);
   console.log("Testing clipping blend modes against an independent Canvas backdrop reference…");
-  for (const mode of ["source-over", "multiply", "screen", "overlay", "darken", "lighten"]) {
+  for (const mode of BLEND_MODES) {
     const baseCopy = structuredClone(baseLayer),
       clipCopy = structuredClone(blue);
     baseCopy.blend = "multiply";
