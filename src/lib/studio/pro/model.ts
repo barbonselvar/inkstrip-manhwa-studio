@@ -469,26 +469,6 @@ export function validateDocument(d: ProDocument) {
   validateGeometry(d);
   validateLayout(d);
   if (d.selection !== undefined) validateSelection(d.selection);
-  // JSON/native files duplicate captured selection coverage, even when editing
-  // snapshots share references. Bound the complete serialized coverage payload.
-  let coverageEntries = 0;
-  const budgetSelection = (s: Selection | undefined) => {
-    for (const r of s?.regions ?? []) coverageEntries += r.pixels?.runs.length ?? 0;
-  };
-  budgetSelection(d.selection);
-  for (const s of d.savedSelections ?? []) budgetSelection(s.selection);
-  for (const l of d.layers) {
-    budgetSelection(l.mask?.selection);
-    budgetSelection(l.colorSelection);
-    for (const s of [...(l.strokes ?? []), ...(l.mask?.strokes ?? [])]) {
-      budgetSelection(s.clip);
-      budgetSelection(s.patch);
-    }
-  }
-  if (coverageEntries > 1_200_000)
-    throw Error(
-      "Selection coverage exceeds the native document budget. Save a backup and simplify or remove saved selections before continuing. Nothing was changed.",
-    );
   if (d.brushSettings !== undefined)
     validateStroke({ ...d.brushSettings, points: [{ x: 0, y: 0 }], erase: false });
   if (d.savedSelections !== undefined) {

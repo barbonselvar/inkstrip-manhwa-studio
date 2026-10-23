@@ -21,7 +21,7 @@ production environment configuration was added.
 | Masks | Editable native masks and painting, density, feather, inversion, enable/disable, linked/unlinked affine placement, same-world-position copy/paste with independent data, duplication through layer duplication, mask coverage thumbnails and explicit undoable raster/paint bake |
 | Group/compositing | Group masks applied to the isolated child composite before group opacity/effects/clipping; linked group masks move once with group transforms; unlinked masks stay fixed; masked editable affine vector paints render in the document plane, including outside strokes |
 | Large images | Consistent 16,777,216-pixel / 16,384-side Pro limits, retaining the 4-million-pixel mobile/low-memory cap; native-resolution tiled refinement with kernel halos; area-sampled coverage previews without native RGBA thumbnail allocation; conservative dirty rectangles for brush/eraser/mask preview presentation; existing bounded decoded-image LRU and worker previews retained |
-| Recovery | Existing 50-step undo count plus conservative 32 MiB serialized-history accounting; separately bounded immutable source pool; selection payload and device mask/frame checks; worker cancellation; failed operations preserve the current document/source |
+| Recovery | Existing 50-step undo count plus conservative 32 MiB soft serialized-history accounting, always retaining the nearest Undo and Redo; separately bounded immutable source pool; existing per-region selection limits and device mask/frame checks; worker cancellation; failed operations preserve the current document/source |
 | Persistence/export | Feature-bearing native envelope v5; versions 1–4 remain readable and continue to export their original version when no v5 feature is present; full editable data and original source references retained; PNG/JPEG/WebP exports use the shared compositor and native output frame |
 
 ## Algorithms and limits
@@ -69,10 +69,9 @@ production environment configuration was added.
   premultiplied-alpha-safe resampling. No CMYK, ICC soft-proofing, wide-gamut/16-bit
   editing, or arbitrary source profile round-trip is advertised. JPEG uses white
   behind transparent output; PNG preserves alpha; WebP quality is browser encoded.
-- Up to 16 named selections, 200,000 row-bounded runs per pixel region, and
-  1,200,000 aggregate coverage entries per document. Native imports/exports have
+- Up to 16 named selections, 200,000 row-bounded runs per pixel region; legacy multi-region coverage remains readable without a new aggregate cutoff. Native imports/exports have
   a 70 MB portable-file cap and 48 MB embedded source pool. History may have fewer
-  than 50 undos for large documents; present work is never evicted by that budget.
+  than 50 undos for large documents; present work and the immediate Undo/Redo are never evicted by the soft budget.
 - Masks, adjustments, raster artwork and other unsupported SVG features retain
   the explicit native/raster fallback; no silent lossy SVG flattening was added.
 
@@ -106,7 +105,7 @@ pages and including browser/GPU/runtime processes and previously loaded document
 The browser benchmark overlapped regression suites. Zoom-click timing includes UI
 automation; it is not a frame-rate or gesture-latency claim.
 
-Validation baseline: **675 passing automated tests**, TypeScript and production
+Validation baseline: **677 passing automated tests**, TypeScript and production
 build/config/auth checks, with one pre-existing button fast-refresh lint warning.
 All **19 Chromium suites** passed on the integration build, including real
 Swin2SR inference and Chapter recovery. The final revision also receives the

@@ -567,3 +567,49 @@ test("mask selection sampling composes its native affine frame before perspectiv
     expected,
   );
 });
+
+test("large-document history always retains immediate Undo and Redo above the soft budget", async () => {
+  const { budgetHistory } = await import("./history-budget.ts");
+  let h = createHistory("first large state");
+  h = record(h, "second large state");
+  h = budgetHistory(h, 1);
+  assert.equal(undo(h).present, "first large state");
+  const back = budgetHistory(undo(h), 1);
+  assert.equal(redo(back).present, "second large state");
+});
+test("legacy v4 multi-region coverage round trips without a new aggregate cutoff", async () => {
+  const d = doc(),
+    runs: number[] = [];
+  for (let i = 0; i < 67000; i++) runs.push(i * 2, 1, 255);
+  const r = {
+    kind: "pixels" as const,
+    operation: "add" as const,
+    points: [
+      { x: 0, y: 0 },
+      { x: 128, y: 0 },
+      { x: 0, y: 2048 },
+    ],
+    pixels: { width: 128, height: 2048, runs },
+  };
+  d.selection = {
+    regions: Array.from({ length: 7 }, () => ({ ...r })),
+    inverted: false,
+    feather: 0,
+  };
+  const shape = layer("shape", 32, 24);
+  shape.appearance = [];
+  d.layers.push(shape);
+  const s: ProSession = {
+    document: d,
+    assets: { source: new Blob([Uint8Array.of(1)], { type: "image/png" }) },
+    revision: 0,
+    acceptedBlobId: "source",
+    updatedAt: 0,
+  };
+  const file = await nativeFile(s);
+  assert.equal(JSON.parse(await file.text()).version, 4);
+  const restored = await readNative(file, "p", "source");
+  assert.equal(restored.document.selection!.regions.length, 7);
+  assert.deepEqual(restored.document.selection!.regions[6]!.pixels!.runs, runs);
+  validateDocument(restored.document);
+});
