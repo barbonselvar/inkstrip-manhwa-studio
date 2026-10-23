@@ -1,0 +1,92 @@
+{
+  "browser": "156.0.8078.4",
+  "fixture": "internally generated RGBA geometry/color/alpha fixture; not a manhwa quality qualification",
+  "modelTransport": "exact hash-verified cache",
+  "reports": [
+    {
+      "width": 1440,
+      "touchEmulation": false,
+      "model": "swin2sr-classical-x2",
+      "revision": "93dfc9089abda257351d3a58d5771e2c1ff69442",
+      "artifactSha256": "6dde3fe2440543ccae7c40d175609f83c18aeaa3d8456745c4329ef97ae744bd",
+      "realInference": true,
+      "processingRegion": {
+        "x": 0,
+        "y": 0,
+        "width": 36,
+        "height": 36
+      },
+      "measuredWallMs": 13866.753938,
+      "sameWorkspaceWarmMs": 2378.401307,
+      "receiptElapsedMs": 2186.3000000044703,
+      "metrics": {
+        "protectedPixels": 12032,
+        "protectedMaxError": 0,
+        "alphaChanges": 0,
+        "changedPixels": 32,
+        "meanChannelChange": 0.00439453125
+      },
+      "jsHeap": 20500000,
+      "gpuDiscovery": "mock transport only; no GPU execution",
+      "errors": [],
+      "externalArtworkUploads": 0
+    },
+    {
+      "width": 320,
+      "touchEmulation": true,
+      "model": "swin2sr-classical-x2",
+      "revision": "93dfc9089abda257351d3a58d5771e2c1ff69442",
+      "artifactSha256": "6dde3fe2440543ccae7c40d175609f83c18aeaa3d8456745c4329ef97ae744bd",
+      "realInference": true,
+      "processingRegion": {
+        "x": 0,
+        "y": 0,
+        "width": 36,
+        "height": 36
+      },
+      "measuredWallMs": 16891.674882,
+      "sameWorkspaceWarmMs": null,
+      "receiptElapsedMs": 16610.79999999702,
+      "metrics": {
+        "protectedPixels": 12032,
+        "protectedMaxError": 0,
+        "alphaChanges": 0,
+        "changedPixels": 32,
+        "meanChannelChange": 0.00439453125
+      },
+      "jsHeap": 21700000,
+      "gpuDiscovery": "mock transport only; no GPU execution",
+      "errors": [],
+      "externalArtworkUploads": 0
+    },
+    {
+      "width": 390,
+      "touchEmulation": true,
+      "model": "swin2sr-classical-x2",
+      "revision": "93dfc9089abda257351d3a58d5771e2c1ff69442",
+      "artifactSha256": "6dde3fe2440543ccae7c40d175609f83c18aeaa3d8456745c4329ef97ae744bd",
+      "realInference": true,
+      "processingRegion": {
+        "x": 28,
+        "y": 16,
+        "width": 48,
+        "height": 48
+      },
+      "measuredWallMs": 14231.089621,
+      "sameWorkspaceWarmMs": null,
+      "receiptElapsedMs": 14161.89999999851,
+      "metrics": {
+        "protectedPixels": 12032,
+        "protectedMaxError": 0,
+        "alphaChanges": 0,
+        "changedPixels": 53,
+        "meanChannelChange": 0.001925998263888889
+      },
+      "jsHeap": 21700000,
+      "gpuDiscovery": "mock transport only; no GPU execution",
+      "errors": [],
+      "externalArtworkUploads": 0
+    }
+  ],
+  "qaTransport": "Explicit INKSTRIP_QA_IDENTITY_ENCODING=1 on loopback, to exclude local on-demand Brotli CPU cost; same pinned checkpoint and runtime bytes."
+}

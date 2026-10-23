@@ -20,7 +20,7 @@ export function PanelImageActions({
   onToggle: () => void;
   onEdit: () => void;
   onEnhance: () => void;
-  onStudio: (mode: "raster" | "vector") => void;
+  onStudio: (mode: "raster" | "vector" | "ai") => void;
 }) {
   const [menu, setMenu] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -200,6 +200,16 @@ export function PanelImageActions({
           >
             <PenTool className="size-4" />
             Open in Vector Studio
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setMenu(false);
+              onStudio("ai");
+            }}
+          >
+            <Sparkles className="size-4" />
+            Open in AI Studio
           </Button>
           <Button
             variant="secondary"

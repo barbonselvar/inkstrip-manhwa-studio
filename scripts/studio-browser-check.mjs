@@ -21,6 +21,9 @@ try {
     hasTouch: true,
     deviceScaleFactor: 1,
     ignoreHTTPSErrors: true,
+    ...(process.env.INKSTRIP_QA_IDENTITY_ENCODING === "1"
+      ? { extraHTTPHeaders: { "Accept-Encoding": "identity" } }
+      : {}),
   });
   const page = await context.newPage();
   const errors = [];

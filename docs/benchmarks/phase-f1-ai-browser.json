@@ -1,0 +1,98 @@
+{
+  "browser": "156.0.8078.4",
+  "fixture": "internally generated RGBA geometry/color/alpha fixture; not a manhwa quality qualification",
+  "modelTransport": "exact hash-verified cache",
+  "reports": [
+    {
+      "width": 1440,
+      "touchEmulation": false,
+      "model": "swin2sr-classical-x2",
+      "revision": "93dfc9089abda257351d3a58d5771e2c1ff69442",
+      "artifactSha256": "6dde3fe2440543ccae7c40d175609f83c18aeaa3d8456745c4329ef97ae744bd",
+      "realInference": true,
+      "processingRegion": {
+        "x": 0,
+        "y": 0,
+        "width": 36,
+        "height": 36
+      },
+      "measuredWallMs": 44507.212831000004,
+      "receiptElapsedMs": 44010.099999997765,
+      "metrics": {
+        "protectedPixels": 12032,
+        "protectedMaxError": 0,
+        "alphaChanges": 0,
+        "changedPixels": 32,
+        "meanChannelChange": 0.00439453125
+      },
+      "jsHeap": 24500000,
+      "gpuDiscovery": "mock transport only; no GPU execution",
+      "errors": [],
+      "externalArtworkUploads": 0
+    },
+    {
+      "width": 320,
+      "touchEmulation": true,
+      "model": "swin2sr-classical-x2",
+      "revision": "93dfc9089abda257351d3a58d5771e2c1ff69442",
+      "artifactSha256": "6dde3fe2440543ccae7c40d175609f83c18aeaa3d8456745c4329ef97ae744bd",
+      "realInference": true,
+      "processingRegion": {
+        "x": 0,
+        "y": 0,
+        "width": 36,
+        "height": 36
+      },
+      "measuredWallMs": 39136.65382199999,
+      "receiptElapsedMs": 38800.099999997765,
+      "metrics": {
+        "protectedPixels": 12032,
+        "protectedMaxError": 0,
+        "alphaChanges": 0,
+        "changedPixels": 32,
+        "meanChannelChange": 0.00439453125
+      },
+      "jsHeap": 17100000,
+      "gpuDiscovery": "mock transport only; no GPU execution",
+      "errors": [],
+      "externalArtworkUploads": 0
+    },
+    {
+      "width": 390,
+      "touchEmulation": true,
+      "model": "swin2sr-classical-x2",
+      "revision": "93dfc9089abda257351d3a58d5771e2c1ff69442",
+      "artifactSha256": "6dde3fe2440543ccae7c40d175609f83c18aeaa3d8456745c4329ef97ae744bd",
+      "realInference": true,
+      "processingRegion": {
+        "x": 0,
+        "y": 0,
+        "width": 36,
+        "height": 36
+      },
+      "measuredWallMs": 33886.89024800001,
+      "receiptElapsedMs": 33746.10000000149,
+      "metrics": {
+        "protectedPixels": 12032,
+        "protectedMaxError": 0,
+        "alphaChanges": 0,
+        "changedPixels": 32,
+        "meanChannelChange": 0.00439453125
+      },
+      "jsHeap": 17100000,
+      "gpuDiscovery": "mock transport only; no GPU execution",
+      "errors": [],
+      "externalArtworkUploads": 0
+    }
+  ],
+  "environment": {
+    "os": "Linux x86_64",
+    "cpu": "AMD EPYC 9V74",
+    "allocatedVcpus": 3,
+    "cgroupMemoryBytes": 8589934592,
+    "node": "24.19.0",
+    "backend": "ONNX Runtime Web 1.22.0 WASM, single thread",
+    "gpu": "not provided/qualified",
+    "limitations": "Shared environment; JS heap excludes WASM/process peak. Emulation does not represent Android hardware. Model download uses checksum-verified cache."
+  }
+}

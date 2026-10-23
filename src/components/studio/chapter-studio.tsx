@@ -62,7 +62,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const [batchTargets, setBatchTargets] = useState<Panel[] | null>(null);
   const [faceTargets, setFaceTargets] = useState<Panel[] | null>(null);
   const [proPanel, setProPanel] = useState<Panel | null>(null);
-  const [studioMode, setStudioMode] = useState<"raster" | "vector">("raster");
+  const [studioMode, setStudioMode] = useState<"raster" | "vector" | "ai">("raster");
   const [editorPanel, setEditorPanel] = useState<Panel | null>(null);
   const [enhancePanels, setEnhancePanels] = useState<Panel[] | null>(null);
   const [pane, setPane] = useState<"panels" | "page">("panels");
@@ -305,6 +305,17 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                 <PenTool className="size-4" /> Open in Vector Studio
               </Button>
             </div>
+            <Button
+              variant="secondary"
+              className="mt-2 w-full"
+              disabled={busy || !checked.length}
+              onClick={() => {
+                setStudioMode("ai");
+                setProPanel(list.find((p) => checkedSet.has(p.id)) ?? null);
+              }}
+            >
+              <Sparkles className="size-4" /> Open in AI Studio
+            </Button>
             <div className="chapter-tool-grid">
               <Button
                 intent="ai"
@@ -726,7 +737,8 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
           <ProWorkspace
             panel={proPanel}
             projectId={projectId}
-            mode={studioMode}
+            mode={studioMode === "ai" ? "raster" : studioMode}
+            aiStudio={studioMode === "ai"}
             onModeChange={setStudioMode}
             onClose={() => setProPanel(null)}
             onContinue={(mode) => {

@@ -1,44 +1,41 @@
-# Inkstrip project release workflow
+# Inkstrip Phase F approval policy
 
-The user authorized automatic normal-merge releases for **completed phases**.
-This authorization supersedes earlier conversation instructions requiring routine
-merge/deployment approval. It does not authorize bypassing safety or validation.
+The current user instruction supersedes earlier automatic phase release authority.
+Implement **F1 only** on `codex/phase-f-ai-studio`. Commit/push tested development
+work and prepare a reviewable PR. **Do not merge, deploy to production, change
+production settings or start F2–F5 without explicit user approval.** Never push
+directly to main, rewrite shared history, provision paid compute or enable paid APIs.
 
-- Continue the existing graphics/document engines; preserve source artwork,
-  native backward compatibility, Chapter data, AI and 3D functionality.
-- Finish the entire planned phase with working tools, changelog and truthful
-  implemented/partial/missing inventory before releasing it.
-- Run full unit/integration, type, lint, production build/configuration and browser
-  regressions, including native/history/exports, AI/3D, and touch 320px/390px.
-  Investigate failures; never silently skip them. Document timing flakes/retries.
-- Push tested development commits and create/update the phase PR. Review the exact
-  tested HEAD, mergeability, all required GitHub checks and accidental secrets.
-- Once every gate passes, merge that exact PR HEAD into main with a **normal merge
-  commit**, without routine approval. Never force-push, reset or rewrite main.
-- Let the existing Vercel integration deploy main. During webhook delays, inspect
-  the intended main SHA and use existing authorized Vercel access only. Missing
-  credentials/permissions are blockers to a manual deployment. Never create a
-  duplicate project, expose secrets, change secrets/environment variables without
-  authorization, or promote an outdated preview.
-- Verify the live release/commit/domain, Chapter/Raster/Vector, mobile/touch, AI/3D,
-  errors and assets before claiming deployment or beginning the next phase.
-- If production verification fails, stop progression and apply a minimal tested
-  recovery without deleting production data or deployment history.
-- After verified production, branch from freshly verified main for the next phase.
-  An incomplete next phase may use a draft PR, but must not merge prematurely.
-- Report completed features, tests, PR, merge SHA, production/live verification,
-  limitations and next phase. Do not claim Adobe feature parity without evidence.
+Preserve the existing Raster/Vector engines, original artwork, Chapter data,
+AI inference and 3D features. No fake inference or production-ready claims for
+unqualified models. Mocked orchestration is not evidence of model execution.
+Verify exact code/weights/dependency licenses; report missing GPU resources and
+human quality review honestly. Follow the current F1 report and acceptance gates
+in `docs/PHASE_F1_AI_STUDIO.md`. Native v1–v5 remain readable; additive AI records
+use v6 so older readers reject unsupported provenance rather than dropping it.
 
-Current sequence: Phase C and Phase D are released. Phase D PR #3 merged normally
-as `a35e73ef90e71f79f711ce7830e8e8625e372aaa` and was verified on the existing
-Vercel Production domain. The baseline is 642 automated tests and 18 Chromium
-suites, including real AI and desktop/320px/390px workflows. See the final Phase D
-audit and `docs/PHASE_E_RASTER_REFINEMENT.md` before implementing anything.
+Current sequence: Phases C, D and E are released; PR #5 cleanup is released at
+`71a29e2f01869a82a4b6a81818fb56441cb93c3f`. Existing baseline: 677 automated
+tests and 19 Chromium suites. Phase F scaffold `b918ea2` was documents only and
+was integrated with main by normal merge `4caa9d8` without rewriting history.
 
-Phase E Raster refinement is implemented on its development branch/PR #4. Read
-`docs/PHASE_E_RASTER_REFINEMENT.md` and PR #4 for the actual release/validation
-state before starting new work. Do not duplicate its selection, brush, mask,
-native v5 or high-resolution improvements. All native v1–v4 files remain readable.
-Future AI Studio is a separate phase, permitted only after the Phase E main
-release and live source-SHA verification. Preserve all source artwork and existing
-AI/Raster/Vector/Chapter/3D engines and the release policy above.
+Current branch: `codex/phase-f-ai-studio`. F1 adds the shared-document AI Studio,
+real existing Swin2SR restoration, staged approval and AI result layers/native v6,
+plus metadata-only GPU discovery. It does not enable GPU jobs or qualified
+inpainting/face/hands/background generation. Model licenses/evidence, benchmark
+limitations and the actual validation status live in `docs/PHASE_F1_AI_STUDIO.md`
+and `docs/AI_MODEL_QUALIFICATION.md`. Native v1–v5 remain readable. Preserve the
+existing optional paid adapter without invoking/configuring it for F1 or QA.
+
+CodeFormer's upstream license restricts commercial use without permission; it is
+excluded from the default registry. No model code/weights from imported files or
+remote discovery may execute. No tokens/endpoints enter native files. No paid
+compute, provider, production changes or next release without explicit approval.
+
+F1 readiness audit: `docs/PHASE_F1_READINESS_AUDIT.md` supersedes the initial
+report for import/JPEG fixes, worker reuse and validation results. Pro IndexedDB
+uses version2 with the same retained sessions store, preventing cached pre-F1
+version1 clients from dropping AI source assets or using old compositing. Do not
+revert this compatibility guard or delete user storage. Native envelopes remain
+v1–v6. Validate embedded native raster bytes and decoded budgets before committing
+imports. JPEG mattes apply after compositing, never before AI color overlays.

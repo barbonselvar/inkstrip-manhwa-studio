@@ -2,11 +2,27 @@ import { validateAssets, type ProSession } from "./model";
 /** Independent, self-contained blobs: old chapter garbage collection cannot remove Pro assets. */
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const r = indexedDB.open("inkstrip-pro", 1);
-    r.onupgradeneeded = () => r.result.createObjectStore("sessions", { keyPath: "id" });
-    r.onsuccess = () => resolve(r.result);
+    // F1 AI layers change compositing and asset reachability. A cached pre-F1
+    // version-1 client must fail closed rather than save a lossy older envelope.
+    const r = indexedDB.open("inkstrip-pro", 2);
+    let blocked = false;
+    r.onupgradeneeded = () => {
+      if (!r.result.objectStoreNames.contains("sessions"))
+        r.result.createObjectStore("sessions", { keyPath: "id" });
+    };
+    r.onsuccess = () => {
+      if (blocked) {
+        r.result.close();
+        return;
+      }
+      r.result.onversionchange = () => r.result.close();
+      resolve(r.result);
+    };
     r.onerror = () => reject(r.error);
-    r.onblocked = () => reject(new Error("Close another Pro Studio tab to open document storage."));
+    r.onblocked = () => {
+      blocked = true;
+      reject(new Error("Close another Pro Studio tab to open document storage."));
+    };
   });
 }
 export async function loadSession(panelId: string): Promise<ProSession | undefined> {

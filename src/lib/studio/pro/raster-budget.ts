@@ -36,6 +36,8 @@ export function documentSources(doc: ProDocument, maxArea: number) {
         "A layer exceeds this device’s memory budget. Export a native backup or use a smaller source.",
       );
     if (l.assetId) dimensions.set(l.assetId, { width: l.width, height: l.height });
+    if (l.ai)
+      dimensions.set(l.ai.sourceAssetId, { width: l.ai.sourceWidth, height: l.ai.sourceHeight });
     for (const stroke of [...l.strokes, ...(l.mask?.strokes ?? [])])
       if (stroke.clone)
         dimensions.set(stroke.clone.assetId, {

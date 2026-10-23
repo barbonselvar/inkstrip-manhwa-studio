@@ -13,7 +13,19 @@ export const DEFAULT_ENHANCE: EnhanceOptions = {
   artifacts: true,
 };
 export type EnhanceProgress = { stage: string; done: number; total: number };
-export type EnhanceResult = { blob: Blob; width: number; height: number };
+export type EnhanceTimings = {
+  modelRetrievalMs: number;
+  integrityMs: number;
+  runtimeDownloadMs: number;
+  sessionCreateMs: number;
+  preprocessMs: number;
+  inferenceMs: number;
+  reconstructionMs: number;
+  encodeMs: number;
+  totalMs: number;
+  sessionReused: boolean;
+};
+export type EnhanceResult = { blob: Blob; width: number; height: number; timings?: EnhanceTimings };
 export type WorkerReply =
   | { type: "progress"; progress: EnhanceProgress }
   | { type: "result"; result: EnhanceResult }

@@ -1278,3 +1278,38 @@
   padding-block: 0.5rem;
   overflow-wrap: anywhere;
 }
+
+.pro-ai-studio {
+  overflow-wrap: anywhere;
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.pro-ai-studio .pro-field,
+.pro-ai-settings,
+.pro-ai-preview {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.pro-ai-studio input:not([type="checkbox"]) {
+  width: 100%;
+  min-height: 2.75rem;
+  min-width: 0;
+}
+.pro-ai-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 16rem;
+  object-fit: contain;
+  background: var(--color-bg-subtle);
+}
+.pro-ai-preview figcaption {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+.pro-ai-studio [role="alert"] {
+  overflow-wrap: anywhere;
+  font-size: 0.8125rem;
+  color: var(--color-fg);
+}

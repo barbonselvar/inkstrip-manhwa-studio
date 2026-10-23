@@ -28,10 +28,9 @@ self.onmessage = async ({ data }) => {
       self.postMessage({ id, type: "ready" });
       return;
     }
-    const doc: ProDocument =
-      data.mime === "image/jpeg" && data.document.background === "transparent"
-        ? { ...data.document, background: "#ffffff" }
-        : data.document;
+    // JPEG's white matte belongs after editable compositing, otherwise it changes
+    // preserve-alpha AI colors (and backdrop-dependent blend/adjustment coverage).
+    const doc: ProDocument = data.document;
     if (doc.width * doc.height > data.maxArea)
       throw new Error(
         "This document exceeds the device memory budget. Export the native document or use the existing chapter strip workflow. No resolution was reduced.",
@@ -390,7 +389,7 @@ self.onmessage = async ({ data }) => {
       const bitmap = output.transferToImageBitmap();
       self.postMessage({ id, type: "preview", bitmap }, [bitmap]);
     } else {
-      if (board && data.mime === "image/jpeg") {
+      if ((board || data.fullCanvas) && data.mime === "image/jpeg") {
         const ctx = output.getContext("2d")!;
         ctx.globalCompositeOperation = "destination-over";
         ctx.fillStyle = "#ffffff";
