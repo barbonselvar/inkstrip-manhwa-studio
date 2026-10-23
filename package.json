@@ -20,7 +20,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "check:build": "node scripts/check-build.mjs",
-    "test:studio": "node --experimental-strip-types --test src/lib/studio/enhance/enhance.test.ts src/lib/studio/reader-scroll.test.ts src/lib/studio/editor/editor.test.ts src/lib/studio/editor/adjustments.test.ts src/lib/studio/retouch/retouch.test.ts src/lib/ai/image-edit.test.ts src/lib/studio/faces/detect.test.ts src/lib/studio/characters/characters.test.ts src/lib/studio/order.test.ts src/lib/studio/workflow.test.ts src/lib/studio/ui/preferences.test.ts && npm run test:pro",
+    "test:studio": "node --experimental-strip-types --test src/lib/studio/enhance/enhance.test.ts src/lib/studio/reader-scroll.test.ts src/lib/studio/editor/editor.test.ts src/lib/studio/editor/adjustments.test.ts src/lib/studio/retouch/retouch.test.ts src/lib/ai/image-edit.test.ts src/lib/studio/faces/detect.test.ts src/lib/studio/characters/characters.test.ts src/lib/studio/order.test.ts src/lib/studio/backup.test.ts src/lib/studio/workflow.test.ts src/lib/studio/ui/preferences.test.ts && npm run test:pro",
     "test:studio:browser": "node scripts/studio-browser-check.mjs",
     "test:editor:browser": "node scripts/editor-browser-check.mjs",
     "test:adjustments:browser": "node scripts/adjustments-browser-check.mjs",
