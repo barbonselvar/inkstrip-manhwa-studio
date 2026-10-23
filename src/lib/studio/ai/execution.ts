@@ -10,7 +10,7 @@ export interface AiExecution {
   ): Promise<{ blob: Blob; width: number; height: number }>;
   cancel(): void;
 }
-/** One worker/job. Cancellation terminates download/inference; no artwork leaves the browser. */
+/** One serial worker; completed sessions may be reused. Cancel terminates all inference resources. */
 export class LocalRestoration implements AiExecution {
   private engine = new EnhancementEngine();
   async run(blob: Blob, settings: EnhanceOptions, progress: AiProgress) {

@@ -288,3 +288,89 @@ test("an already cancelled GPU request never reaches the network, and control ch
     );
   assert.equal(calls, 0);
 });
+
+test("v1–v6 representative feature envelopes round-trip without dropping legacy or AI data", async () => {
+  const { layer } = await import("./model.ts");
+  for (let version = 1; version <= 6; version++) {
+    let s = session();
+    if (version >= 2) {
+      const path = layer("shape", 64, 48);
+      path.shape = "path";
+      path.anchors = [
+        { x: 0, y: 0 },
+        { x: 60, y: 0 },
+        { x: 60, y: 40 },
+      ];
+      path.closed = true;
+      path.fillRule = "evenodd";
+      path.subpaths = [
+        {
+          anchors: [
+            { x: 10, y: 10 },
+            { x: 20, y: 10 },
+            { x: 20, y: 20 },
+          ],
+          closed: true,
+        },
+      ];
+      s.document.layers.push(path);
+    }
+    if (version >= 3)
+      s.document.artboards = [
+        {
+          id: "board",
+          name: "Artwork",
+          x: 0,
+          y: 0,
+          width: 64,
+          height: 48,
+          background: "transparent",
+        },
+      ];
+    if (version >= 4) s.document.layers[1]!.appearance = [];
+    if (version >= 5)
+      s.document.layers[0]!.mask = {
+        enabled: true,
+        selection: { regions: [], inverted: true, feather: 0 },
+        strokes: [],
+        density: 0.7,
+        feather: 1,
+      };
+    if (version === 6) s = acceptAiResult(s, receipt(), png(), png(), 4e6).session;
+    const file = await nativeFile(s);
+    assert.equal(JSON.parse(await file.text()).version, version);
+    const restored = await readNative(file, "panel", "accepted");
+    assert.deepEqual(restored.document, s.document);
+    for (const id of Object.keys(restored.assets))
+      assert.deepEqual(await restored.assets[id]!.arrayBuffer(), await s.assets[id]!.arrayBuffer());
+  }
+});
+test("v6 repeated save/import cycles retain shared sources once and reject corrupt envelopes atomically", async () => {
+  let s = acceptAiResult(session(), receipt(), png(), png(), 4e6).session;
+  const original = s.document;
+  for (let n = 0; n < 8; n++) {
+    const file = await nativeFile(s),
+      envelope = JSON.parse(await file.text());
+    assert.equal(Object.keys(envelope.assets).length, 3);
+    const incoming = await readNative(file, "panel", "accepted");
+    s = mergeNativeSession(s, incoming);
+    assert.deepEqual(s.document.layers.at(-1)!.ai!.settings, receipt().settings);
+  }
+  const v = JSON.parse(await (await nativeFile(s)).text());
+  for (const alter of [
+    (x: typeof v) => (x.version = 7),
+    (x: typeof v) => delete x.assets[x.document.layers.at(-1).ai.sourceAssetId],
+    (x: typeof v) => (x.document.layers.at(-1).ai.settings.token = "secret"),
+    (x: typeof v) => (x.assets = undefined),
+  ]) {
+    const bad = structuredClone(v);
+    alter(bad);
+    await assert.rejects(readNative(new Blob([JSON.stringify(bad)]), "panel", "accepted"));
+  }
+  await assert.rejects(readNative(new Blob(['{"format":']), "panel", "accepted"));
+  await assert.rejects(
+    readNative(new Blob([new Uint8Array(70_000_001)]), "panel", "accepted"),
+    /70MB/,
+  );
+  assert.equal(original.layers.length, 2);
+});

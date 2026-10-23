@@ -4,7 +4,12 @@ import { env, InferenceSession, Tensor } from "onnxruntime-web/wasm";
 import wasmUrl from "../../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
 import wasmModuleUrl from "../../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url";
 import { cleanPixels, finishPixels } from "./filters";
-import { enhancementSize, type EnhanceOptions, type WorkerReply } from "./types";
+import {
+  enhancementSize,
+  type EnhanceOptions,
+  type EnhanceTimings,
+  type WorkerReply,
+} from "./types";
 
 // Versioned public model; only weights are downloaded, never user artwork.
 env.wasm.numThreads = 1;
@@ -20,7 +25,8 @@ const send = (message: WorkerReply) => self.postMessage(message);
 const progress = (stage: string, done = 0, total = 0) =>
   send({ type: "progress", progress: { stage, done, total } });
 
-async function loadModel() {
+async function loadModel(timings: EnhanceTimings) {
+  let started = performance.now();
   let cache: Cache | undefined;
   try {
     cache = await caches.open("inkstrip-ai-swin2sr-v1");
@@ -56,6 +62,8 @@ async function loadModel() {
       /* Storage may be full. */
     }
   }
+  timings.modelRetrievalMs = performance.now() - started;
+  started = performance.now();
   if (
     bytes.byteLength !== SWIN.bytes ||
     [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
@@ -67,6 +75,8 @@ async function loadModel() {
       "The Swin2SR checkpoint failed integrity verification. Nothing was processed; retry the model download.",
     );
   }
+  timings.integrityMs = performance.now() - started;
+  started = performance.now();
   progress("Preparing AI engine · this can take a moment");
   // ORT supports an explicit binary. Some static preview hosts use octet-stream
   // for .wasm, which makes Emscripten log a failed streaming compile before retry.
@@ -86,18 +96,23 @@ async function loadModel() {
       throw Error("The bundled AI runtime is invalid.");
     env.wasm.wasmBinary = binary;
   }
+  timings.runtimeDownloadMs = performance.now() - started;
+  started = performance.now();
   try {
-    return await InferenceSession.create(bytes, {
+    const session = await InferenceSession.create(bytes, {
       executionProviders: ["wasm"],
       graphOptimizationLevel: "all",
     });
+    timings.sessionCreateMs = performance.now() - started;
+    return session;
   } catch (error) {
     await cache?.delete(MODEL);
     throw error;
   }
 }
 
-async function restoreTile(pixels: ImageData) {
+async function restoreTile(pixels: ImageData, timings: EnhanceTimings) {
+  let started = performance.now();
   // Match Swin2SR's rescale + symmetric pad-to-window preprocessing.
   const w = (Math.floor(pixels.width / 8) + 1) * 8;
   const h = (Math.floor(pixels.height / 8) + 1) * 8;
@@ -112,10 +127,14 @@ async function restoreTile(pixels: ImageData) {
       const p = (reflect(y, pixels.height) * pixels.width + reflect(x, pixels.width)) * 4;
       for (let c = 0; c < 3; c++) data[c * w * h + y * w + x] = pixels.data[p + c]! / 255;
     }
+  timings.preprocessMs += performance.now() - started;
   const session = await model!;
   const tensor = new Tensor("float32", data, [1, 3, h, w]);
   try {
+    started = performance.now();
     const outputs = await session.run({ [session.inputNames[0]!]: tensor });
+    timings.inferenceMs += performance.now() - started;
+    started = performance.now();
     const result = outputs[session.outputNames[0]!]!;
     try {
       const ow = Number(result.dims[3]),
@@ -126,6 +145,7 @@ async function restoreTile(pixels: ImageData) {
         for (let c = 0; c < 3; c++) rgba[i * 4 + c] = values[c * ow * oh + i]! * 255;
         rgba[i * 4 + 3] = 255;
       }
+      timings.reconstructionMs += performance.now() - started;
       return new ImageData(rgba, ow, oh);
     } finally {
       Object.values(outputs).forEach((output) => output.dispose());
@@ -136,14 +156,34 @@ async function restoreTile(pixels: ImageData) {
 }
 
 self.onmessage = async (event: MessageEvent<{ blob: Blob; options: EnhanceOptions }>) => {
+  const started = performance.now();
+  const timings: EnhanceTimings = {
+    modelRetrievalMs: 0,
+    integrityMs: 0,
+    runtimeDownloadMs: 0,
+    sessionCreateMs: 0,
+    preprocessMs: 0,
+    inferenceMs: 0,
+    reconstructionMs: 0,
+    encodeMs: 0,
+    totalMs: 0,
+    sessionReused: !!model,
+  };
   let bitmap: ImageBitmap | undefined;
   try {
     const { blob, options } = event.data;
+    let phase = performance.now();
     bitmap = await createImageBitmap(blob);
+    timings.preprocessMs += performance.now() - phase;
     const size = enhancementSize(bitmap.width, bitmap.height, options.scale);
-    progress("Loading AI model · first download may take a few minutes");
-    model ??= loadModel();
+    progress(
+      model
+        ? "Reusing local AI engine"
+        : "Loading AI model · first download may take a few minutes",
+    );
+    model ??= loadModel(timings);
     await model;
+    phase = performance.now();
     const input = new OffscreenCanvas(bitmap.width, bitmap.height);
     const ctx = input.getContext("2d", { willReadFrequently: true });
     if (!ctx) throw new Error("Your browser cannot prepare this image.");
@@ -166,6 +206,7 @@ self.onmessage = async (event: MessageEvent<{ blob: Blob; options: EnhanceOption
       overlap = 8;
     const total = Math.ceil(input.width / tile) * Math.ceil(input.height / tile);
     let done = 0;
+    timings.preprocessMs += performance.now() - phase;
     for (let y = 0; y < input.height; y += tile)
       for (let x = 0; x < input.width; x += tile) {
         progress("Restoring fine detail", done, total);
@@ -173,17 +214,22 @@ self.onmessage = async (event: MessageEvent<{ blob: Blob; options: EnhanceOption
           top = Math.max(0, y - overlap);
         const right = Math.min(input.width, x + tile + overlap),
           bottom = Math.min(input.height, y + tile + overlap);
+        phase = performance.now();
         const pixels = ctx.getImageData(left, top, right - left, bottom - top);
-        const rgba = await restoreTile(pixels);
+        timings.preprocessMs += performance.now() - phase;
+        const rgba = await restoreTile(pixels, timings);
+        phase = performance.now();
         const patch = new OffscreenCanvas(rgba.width, rgba.height);
         patch.getContext("2d")!.putImageData(rgba, 0, 0);
         const w = Math.min(tile, input.width - x) * 2,
           h = Math.min(tile, input.height - y) * 2;
         target.drawImage(patch, (x - left) * 2, (y - top) * 2, w, h, x * 2, y * 2, w, h);
         patch.width = patch.height = 0;
+        timings.reconstructionMs += performance.now() - phase;
         done++;
       }
     progress("Finishing colors and edges", total, total);
+    phase = performance.now();
     const final = new OffscreenCanvas(size.width, size.height);
     const finalCtx = final.getContext("2d", { willReadFrequently: true })!;
     finalCtx.imageSmoothingEnabled = true;
@@ -198,9 +244,13 @@ self.onmessage = async (event: MessageEvent<{ blob: Blob; options: EnhanceOption
     const alphaPixels = alphaCtx.getImageData(0, 0, size.width, size.height);
     for (let i = 3; i < pixels.data.length; i += 4) pixels.data[i] = alphaPixels.data[i]!;
     finalCtx.putImageData(pixels, 0, 0);
+    timings.reconstructionMs += performance.now() - phase;
+    phase = performance.now();
     const resultBlob = await final.convertToBlob({ type: "image/png" });
     input.width = output.width = alpha.width = final.width = 0;
-    send({ type: "result", result: { blob: resultBlob, ...size } });
+    timings.encodeMs = performance.now() - phase;
+    timings.totalMs = performance.now() - started;
+    send({ type: "result", result: { blob: resultBlob, ...size, timings } });
   } catch (error) {
     model = undefined;
     send({

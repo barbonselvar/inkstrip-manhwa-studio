@@ -65,7 +65,9 @@ export function ProAiStudio({
   const run = useRef(0),
     abort = useRef<AbortController | null>(null),
     engine = useRef<LocalRestoration | null>(null),
-    discovery = useRef<AbortController | null>(null);
+    discovery = useRef<AbortController | null>(null),
+    generating = useRef(false),
+    idle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const capable = localCapability({
     worker: typeof Worker !== "undefined",
     canvas: typeof OffscreenCanvas !== "undefined",
@@ -74,6 +76,7 @@ export function ProAiStudio({
   useEffect(
     () => () => {
       ++run.current;
+      clearTimeout(idle.current);
       abort.current?.abort();
       engine.current?.cancel();
       discovery.current?.abort();
@@ -82,14 +85,19 @@ export function ProAiStudio({
   );
   const cancel = () => {
     ++run.current;
+    clearTimeout(idle.current);
     abort.current?.abort();
     engine.current?.cancel();
+    engine.current = null;
+    generating.current = false;
     setRunning(false);
     setStage("Cancelled. Document and Chapter unchanged.");
   };
   const generate = async () => {
+    if (generating.current) return;
+    generating.current = true;
     abort.current?.abort();
-    engine.current?.cancel();
+    clearTimeout(idle.current);
     const serial = ++run.current,
       controller = new AbortController();
     abort.current = controller;
@@ -152,7 +160,7 @@ export function ProAiStudio({
       bitmap.close();
       bitmap = undefined;
       const before = await input.convertToBlob({ type: "image/png" });
-      execution = new LocalRestoration();
+      execution = engine.current ?? new LocalRestoration();
       engine.current = execution;
       const result = await execution.run(before, { ...chosen, scale: 1 }, (s, n, t) => {
         if (serial === run.current) setStage(t ? `${s} · ${n} / ${t}` : s);
@@ -211,14 +219,29 @@ export function ProAiStudio({
         setStage("Preview ready. Nothing has been added to your document.");
       }
     } catch (e) {
+      // Only successful sessions are retained. Failed ORT jobs can own native
+      // allocations even after the worker clears its model promise.
+      execution?.cancel();
+      if (engine.current === execution) engine.current = null;
       if (serial === run.current && !controller.signal.aborted)
         setError(e instanceof Error ? e.message : "Inference failed; original unchanged.");
     } finally {
       bitmap?.close();
-      execution?.cancel();
+      if (controller.signal.aborted || serial !== run.current) execution?.cancel();
+      else idle.current = setTimeout(() => engine.current?.cancel(), 60_000);
       for (const surface of surfaces) surface.width = surface.height = 1;
-      if (serial === run.current) setRunning(false);
+      if (serial === run.current) {
+        generating.current = false;
+        setRunning(false);
+      }
     }
+  };
+  const invalidateDiscovery = () => {
+    discovery.current?.abort();
+    discovery.current = null;
+    setDiscovering(false);
+    setGpu(null);
+    setGpuError("");
   };
   const stale = preview && preview.documentJson !== JSON.stringify(doc);
   return (
@@ -392,8 +415,8 @@ export function ProAiStudio({
             aria-label="GPU HTTPS origin"
             value={endpoint}
             onChange={(e) => {
+              invalidateDiscovery();
               setEndpoint(e.target.value);
-              setGpu(null);
               setNetworkConsent(false);
             }}
             placeholder="https://gpu.example.org"
@@ -406,14 +429,21 @@ export function ProAiStudio({
             autoComplete="off"
             aria-label="GPU session token"
             value={token}
-            onChange={(e) => setToken(e.target.value)}
+            onChange={(e) => {
+              invalidateDiscovery();
+              setToken(e.target.value);
+              setNetworkConsent(false);
+            }}
           />
         </label>
         <label>
           <input
             type="checkbox"
             checked={networkConsent}
-            onChange={(e) => setNetworkConsent(e.target.checked)}
+            onChange={(e) => {
+              invalidateDiscovery();
+              setNetworkConsent(e.target.checked);
+            }}
           />{" "}
           Allow this capability request and session credential to the configured origin; no artwork
           is sent.
@@ -422,26 +452,34 @@ export function ProAiStudio({
           variant="secondary"
           disabled={!networkConsent || discovering}
           onClick={() => {
-            discovery.current = new AbortController();
+            const request = new AbortController();
+            discovery.current = request;
             setDiscovering(true);
             setGpuError("");
-            void discoverGpu(endpoint, token, discovery.current.signal)
-              .then(setGpu)
-              .catch((e) => setGpuError(e instanceof Error ? e.message : "GPU discovery failed."))
-              .finally(() => setDiscovering(false));
+            void discoverGpu(endpoint, token, request.signal)
+              .then((value) => {
+                if (discovery.current === request) setGpu(value);
+              })
+              .catch((e) => {
+                if (discovery.current === request && !request.signal.aborted)
+                  setGpuError(e instanceof Error ? e.message : "GPU discovery failed.");
+              })
+              .finally(() => {
+                if (discovery.current === request) setDiscovering(false);
+              });
           }}
         >
           Check GPU capabilities
         </Button>
         {discovering && (
-          <Button variant="ghost" onClick={() => discovery.current?.abort()}>
+          <Button variant="ghost" onClick={invalidateDiscovery}>
             Cancel GPU discovery
           </Button>
         )}
         <Button
           variant="ghost"
           onClick={() => {
-            discovery.current?.abort();
+            invalidateDiscovery();
             setToken("");
             setGpu(null);
             setNetworkConsent(false);

@@ -24,6 +24,9 @@ try {
         hasTouch: mobile,
         isMobile: mobile,
         reducedMotion: "reduce",
+        ...(process.env.INKSTRIP_QA_IDENTITY_ENCODING === "1"
+          ? { extraHTTPHeaders: { "Accept-Encoding": "identity" } }
+          : {}),
       }),
       p = await c.newPage(),
       errors = [],
@@ -55,15 +58,13 @@ try {
       strokes: [],
       density: 1,
     };
+    const selectionOrigin = width === 390 ? { x: 44, y: 32 } : { x: 4, y: 4 };
     d.selection = {
       regions: [
         {
           kind: "rectangle",
           operation: "add",
-          points: [
-            { x: 4, y: 4 },
-            { x: 20, y: 20 },
-          ],
+          points: [selectionOrigin, { x: selectionOrigin.x + 16, y: selectionOrigin.y + 16 }],
         },
       ],
       inverted: false,
@@ -101,10 +102,43 @@ try {
     await ai();
     const started = performance.now();
     await p.getByRole("button", { name: "Generate restoration preview", exact: true }).click();
-    await p
-      .getByRole("button", { name: "Accept AI result layer", exact: true })
-      .waitFor({ timeout: 180000 });
+    await Promise.race([
+      p
+        .getByRole("button", { name: "Accept AI result layer", exact: true })
+        .waitFor({ timeout: 180000 }),
+      p
+        .locator(".pro-ai-studio [role=alert]")
+        .first()
+        .waitFor({ timeout: 180000 })
+        .then(async () => {
+          throw Error(
+            "AI preview failed: " +
+              (await p.locator(".pro-ai-studio [role=alert]").allTextContents()) +
+              "; browser errors: " +
+              JSON.stringify(errors),
+          );
+        }),
+    ]);
     const elapsed = performance.now() - started;
+    let warmElapsed = null;
+    if (width === 1440) {
+      const workers = p.workers().map((w) => w.url());
+      await p.getByRole("button", { name: "Discard AI preview", exact: true }).click();
+      const warmStarted = performance.now();
+      await p.getByRole("button", { name: "Generate restoration preview", exact: true }).click();
+      await p
+        .getByRole("button", { name: "Accept AI result layer", exact: true })
+        .waitFor({ timeout: 180000 });
+      warmElapsed = performance.now() - warmStarted;
+      assert.deepEqual(
+        p
+          .workers()
+          .map((w) => w.url())
+          .sort(),
+        workers.sort(),
+        "A successful preview reuses the inference worker",
+      );
+    }
     assert.deepEqual((await native(p)).value.document, beforeDoc, "Preview is not committed");
     await ai();
     await p.screenshot({ path: `/workspace/screenshots/f1-ai-preview-${width}.png` });
@@ -122,9 +156,68 @@ try {
     assert.ok(
       await p.getByRole("button", { name: "Accept AI result layer", exact: true }).isEnabled(),
     );
+    if (width === 1440) {
+      // A second real browser tab commits a new revision while the preview is open.
+      const other = await c.newPage();
+      await other.goto(base);
+      await other.getByRole("button", { name: "New project", exact: true }).waitFor();
+      const previousRevision = await other.evaluate(async (id) => {
+        const db = await new Promise((resolve) => {
+          const r = indexedDB.open("inkstrip-pro");
+          r.onsuccess = () => resolve(r.result);
+        });
+        const revision = await new Promise((resolve, reject) => {
+          const tx = db.transaction("sessions", "readwrite"),
+            store = tx.objectStore("sessions"),
+            r = store.get(id);
+          let previous;
+          r.onsuccess = () => {
+            previous = r.result.session.revision;
+            r.result.session.revision++;
+            store.put(r.result);
+          };
+          tx.oncomplete = () => resolve(previous);
+          tx.onabort = () => reject(tx.error);
+        });
+        db.close();
+        return revision;
+      }, beforeDoc.panelId);
+      await p.getByRole("button", { name: "Accept AI result layer", exact: true }).click();
+      await p.getByText(/Another tab saved this project/).waitFor();
+      assert.deepEqual(
+        (await native(p)).value.document,
+        beforeDoc,
+        "Concurrent acceptance must not mutate the document",
+      );
+      // Restore the test-only revision bump after proving the guard, without changing any artwork.
+      await other.evaluate(
+        async ({ id, revision }) => {
+          const db = await new Promise((resolve) => {
+            const r = indexedDB.open("inkstrip-pro");
+            r.onsuccess = () => resolve(r.result);
+          });
+          await new Promise((resolve, reject) => {
+            const tx = db.transaction("sessions", "readwrite"),
+              store = tx.objectStore("sessions"),
+              r = store.get(id);
+            r.onsuccess = () => {
+              r.result.session.revision = revision;
+              store.put(r.result);
+            };
+            tx.oncomplete = resolve;
+            tx.onabort = () => reject(tx.error);
+          });
+          db.close();
+        },
+        { id: beforeDoc.panelId, revision: previousRevision },
+      );
+      await other.close();
+      await ai();
+    }
     await p.getByRole("button", { name: "Accept AI result layer", exact: true }).click();
     await p.getByText("Accepted as an editable AI result layer.", { exact: true }).waitFor();
-    const accepted = (await native(p)).value;
+    const acceptedFile = await native(p),
+      accepted = acceptedFile.value;
     assert.equal(accepted.version, 6);
     assert.equal(accepted.document.layers.length, beforeDoc.layers.length + 1);
     assert.deepEqual(accepted.document.layers.slice(0, -1), beforeDoc.layers);
@@ -135,7 +228,8 @@ try {
     assert.ok(accepted.assets[result.ai.sourceAssetId]);
     const afterPixels = await raster(p),
       coverage = new Uint8Array(128 * 96);
-    for (let y = 4; y < 20; y++) for (let x = 4; x < 20; x++) coverage[y * 128 + x] = 255;
+    for (let y = selectionOrigin.y; y < selectionOrigin.y + 16; y++)
+      for (let x = selectionOrigin.x; x < selectionOrigin.x + 16; x++) coverage[y * 128 + x] = 255;
     const metrics = integrityMetrics(
       Uint8ClampedArray.from(beforePixels.pixels),
       Uint8ClampedArray.from(afterPixels.pixels),
@@ -175,7 +269,31 @@ try {
       assert.equal(image.height, 96);
     }
     assert.deepEqual(await records(p), chapter, "AI output never overwrites Chapter");
-    await p.getByRole("button", { name: "Back to chapter from Pro Studio", exact: true }).click();
+    const closeButton = p.getByRole("button", {
+      name: "Back to chapter from Pro Studio",
+      exact: true,
+    });
+    await closeButton.click();
+    // close() persists asynchronously before dismissing; do not navigate away mid-save.
+    await closeButton.waitFor({ state: "hidden" });
+    const savedDocument = await p.evaluate(async (id) => {
+      const db = await new Promise((resolve) => {
+        const r = indexedDB.open("inkstrip-pro");
+        r.onsuccess = () => resolve(r.result);
+      });
+      const stored = await new Promise((resolve) => {
+        const r = db.transaction("sessions").objectStore("sessions").get(id);
+        r.onsuccess = () => resolve(r.result.session.document);
+      });
+      db.close();
+      return stored;
+    }, accepted.document.panelId);
+    assert.deepEqual(
+      // Native JSON canonicalizes IEEE negative zero; IndexedDB preserves it.
+      JSON.parse(JSON.stringify(savedDocument)),
+      accepted.document,
+      "Closing commits the complete accepted document before navigation",
+    );
     await p.reload();
     await p.getByRole("button", { name: "Open in AI Studio", exact: true }).click();
     await panels();
@@ -184,6 +302,31 @@ try {
       accepted.document,
       "AI layers/masks/provenance survive saved draft reopening",
     );
+    // Import the actual exported v6 file after closing/reopening, not only the IndexedDB draft.
+    await p
+      .getByRole("navigation", { name: "Pro panels", exact: true })
+      .getByRole("button", { name: "Assets", exact: true })
+      .click();
+    await p.getByLabel("Import Pro asset", { exact: true }).setInputFiles({
+      name: "restored.inkstrip",
+      mimeType: "application/json",
+      buffer: acceptedFile.bytes,
+    });
+    await p
+      .getByText("Native document imported into this Pro draft. Chapter unchanged.", {
+        exact: true,
+      })
+      .waitFor();
+    same(await raster(p), afterPixels);
+    const imported = (await native(p)).value;
+    assert.equal(imported.version, 6);
+    const remapped = imported.document.layers.at(-1);
+    assert.notEqual(remapped.ai.sourceAssetId, result.ai.sourceAssetId);
+    assert.equal(
+      imported.assets[remapped.ai.sourceAssetId].data,
+      accepted.assets[result.ai.sourceAssetId].data,
+    );
+    assert.deepEqual({ ...remapped.ai, sourceAssetId: result.ai.sourceAssetId }, result.ai);
     await ai();
     // GPU FOUNDATION test double: validates protocol/auth/consent, not GPU inference.
     await p
@@ -239,6 +382,7 @@ try {
       realInference: true,
       processingRegion: result.ai.region,
       measuredWallMs: elapsed,
+      sameWorkspaceWarmMs: warmElapsed,
       receiptElapsedMs: result.ai.elapsedMs,
       metrics,
       jsHeap: await p.evaluate(() => performance.memory?.usedJSHeapSize ?? null),

@@ -1,3 +1,4 @@
+import { validateNativeImages } from "@/lib/studio/pro/native-images";
 import { ProAiStudio, type AiPreview } from "./pro-ai-studio";
 import { acceptAiResult } from "@/lib/studio/pro/ai-result";
 import { assertFresh } from "@/lib/studio/ai/plan";
@@ -662,7 +663,14 @@ export default function ProWorkspace({
     const stored = await loadSession(panel.id);
     s = sessionRef.current;
     current = historyRef.current?.present.doc;
-    if (!s || !current || busyRef.current || transformRef.current || closeInProgress.current)
+    if (
+      !alive.current ||
+      !s ||
+      !current ||
+      busyRef.current ||
+      transformRef.current ||
+      closeInProgress.current
+    )
       throw Error("Workspace changed while checking the result.");
     if (stored && stored.revision !== s.revision)
       throw Error(
@@ -1171,6 +1179,7 @@ export default function ProWorkspace({
       if (file.name.toLowerCase().endsWith(".inkstrip")) {
         setStatus("Importing editable native document…");
         const imported = await readNative(file, panel.id, sessionRef.current.acceptedBlobId);
+        await validateNativeImages(imported, maxArea);
         if (!alive.current || busyRef.current || closeInProgress.current || transformRef.current)
           return;
         const next = mergeNativeSession(sessionRef.current, imported);
