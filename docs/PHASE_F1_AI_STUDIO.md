@@ -1,6 +1,6 @@
 # Phase F1 — AI Studio foundation and integration
 
-Status: implementation under validation; **not merged or deployed**. User approval
+Status: **F1 foundation validated locally; draft PR #6 for explicit review, not merged or deployed**. User approval
 is required before merge, production deployment, or F2. Generative editing is not
 implemented or claimed by F1.
 
@@ -140,6 +140,70 @@ corrected. The next run exposed an existing built-preview WASM MIME mismatch
 (`application/octet-stream`); production serves the same asset as `application/wasm`.
 A loader compatibility fix is validated below; console assertions are not weakened.
 
-See the final validation report appended after executing the supported checks.
+Final local validation:
+- 691 automated tests passed (200 scripts +59 shared +40 Studio +392 Pro), zero
+  failures/skips. Fourteen new foundation/security/receipt cases are included.
+- TypeScript, ESLint, production build, build configuration and auth invariants pass.
+  ESLint retains one pre-existing fast-refresh warning at `ui/button.tsx:25`.
+- All 19 existing Chromium suites passed: studio, editor, adjustments, retouch,
+  workflow, UI/3D, Pro, layers, repair, geometry, transform, color, appearance,
+  vector, compound, Pathfinder, artboards, vector-final and raster-refinement.
+- After the WASM binary-loader fix, the affected existing genuine Swin2SR suite
+  passed again. After copy/label cleanup, the new AI Studio suite passed again at
+  1440px/320px/390px. Total coverage: 19 existing suites +1 new F1 suite.
+- Real F1 inference passes with staging/no mutation, cancellation, stale result
+  rejection, editable acceptance, Undo/Redo, native v6 reopening, PNG/JPEG/WebP,
+  preserved layer/mask identities and Chapter bytes. Zero page/console errors and
+  external artwork uploads. GPU protocol/auth/consent checks use HTTP mocks only;
+  these do not demonstrate GPU inference. Browser interaction uses Playwright
+  because agent-browser is unavailable. Physical Android hardware was not tested.
+- Dev and built render smokes match on desktop/mobile with clean error arrays.
+  The generic smoke still emits existing game-brand classifier warnings for the
+  homepage canvas; this editor is not a game and branding was not modified.
+
+Final benchmark evidence: `benchmarks/phase-f1-ai-browser.json`,
+`phase-f1-before.png`, `phase-f1-after.png` and `phase-f1-model-evidence.json`.
+Environment: Linux x86_64, 3 allocated AMD EPYC 9V74 vCPUs, 8 GiB cgroup memory,
+Node24.19.0 and Chromium156.0.8078.4; ORT Web1.22.0 single-thread WASM, no provided
+usable GPU. The ONNX download was an exact checksum-verified local transport cache;
+weights, normalization and inference were real and unmodified. Network download
+latency is not benchmarked. Timings include snapshot, local weight/runtime loading,
+inference, pixel preview and UI delivery; other checks may contend for resources.
+
+| Viewport | Native image / context | Generate → preview | JS heap observation |
+|---|---|---:|---:|
+| Desktop1440px | 128×96 /36×36 | 44.51s | 24.5 MB |
+| Touch emulation320px | 128×96 /36×36 | 39.14s | 17.1 MB |
+| Touch emulation390px | 128×96 /36×36 | 33.89s | 17.1 MB |
+
+Every case: 12,032 protected pixels, maximum outside-mask error **0**, alpha changes
+**0**, changed selected pixels **32**. Mean RGB change0.00439 is measured pixel
+change, not a perceptual score. The synthetic fixture is intentionally simple;
+there are no characters/hands and the visible improvement is subtle. It does not
+qualify real manhwa restoration aesthetics or identity/anatomy. No subjective
+quality score is assigned; representative artwork/human approval remains future
+model qualification work. JS heap is neither peak process nor WASM/GPU memory.
+Whole-image inference at2048²/4096²/long-chapter sizes was not benchmarked: the
+local context cap requires smaller regions. Do not extrapolate these desktop CPU
+measurements to Android hardware. Workers are released after each job to bound
+model lifetime, so cold initialization can dominate repeated previews.
+
+Git base main is `71a29e2f01869a82a4b6a81818fb56441cb93c3f`; scaffold `b918ea2`
+was retained and integrated by `4caa9d8`. Tested implementation checkpoint
+`98c98e40665dd887dfd89356362a9f362f0f0480` is pushed; the follow-up contains copy,
+label and final validation-evidence changes only. See draft
+[PR #6](https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/6) for its exact
+latest HEAD and GitHub checks. Main and production remain unchanged. The existing
+Vercel integration may build branch previews; no production deployment is requested.
+
+Files: AI Studio component and Chapter/image/shared-editor integration; the AI
+registry, execution, connector, planner and benchmark modules; AI receipt/result
+validation and tests; native files, source budgets and restoration compositing;
+existing Swin2SR loader integrity/compatibility; responsive styles; browser command/
+suite; policy/inventory/audit/model/protocol/benchmark documentation. PR Files
+Changed is the exact reviewed file list.
+
+Release ready for review. Awaiting explicit user approval before merge, production
+deployment, or starting the next release.
 No merge, production deployment, secret/environment change, paid provider or F2
 implementation is authorized by this development branch.

@@ -86,7 +86,7 @@ try {
     };
     await panels();
     await p.getByRole("button", { name: "Advanced", exact: true }).click();
-    assert.ok(await p.getByLabel("AI denoise", { exact: true }).isVisible());
+    assert.ok(await p.getByLabel("Denoise prefilter", { exact: true }).isVisible());
     assert.equal(
       await p.getByLabel("AI prompt", { exact: true }).count(),
       0,

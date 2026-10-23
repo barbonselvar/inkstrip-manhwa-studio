@@ -225,11 +225,11 @@ export function ProAiStudio({
     <section className="pro-ai-studio" aria-label="AI Studio controls">
       <div className="pro-section-heading">
         <h3>Inkstrip AI Studio</h3>
-        <span className="pro-help">F1 · local foundation</span>
+        <span className="pro-help">Local · preview first</span>
       </div>
       <p className="pro-help">
-        Restore a composite snapshot without flattening your editable document. Accept adds a
-        separate color-restoration layer; Chapter images change only with Apply to chapter.
+        Restore visible artwork into a new editable layer. Original layers and Chapter images stay
+        unchanged until you apply.
       </p>
       <div className="flex gap-2" role="group" aria-label="AI interface mode">
         <Button
@@ -251,8 +251,8 @@ export function ProAiStudio({
         <strong>Task:</strong> Gentle detail restoration · Swin2SR
       </p>
       <p className="pro-help">
-        {capable.reason} {SWIN.limitation} The model download is 54.4 MB; compute and temporary
-        memory depend on your device.
+        {capable.reason} First use downloads 54.4 MB and can take a few minutes. Neural restoration
+        keeps the original resolution; generative repair is unavailable.
       </p>
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" onClick={onSelection} disabled={running || accepting}>
@@ -266,25 +266,24 @@ export function ProAiStudio({
         {doc.selection && (doc.selection.regions.length || doc.selection.inverted)
           ? "Current selection limits the result; 16px context is included for inference."
           : "No selection: process the full image within local model limits."}{" "}
-        Existing layer masks are included in the snapshot. Restoration preserves composite
-        transparency.
+        Layer masks and transparency are preserved.
       </p>
       {advanced && (
         <fieldset disabled={running || accepting} className="pro-ai-settings">
           <legend>Supported restoration settings</legend>
           <p className="pro-help">
-            Browser WASM · pinned Swin2SR. F1 keeps the document resolution. No prompt, seed or
-            anatomy controls: this model does not support them.
+            Swin2SR settings are fixed. These optional traditional pre/post filters surround neural
+            inference; they do not provide generative repair.
           </p>
           <ProNumber
-            label="AI denoise"
+            label="Denoise prefilter"
             value={settings.denoise}
             min={0}
             max={100}
             onChange={(denoise) => setSettings((s) => ({ ...s, denoise }))}
           />
           <ProNumber
-            label="AI sharpen"
+            label="Sharpen finish"
             value={settings.sharpen}
             min={0}
             max={100}
@@ -382,7 +381,7 @@ export function ProAiStudio({
       </ToolSection>
       <ToolSection title="Optional self-hosted GPU discovery">
         <p className="pro-help">
-          F1 checks capabilities only. No job submission or image upload is enabled. A server
+          Connection check only. No job submission or image upload is enabled. A server
           advertisement does not qualify a model. Tokens stay in this workspace's memory and are
           cleared when it closes. Server compute may cost money.
         </p>
