@@ -21,6 +21,8 @@ import {
 } from "@/lib/studio/pro/artboards";
 import type { RepairRequest } from "@/lib/studio/pro/repair";
 import { appendSelection } from "@/lib/studio/pro/selection";
+import { bucketStroke, hasActiveSelection, intersectRegion } from "@/lib/studio/pro/fill";
+import { selectionCanvas } from "@/lib/studio/pro/render";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -34,6 +36,7 @@ import {
   Stamp,
   Eraser,
   Pipette,
+  PaintBucket,
   Square,
   Circle,
   Minus,
@@ -135,6 +138,7 @@ const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush 
   { id: "patch", name: "Patch Repair", key: "", Icon: ScanLine },
   { id: "eraser", name: "Eraser", key: "E", Icon: Eraser },
   { id: "eyedropper", name: "Eyedropper", key: "I", Icon: Pipette },
+  { id: "fill", name: "Paint Bucket", key: "G", Icon: PaintBucket },
   { id: "select-rect", name: "Rectangle selection", key: "M", Icon: ScanLine },
   { id: "select-ellipse", name: "Ellipse selection", key: "", Icon: Circle },
   { id: "wand", name: "Magic Wand", key: "W", Icon: Wand },
@@ -150,6 +154,7 @@ const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush 
   { id: "text", name: "Text", key: "T", Icon: Type },
 ];
 const RASTER_TOOL_IDS = new Set<ProTool>([
+  "fill",
   "transform",
   "crop",
   "move",
@@ -664,10 +669,54 @@ export default function ProWorkspace({
       }
       const result = await worker.select(document, maxArea, point, {
         tolerance,
-        contiguous: tool === "wand" && contiguous,
+        contiguous: (tool === "wand" || tool === "fill") && contiguous,
         antiAlias,
       });
       if (!result.region || !alive.current) return;
+      if (tool === "fill") {
+        const target = document.layers.find((l) => l.id === selectedIds[0]);
+        if (!target || target.kind !== "paint" || isLocked(document, target.id))
+          throw new Error("Select an unlocked paint layer for Paint Bucket.");
+        let region = result.region;
+        // An active selection limits the fill; feathered edges fill partially.
+        if (hasActiveSelection(document.selection)) {
+          const coverage = selectionCanvas(document.selection!, document.width, document.height),
+            data = coverage
+              .getContext("2d")!
+              .getImageData(0, 0, coverage.width, coverage.height).data,
+            alpha = new Uint8ClampedArray(document.width * document.height);
+          for (let i = 0; i < alpha.length; i++) alpha[i] = data[i * 4 + 3]!;
+          coverage.width = coverage.height = 1;
+          region = intersectRegion(region, alpha);
+        }
+        if (!region.pixels?.runs.length) {
+          setStatus("Nothing to fill there inside the current selection.");
+          return;
+        }
+        const stroke = bucketStroke(
+          target,
+          toLocalSelection({ regions: [region], inverted: false, feather: 0 }, target, {
+            width: document.width,
+            height: document.height,
+          }),
+          brush.color,
+          brush.opacity,
+        );
+        busyRef.current = false;
+        commit(
+          {
+            ...document,
+            layers: document.layers.map((l) =>
+              l.id === target.id ? { ...l, strokes: [...l.strokes, stroke] } : l,
+            ),
+          },
+          "Paint Bucket",
+        );
+        setStatus(
+          "Filled at full document resolution as an editable stroke. Undo removes it; the artwork below is unchanged.",
+        );
+        return;
+      }
       const previous = document.selection ?? EMPTY_SELECTION;
       // Release the operation lock before recording its single undo transaction.
       busyRef.current = false;
@@ -1393,12 +1442,12 @@ export default function ProWorkspace({
       setPanelOpen(true);
     }
     if (
-      ["brush", "pencil", "eraser", "clone", "heal", "spot", "patch"].includes(id) &&
-      (!maskMode || ["clone", "heal", "spot", "patch"].includes(id)) &&
+      ["brush", "pencil", "eraser", "clone", "heal", "spot", "patch", "fill"].includes(id) &&
+      (!maskMode || ["clone", "heal", "spot", "patch", "fill"].includes(id)) &&
       active?.kind !== "paint"
     )
       add("paint");
-    if (["clone", "heal", "spot", "patch"].includes(id)) setMaskMode(false);
+    if (["clone", "heal", "spot", "patch", "fill"].includes(id)) setMaskMode(false);
     setTool(id);
     setBefore(false);
   };
@@ -1852,7 +1901,7 @@ export default function ProWorkspace({
               <option value="subtract">Subtract</option>
               <option value="intersect">Intersect</option>
             </select>
-            {(tool === "wand" || tool === "color-range") && (
+            {(tool === "wand" || tool === "color-range" || tool === "fill") && (
               <>
                 <ProNumber
                   label="Color tolerance"
@@ -1861,7 +1910,7 @@ export default function ProWorkspace({
                   max={255}
                   onChange={setTolerance}
                 />
-                {tool === "wand" && (
+                {(tool === "wand" || tool === "fill") && (
                   <label className="pro-check">
                     <input
                       type="checkbox"
