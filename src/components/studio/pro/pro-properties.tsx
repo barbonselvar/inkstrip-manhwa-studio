@@ -6,6 +6,7 @@ import {
   renameBrushPreset,
 } from "@/lib/studio/pro/brush-presets";
 import { DAB_DEFAULTS } from "@/lib/studio/pro/brush-dynamics";
+import { BLEND_GROUPS, BLEND_GROUP_NAMES, BLEND_LABELS } from "@/lib/studio/pro/blend";
 import { ProAppearance } from "./pro-appearance";
 import type { ReactNode } from "react";
 import { ProColor } from "./pro-color";
@@ -417,10 +418,14 @@ export function ProProperties({
                 value={selected.blend}
                 onChange={(e) => onPatch({ blend: e.target.value as Layer["blend"] })}
               >
-                {["source-over", "multiply", "screen", "overlay", "darken", "lighten"].map((v) => (
-                  <option key={v} value={v}>
-                    {v === "source-over" ? "Normal" : v}
-                  </option>
+                {BLEND_GROUPS.map((group, index) => (
+                  <optgroup key={group[0]} label={BLEND_GROUP_NAMES[index]}>
+                    {group.map((mode) => (
+                      <option key={mode} value={mode}>
+                        {BLEND_LABELS[mode]}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </label>
