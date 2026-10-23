@@ -785,7 +785,17 @@ export async function composite(
             await checkpoint();
           }
         }
-        draw(target, bitmap, base, clips.length > 0 || !!base.effects?.some((e) => e.enabled));
+        if (base.ai) {
+          // Restoration edits color, never the underlying artwork's coverage.
+          // Ordinary source-over would incorrectly turn 50% alpha into 75% alpha.
+          if (!clips.length) bitmap = project(bitmap, base);
+          const ctx = target.getContext("2d")!,
+            image = ctx.getImageData(0, 0, target.width, target.height),
+            overlay = bitmap.getContext("2d")!.getImageData(0, 0, bitmap.width, bitmap.height);
+          image.data.set(blendClippedPixels(image.data, overlay.data, base.opacity, base.blend));
+          ctx.putImageData(image, 0, 0);
+        } else
+          draw(target, bitmap, base, clips.length > 0 || !!base.effects?.some((e) => e.enabled));
       } finally {
         release(bitmap);
       }

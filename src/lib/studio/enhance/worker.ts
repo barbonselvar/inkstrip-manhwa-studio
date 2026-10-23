@@ -1,3 +1,4 @@
+import { SWIN } from "../ai/registry";
 /// <reference lib="webworker" />
 import { env, InferenceSession, Tensor } from "onnxruntime-web/wasm";
 import wasmUrl from "../../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
@@ -42,6 +43,10 @@ async function loadModel() {
       if (done) break;
       chunks.push(new Uint8Array(value));
       received += value.byteLength;
+      if (received > SWIN.bytes) {
+        await reader.cancel();
+        throw Error("Model download exceeds its pinned size.");
+      }
       progress(`Downloading AI model · ${(received / 1_048_576).toFixed(1)} MB`, received, total);
     }
     bytes = await new Blob(chunks).arrayBuffer();
@@ -51,7 +56,36 @@ async function loadModel() {
       /* Storage may be full. */
     }
   }
+  if (
+    bytes.byteLength !== SWIN.bytes ||
+    [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
+      .map((n) => n.toString(16).padStart(2, "0"))
+      .join("") !== SWIN.sha256
+  ) {
+    await cache?.delete(MODEL);
+    throw Error(
+      "The Swin2SR checkpoint failed integrity verification. Nothing was processed; retry the model download.",
+    );
+  }
   progress("Preparing AI engine · this can take a moment");
+  // ORT supports an explicit binary. Some static preview hosts use octet-stream
+  // for .wasm, which makes Emscripten log a failed streaming compile before retry.
+  // Use the bundled runtime bytes directly; this changes no model/output pixels.
+  if (!env.wasm.wasmBinary) {
+    const response = await fetch(new URL(wasmUrl, self.location.origin).href, {
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!response.ok) throw Error("Could not load the bundled AI runtime.");
+    const binary = await response.arrayBuffer();
+    const magic = new Uint8Array(binary, 0, Math.min(4, binary.byteLength));
+    if (
+      binary.byteLength > 32_000_000 ||
+      magic.length !== 4 ||
+      [0, 97, 115, 109].some((n, i) => magic[i] !== n)
+    )
+      throw Error("The bundled AI runtime is invalid.");
+    env.wasm.wasmBinary = binary;
+  }
   try {
     return await InferenceSession.create(bytes, {
       executionProviders: ["wasm"],

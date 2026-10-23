@@ -1,0 +1,122 @@
+{
+  "checkedAt": "2026-10-23",
+  "status": "F1 existing Swin2SR integration only; candidates not newly installed or qualified",
+  "evidence": [
+    {
+      "name": "codeformer.txt",
+      "sha256": "cfd654022bdc44fdd809670d50239bcb1ebf2f4a661dca7e328f93c269538246",
+      "bytes": 1717,
+      "url": "https://raw.githubusercontent.com/sczhou/CodeFormer/master/LICENSE"
+    },
+    {
+      "name": "gfpgan.txt",
+      "sha256": "b916d19bf894eb43409866adf17c9f71cbb17aefd9cd105117c4a32598ef6a46",
+      "bytes": 22990,
+      "url": "https://raw.githubusercontent.com/TencentARC/GFPGAN/master/LICENSE"
+    },
+    {
+      "name": "lama.txt",
+      "sha256": "4ceeeac5a802e86c413c22b16cce8e9a22027b0250c97e6f8ac97c14cf0542c0",
+      "bytes": 11348,
+      "url": "https://raw.githubusercontent.com/advimman/lama/main/LICENSE"
+    },
+    {
+      "name": "realesrgan.txt",
+      "sha256": "4a699ec4863d96a91fc265948a0c90033f7e8735d515524dcf3444736406e0c2",
+      "bytes": 1519,
+      "url": "https://raw.githubusercontent.com/xinntao/Real-ESRGAN/master/LICENSE"
+    },
+    {
+      "name": "sam2-readme.txt",
+      "sha256": "eea69ee1042fb30933c5ca5019fbf0f6f9366cec5e792109281b5023a4f1589c",
+      "bytes": 16249,
+      "url": "https://raw.githubusercontent.com/facebookresearch/sam2/main/README.md"
+    },
+    {
+      "name": "sam2.txt",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "bytes": 11357,
+      "url": "https://raw.githubusercontent.com/facebookresearch/sam2/main/LICENSE"
+    },
+    {
+      "name": "sd-card.txt",
+      "sha256": "6f5758cfeabddb509b09399d6f0879056c5fd0002d7d9849bc183a6de9a98ab0",
+      "bytes": 15107,
+      "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-inpainting/raw/main/README.md"
+    },
+    {
+      "name": "swin-artifacts.json",
+      "sha256": "b7f5aac57356d88fe7685581a52e17fd130d39eaa536f6b38bb90b0d420fd678",
+      "bytes": 3946,
+      "url": "https://huggingface.co/api/models/Xenova/swin2SR-classical-sr-x2-64/revision/93dfc9089abda257351d3a58d5771e2c1ff69442?blobs=true"
+    },
+    {
+      "name": "swin-base.txt",
+      "sha256": "6e05abfd2fa9a38e69d0fab54be0f3917eda255d62e46820d21a875146758f56",
+      "bytes": 1889,
+      "url": "https://huggingface.co/api/models/caidas/swin2SR-classical-sr-x2-64"
+    },
+    {
+      "name": "swin-card.txt",
+      "sha256": "369849bbdd893408837dd3ba1a325dfd4151278071b7c14e39899a049b17e38c",
+      "bytes": 1402,
+      "url": "https://huggingface.co/api/models/Xenova/swin2SR-classical-sr-x2-64/revision/93dfc9089abda257351d3a58d5771e2c1ff69442"
+    },
+    {
+      "name": "swin-conversion.txt",
+      "sha256": "b0f1c53301e024774d8d8ed65e7b4a05d94e915bf2047f002ad4aecf2ace4230",
+      "bytes": 1845,
+      "url": "https://huggingface.co/Xenova/swin2SR-classical-sr-x2-64/raw/93dfc9089abda257351d3a58d5771e2c1ff69442/README.md"
+    },
+    {
+      "name": "swin-license.txt",
+      "sha256": "d66ccc11682c7458b19b376e1335e8665cbe412ff71f554bfec25f1791cddfa0",
+      "bytes": 11348,
+      "url": "https://raw.githubusercontent.com/mv-lab/swin2sr/main/LICENSE"
+    }
+  ],
+  "onnxArtifact": {
+    "model": "Xenova/swin2SR-classical-sr-x2-64",
+    "revision": "93dfc9089abda257351d3a58d5771e2c1ff69442",
+    "path": "onnx/model.onnx",
+    "bytes": 54428699,
+    "sha256": "6dde3fe2440543ccae7c40d175609f83c18aeaa3d8456745c4329ef97ae744bd"
+  },
+  "runtimeDependencies": [
+    {
+      "name": "onnxruntime-web",
+      "version": "1.22.0",
+      "license": "MIT"
+    },
+    {
+      "name": "onnxruntime-common",
+      "version": "1.22.0",
+      "license": "MIT"
+    },
+    {
+      "name": "flatbuffers",
+      "version": "25.9.23",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "guid-typescript",
+      "version": "1.0.9",
+      "license": "ISC"
+    },
+    {
+      "name": "long",
+      "version": "5.3.2",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "platform",
+      "version": "1.3.6",
+      "license": "MIT"
+    },
+    {
+      "name": "protobufjs",
+      "version": "7.6.6",
+      "license": "BSD-3-Clause"
+    }
+  ]
+}

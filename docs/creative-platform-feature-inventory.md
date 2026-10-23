@@ -11,11 +11,13 @@ Phase E PR #4 is merged, deployed and live-verified at
 `ced5907f5e0bfc49e72588fe76d3cbf652d39b7f`. See
 [the release record](PHASE_E_RELEASE_VERIFICATION.md) for 677 tests, 19 Chromium
 suites, native/exports/4K/mobile, real AI and 3D evidence. The capability limits in
-the audit remain in force. [Phase F](PHASE_F_AI_STUDIO_ARCHITECTURE.md) is architecture
-preparation only: new face/eyes/mouth/hands/anatomy/identity/inpainting/background/
-line-art/reference-region AI tasks and non-destructive AI result layers are
-**planned, not implemented**. Existing Swin2SR and explicitly configured optional
-cloud tools retain their prior behavior; no new paid services are enabled.
+the audit remain in force. PR #5's Chapter entry cleanup is also released at
+`71a29e2f01869a82a4b6a81818fb56441cb93c3f`. Phase F1 foundation is implemented
+on its development branch only; see [the F1 audit](PHASE_F1_AI_STUDIO.md) and
+its validation status. AI Studio staging/result layers reuse real existing Swin2SR.
+Generative face/hands/inpainting/background tasks and new checkpoints remain
+unqualified and unavailable. No new paid services are enabled. No Phase F merge,
+production deployment or next release is allowed without explicit user approval.
 
 ## Phase E implementation status (2026-10-23, development branch)
 
@@ -34,7 +36,7 @@ device/payload budgets and sRGB Canvas color. Missing: semantic model selection,
 matte color decontamination, sampled-image brush tips, stationary airbrush timing,
 CMYK/ICC soft proofing and an unlimited/disk-backed tile compositor. These are not
 advertised as implemented. Existing Phase D vector and AI functionality is retained;
-Phase F has not begun.
+The Phase E production release did not contain Phase F; F1 development is recorded above.
 
 ## Repository snapshot and implementation baseline
 
@@ -451,3 +453,20 @@ complex/contextual path text, embedded/custom fonts, non-linear SVG export,
 repeat/reflect/mesh gradients, unlimited-size documents, and exact Boolean curve
 preservation. See the audit for supported alternatives and rejection behavior.
 Remaining Raster/AI work is a separate phase; no future AI tools are advertised.
+
+## Phase F1 — development only, awaiting review
+
+- Implemented foundation: AI Studio entry/view in the shared Raster document,
+  Simple/Advanced supported restoration settings, real existing Swin2SR inference,
+  staged previews and explicit result acceptance, immutable source/provenance,
+  editable alpha-preserving restoration layers, native v6 (v1–v5 compatible),
+  cancellation, document/Chapter/cross-tab stale guards and integrity benchmarks.
+- Partial: user-controlled HTTPS GPU capability discovery. No remote image/job
+  execution is enabled; discovery claims do not qualify a model.
+- Missing/unqualified: generative inpainting/object removal, dedicated illustrated
+  face/hands repair, background generation, SAM2 inference, Real-ESRGAN integration,
+  same-source reprocess UI, generative tiling, representative manhwa visual approval,
+  GPU benchmarks and physical Android qualification. Existing Raster repair tools
+  remain traditional tools; existing Swin2SR remains actual neural restoration.
+- No Phase F merge/production deployment or F2 start is authorized without explicit
+  user approval. See `PHASE_F1_AI_STUDIO.md` for boundaries and validation evidence.

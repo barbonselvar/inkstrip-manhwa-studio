@@ -28,6 +28,7 @@ export async function nativeFile(s: ProSession): Promise<Blob> {
   if (original) referenced.add(original.assetId);
   for (const l of s.document.layers) {
     if (l.assetId) referenced.add(l.assetId);
+    if (l.ai) referenced.add(l.ai.sourceAssetId);
     for (const stroke of [...l.strokes, ...(l.mask?.strokes ?? [])])
       if (stroke.clone) referenced.add(stroke.clone.assetId);
   }
@@ -54,21 +55,22 @@ export async function nativeFile(s: ProSession): Promise<Blob> {
       ...[...l.strokes, ...(l.mask?.strokes ?? [])].flatMap((s) => [s.clip, s.patch]),
     ]),
   ].some((s) => s?.frame?.matrix !== undefined);
-  const version =
-    matrixSelection ||
-    s.document.brushSettings !== undefined ||
-    s.document.savedSelections !== undefined ||
-    s.document.layers.some(
-      (l) =>
-        (l.kind === "group" && !!l.mask) ||
-        l.mask?.placement !== undefined ||
-        l.mask?.linked !== undefined ||
-        l.mask?.width !== undefined ||
-        l.mask?.density !== undefined ||
-        l.mask?.feather !== undefined ||
-        l.strokes.some((s) => s.dynamics !== undefined) ||
-        l.mask?.strokes.some((s) => s.dynamics !== undefined),
-    )
+  const version = s.document.layers.some((l) => l.ai !== undefined)
+    ? 6
+    : matrixSelection ||
+        s.document.brushSettings !== undefined ||
+        s.document.savedSelections !== undefined ||
+        s.document.layers.some(
+          (l) =>
+            (l.kind === "group" && !!l.mask) ||
+            l.mask?.placement !== undefined ||
+            l.mask?.linked !== undefined ||
+            l.mask?.width !== undefined ||
+            l.mask?.density !== undefined ||
+            l.mask?.feather !== undefined ||
+            l.strokes.some((s) => s.dynamics !== undefined) ||
+            l.mask?.strokes.some((s) => s.dynamics !== undefined),
+        )
       ? 5
       : s.document.layers.some(
             (l) =>
@@ -112,13 +114,13 @@ export async function readNative(
   if (
     !value ||
     value.format !== "inkstrip-pro" ||
-    ![1, 2, 3, 4, 5].includes(value.version) ||
+    ![1, 2, 3, 4, 5, 6].includes(value.version) ||
     !value.assets ||
     typeof value.assets !== "object" ||
     Array.isArray(value.assets)
   )
     throw new Error(
-      "Unsupported native document. This editor supports Inkstrip Pro native versions 1 through 5.",
+      "Unsupported native document. This editor supports Inkstrip Pro native versions 1 through 6.",
     );
   const assets: Record<string, Blob> = Object.create(null);
   let total = 0;
@@ -245,6 +247,7 @@ export function mergeNativeSession(current: ProSession, incoming: ProSession): P
     source: original ? { ...original, assetId: mapping.get(original.assetId)! } : undefined,
     layers: incoming.document.layers.map((l) => ({
       ...l,
+      ...(l.ai ? { ai: { ...l.ai, sourceAssetId: mapping.get(l.ai.sourceAssetId)! } } : {}),
       ...(l.assetId ? { assetId: mapping.get(l.assetId)! } : {}),
       strokes: l.strokes.map((stroke) =>
         stroke.clone

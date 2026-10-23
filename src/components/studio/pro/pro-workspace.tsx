@@ -1,3 +1,6 @@
+import { ProAiStudio, type AiPreview } from "./pro-ai-studio";
+import { acceptAiResult } from "@/lib/studio/pro/ai-result";
+import { assertFresh } from "@/lib/studio/ai/plan";
 import { previewDirtyRect } from "@/lib/studio/pro/preview-dirty";
 import { budgetHistory } from "@/lib/studio/pro/history-budget";
 import { copyLayerMask, maskFromSelection } from "@/lib/studio/pro/masks";
@@ -224,6 +227,7 @@ export default function ProWorkspace({
   panel,
   projectId,
   mode: initialMode,
+  aiStudio = false,
   onModeChange,
   onClose,
   onContinue,
@@ -231,6 +235,7 @@ export default function ProWorkspace({
   panel: Panel;
   projectId: string;
   mode: "raster" | "vector";
+  aiStudio?: boolean;
   onModeChange: (mode: "raster" | "vector") => void;
   onClose: () => void;
   onContinue: (mode: "enhance" | "image" | "face") => void;
@@ -283,6 +288,7 @@ export default function ProWorkspace({
     [fitRequest, setFitRequest] = useState<{ frame: Frame; serial: number } | null>(null),
     [before, setBefore] = useState(false),
     [tab, setTab] = useState<
+      | "studio"
       | "refine"
       | "properties"
       | "transform"
@@ -297,7 +303,7 @@ export default function ProWorkspace({
       | "assets"
       | "ai"
       | "export"
-    >("layers"),
+    >(aiStudio ? "studio" : "layers"),
     [panelOpen, setPanelOpen] = useState(true),
     [panelWidth, setPanelWidth] = useState(300),
     [error, setError] = useState(""),
@@ -628,6 +634,68 @@ export default function ProWorkspace({
     },
     [setHist, maxArea],
   );
+  const prepareAi = async (snapshot: ProDocument, signal: AbortSignal) => {
+    const s = sessionRef.current;
+    if (!s || busyRef.current || transformRef.current || cropDraft)
+      throw Error("Apply or cancel active operations before AI processing.");
+    // A dedicated instance prevents preview supersession from cancelling an input snapshot.
+    const worker = new ProRenderer();
+    const stop = () => worker.dispose();
+    signal.addEventListener("abort", stop, { once: true });
+    try {
+      signal.throwIfAborted();
+      await worker.init({ ...s, document: snapshot }, maxArea);
+      const result = await worker.export(snapshot, maxArea, "image/png", 1, () => {}, true);
+      signal.throwIfAborted();
+      if (!result.blob) throw Error("AI source snapshot is unavailable.");
+      return { blob: result.blob, acceptedBlobId: s.acceptedBlobId };
+    } finally {
+      signal.removeEventListener("abort", stop);
+      worker.dispose();
+    }
+  };
+  const acceptAi = async (result: AiPreview) => {
+    let s = sessionRef.current,
+      current = historyRef.current?.present.doc;
+    if (!s || !current || busyRef.current || transformRef.current || cropDraft)
+      throw Error("Finish the current operation before accepting AI output.");
+    const stored = await loadSession(panel.id);
+    s = sessionRef.current;
+    current = historyRef.current?.present.doc;
+    if (!s || !current || busyRef.current || transformRef.current || closeInProgress.current)
+      throw Error("Workspace changed while checking the result.");
+    if (stored && stored.revision !== s.revision)
+      throw Error(
+        "Another tab saved this project. Export your work and reopen before accepting AI output.",
+      );
+    assertFresh(
+      result.documentJson,
+      JSON.stringify(current),
+      result.acceptedBlobId,
+      s.acceptedBlobId,
+    );
+    if (
+      useStudio.getState().panels.find((p) => p.id === panel.id)?.blobId !== result.acceptedBlobId
+    )
+      throw Error("Chapter image changed. Generate a new preview.");
+    const next = acceptAiResult(
+      { ...s, document: current },
+      result.receipt,
+      result.result,
+      result.source,
+      maxArea,
+      result.receipt.selection,
+    );
+    // All checks precede the single undoable transaction; immutable pool retains Undo assets.
+    sessionRef.current = next.session;
+    setSession(next.session);
+    commit(next.session.document, "Accept AI restoration result");
+    setSelectedIds([next.layerId]);
+    setAssetEpoch((n) => n + 1);
+    setMaskMode(false);
+    setBefore(false);
+    setStatus("AI result added as an editable layer. Chapter and original artwork unchanged.");
+  };
   const setSelection = useCallback(
     (selection: Selection) => {
       const current = historyRef.current?.present.doc;
@@ -1638,7 +1706,14 @@ export default function ProWorkspace({
             </Button>
             <div className="pro-brand">
               <Dialog.Title>
-                Inkstrip <span>{mode === "raster" ? "Raster Studio" : "Vector Studio"}</span>
+                Inkstrip{" "}
+                <span>
+                  {tab === "studio"
+                    ? "AI Studio"
+                    : mode === "raster"
+                      ? "Raster Studio"
+                      : "Vector Studio"}
+                </span>
               </Dialog.Title>
               <Dialog.Description>
                 {panel.name} · {mode === "raster" ? "raster and layered" : "vector and reference"} ·
@@ -1653,6 +1728,7 @@ export default function ProWorkspace({
                 disabled={busy || !!refinePreview}
                 onClick={() => {
                   setMode("raster");
+                  if (tab === "studio") setTab("layers");
                   if (
                     ["pathfinder", "artboards", "precision", "appearance", "typography"].includes(
                       tab,
@@ -1675,6 +1751,7 @@ export default function ProWorkspace({
                 disabled={busy}
                 onClick={() => {
                   setMode("vector");
+                  if (tab === "studio") setTab("layers");
                   onModeChange("vector");
                   if (transformRef.current) cancelTransform();
                   setCropDraft(null);
@@ -1683,6 +1760,20 @@ export default function ProWorkspace({
                 }}
               >
                 <PenTool /> Vector
+              </Button>
+              <Button
+                variant={tab === "studio" ? "secondary" : "ghost"}
+                aria-pressed={tab === "studio"}
+                disabled={busy || !!transformDraft || !!cropDraft}
+                onClick={() => {
+                  setTab("studio");
+                  setPanelOpen(true);
+                  setMode("raster");
+                  onModeChange("raster");
+                  setBefore(false);
+                }}
+              >
+                <Sparkles /> AI Studio
               </Button>
             </div>
             <span className="pro-save-state" role="status">
@@ -2028,11 +2119,16 @@ export default function ProWorkspace({
                 {error && <Button onClick={onClose}>Return to chapter</Button>}
               </div>
             )}
-            {panelOpen && (
-              <aside className="pro-inspector" aria-label="Pro inspector">
+            {doc && (
+              <aside
+                className="pro-inspector"
+                style={{ display: panelOpen ? undefined : "none" }}
+                aria-label="Pro inspector"
+              >
                 <nav className="pro-panel-tabs" aria-label="Pro panels">
                   {(
                     [
+                      "studio",
                       "refine",
                       "properties",
                       "transform",
@@ -2066,11 +2162,32 @@ export default function ProWorkspace({
                         aria-pressed={tab === t}
                         onClick={() => setTab(t)}
                       >
-                        {t === "ai" ? "AI tools" : t[0]!.toUpperCase() + t.slice(1)}
+                        {t === "studio"
+                          ? "AI Studio"
+                          : t === "ai"
+                            ? "AI tools"
+                            : t[0]!.toUpperCase() + t.slice(1)}
                       </button>
                     ))}
                 </nav>
                 <div className="pro-panel-content">
+                  <div style={{ display: tab === "studio" ? undefined : "none" }}>
+                    <ProAiStudio
+                      document={doc}
+                      disabled={busy || !ready || stale || !!cropDraft || !!transformDraft}
+                      prepare={prepareAi}
+                      onAccept={acceptAi}
+                      onSelection={() => {
+                        setTab("refine");
+                        setTool("select-rect");
+                      }}
+                      onRaster={() => {
+                        setTab("layers");
+                        setMode("raster");
+                        onModeChange("raster");
+                      }}
+                    />
+                  </div>
                   {tab === "refine" && doc && (
                     <ProRefine
                       document={doc}

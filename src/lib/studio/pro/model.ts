@@ -1,3 +1,4 @@
+import { validateAiReceipt, type AiReceipt } from "./ai-receipt.ts";
 import { validateDynamics, type DabDynamics } from "./brush-dynamics.ts";
 import { validateVectorClips, type VectorClip } from "./vector-clip.ts";
 import { validateAppearance, type AppearanceItem } from "./vector-appearance.ts";
@@ -119,6 +120,7 @@ export type Shape =
   | "shout"
   | "caption";
 export type Layer = {
+  ai?: AiReceipt;
   appearance?: AppearanceItem[];
   vectorClips?: VectorClip[];
   textPath?: TextPath;
@@ -497,6 +499,11 @@ export function validateDocument(d: ProDocument) {
   const ids = new Set<string>();
   let commands = 0;
   for (const l of d.layers) {
+    if (l.ai !== undefined) {
+      validateAiReceipt(l.ai);
+      if (l.kind !== "raster") throw Error("AI results require a raster layer.");
+      if (l.ai.selection) validateSelection(l.ai.selection);
+    }
     if (
       !l ||
       typeof l.id !== "string" ||
@@ -739,6 +746,13 @@ export function validateAssets(session: ProSession) {
         !(session.assets[l.assetId] instanceof Blob))
     )
       throw new Error("A raster source is missing; existing artwork is unchanged.");
+  for (const l of session.document.layers)
+    if (
+      l.ai &&
+      (!Object.hasOwn(session.assets, l.ai.sourceAssetId) ||
+        !(session.assets[l.ai.sourceAssetId] instanceof Blob))
+    )
+      throw Error("The AI result's immutable input is missing.");
   for (const l of session.document.layers)
     for (const stroke of [...l.strokes, ...(l.mask?.strokes ?? [])])
       if (stroke.clone && !Object.hasOwn(session.assets, stroke.clone.assetId))

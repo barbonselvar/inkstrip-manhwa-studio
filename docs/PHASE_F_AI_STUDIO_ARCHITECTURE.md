@@ -1,6 +1,7 @@
 # Phase F — AI Studio architecture preparation
 
-Status: **architecture only; no new AI capabilities implemented or enabled**.
+Status: scaffold retained as design context; executable F1 foundation is documented in
+`PHASE_F1_AI_STUDIO.md`. F2–F5 remain unavailable and require explicit approval.
 Branch starts from the verified Phase E production release
 `ced5907f5e0bfc49e72588fe76d3cbf652d39b7f` (PR #4).
 No model installation, training, GPU service, paid API/subscription, credential,
@@ -150,5 +151,5 @@ measured CPU/GPU/browser/download/memory results and desktop/320/390px touch QA.
 Use held-out fixtures and human review for style/identity/anatomy; ordinary image
 similarity alone cannot prove anatomically correct reconstruction. Preserve the
 Phase E baseline of 677 tests / 19 Chromium suites, Raster/Vector/Chapter, actual
-Swin2SR and homepage 3D. Release only a complete qualified phase through the same
-normal-merge, exact-source Vercel and live-verification gates.
+Swin2SR and homepage 3D. The current Phase F user policy requires an explicit approval checkpoint for each
+release. Do not merge, deploy or start F2–F5 automatically. See `AGENTS.project.md`.
