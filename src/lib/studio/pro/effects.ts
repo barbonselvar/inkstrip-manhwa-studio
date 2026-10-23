@@ -1,6 +1,7 @@
 import type { Layer, ProDocument } from "./model.ts";
 import { defaultGradient, gradientField, validateGradient, type Gradient } from "./gradient.ts";
 import { blendClippedPixels } from "./clipping.ts";
+import { blendPixel, isBlendMode } from "./blend.ts";
 export const EFFECT_NAMES = {
   dropShadow: "Drop Shadow",
   innerShadow: "Inner Shadow",
@@ -53,7 +54,7 @@ export function validateEffects(effects: Effect[]) {
       !Object.hasOwn(EFFECT_NAMES, e.kind) ||
       typeof e.enabled !== "boolean" ||
       !n(e.opacity, 0, 1) ||
-      !["source-over", "multiply", "screen", "overlay", "darken", "lighten"].includes(e.blend) ||
+      !isBlendMode(e.blend) ||
       typeof e.color !== "string" ||
       !/^#[\da-f]{6}$/i.test(e.color) ||
       !n(e.radius, 0, 64) ||
@@ -188,28 +189,17 @@ export function overPixels(
   opacity = 1,
   blend: Layer["blend"] = "source-over",
 ) {
+  const mixed = new Float64Array(3);
   for (let i = 0; i < back.length; i += 4) {
     const ab = back[i + 3]! / 255,
       as = (front[i + 3]! / 255) * opacity,
       a = as + ab * (1 - as);
     if (!as) continue;
+    blendPixel(blend, back, front, i, mixed);
     for (let c = 0; c < 3; c++) {
       const b = back[i + c]! / 255,
         s = front[i + c]! / 255,
-        m =
-          blend === "multiply"
-            ? b * s
-            : blend === "screen"
-              ? b + s - b * s
-              : blend === "overlay"
-                ? b <= 0.5
-                  ? 2 * b * s
-                  : 1 - 2 * (1 - b) * (1 - s)
-                : blend === "darken"
-                  ? Math.min(b, s)
-                  : blend === "lighten"
-                    ? Math.max(b, s)
-                    : s;
+        m = mixed[c]!;
       back[i + c] = a ? ((as * ((1 - ab) * s + ab * m) + ab * (1 - as) * b) / a) * 255 : 0;
     }
     back[i + 3] = a * 255;

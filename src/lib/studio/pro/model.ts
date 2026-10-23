@@ -16,6 +16,7 @@ import { validateColor, type ColorAdjustments } from "./color.ts";
 import { defaultGradient, validateGradient, type Gradient } from "./gradient.ts";
 import { validateEffects, type Effect } from "./effects.ts";
 import { validateLayout, type Artboard, type Layout } from "./artboards.ts";
+import { isBlendMode, type BlendMode } from "./blend.ts";
 export type Point = { x: number; y: number };
 export type Transform = {
   x: number;
@@ -133,7 +134,7 @@ export type Layer = {
   visible: boolean;
   locked: boolean;
   opacity: number;
-  blend: "source-over" | "multiply" | "screen" | "overlay" | "darken" | "lighten";
+  blend: BlendMode;
   width: number;
   height: number;
   transform: Transform;
@@ -511,7 +512,7 @@ export function validateDocument(d: ProDocument) {
       (l.linkId !== undefined &&
         (typeof l.linkId !== "string" || !l.linkId || l.linkId.length > 128)) ||
       !finite(l.opacity, 0, 1) ||
-      !["source-over", "multiply", "screen", "overlay", "darken", "lighten"].includes(l.blend) ||
+      !isBlendMode(l.blend) ||
       !finite(l.width, 1, 16384) ||
       !finite(l.height, 1, 16384) ||
       l.width * l.height > 16_777_216

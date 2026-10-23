@@ -92,6 +92,7 @@ export type ProTool =
   | "select-ellipse"
   | "wand"
   | "color-range"
+  | "fill"
   | "lasso"
   | "poly-lasso";
 type View = { zoom: number; x: number; y: number };
@@ -705,7 +706,7 @@ export function ProCanvas({
       };
       return;
     }
-    if (tool === "wand" || tool === "color-range") {
+    if (tool === "wand" || tool === "color-range" || tool === "fill") {
       onColorSelect(p);
       return;
     }

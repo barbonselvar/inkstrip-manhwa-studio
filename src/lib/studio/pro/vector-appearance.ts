@@ -138,7 +138,7 @@ export function validateAppearance(l: Layer) {
       !["fill", "stroke"].includes(a.kind) ||
       typeof a.visible !== "boolean" ||
       !finite(a.opacity, 0, 1) ||
-      !VECTOR_BLENDS.includes(a.blend) ||
+      !(VECTOR_BLENDS as readonly string[]).includes(a.blend) ||
       !a.paint ||
       !color(a.paint.color) ||
       !["nonzero", "evenodd"].includes(a.fillRule) ||
