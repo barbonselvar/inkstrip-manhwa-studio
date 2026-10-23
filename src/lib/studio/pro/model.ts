@@ -290,7 +290,6 @@ export function validateSelection(s: Selection) {
     validateTransform(t);
     if (s.frame.matrix !== undefined) {
       validateAffineMatrix(s.frame.matrix);
-      if (t.deform) throw Error("Selection frame cannot combine affine matrix and deformation.");
     }
     if (
       !Number.isInteger(width) ||

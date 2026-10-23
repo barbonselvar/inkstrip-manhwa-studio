@@ -1,4 +1,4 @@
-import { maskPaintPoint, maskWorld } from "@/lib/studio/pro/masks";
+import { maskPaintPoint, maskWorld, maskLocal } from "@/lib/studio/pro/masks";
 import { clipPath } from "@/lib/studio/pro/vector-clip";
 import { gradientHandles, moveGradientHandle } from "@/lib/studio/pro/vector-appearance";
 import { measureTextPath } from "@/lib/studio/pro/text-path";
@@ -830,8 +830,10 @@ export function ProCanvas({
                 frame: {
                   width: doc.width,
                   height: doc.height,
-                  transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
-                  matrix: maskWorld(selected),
+                  transform: selected.transform.deform
+                    ? structuredClone(selected.transform)
+                    : { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+                  matrix: selected.transform.deform ? maskLocal(selected) : maskWorld(selected),
                 },
               }
             : toLocalSelection(selection, selected, { width: doc.width, height: doc.height })

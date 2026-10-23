@@ -1,4 +1,4 @@
-import { bounds, mapping } from "./transform.ts";
+import { bounds, mapping, applyMatrix, type Matrix } from "./transform.ts";
 import type { Point, Transform } from "./model.ts";
 /** Bilinear reconstruction with transparent virtual pixels, in premultiplied alpha. Coordinates are pixel centers minus .5. */
 export function sampleRgba(
@@ -183,12 +183,14 @@ export function sampleDocument(
   outHeight: number,
   scale = 1,
   offset: Point = { x: 0, y: 0 },
+  premapping?: Matrix,
 ) {
   const out = new Uint8ClampedArray(outWidth * outHeight * 4),
     m = mapping(t);
   for (let y = 0; y < outHeight; y++)
     for (let x = 0; x < outWidth; x++) {
-      const p = m.forward({ x: (x + 0.5) / scale, y: (y + 0.5) / scale });
+      const local = { x: (x + 0.5) / scale, y: (y + 0.5) / scale };
+      const p = m.forward(premapping ? applyMatrix(premapping, local) : local);
       sampleRgba(
         pixels,
         width,

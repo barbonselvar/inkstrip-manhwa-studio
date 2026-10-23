@@ -29,6 +29,7 @@ export function sampleSurface(
   t: Transform,
   scale: number,
   offset?: Point,
+  premapping?: import("./transform").Matrix,
 ) {
   const scratch = new OffscreenCanvas(source.width, source.height),
     ctx = scratch.getContext("2d")!;
@@ -44,6 +45,7 @@ export function sampleSurface(
         target.height,
         scale,
         offset,
+        premapping,
       );
     target.getContext("2d")!.putImageData(new ImageData(pixels, target.width, target.height), 0, 0);
   } finally {

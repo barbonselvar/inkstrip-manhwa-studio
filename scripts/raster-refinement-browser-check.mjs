@@ -180,6 +180,67 @@ try {
     same(await raster(p), affineBefore);
     const affineNative = await native(p);
     assert.ok(Array.isArray(affineNative.value.document.layers[0].mask.placement));
+    // Painting a linked perspective mask must clip in document coordinates.
+    d = fromPanel({ id: "p", name: "Perspective mask clip", width: 128, height: 96 });
+    const warped = layer("paint", 128, 96, "warped-mask");
+    warped.strokes = [
+      {
+        points: [{ x: 64, y: 48 }],
+        size: 80,
+        hardness: 1,
+        opacity: 1,
+        flow: 1,
+        color: "#ff0000",
+        erase: false,
+      },
+    ];
+    warped.mask = maskFromSelection({ regions: [], inverted: true, feather: 0 }, warped, d);
+    warped.transform.deform = {
+      kind: "perspective",
+      width: 128,
+      height: 96,
+      points: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 0.6, y: 1 },
+        { x: 0, y: 1 },
+      ],
+    };
+    d.layers = [warped];
+    d.selection = selection(54, 0, 20, 96);
+    await load(p, d, source);
+    const warpedBefore = await raster(p);
+    await props(p);
+    await p.getByLabel("Brush preset", { exact: true }).selectOption("Hard Round Brush");
+    await p.getByLabel("Paint layer mask", { exact: true }).check();
+    await p.getByRole("button", { name: "Eraser tool", exact: true }).click();
+    const warpBounds = await artboardBounds(p);
+    if (width === 1440) {
+      await p.mouse.move(
+        warpBounds.x + (20 / 128) * warpBounds.width,
+        warpBounds.y + (48 / 96) * warpBounds.height,
+      );
+      await p.mouse.down();
+      await p.mouse.move(
+        warpBounds.x + (100 / 128) * warpBounds.width,
+        warpBounds.y + (48 / 96) * warpBounds.height,
+        { steps: 12 },
+      );
+      await p.mouse.up();
+    } else await touch(p, { x: 20, y: 48 }, { x: 100, y: 48 });
+    const warpedAfter = await raster(p);
+    assert.notDeepEqual(warpedAfter.pixels, warpedBefore.pixels);
+    for (let y = 0; y < 96; y++)
+      for (let x = 0; x < 128; x++)
+        if (x < 50 || x > 78)
+          assert.ok(
+            Math.abs(alpha(warpedBefore, x, y) - alpha(warpedAfter, x, y)) <= 1,
+            `Perspective mask edit escaped selection at ${x},${y}`,
+          );
+    const warpNative = await native(p),
+      clipFrame = warpNative.value.document.layers[0].mask.strokes[0].clip.frame;
+    assert.ok(clipFrame.matrix);
+    assert.equal(clipFrame.transform.deform.kind, "perspective");
     // Mask density, feather, inversion, placement and native/export fidelity.
     d = fromPanel({ id: "p", name: "Masks", width: 128, height: 96 });
     d.layers = [];

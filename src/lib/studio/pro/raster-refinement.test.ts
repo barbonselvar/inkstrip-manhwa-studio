@@ -531,3 +531,39 @@ test("non-uniform rotated masks preserve exact affine inverses beyond bounded sk
   assert.equal(JSON.parse(await file.text()).version, 5);
   assert.deepEqual((await readNative(file, "p", "source")).document, d);
 });
+
+test("mask selection sampling composes its native affine frame before perspective mapping", async () => {
+  const { sampleDocument, sampleRgba } = await import("./transform-pixels.ts");
+  const { mapping, applyMatrix, QUAD } = await import("./transform.ts");
+  const width = 32,
+    height = 24,
+    pixels = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++)
+      pixels.set([x * 7, y * 9, 40, x < 16 ? 255 : 0], (y * width + x) * 4);
+  const transform = {
+      x: 2,
+      y: 1,
+      scaleX: 1,
+      scaleY: 1,
+      rotation: 0,
+      deform: {
+        kind: "perspective" as const,
+        width: 32,
+        height: 24,
+        points: QUAD.map((p, i) => ({ ...p, x: i === 2 ? 0.6 : p.x })),
+      },
+    },
+    pre: [number, number, number, number, number, number] = [1.2, 0.1, 0.2, 0.9, 3, 2],
+    expected = new Uint8ClampedArray(8 * 8 * 4),
+    map = mapping(transform);
+  for (let y = 0; y < 8; y++)
+    for (let x = 0; x < 8; x++) {
+      const p = map.forward(applyMatrix(pre, { x: x + 0.5, y: y + 0.5 }));
+      sampleRgba(pixels, width, height, p.x - 0.5, p.y - 0.5, expected, (y * 8 + x) * 4);
+    }
+  assert.deepEqual(
+    sampleDocument(pixels, width, height, transform, 8, 8, 1, { x: 0, y: 0 }, pre),
+    expected,
+  );
+});

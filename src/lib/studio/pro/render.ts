@@ -8,7 +8,7 @@ import type { Frame } from "./artboards.ts";
 import { gradientPixels } from "./gradient";
 import { effectPadding, effectPixels } from "./effects";
 import { NEUTRAL } from "../editor/adjustments";
-import { affine, inverse } from "./transform";
+import { affine, inverse, compose } from "./transform";
 import { projectSurface, sampleSurface } from "./transform-surface";
 import {
   type ProDocument,
@@ -102,9 +102,10 @@ export function selectionCanvas(s: Selection, w: number, h: number, scale = 1) {
   if (s.frame) {
     const { width, height, transform } = s.frame,
       source = selectionCanvas({ ...s, frame: undefined }, width, height, scale);
-    if (transform.deform) sampleSurface(source, output, transform, scale);
+    if (transform.deform)
+      sampleSurface(source, output, transform, scale, undefined, s.frame.matrix);
     else {
-      const m = inverse(s.frame.matrix ?? affine(transform));
+      const m = inverse(compose(affine(transform), s.frame.matrix ?? [1, 0, 0, 1, 0, 0]));
       ctx.setTransform(m[0], m[1], m[2], m[3], m[4] * scale, m[5] * scale);
       ctx.drawImage(source, 0, 0);
     }
