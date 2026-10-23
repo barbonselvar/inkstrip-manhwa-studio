@@ -1,16 +1,42 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { ArrowDown, Layers3 } from "lucide-react";
 import { DepthSurface } from "./depth-surface";
 const RobotCompanion = lazy(() =>
   import("./robot-companion").then((module) => ({ default: module.RobotCompanion })),
 );
+type DeviceHints = Navigator & {
+  deviceMemory?: number;
+  connection?: { saveData?: boolean };
+};
+
+/** The 3D companion is decorative and costs ~0.5 MB of three.js, so it is only fetched
+ * where motion is welcome and the device can comfortably afford it. */
+function canAffordCompanion() {
+  const nav = navigator as DeviceHints;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+  if (document.documentElement.dataset.studioMotion === "quiet") return false;
+  if (nav.connection?.saveData) return false;
+  if ((nav.deviceMemory ?? 8) < 4) return false;
+  if ((nav.hardwareConcurrency ?? 8) < 4) return false;
+  return window.matchMedia("(min-width: 640px)").matches;
+}
+
+function useCompanionAllowed() {
+  const [allowed, setAllowed] = useState(false);
+  useEffect(() => setAllowed(canAffordCompanion()), []);
+  return allowed;
+}
+
 /** Hero artwork and its animated companion; neither represents a stored project. */
 export function ChapterSculpture() {
+  const companion = useCompanionAllowed();
   return (
     <DepthSurface className="chapter-sculpture">
-      <Suspense fallback={null}>
-        <RobotCompanion />
-      </Suspense>
+      {companion ? (
+        <Suspense fallback={null}>
+          <RobotCompanion />
+        </Suspense>
+      ) : null}
       <div className="sculpture-halo" />
       <div className="sculpture-orbit" />
       <div className="sculpture-sheet sheet-back">

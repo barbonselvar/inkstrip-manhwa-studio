@@ -21,7 +21,10 @@ import {
   Search,
   PanelsTopLeft,
   WandSparkles,
+  Upload,
 } from "lucide-react";
+import { BACKUP_EXTENSION } from "@/lib/studio/backup";
+import { importProject, requestPersistentStorage } from "@/lib/studio/backup-store";
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
 
 export function Library() {
@@ -48,6 +51,14 @@ export function Library() {
   }, []);
   const chapters = useStudio((state) => state.chapters);
   const createProject = useStudio((state) => state.createProject);
+  const backupInput = useRef<HTMLInputElement>(null);
+  const [restoring, setRestoring] = useState(false);
+  const [restoreError, setRestoreError] = useState("");
+  const hasProjects = projects.length > 0;
+  useEffect(() => {
+    // Once there is work worth keeping, ask the browser not to evict it under storage pressure.
+    if (hasProjects) void requestPersistentStorage();
+  }, [hasProjects]);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -75,6 +86,21 @@ export function Library() {
       setError(storageMessage(problem));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onRestore(file: File | undefined) {
+    if (!file || restoring) return;
+    setRestoring(true);
+    setRestoreError("");
+    try {
+      const projectId = await importProject(file);
+      await navigate({ to: "/p/$projectId", params: { projectId } });
+    } catch (problem) {
+      setRestoreError(storageMessage(problem));
+    } finally {
+      setRestoring(false);
+      if (backupInput.current) backupInput.current.value = "";
     }
   }
 
@@ -147,7 +173,28 @@ export function Library() {
                 Explore the studio
                 <ChevronRight className="size-4" />
               </a>
+              <button
+                type="button"
+                className="hero-secondary focus-ring"
+                disabled={restoring}
+                onClick={() => backupInput.current?.click()}
+              >
+                <Upload className="size-4" />
+                {restoring ? "Restoring…" : "Restore backup"}
+              </button>
+              <input
+                ref={backupInput}
+                type="file"
+                accept={BACKUP_EXTENSION}
+                hidden
+                onChange={(e) => void onRestore(e.target.files?.[0])}
+              />
             </div>
+            {restoreError ? (
+              <p role="alert" className="form-error">
+                {restoreError}
+              </p>
+            ) : null}
             <div className="hero-footnote">
               <ShieldCheck className="size-3" />
               Your originals always have a way home.

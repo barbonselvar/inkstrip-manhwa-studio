@@ -3,6 +3,8 @@ import { AppearanceButton } from "./design/preferences";
 import { DepthSurface } from "./design/depth-surface";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton, InlineTitle, Wordmark } from "@/components/studio/chrome";
+import { storageMessage } from "@/lib/studio/db";
+import { exportProject } from "@/lib/studio/backup-store";
 import { useStudio } from "@/lib/studio/store";
 import { countLabel } from "@/lib/utils";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -10,6 +12,7 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
+  Download,
   Layers3,
   Plus,
   ShieldCheck,
@@ -34,6 +37,26 @@ export function ProjectView({ projectId }: { projectId: string }) {
   const deleteChapter = useStudio((state) => state.deleteChapter);
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
+  const [backupState, setBackupState] = useState<"idle" | "busy" | "error">("idle");
+  const [backupError, setBackupError] = useState("");
+
+  async function downloadBackup(id: string) {
+    setBackupState("busy");
+    setBackupError("");
+    try {
+      const { blob, fileName } = await exportProject(id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setBackupState("idle");
+    } catch (problem) {
+      setBackupError(storageMessage(problem));
+      setBackupState("error");
+    }
+  }
 
   if (!project) {
     return (
@@ -63,6 +86,16 @@ export function ProjectView({ projectId }: { projectId: string }) {
         </Link>
         <div className="flex items-center gap-2">
           <AppearanceButton />
+          <button
+            type="button"
+            onClick={() => void downloadBackup(project.id)}
+            disabled={backupState === "busy"}
+            title="Download every chapter and image as one backup file"
+            className="press focus-ring inline-flex h-11 items-center gap-2 rounded-sm px-2 text-sm text-subtle hover:text-fg disabled:opacity-60"
+          >
+            <Download className="size-4" />
+            {backupState === "busy" ? "Saving…" : "Backup"}
+          </button>
           <ConfirmButton
             title="Delete project?"
             description="Every chapter and photo in this project is removed from this device."
@@ -77,6 +110,11 @@ export function ProjectView({ projectId }: { projectId: string }) {
           </ConfirmButton>
         </div>
       </div>
+      {backupError ? (
+        <p role="alert" className="form-error mt-2">
+          {backupError}
+        </p>
+      ) : null}
 
       <div className="project-heading story-heading">
         <div className="story-heading-copy">

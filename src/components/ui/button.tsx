@@ -22,6 +22,8 @@ const buttonVariants = cva(
   },
 );
 
+// Shared with links styled as buttons; keeping it beside Button outweighs fast-refresh granularity.
+// eslint-disable-next-line react-refresh/only-export-components
 export function buttonClass({
   className,
   variant,
