@@ -283,17 +283,6 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
               Your panels, at their original quality. Drop, paste, or choose files.
               <span className="sr-only">{FORMAT_HINT}</span>
             </p>
-            <Button
-              variant="secondary"
-              className="pro-launch"
-              disabled={busy || !checked.length}
-              onClick={() => {
-                setStudioMode("raster");
-                setProPanel(list.find((p) => checkedSet.has(p.id)) ?? null);
-              }}
-            >
-              <Layers3 className="size-4" /> Pro Studio · layers & vectors
-            </Button>
             <div className="studio-launch-grid" aria-label="Open selected image in an editor">
               <Button
                 variant="secondary"
@@ -520,10 +509,6 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                       disabled={busy}
                       onToggle={() => toggleSelected(chapter.id, panel.id)}
                       onEdit={() => setEditorPanel(panel)}
-                      onPro={() => {
-                        setStudioMode("raster");
-                        setProPanel(panel);
-                      }}
                       onStudio={(mode) => {
                         setStudioMode(mode);
                         setProPanel(panel);
