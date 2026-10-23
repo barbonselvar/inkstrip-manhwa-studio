@@ -339,6 +339,12 @@ try {
     }
     await props(p);
     await p.getByLabel("Brush preset", { exact: true }).selectOption("Eraser");
+    await p.getByLabel("Brush preset", { exact: true }).selectOption("Pencil");
+    await p.getByLabel("Brush preset", { exact: true }).selectOption("Hard Round Brush");
+    const roundPreset = await native(p);
+    assert.equal(roundPreset.value.document.brushSettings.tip, "round");
+    await props(p);
+    await p.getByLabel("Brush preset", { exact: true }).selectOption("Eraser");
     p.once("dialog", (dialog) => dialog.accept("Saved eraser"));
     await p.getByRole("button", { name: "Save current preset", exact: true }).click();
     await p.getByLabel("Brush preset", { exact: true }).selectOption("Hard Round Brush");

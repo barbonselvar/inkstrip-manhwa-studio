@@ -236,6 +236,7 @@ export function ProProperties({
                   {
                     ...preset.settings,
                     dynamics: preset.settings.dynamics,
+                    tip: preset.settings.tip ?? "round",
                     sizePressure: preset.settings.sizePressure ?? false,
                     smoothing: preset.settings.smoothing ?? 0,
                   },
