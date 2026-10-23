@@ -29,16 +29,21 @@ merge/deployment approval. It does not authorize bypassing safety or validation.
 - Report completed features, tests, PR, merge SHA, production/live verification,
   limitations and next phase. Do not claim Adobe feature parity without evidence.
 
-Current sequence: Phase C and Phase D are released. Phase D PR #3 merged normally
-as `a35e73ef90e71f79f711ce7830e8e8625e372aaa` and was verified on the existing
-Vercel Production domain. The baseline is 642 automated tests and 18 Chromium
-suites, including real AI and desktop/320px/390px workflows. See the final Phase D
-audit and `docs/PHASE_E_RASTER_REFINEMENT.md` before implementing anything.
+Current sequence: Phases C, D and E are released. Phase E PR #4 merged normally
+as `ced5907f5e0bfc49e72588fe76d3cbf652d39b7f` from tested development HEAD
+`17ba1134ec011cc50b4455b60ae410b41e2742aa`. Both main Actions pass and the existing
+Vercel Production domain was live-verified at that exact source SHA, including
+Raster/Vector/Chapter, native v5, 4K masked export, mobile 320/390px, actual WebGL
+and real Swin2SR. Baseline: 677 automated tests / 19 Chromium suites. See
+`docs/PHASE_E_RELEASE_VERIFICATION.md` and PR #4 for evidence and limitations.
 
-Phase E Raster refinement is implemented on its development branch/PR #4. Read
-`docs/PHASE_E_RASTER_REFINEMENT.md` and PR #4 for the actual release/validation
-state before starting new work. Do not duplicate its selection, brush, mask,
-native v5 or high-resolution improvements. All native v1–v4 files remain readable.
-Future AI Studio is a separate phase, permitted only after the Phase E main
-release and live source-SHA verification. Preserve all source artwork and existing
-AI/Raster/Vector/Chapter/3D engines and the release policy above.
+Current branch: `codex/phase-f-ai-studio`, created from that verified main release.
+`docs/PHASE_F_AI_STUDIO_ARCHITECTURE.md` is preparation only. No new AI model,
+server, paid API or subscription is enabled. Implement future AI work only through
+real qualified inference and non-destructive result layers, reusing the existing
+engines and native source pool. Do not duplicate Phase E selection/brush/mask/
+high-resolution capabilities or treat traditional filters as generative AI.
+Preserve native v1–v5 compatibility, all original artwork and the release policy
+above. Model code and weights licenses require separate review; CodeFormer's
+upstream license restricts commercial use without permission. Do not provision
+billable GPU services or enable paid providers without explicit authorization.

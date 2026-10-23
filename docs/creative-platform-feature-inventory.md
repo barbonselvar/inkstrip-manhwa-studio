@@ -5,6 +5,18 @@ Photoshop and Illustrator workflows for planning original Inkstrip functionality
 It does not use Adobe source code, private APIs, assets, icons, branding, or
 reverse-engineered file internals. It makes no claim of Adobe feature parity.
 
+## Current release and next phase
+
+Phase E PR #4 is merged, deployed and live-verified at
+`ced5907f5e0bfc49e72588fe76d3cbf652d39b7f`. See
+[the release record](PHASE_E_RELEASE_VERIFICATION.md) for 677 tests, 19 Chromium
+suites, native/exports/4K/mobile, real AI and 3D evidence. The capability limits in
+the audit remain in force. [Phase F](PHASE_F_AI_STUDIO_ARCHITECTURE.md) is architecture
+preparation only: new face/eyes/mouth/hands/anatomy/identity/inpainting/background/
+line-art/reference-region AI tasks and non-destructive AI result layers are
+**planned, not implemented**. Existing Swin2SR and explicitly configured optional
+cloud tools retain their prior behavior; no new paid services are enabled.
+
 ## Phase E implementation status (2026-10-23, development branch)
 
 The historical inventory below is superseded for the Raster areas described in
