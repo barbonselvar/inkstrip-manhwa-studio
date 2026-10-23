@@ -35,7 +35,7 @@ async function start(p) {
     .setInputFiles([
       { name: "source.png", mimeType: "image/png", buffer: Buffer.from(data, "base64") },
     ]);
-  await p.getByRole("button", { name: "Pro Studio · layers & vectors", exact: true }).click();
+  await p.getByRole("button", { name: "Open in Raster Studio", exact: true }).click();
   await p.getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true }).waitFor();
   return data;
 }
@@ -241,7 +241,7 @@ try {
   await p.getByText("Draft saved", { exact: true }).waitFor();
   await p.getByRole("button", { name: "Back to chapter from Pro Studio", exact: true }).click();
   await p.reload();
-  await p.getByRole("button", { name: "Pro Studio · layers & vectors", exact: true }).click();
+  await p.getByRole("button", { name: "Open in Raster Studio", exact: true }).click();
   await values(p, 24, 24, [64, 128, 64, 128]);
   assert.equal((await native(p)).document.layers[0].assetId, mergedAsset);
   console.log("Testing clipping blend modes against an independent Canvas backdrop reference…");
@@ -536,7 +536,7 @@ try {
     const saved = await native(p);
     await p.getByRole("button", { name: "Back to chapter from Pro Studio", exact: true }).click();
     await p.reload();
-    await p.getByRole("button", { name: "Pro Studio · layers & vectors", exact: true }).click();
+    await p.getByRole("button", { name: "Open in Raster Studio", exact: true }).click();
     assert.deepEqual((await native(p)).document, saved.document);
     await selected(p, ["A touch"]);
     const grip = p.getByRole("button", { name: "Drag layer A touch", exact: true });

@@ -274,7 +274,7 @@ try {
     "Pro draft saving leaves the chapter accepted image unchanged",
   );
   await page.reload();
-  await page.getByRole("button", { name: "Pro Studio · layers & vectors", exact: true }).click();
+  await page.getByRole("button", { name: "Open in Raster Studio", exact: true }).click();
   await page.getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true }).waitFor();
   await tab(page, "Properties");
   assert.equal(
@@ -1044,7 +1044,7 @@ try {
     await rp.getByRole("dialog", { name: "Edit Image", exact: true }).waitFor({ state: "hidden" });
     const latest = await records(rp);
     assert.deepEqual([latest[0].width, latest[0].height], [96, 128]);
-    await rp.getByRole("button", { name: "Pro Studio · layers & vectors", exact: true }).click();
+    await rp.getByRole("button", { name: "Open in Raster Studio", exact: true }).click();
     await rp
       .getByRole("button", { name: "Use latest chapter image · keep layers", exact: true })
       .waitFor();
@@ -1165,7 +1165,7 @@ try {
       x.fillText("CHAPTER 01  /  AFTER THE RAIN", 30, 689);
       return c.toDataURL().split(",")[1];
     });
-    await sp.getByRole("button", { name: "Pro Studio · layers & vectors", exact: true }).click();
+    await sp.getByRole("button", { name: "Open in Raster Studio", exact: true }).click();
     await sp.getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true }).waitFor();
     const scene = fromPanel({
         id: "showcase",
