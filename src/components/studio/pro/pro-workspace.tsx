@@ -2263,6 +2263,8 @@ export default function ProWorkspace({
                         try {
                           const next = upsertBrushPreset(brushPresets, {
                             name,
+                            tool:
+                              tool === "eraser" ? "eraser" : tool === "pencil" ? "pencil" : "brush",
                             settings: {
                               size: brush.size,
                               hardness: brush.hardness,

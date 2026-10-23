@@ -337,6 +337,18 @@ try {
       const unpainted = await native(p);
       assert.equal(unpainted.value.document.layers[0].mask.strokes.length, 0);
     }
+    await props(p);
+    await p.getByLabel("Brush preset", { exact: true }).selectOption("Eraser");
+    p.once("dialog", (dialog) => dialog.accept("Saved eraser"));
+    await p.getByRole("button", { name: "Save current preset", exact: true }).click();
+    await p.getByLabel("Brush preset", { exact: true }).selectOption("Hard Round Brush");
+    await p.getByLabel("Brush preset", { exact: true }).selectOption("Saved eraser");
+    assert.equal(
+      await p
+        .getByRole("button", { name: "Eraser tool", exact: true })
+        .getAttribute("aria-pressed"),
+      "true",
+    );
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await tab(p, "Refine");
     await p.screenshot({ path: `/workspace/screenshots/ee-raster-${width}.png` });
