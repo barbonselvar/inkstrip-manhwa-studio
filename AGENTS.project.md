@@ -31,3 +31,11 @@ CodeFormer's upstream license restricts commercial use without permission; it is
 excluded from the default registry. No model code/weights from imported files or
 remote discovery may execute. No tokens/endpoints enter native files. No paid
 compute, provider, production changes or next release without explicit approval.
+
+F1 readiness audit: `docs/PHASE_F1_READINESS_AUDIT.md` supersedes the initial
+report for import/JPEG fixes, worker reuse and validation results. Pro IndexedDB
+uses version2 with the same retained sessions store, preventing cached pre-F1
+version1 clients from dropping AI source assets or using old compositing. Do not
+revert this compatibility guard or delete user storage. Native envelopes remain
+v1–v6. Validate embedded native raster bytes and decoded budgets before committing
+imports. JPEG mattes apply after compositing, never before AI color overlays.

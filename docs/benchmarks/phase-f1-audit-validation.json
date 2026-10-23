@@ -1,0 +1,147 @@
+{
+  "date": "2026-10-23",
+  "initialHead": "d1e82c2aabc80d141111f6cd0aee8516d1277fc6",
+  "baseMain": "71a29e2f01869a82a4b6a81818fb56441cb93c3f",
+  "fixCommit": "d858b0615993f83b5fadae662137a2ec9372d9e3",
+  "unitTests": {
+    "passed": 699,
+    "failed": 0,
+    "skipped": 0,
+    "new": 8,
+    "groups": [
+      200,
+      59,
+      40,
+      400
+    ]
+  },
+  "existingBrowserSuites": [
+    {
+      "name": "pro",
+      "exitCode": 0,
+      "seconds": 113.79
+    },
+    {
+      "name": "layers",
+      "exitCode": 0,
+      "seconds": 41.05
+    },
+    {
+      "name": "repair",
+      "exitCode": 0,
+      "seconds": 31.33
+    },
+    {
+      "name": "geometry",
+      "exitCode": 0,
+      "seconds": 27.32
+    },
+    {
+      "name": "transform",
+      "exitCode": 0,
+      "seconds": 37.56
+    },
+    {
+      "name": "color",
+      "exitCode": 0,
+      "seconds": 28.23
+    },
+    {
+      "name": "appearance",
+      "exitCode": 0,
+      "seconds": 35.4
+    },
+    {
+      "name": "raster-refinement",
+      "exitCode": 0,
+      "seconds": 57.69
+    },
+    {
+      "name": "studio",
+      "exitCode": 0,
+      "seconds": 64.28
+    },
+    {
+      "name": "editor",
+      "exitCode": 0,
+      "seconds": 18.42
+    },
+    {
+      "name": "adjustments",
+      "exitCode": 0,
+      "seconds": 16.87
+    },
+    {
+      "name": "retouch",
+      "exitCode": 0,
+      "seconds": 7.15
+    },
+    {
+      "name": "workflow",
+      "exitCode": 0,
+      "seconds": 21.54
+    },
+    {
+      "name": "ui",
+      "exitCode": 0,
+      "seconds": 27.71
+    },
+    {
+      "name": "vector",
+      "exitCode": 0,
+      "seconds": 31.0
+    },
+    {
+      "name": "compound",
+      "exitCode": 0,
+      "seconds": 44.16
+    },
+    {
+      "name": "pathfinder",
+      "exitCode": 0,
+      "seconds": 68.31
+    },
+    {
+      "name": "artboards",
+      "exitCode": 0,
+      "seconds": 43.64
+    },
+    {
+      "name": "vector-final",
+      "exitCode": 0,
+      "seconds": 70.48
+    }
+  ],
+  "newBrowserSuites": {
+    "ai-studio": "PASS actual inference, desktop/320/390, non-zero region and save-before-reload checks",
+    "ai-studio:audit": "PASS 320/360/390/768/1440, corrupted native imports, JPEG/WebP/EXIF, storage compatibility and corrupted checkpoint rejection",
+    "ai-studio:exports": "PASS actual PNG/JPEG/WebP, visibility/opacity/multiply/mask/translated geometry"
+  },
+  "gates": {
+    "typecheck": "PASS app and configuration",
+    "lint": "PASS 0 errors, 1 existing button.tsx fast-refresh warning",
+    "build": "PASS Vercel preset; DATABASE_URL absent migration skipped as configured",
+    "check:build": "PASS",
+    "check:auth": "PASS",
+    "npmAuditKnownAdvisories": 0,
+    "devBuiltSmoke": "Visible desktop/mobile, clean error arrays; existing game-brand classifier warnings unchanged"
+  },
+  "blockedOrUnverified": [
+    "Physical Android hardware",
+    "External GPU inference: not implemented/required in F1",
+    "Representative production-art identity/anatomy/style approval",
+    "4MP inference throughput and per-model peak memory",
+    "OS power-loss simulation"
+  ],
+  "retries": [
+    "Concurrent cold neural tests hit local preview Brotli/runtime fetch deadline; unmodified assertions passed with explicit identity encoding",
+    "Reopen test now waits for actual asynchronous close and checks saved record before navigation",
+    "New IndexedDB-vs-JSON assertion canonicalizes IEEE negative zero without removing any fields"
+  ],
+  "safety": {
+    "draft": true,
+    "merged": false,
+    "productionDeployRequested": false,
+    "f2Started": false
+  }
+}

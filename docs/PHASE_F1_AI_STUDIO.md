@@ -1,3 +1,8 @@
+> The final readiness audit and fixes in [PHASE_F1_READINESS_AUDIT.md](PHASE_F1_READINESS_AUDIT.md)
+> supersede this initial implementation report's worker lifetime and Pro database behavior.
+> Pro storage now uses an in-place version2 compatibility guard; native envelopes stay1–6.
+> One successful inference worker may be reused until60s idle, cancellation or workspace close.
+
 # Phase F1 — AI Studio foundation and integration
 
 Status: **F1 foundation validated locally; draft PR #6 for explicit review, not merged or deployed**. User approval

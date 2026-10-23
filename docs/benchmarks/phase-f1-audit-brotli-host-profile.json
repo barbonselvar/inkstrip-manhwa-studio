@@ -1,0 +1,155 @@
+{
+  "browser": "156.0.8078.4",
+  "backend": "ORT 1.22.0 WASM SIMD single-thread",
+  "model": {
+    "id": "swin2sr-classical-x2",
+    "name": "Swin2SR · gentle restoration",
+    "revision": "93dfc9089abda257351d3a58d5771e2c1ff69442",
+    "sha256": "6dde3fe2440543ccae7c40d175609f83c18aeaa3d8456745c4329ef97ae744bd",
+    "bytes": 54428699,
+    "artifact": "https://huggingface.co/Xenova/swin2SR-classical-sr-x2-64/resolve/93dfc9089abda257351d3a58d5771e2c1ff69442/onnx/model.onnx",
+    "repository": "https://github.com/mv-lab/swin2sr",
+    "codeLicense": "Apache-2.0",
+    "weightsLicense": "Apache-2.0 (upstream base model card; ONNX derivative)",
+    "licenseEvidence": "https://huggingface.co/caidas/swin2SR-classical-sr-x2-64/blob/cee1c923c6a37361c6e5650b65dcf4be821e5d52/README.md",
+    "runtime": "ONNX Runtime Web / WASM (MIT)",
+    "task": "restoration",
+    "maxPixels": 4000000,
+    "maxSide": 4096,
+    "parameters": [
+      "denoise",
+      "sharpen",
+      "artifacts",
+      "color"
+    ],
+    "limitation": "Neural detail restoration, not generative repair or guaranteed identity preservation. F1 retains document resolution; the existing Chapter Enhance tool offers 2× upscaling."
+  },
+  "method": "Built real worker in an isolated same-origin test document (homepage animation absent), sequential original procedural illustrations; no competing QA. Cold session then repeated same-input warm session, then four warm illustrations. Transport uses exact verified local checkpoint when configured; does not measure Internet download latency. JS heap snapshot excludes WASM/native/process peak memory.",
+  "sampledCgroupMemory": {
+    "firstBytes": 1931911168,
+    "maximumObservedBytes": 2760720384,
+    "lastBytes": 2624163840,
+    "samples": 160,
+    "intervalMs": 500,
+    "limitation": "Whole shared execution cgroup, including browser, Node model cache and preview server; sampled maximum is not per-model or guaranteed peak memory."
+  },
+  "runs": [
+    {
+      "category": "black-and-white-manga",
+      "totalMs": 42449.300000000745,
+      "timings": {
+        "modelRetrievalMs": 1226,
+        "integrityMs": 57,
+        "runtimeDownloadMs": 21695.099999997765,
+        "sessionCreateMs": 11224.300000000745,
+        "preprocessMs": 4.800000004470348,
+        "inferenceMs": 8160.400000002235,
+        "reconstructionMs": 3.5000000037252903,
+        "encodeMs": 2.100000001490116,
+        "totalMs": 42374.5,
+        "sessionReused": false
+      },
+      "width": 64,
+      "height": 64,
+      "alphaChanges": 0,
+      "changedPixels": 1940,
+      "sameInputWarm": {
+        "totalMs": 7088,
+        "timings": {
+          "modelRetrievalMs": 0,
+          "integrityMs": 0,
+          "runtimeDownloadMs": 0,
+          "sessionCreateMs": 0,
+          "preprocessMs": 1.800000000745058,
+          "inferenceMs": 7082.10000000149,
+          "reconstructionMs": 2.7999999970197678,
+          "encodeMs": 0.8999999985098839,
+          "totalMs": 7087.699999999255,
+          "sessionReused": true
+        },
+        "identicalPng": true
+      }
+    },
+    {
+      "category": "colored-manhwa",
+      "totalMs": 7690.60000000149,
+      "timings": {
+        "modelRetrievalMs": 0,
+        "integrityMs": 0,
+        "runtimeDownloadMs": 0,
+        "sessionCreateMs": 0,
+        "preprocessMs": 2,
+        "inferenceMs": 7680.39999999851,
+        "reconstructionMs": 6.399999998509884,
+        "encodeMs": 0.6999999992549419,
+        "totalMs": 7690,
+        "sessionReused": true
+      },
+      "width": 64,
+      "height": 64,
+      "alphaChanges": 0,
+      "changedPixels": 1292
+    },
+    {
+      "category": "detailed-line-art",
+      "totalMs": 7752.199999999255,
+      "timings": {
+        "modelRetrievalMs": 0,
+        "integrityMs": 0,
+        "runtimeDownloadMs": 0,
+        "sessionCreateMs": 0,
+        "preprocessMs": 3.600000001490116,
+        "inferenceMs": 7745.10000000149,
+        "reconstructionMs": 1.4999999962747097,
+        "encodeMs": 1,
+        "totalMs": 7752.10000000149,
+        "sessionReused": true
+      },
+      "width": 64,
+      "height": 64,
+      "alphaChanges": 0,
+      "changedPixels": 2196
+    },
+    {
+      "category": "character-portrait",
+      "totalMs": 7414.10000000149,
+      "timings": {
+        "modelRetrievalMs": 0,
+        "integrityMs": 0,
+        "runtimeDownloadMs": 0,
+        "sessionCreateMs": 0,
+        "preprocessMs": 1.699999999254942,
+        "inferenceMs": 7409.099999997765,
+        "reconstructionMs": 2,
+        "encodeMs": 0.6999999992549419,
+        "totalMs": 7413.89999999851,
+        "sessionReused": true
+      },
+      "width": 64,
+      "height": 64,
+      "alphaChanges": 0,
+      "changedPixels": 1292
+    },
+    {
+      "category": "background-artwork",
+      "totalMs": 7164.60000000149,
+      "timings": {
+        "modelRetrievalMs": 0,
+        "integrityMs": 0,
+        "runtimeDownloadMs": 0,
+        "sessionCreateMs": 0,
+        "preprocessMs": 3.899999998509884,
+        "inferenceMs": 7153.800000000745,
+        "reconstructionMs": 1.5000000037252903,
+        "encodeMs": 3,
+        "totalMs": 7164.39999999851,
+        "sessionReused": true
+      },
+      "width": 64,
+      "height": 64,
+      "alphaChanges": 0,
+      "changedPixels": 2651
+    }
+  ],
+  "jsHeap": 10000000
+}

@@ -1,0 +1,11 @@
+{
+  "asset": "/assets/ort-wasm-simd-threaded-_SXXjhZY.wasm",
+  "uncompressedBytes": 11210254,
+  "identityHTTPSeconds": 0.049755,
+  "brotliHTTPSeconds": 29.431275,
+  "brotliTransferBytes": 1838155,
+  "httpStatus": 200,
+  "host": "local Nitro/Vite built QA preview",
+  "finding": "On-demand Brotli compression under shared CPU contention can exhaust the existing 60s runtime fetch timeout. curl identity versus --compressed reproduced it; not WAN or Vercel throughput.",
+  "handling": "Explicit INKSTRIP_QA_IDENTITY_ENCODING=1 in the two neural browser harnesses, and identity encoding for the isolated worker compute benchmark. No application headers, runtime timeout, checkpoint bytes, inference or assertions changed. Normal-encoding tests also passed earlier; concurrent attempts and their failures are disclosed."
+}

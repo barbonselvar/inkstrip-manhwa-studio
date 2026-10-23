@@ -470,3 +470,9 @@ Remaining Raster/AI work is a separate phase; no future AI tools are advertised.
   remain traditional tools; existing Swin2SR remains actual neural restoration.
 - No Phase F merge/production deployment or F2 start is authorized without explicit
   user approval. See `PHASE_F1_AI_STUDIO.md` for boundaries and validation evidence.
+
+F1 final readiness corrections and current evidence are in
+[the audit](PHASE_F1_READINESS_AUDIT.md): atomic validated native imports,
+old-client storage compatibility guard, JPEG alpha-composite fidelity,
+request-bound discovery state and bounded warm-worker reuse. Phase F1 remains
+Draft and unmerged pending explicit approval; no F2 or production changes.

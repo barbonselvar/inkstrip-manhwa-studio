@@ -1,0 +1,67 @@
+{
+  "browser": "156.0.8078.4",
+  "runs": [
+    {
+      "totalMs": 28570.5,
+      "progress": [
+        {
+          "stage": "Loading AI model · first download may take a few minutes",
+          "done": 0,
+          "total": 0,
+          "ms": 493.69999999925494
+        },
+        {
+          "stage": "Downloading AI model · 51.9 MB",
+          "done": 54428699,
+          "total": 54428699,
+          "ms": 1999.1000000014901
+        },
+        {
+          "stage": "Preparing AI engine · this can take a moment",
+          "done": 0,
+          "total": 0,
+          "ms": 2569.800000000745
+        },
+        {
+          "stage": "Restoring fine detail",
+          "done": 0,
+          "total": 1,
+          "ms": 25068.199999999255
+        },
+        {
+          "stage": "Finishing colors and edges",
+          "done": 1,
+          "total": 1,
+          "ms": 28567.400000002235
+        }
+      ],
+      "width": 36,
+      "height": 36
+    },
+    {
+      "totalMs": 3625.900000002235,
+      "progress": [
+        {
+          "stage": "Loading AI model · first download may take a few minutes",
+          "done": 0,
+          "total": 0,
+          "ms": 0.6999999992549419
+        },
+        {
+          "stage": "Restoring fine detail",
+          "done": 0,
+          "total": 1,
+          "ms": 3.800000000745058
+        },
+        {
+          "stage": "Finishing colors and edges",
+          "done": 1,
+          "total": 1,
+          "ms": 3624.10000000149
+        }
+      ],
+      "width": 36,
+      "height": 36
+    }
+  ]
+}
