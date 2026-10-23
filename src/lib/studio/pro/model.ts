@@ -1,3 +1,4 @@
+import { validateDynamics, type DabDynamics } from "./brush-dynamics.ts";
 import { validateVectorClips, type VectorClip } from "./vector-clip.ts";
 import { validateAppearance, type AppearanceItem } from "./vector-appearance.ts";
 import { validateTextPath, checkPathText, type TextPath } from "./text-path.ts";
@@ -53,7 +54,9 @@ export type CloneSource = {
   aligned: boolean;
 };
 export type Stroke = {
-  points: (Point & { pressure?: number })[];
+  points: (Point & { pressure?: number; time?: number })[];
+  dynamics?: DabDynamics;
+  seed?: number;
   sizePressure?: boolean;
   smoothing?: number;
   /** Patch footprint in the target layer; normal strokes continue using brush dabs. */
@@ -88,9 +91,15 @@ export type Stroke = {
   };
 };
 export type Mask = {
+  width?: number;
+  height?: number;
+  placement?: Transform;
+  linked?: boolean;
   selection: Selection;
   strokes: Stroke[];
   enabled: boolean;
+  density?: number;
+  feather?: number;
   inverted?: boolean;
 };
 export type Shape =
@@ -173,6 +182,8 @@ export type ProDocument = {
   /** Final composite resampling; source layers and masks retain native coordinates. */
   imageSize?: ImageSize;
   selection?: Selection;
+  brushSettings?: Omit<Stroke, "points" | "erase" | "clip" | "clone" | "patch" | "repair" | "seed">;
+  savedSelections?: { name: string; selection: Selection }[];
   source?: SourceReference;
   version: 1;
   id: string;
@@ -276,7 +287,7 @@ export function validateSelection(s: Selection) {
       !Number.isInteger(height) ||
       !finite(width, 1, 16384) ||
       !finite(height, 1, 16384) ||
-      width * height > 16_000_000 ||
+      width * height > 16_777_216 ||
       !t ||
       !point(t) ||
       !finite(t.scaleX, 0.01, 100) ||
@@ -306,7 +317,7 @@ export function validateSelection(s: Selection) {
         !Number.isInteger(p.height) ||
         !finite(p.width, 1, 16384) ||
         !finite(p.height, 1, 16384) ||
-        p.width * p.height > 16_000_000 ||
+        p.width * p.height > 16_777_216 ||
         !Array.isArray(p.runs) ||
         p.runs.length % 3 ||
         p.runs.length > 600_000
@@ -338,12 +349,31 @@ export function validateSelection(s: Selection) {
   }
 }
 function validateStroke(s: Stroke) {
+  if (s?.dynamics !== undefined) {
+    validateDynamics(s.dynamics);
+    if (Array.isArray(s.points)) {
+      let distance = 0;
+      for (let i = 1; i < s.points.length; i++)
+        distance += Math.hypot(
+          s.points[i]!.x - s.points[i - 1]!.x,
+          s.points[i]!.y - s.points[i - 1]!.y,
+        );
+      if (distance / 0.25 > 200_000) throw Error("Stroke exceeds the safe dab budget.");
+    }
+  }
+  if (s?.seed !== undefined && (!Number.isInteger(s.seed) || s.seed < 1 || s.seed > 4294967295))
+    throw Error("Invalid brush seed.");
   if (
     !s ||
     !Array.isArray(s.points) ||
     s.points.length < 1 ||
     s.points.length > 10000 ||
-    !s.points.every((p) => point(p) && (p.pressure === undefined || finite(p.pressure, 0.05, 1))) ||
+    !s.points.every(
+      (p) =>
+        point(p) &&
+        (p.pressure === undefined || finite(p.pressure, 0.05, 1)) &&
+        (p.time === undefined || finite(p.time, 0, 1e15)),
+    ) ||
     (s.sizePressure !== undefined && typeof s.sizePressure !== "boolean") ||
     (s.smoothing !== undefined && !finite(s.smoothing, 0, 0.95)) ||
     !finite(s.size, 1, 1000) ||
@@ -377,7 +407,7 @@ function validateStroke(s: Stroke) {
       !Number.isInteger(s.clone.width) ||
       !finite(s.clone.height, 1, 16384) ||
       !Number.isInteger(s.clone.height) ||
-      s.clone.width * s.clone.height > 16_000_000 ||
+      s.clone.width * s.clone.height > 16_777_216 ||
       !point(s.clone.source) ||
       !point(s.clone.destination) ||
       (s.clone.mode !== undefined && s.clone.mode !== "clone" && s.clone.mode !== "heal"))
@@ -409,13 +439,13 @@ export function validateDocument(d: ProDocument) {
     !Number.isInteger(d.width) ||
     !finite(d.height, 1, 16384) ||
     !Number.isInteger(d.height) ||
-    d.width * d.height > 16_000_000 ||
+    d.width * d.height > 16_777_216 ||
     !validColor(d.background) ||
     !Array.isArray(d.layers) ||
     d.layers.length > MAX_LAYERS
   )
     throw new Error(
-      "Unsupported or oversized Pro document (up to 48 layers / 16 megapixels / 16384px per side).",
+      "Unsupported or oversized Pro document (up to 48 layers / 16.8 megapixels / 16384px per side).",
     );
   if (
     d.source !== undefined &&
@@ -424,12 +454,47 @@ export function validateDocument(d: ProDocument) {
       !d.source.assetId ||
       !finite(d.source.width, 1, 16384) ||
       !finite(d.source.height, 1, 16384) ||
-      d.source.width * d.source.height > 16_000_000)
+      d.source.width * d.source.height > 16_777_216)
   )
     throw new Error("Invalid original source reference.");
   validateGeometry(d);
   validateLayout(d);
   if (d.selection !== undefined) validateSelection(d.selection);
+  // JSON/native files duplicate captured selection coverage, even when editing
+  // snapshots share references. Bound the complete serialized coverage payload.
+  let coverageEntries = 0;
+  const budgetSelection = (s: Selection | undefined) => {
+    for (const r of s?.regions ?? []) coverageEntries += r.pixels?.runs.length ?? 0;
+  };
+  budgetSelection(d.selection);
+  for (const s of d.savedSelections ?? []) budgetSelection(s.selection);
+  for (const l of d.layers) {
+    budgetSelection(l.mask?.selection);
+    budgetSelection(l.colorSelection);
+    for (const s of [...(l.strokes ?? []), ...(l.mask?.strokes ?? [])]) {
+      budgetSelection(s.clip);
+      budgetSelection(s.patch);
+    }
+  }
+  if (coverageEntries > 1_200_000)
+    throw Error(
+      "Selection coverage exceeds the native document budget. Save a backup and simplify or remove saved selections before continuing. Nothing was changed.",
+    );
+  if (d.brushSettings !== undefined)
+    validateStroke({ ...d.brushSettings, points: [{ x: 0, y: 0 }], erase: false });
+  if (d.savedSelections !== undefined) {
+    if (
+      !Array.isArray(d.savedSelections) ||
+      d.savedSelections.length > 16 ||
+      new Set(d.savedSelections.map((s) => s?.name)).size !== d.savedSelections.length
+    )
+      throw Error("Invalid saved selections.");
+    for (const s of d.savedSelections) {
+      if (!s || typeof s.name !== "string" || !s.name.trim() || s.name.length > 40)
+        throw Error("Invalid selection name.");
+      validateSelection(s.selection);
+    }
+  }
   for (let i = 0; i < d.layers.length; i++) {
     const l = d.layers[i]!;
     if (l.kind === "adjustment" && !l.clipped) {
@@ -460,7 +525,7 @@ export function validateDocument(d: ProDocument) {
       !["source-over", "multiply", "screen", "overlay", "darken", "lighten"].includes(l.blend) ||
       !finite(l.width, 1, 16384) ||
       !finite(l.height, 1, 16384) ||
-      l.width * l.height > 16_000_000
+      l.width * l.height > 16_777_216
     )
       throw new Error("Invalid or oversized layer.");
     validateVectorClips(l);
@@ -492,8 +557,7 @@ export function validateDocument(d: ProDocument) {
     if (l.colorSelection !== undefined) validateSelection(l.colorSelection);
     if (
       l.kind === "group" &&
-      (l.mask ||
-        l.color ||
+      (l.color ||
         l.colorSelection ||
         l.transform.x ||
         l.transform.y ||
@@ -514,7 +578,7 @@ export function validateDocument(d: ProDocument) {
         (Array.isArray(l.curve) && l.curve.some((n, i) => n !== [0, 64, 128, 192, 255][i])))
     )
       throw new Error(
-        "Group transforms, masks and adjustments are not supported; edit the child layers instead.",
+        "Group-local transforms and adjustments are not supported; edit the child layers instead.",
       );
     if (
       !finite(l.hue, -180, 180) ||
@@ -539,11 +603,31 @@ export function validateDocument(d: ProDocument) {
       commands += s.points.length;
     }
     if (l.mask) {
+      if (l.mask.placement !== undefined) {
+        validateTransform(l.mask.placement);
+        if (l.mask.placement.deform) throw Error("Mask placement supports affine transforms only.");
+      }
+      if (l.mask.linked === false && l.transform.deform)
+        throw Error("Relink the mask before Perspective or Warp.");
+      if (l.mask.linked !== undefined && typeof l.mask.linked !== "boolean")
+        throw Error("Invalid mask linkage.");
+      if (
+        (l.mask.width === undefined) !== (l.mask.height === undefined) ||
+        (l.mask.width !== undefined &&
+          (!Number.isInteger(l.mask.width) ||
+            !Number.isInteger(l.mask.height) ||
+            !finite(l.mask.width, 1, 16384) ||
+            !finite(l.mask.height, 1, 16384) ||
+            l.mask.width * l.mask.height! > 16_777_216))
+      )
+        throw Error("Invalid mask frame.");
       validateSelection(l.mask.selection);
       if (
         !Array.isArray(l.mask.strokes) ||
         l.mask.strokes.length > 1000 ||
         typeof l.mask.enabled !== "boolean" ||
+        (l.mask.density !== undefined && !finite(l.mask.density, 0, 1)) ||
+        (l.mask.feather !== undefined && !finite(l.mask.feather, 0, 100)) ||
         (l.mask.inverted !== undefined && typeof l.mask.inverted !== "boolean")
       )
         throw new Error("Invalid layer mask.");

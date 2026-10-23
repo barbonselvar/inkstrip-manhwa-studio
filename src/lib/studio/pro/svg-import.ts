@@ -208,7 +208,7 @@ export function importSvg(text: string): {
     throw new Error("Invalid SVG viewBox.");
   const width = numeric(root.getAttribute("width"), box?.[2] ?? 800),
     height = numeric(root.getAttribute("height"), box?.[3] ?? 800);
-  if (width < 1 || height < 1 || width > 16384 || height > 16384 || width * height > 16_000_000)
+  if (width < 1 || height < 1 || width > 16384 || height > 16384 || width * height > 16_777_216)
     throw new Error("SVG dimensions exceed Pro limits.");
   let viewport: Matrix = [1, 0, 0, 1, 0, 0];
   if (box) {

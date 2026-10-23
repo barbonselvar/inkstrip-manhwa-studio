@@ -35,6 +35,8 @@ export function reorderLayer(d: ProDocument, fromId: string, toId: string): ProD
 export function ungroupLayers(d: ProDocument, id: string): ProDocument {
   const g = d.layers.find((l) => l.id === id);
   if (!g || g.kind !== "group") return d;
+  if (g.mask)
+    throw Error("Remove or bake the group mask before ungrouping, to preserve appearance.");
   if (g.effects?.some((e) => e.enabled))
     throw new Error("Remove group effects or merge the group before ungrouping.");
   if (isLocked(d, id) || !g.visible || g.opacity !== 1 || g.blend !== "source-over")

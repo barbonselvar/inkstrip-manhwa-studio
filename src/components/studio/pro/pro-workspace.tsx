@@ -1,3 +1,9 @@
+import { previewDirtyRect } from "@/lib/studio/pro/preview-dirty";
+import { budgetHistory } from "@/lib/studio/pro/history-budget";
+import { copyLayerMask, maskFromSelection } from "@/lib/studio/pro/masks";
+import type { Mask } from "@/lib/studio/pro/model";
+import { ProRefine, type SelectionView } from "./pro-refine";
+import type { RefineOptions } from "@/lib/studio/pro/refine-selection";
 import { ProVectorAppearance } from "./pro-vector-appearance";
 import { ProTextPath } from "./pro-text-path";
 import { attachText } from "@/lib/studio/pro/text-path";
@@ -261,6 +267,14 @@ export default function ProWorkspace({
     [cloneSource, setCloneSource] = useState<CloneSource | null>(null),
     [cloneSampleArmed, setCloneSampleArmed] = useState(false),
     [maskMode, setMaskMode] = useState(false),
+    [maskClipboard, setMaskClipboard] = useState<Mask | null>(null),
+    [refineSampleKey, setRefineSampleKey] = useState<"foreground" | "background" | null>(null),
+    [refineSample, setRefineSample] = useState<{
+      key: "foreground" | "background";
+      color: [number, number, number];
+    } | null>(null),
+    [refinePreview, setRefinePreview] = useState<Selection | null>(null),
+    [selectionView, setSelectionView] = useState<SelectionView>("overlay"),
     [appearanceId, setAppearanceId] = useState(""),
     [appearanceClipboard, setAppearanceClipboard] = useState<AppearanceItem[] | null>(null),
     [activeBoardId, setActiveBoardId] = useState(""),
@@ -269,6 +283,7 @@ export default function ProWorkspace({
     [fitRequest, setFitRequest] = useState<{ frame: Frame; serial: number } | null>(null),
     [before, setBefore] = useState(false),
     [tab, setTab] = useState<
+      | "refine"
       | "properties"
       | "transform"
       | "geometry"
@@ -319,7 +334,7 @@ export default function ProWorkspace({
       ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) <= 4) ||
     (typeof matchMedia !== "undefined" && matchMedia("(pointer:coarse)").matches)
       ? 4_000_000
-      : 16_000_000;
+      : 16_777_216;
   const doc = useMemo(() => {
       const current = transient ?? history?.present.doc;
       if (!current || !transformDraft) return current;
@@ -369,6 +384,7 @@ export default function ProWorkspace({
   const install = (entry: ProSession, label: string) => {
     sessionRef.current = entry;
     setSession(entry);
+    if (entry.document.brushSettings) setBrush(entry.document.brushSettings);
     const h = createHistory({ doc: entry.document, label });
     historyRef.current = h;
     setHistory(h);
@@ -525,9 +541,24 @@ export default function ProWorkspace({
           }
           const c = canvas.current;
           if (c) {
-            c.width = r.bitmap.width;
-            c.height = r.bitmap.height;
-            c.getContext("2d")!.drawImage(r.bitmap, 0, 0);
+            const dirty =
+              mode === "raster" &&
+              !before &&
+              !displayedBefore.current &&
+              c.width === r.bitmap.width &&
+              c.height === r.bitmap.height
+                ? previewDirtyRect(displayedDocument.current, doc, r.bitmap.width, r.bitmap.height)
+                : null;
+            const ctx = c.getContext("2d")!;
+            if (dirty) {
+              const { x, y, width, height } = dirty;
+              ctx.clearRect(x, y, width, height);
+              ctx.drawImage(r.bitmap, x, y, width, height, x, y, width, height);
+            } else {
+              c.width = r.bitmap.width;
+              c.height = r.bitmap.height;
+              ctx.drawImage(r.bitmap, 0, 0);
+            }
             displayedDocument.current = doc;
             displayedBefore.current = before;
             setVersion((v) => v + 1);
@@ -558,15 +589,28 @@ export default function ProWorkspace({
       return valid.length ? valid : current.layers.length ? [current.layers.at(-1)!.id] : [];
     });
   }, [history?.present.doc]);
-  const setHist = useCallback((value: History<Entry>) => {
+  const setHist = useCallback((state: History<Entry>) => {
+    const value = budgetHistory(state);
     historyRef.current = value;
     setHistory(value);
+    setBrush(
+      value.present.doc.brushSettings ?? {
+        size: 24,
+        hardness: 0.8,
+        opacity: 1,
+        flow: 1,
+        color: "#a4efd6",
+        sizePressure: true,
+        smoothing: 0,
+      },
+    );
   }, []);
   const commit = useCallback(
     (next: ProDocument, label: string, group?: string) => {
       if (busyRef.current || transformRef.current) return;
       try {
         validateDocument(next);
+        documentSources(next, maxArea);
         if (
           [next, next.crop, next.imageSize].some(
             (size) => size && size.width * size.height > maxArea,
@@ -591,6 +635,14 @@ export default function ProWorkspace({
     },
     [commit],
   );
+  const armRefineSample = useCallback((key: "foreground" | "background" | null) => {
+    setRefineSampleKey(key);
+    if (key) {
+      setRefinePreview(null);
+      setTool("color-range");
+      setStatus(`Tap a visible ${key} pixel. Sampling uses native source resolution.`);
+    }
+  }, []);
   const sampleSelection = async (point: { x: number; y: number }) => {
     const document = historyRef.current?.present.doc,
       worker = renderer.current;
@@ -600,6 +652,16 @@ export default function ProWorkspace({
     setError("");
     setProgress("Analyzing colors at document resolution…");
     try {
+      if (refineSampleKey) {
+        const result = await worker.sample(document, maxArea, point);
+        if (result.sample && alive.current) {
+          setRefineSample({ key: refineSampleKey, color: result.sample });
+          setRefineSampleKey(null);
+          setTool("move");
+          setStatus("Reference color sampled at native resolution.");
+        }
+        return;
+      }
       const result = await worker.select(document, maxArea, point, {
         tolerance,
         contiguous: tool === "wand" && contiguous,
@@ -1045,6 +1107,7 @@ export default function ProWorkspace({
           return;
         const next = mergeNativeSession(sessionRef.current, imported);
         validateAssets(next);
+        documentSources(next.document, maxArea);
         if (
           [next.document, next.document.crop, next.document.imageSize].some(
             (size) => size && size.width * size.height > maxArea,
@@ -1056,6 +1119,7 @@ export default function ProWorkspace({
         setCropDraft(null);
         if (tool === "crop") setTool("move");
         commit(next.document, "Import native document");
+        if (next.document.brushSettings) setBrush(next.document.brushSettings);
         setMaskMode(false);
         setSelectedIds(next.document.layers.length ? [next.document.layers.at(-1)!.id] : []);
         setAssetEpoch((n) => n + 1);
@@ -1586,7 +1650,7 @@ export default function ProWorkspace({
                 type="button"
                 variant={mode === "raster" ? "secondary" : "ghost"}
                 aria-pressed={mode === "raster"}
-                disabled={busy}
+                disabled={busy || !!refinePreview}
                 onClick={() => {
                   setMode("raster");
                   if (
@@ -1911,7 +1975,8 @@ export default function ProWorkspace({
                 onSelectAnchor={selectAnchor}
                 onError={setError}
                 tool={tool}
-                selection={selection}
+                selection={refinePreview ?? selection}
+                selectionView={selectionView}
                 onSelection={setSelection}
                 brush={brush}
                 operation={operation}
@@ -1928,7 +1993,11 @@ export default function ProWorkspace({
                   setSelectedIds(id ? [id] : []);
                   setMaskMode(false);
                 }}
-                onColor={(color) => setBrush((b) => ({ ...b, color }))}
+                onColor={(color) => {
+                  const next = { ...brush, color };
+                  setBrush(next);
+                  if (doc) commit({ ...doc, brushSettings: next }, "Sample brush color");
+                }}
                 disabled={busy}
                 rendering={
                   rendering ||
@@ -1964,6 +2033,7 @@ export default function ProWorkspace({
                 <nav className="pro-panel-tabs" aria-label="Pro panels">
                   {(
                     [
+                      "refine",
                       "properties",
                       "transform",
                       "geometry",
@@ -2001,6 +2071,52 @@ export default function ProWorkspace({
                     ))}
                 </nav>
                 <div className="pro-panel-content">
+                  {tab === "refine" && doc && (
+                    <ProRefine
+                      document={doc}
+                      sample={refineSample}
+                      onArmSample={armRefineSample}
+                      disabled={busy || !!transformDraft}
+                      canMask={!!active && !isLocked(doc, active.id)}
+                      onGenerate={async (options: RefineOptions) => {
+                        if (!renderer.current || busyRef.current) return;
+                        busyRef.current = true;
+                        setBusy(true);
+                        setCancellable(true);
+                        setProgress("Refining selection at source resolution…");
+                        setError("");
+                        try {
+                          const result = await renderer.current.refine(
+                            doc,
+                            maxArea,
+                            options,
+                            (done, total) =>
+                              setProgress(`Refining selection · tile ${done} of ${total}`),
+                          );
+                          if (
+                            result.region &&
+                            alive.current &&
+                            historyRef.current?.present.doc === doc
+                          )
+                            return { regions: [result.region], inverted: false, feather: 0 };
+                        } catch (e) {
+                          if ((e as Error).name !== "AbortError") setError(storageMessage(e));
+                        } finally {
+                          busyRef.current = false;
+                          setBusy(false);
+                          setCancellable(false);
+                          setProgress("");
+                        }
+                      }}
+                      onPreview={setRefinePreview}
+                      onView={setSelectionView}
+                      onDocument={commit}
+                      onApply={(next, mask) => {
+                        if (mask && active) patch({ mask: maskFromSelection(next, active, doc) });
+                        else setSelection(next);
+                      }}
+                    />
+                  )}
                   {tab === "appearance" && (
                     <ProVectorAppearance
                       layer={
@@ -2102,25 +2218,22 @@ export default function ProWorkspace({
                       onSelection={setSelection}
                       onMask={() => {
                         if (active && doc) {
-                          patch({
-                            mask: {
-                              selection:
-                                selection.regions.length || selection.inverted
-                                  ? toLocalSelection(selection, active, {
-                                      width: doc.width,
-                                      height: doc.height,
-                                    })
-                                  : { regions: [], inverted: true, feather: 0 },
-                              strokes: [],
-                              enabled: true,
-                            },
-                          });
+                          patch({ mask: maskFromSelection(selection, active, doc) });
                           setMaskMode(true);
                           setTool("brush");
                         }
                       }}
                       brush={brush}
-                      onBrush={(p) => setBrush((b) => ({ ...b, ...p }))}
+                      onBrush={(p) => {
+                        const next = { ...brush, ...p };
+                        setBrush(next);
+                        if (doc)
+                          commit(
+                            { ...doc, brushSettings: next },
+                            "Brush settings",
+                            "brush-settings",
+                          );
+                      }}
                       cloneSource={cloneSource}
                       cloneSampleArmed={cloneSampleArmed}
                       onArmCloneSample={() => {
@@ -2131,7 +2244,21 @@ export default function ProWorkspace({
                         setCloneSource((source) => (source ? { ...source, aligned } : source))
                       }
                       brushPresets={brushPresets}
-                      onApplyBrushPreset={(preset) => setBrush((b) => ({ ...b, ...preset }))}
+                      onPresets={(next) => {
+                        if (saveBrushPresets(browserBrushStorage(), next)) setBrushPresets(next);
+                        else
+                          setError(
+                            "Could not save brush presets. Existing preferences are unchanged.",
+                          );
+                      }}
+                      onApplyBrushPreset={(preset, presetTool) => {
+                        if (presetTool) chooseTool(presetTool);
+                        const next = { ...brush, ...preset };
+                        setBrush(next);
+                        const current = historyRef.current?.present.doc;
+                        if (current)
+                          commit({ ...current, brushSettings: next }, "Apply brush preset");
+                      }}
                       onSaveBrushPreset={(name) => {
                         try {
                           const next = upsertBrushPreset(brushPresets, {
@@ -2143,6 +2270,11 @@ export default function ProWorkspace({
                               flow: brush.flow,
                               color: brush.color === "transparent" ? "#172420" : brush.color,
                               ...(brush.tip ? { tip: brush.tip } : {}),
+                              ...(brush.dynamics
+                                ? { dynamics: structuredClone(brush.dynamics) }
+                                : {}),
+                              sizePressure: brush.sizePressure,
+                              smoothing: brush.smoothing,
                             },
                           });
                           if (!saveBrushPresets(browserBrushStorage(), next))
@@ -2160,6 +2292,59 @@ export default function ProWorkspace({
                       }}
                       maskMode={maskMode}
                       setMaskMode={setMaskMode}
+                      maskClipboard={!!maskClipboard}
+                      onCopyMask={() => {
+                        try {
+                          if (active) setMaskClipboard(copyLayerMask(active));
+                        } catch (e) {
+                          setError(storageMessage(e));
+                        }
+                      }}
+                      onPasteMask={() => {
+                        if (maskClipboard) patch({ mask: structuredClone(maskClipboard) });
+                      }}
+                      onApplyMask={async () => {
+                        if (
+                          !doc ||
+                          !active ||
+                          !renderer.current ||
+                          !sessionRef.current ||
+                          busyRef.current
+                        )
+                          return;
+                        busyRef.current = true;
+                        setBusy(true);
+                        setCancellable(true);
+                        setProgress("Baking layer and mask…");
+                        const current = sessionRef.current;
+                        try {
+                          const result = await renderer.current.applyMask(doc, maxArea, active.id);
+                          if (!result.document || !result.blob || !result.assetId || !alive.current)
+                            return;
+                          const next = {
+                            ...current,
+                            document: result.document,
+                            assets: { ...current.assets, [result.assetId]: result.blob },
+                          };
+                          validateAssets(next);
+                          sessionRef.current = next;
+                          setSession(next);
+                          busyRef.current = false;
+                          commit(next.document, "Bake layer and mask (destructive)");
+                          setMaskMode(false);
+                          setAssetEpoch((n) => n + 1);
+                          setStatus(
+                            "Layer and mask baked. Undo and the retained original artwork are available.",
+                          );
+                        } catch (e) {
+                          if ((e as Error).name !== "AbortError") setError(storageMessage(e));
+                        } finally {
+                          busyRef.current = false;
+                          setBusy(false);
+                          setCancellable(false);
+                          setProgress("");
+                        }
+                      }}
                     />
                   )}
                   {tab === "layers" && doc && (

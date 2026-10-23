@@ -1,3 +1,5 @@
+import { maskPaintPoint, maskWorld } from "@/lib/studio/pro/masks";
+import { fromAffine } from "@/lib/studio/pro/transform";
 import { clipPath } from "@/lib/studio/pro/vector-clip";
 import { gradientHandles, moveGradientHandle } from "@/lib/studio/pro/vector-appearance";
 import { measureTextPath } from "@/lib/studio/pro/text-path";
@@ -147,6 +149,7 @@ export function ProCanvas({
   onError,
   tool,
   selection,
+  selectionView = "overlay",
   onSelection,
   brush,
   operation,
@@ -194,6 +197,7 @@ export function ProCanvas({
   onError: (message: string) => void;
   tool: ProTool;
   selection: Selection;
+  selectionView?: "overlay" | "mask" | "ants";
   onSelection: (s: Selection) => void;
   brush: Omit<Stroke, "points" | "erase">;
   operation: Region["operation"];
@@ -430,14 +434,59 @@ export function ProCanvas({
     target.width = mask.width;
     target.height = mask.height;
     const ctx = target.getContext("2d")!;
+    let animation = 0;
     ctx.clearRect(0, 0, target.width, target.height);
     ctx.drawImage(mask, 0, 0);
-    ctx.globalCompositeOperation = "source-in";
-    ctx.fillStyle = "rgba(30, 140, 255, 0.35)";
-    ctx.fillRect(0, 0, target.width, target.height);
+    if (selectionView === "mask") {
+      ctx.globalCompositeOperation = "destination-over";
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, target.width, target.height);
+    } else if (selectionView === "ants") {
+      const image = ctx.getImageData(0, 0, target.width, target.height),
+        original = image.data.slice();
+      for (let y = 0; y < target.height; y++)
+        for (let x = 0; x < target.width; x++) {
+          const i = (y * target.width + x) * 4,
+            inside = original[i + 3]! >= 128;
+          const edge =
+            inside &&
+            (x === 0 ||
+              y === 0 ||
+              x === target.width - 1 ||
+              y === target.height - 1 ||
+              [-1, 1, -target.width, target.width].some((d) => original[i + d * 4 + 3]! < 128));
+          image.data[i] = image.data[i + 1] = image.data[i + 2] = (x + y) % 8 < 4 ? 255 : 0;
+          image.data[i + 3] = edge ? 255 : 0;
+        }
+      const edges: number[] = [];
+      for (let i = 0; i < image.data.length; i += 4) if (image.data[i + 3]) edges.push(i);
+      let previous = 0,
+        phase = 0;
+      const animate = (time: number) => {
+        if (time - previous >= 100) {
+          previous = time;
+          phase++;
+          for (const i of edges) {
+            const x = (i / 4) % target.width,
+              y = Math.floor(i / 4 / target.width),
+              value = (x + y + phase) % 8 < 4 ? 255 : 0;
+            image.data[i] = image.data[i + 1] = image.data[i + 2] = value;
+          }
+          ctx.putImageData(image, 0, 0);
+        }
+        animation = requestAnimationFrame(animate);
+      };
+      ctx.putImageData(image, 0, 0);
+      animation = requestAnimationFrame(animate);
+    } else {
+      ctx.globalCompositeOperation = "source-in";
+      ctx.fillStyle = "rgba(30, 140, 255, 0.35)";
+      ctx.fillRect(0, 0, target.width, target.height);
+    }
     ctx.globalCompositeOperation = "source-over";
     mask.width = mask.height = 1;
-  }, [visibleSelection, doc.width, doc.height, before]);
+    return () => cancelAnimationFrame(animation);
+  }, [visibleSelection, doc.width, doc.height, before, selectionView]);
   const hit = (p: Point) => {
     const ctx = canvasRef.current?.getContext("2d");
     const visible = visibleLayerIds(doc);
@@ -722,10 +771,10 @@ export function ProCanvas({
           points: [
             brushPoint(
               undefined,
-              localPoint(p, selected),
+              { ...localPoint(p, selected), ...(brush.dynamics ? { time: e.timeStamp } : {}) },
               e.pointerType,
               e.pressure,
-              brush.sizePressure ?? false,
+              (brush.sizePressure || brush.dynamics?.opacityPressure) ?? false,
               0,
             ),
           ],
@@ -770,13 +819,28 @@ export function ProCanvas({
       if (
         !selected ||
         isLocked(doc, selected.id) ||
-        selected.kind === "group" ||
+        (selected.kind === "group" && !maskMode) ||
         (!maskMode && selected.kind !== "paint")
       )
         return;
       const clip =
         selection.regions.length || selection.inverted
-          ? toLocalSelection(selection, selected, { width: doc.width, height: doc.height })
+          ? toLocalSelection(
+              selection,
+              maskMode && selected.mask?.placement
+                ? {
+                    ...selected,
+                    transform: fromAffine(maskWorld(selected), {
+                      x: 0,
+                      y: 0,
+                      scaleX: 1,
+                      scaleY: 1,
+                      rotation: 0,
+                    }),
+                  }
+                : selected,
+              { width: doc.width, height: doc.height },
+            )
           : undefined;
       gesture.current = {
         ...base,
@@ -784,16 +848,22 @@ export function ProCanvas({
         id: selected.id,
         stroke: {
           ...brush,
+          ...(brush.dynamics ? { seed: crypto.getRandomValues(new Uint32Array(1))[0]! || 1 } : {}),
           ...(tool === "pencil" ? { hardness: 1, tip: "square" as const } : {}),
           clip,
           erase: maskMode && selected.mask?.inverted ? tool !== "eraser" : tool === "eraser",
           points: [
             brushPoint(
               undefined,
-              localPoint(p, selected),
+              {
+                ...(maskMode
+                  ? maskPaintPoint(selected, localPoint(p, selected))
+                  : localPoint(p, selected)),
+                ...(brush.dynamics ? { time: e.timeStamp } : {}),
+              },
               e.pointerType,
               e.pressure,
-              brush.sizePressure ?? false,
+              (brush.sizePressure || brush.dynamics?.opacityPressure) ?? false,
               0,
             ),
           ],
@@ -833,10 +903,10 @@ export function ProCanvas({
           points: [
             brushPoint(
               undefined,
-              localPoint(p, selected),
+              { ...localPoint(p, selected), ...(brush.dynamics ? { time: e.timeStamp } : {}) },
               e.pointerType,
               e.pressure,
-              brush.sizePressure ?? false,
+              (brush.sizePressure || brush.dynamics?.opacityPressure) ?? false,
               0,
             ),
           ],
@@ -987,7 +1057,13 @@ export function ProCanvas({
   };
   const update = (
     screen: Point,
-    input?: { pointerType: string; pressure: number; shiftKey?: boolean; altKey?: boolean },
+    input?: {
+      pointerType: string;
+      pressure: number;
+      time?: number;
+      shiftKey?: boolean;
+      altKey?: boolean;
+    },
   ): ProDocument | null => {
     const g = gesture.current;
     if (!g) return null;
@@ -1282,16 +1358,17 @@ export function ProCanvas({
     if (g.type === "paint" || g.type === "repair") {
       const s = g.stroke!,
         previous = s.points.at(-1)!,
-        q = localPoint(p, l);
+        q = maskMode && g.type === "paint" ? maskPaintPoint(l, localPoint(p, l)) : localPoint(p, l);
       if (Math.hypot(q.x - previous.x, q.y - previous.y) > 0.001)
         s.points.push(
           brushPoint(
             previous,
-            q,
+            { ...q, ...(s.dynamics ? { time: input?.time ?? performance.now() } : {}) },
             input?.pointerType ?? "mouse",
             input?.pressure ?? 1,
-            s.sizePressure ?? false,
+            (s.sizePressure || s.dynamics?.opacityPressure) ?? false,
             s.smoothing ?? 0,
+            s.dynamics?.stabilization ?? 0,
           ),
         );
       if (g.type === "repair") return null;
@@ -1341,6 +1418,7 @@ export function ProCanvas({
         {
           pointerType: sample.pointerType,
           pressure: sample.pressure,
+          time: sample.timeStamp,
           shiftKey: sample.shiftKey,
           altKey: sample.altKey,
         },
@@ -1366,6 +1444,7 @@ export function ProCanvas({
         { x: e.clientX, y: e.clientY },
         {
           pointerType: e.pointerType,
+          time: e.timeStamp,
           shiftKey: e.shiftKey,
           altKey: e.altKey,
           pressure:

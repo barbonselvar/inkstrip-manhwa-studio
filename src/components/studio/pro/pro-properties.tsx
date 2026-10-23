@@ -1,3 +1,11 @@
+import { ProMaskThumbnail } from "./pro-mask-thumbnail";
+import { setMaskLinked } from "@/lib/studio/pro/masks";
+import {
+  DEFAULT_BRUSH_PRESETS,
+  availableBrushPresets,
+  renameBrushPreset,
+} from "@/lib/studio/pro/brush-presets";
+import { DAB_DEFAULTS } from "@/lib/studio/pro/brush-dynamics";
 import { ProAppearance } from "./pro-appearance";
 import type { ReactNode } from "react";
 import { ProColor } from "./pro-color";
@@ -59,12 +67,17 @@ export function ProProperties({
   onApplyBrushPreset,
   onSaveBrushPreset,
   onDeleteBrushPreset,
+  onPresets,
   cloneSource,
   cloneSampleArmed,
   onArmCloneSample,
   onCloneAlignment,
   maskMode,
   setMaskMode,
+  maskClipboard,
+  onCopyMask,
+  onPasteMask,
+  onApplyMask,
 }: {
   anchorControls?: ReactNode;
   selected?: Layer;
@@ -76,16 +89,22 @@ export function ProProperties({
   brush: Omit<Stroke, "points" | "erase">;
   onBrush: (p: Partial<Stroke>) => void;
   brushPresets: BrushPreset[];
-  onApplyBrushPreset: (settings: BrushSettings) => void;
+  onApplyBrushPreset: (settings: BrushSettings, tool?: "brush" | "pencil" | "eraser") => void;
   onSaveBrushPreset: (name: string) => void;
   onDeleteBrushPreset: (name: string) => void;
+  onPresets: (presets: BrushPreset[]) => void;
   cloneSource: CloneSource | null;
   cloneSampleArmed: boolean;
   onArmCloneSample: () => void;
   onCloneAlignment: (aligned: boolean) => void;
   maskMode: boolean;
   setMaskMode: (v: boolean) => void;
+  maskClipboard: boolean;
+  onCopyMask: () => void;
+  onPasteMask: () => void;
+  onApplyMask: () => void;
 }) {
+  const presets = availableBrushPresets(brushPresets);
   return (
     <div className="pro-properties-content">
       <ToolSection title="Brush & selection" defaultOpen>
@@ -141,6 +160,69 @@ export function ProProperties({
           max={95}
           onChange={(n) => onBrush({ smoothing: n / 100 })}
         />
+        <ToolSection title="Brush dynamics" defaultOpen={false}>
+          <p className="pro-help">
+            Distance-based dabs with deterministic jitter. Pressure uses a real pen only; mouse and
+            touch use full configured strength.
+          </p>
+          <ProNumber
+            label="Brush stabilization"
+            value={brush.dynamics?.stabilization ?? 0}
+            min={0}
+            max={200}
+            onChange={(n) =>
+              onBrush({ dynamics: { ...DAB_DEFAULTS, ...brush.dynamics, stabilization: n } })
+            }
+          />
+          <div className="pro-number-grid">
+            {(
+              [
+                ["spacing", "Dab spacing", 0.01, 2, 0.01],
+                ["roundness", "Brush roundness", 0.05, 1, 0.05],
+                ["angle", "Brush angle", -360, 360, 1],
+                ["scatter", "Brush scatter", 0, 2, 0.05],
+                ["sizeJitter", "Size jitter", 0, 1, 0.05],
+                ["opacityJitter", "Opacity jitter", 0, 1, 0.05],
+                ["velocity", "Velocity thinning", 0, 1, 0.05],
+              ] as const
+            ).map(([key, label, min, max, step]) => (
+              <ProNumber
+                key={key}
+                label={label}
+                value={(brush.dynamics ?? DAB_DEFAULTS)[key]}
+                min={min}
+                max={max}
+                step={step}
+                onChange={(n) =>
+                  onBrush({ dynamics: { ...DAB_DEFAULTS, ...brush.dynamics, [key]: n } })
+                }
+              />
+            ))}
+          </div>
+          {(
+            [
+              ["opacityPressure", "Pen pressure opacity"],
+              ["followDirection", "Rotate tip along stroke"],
+            ] as const
+          ).map(([key, label]) => (
+            <label className="pro-check" key={key}>
+              <input
+                type="checkbox"
+                aria-label={label}
+                checked={brush.dynamics?.[key] ?? false}
+                onChange={(e) =>
+                  onBrush({
+                    dynamics: { ...DAB_DEFAULTS, ...brush.dynamics, [key]: e.target.checked },
+                  })
+                }
+              />
+              {label}
+            </label>
+          ))}
+          <Button variant="ghost" onClick={() => onBrush({ dynamics: { ...DAB_DEFAULTS } })}>
+            Reset brush dynamics
+          </Button>
+        </ToolSection>
         <label className="pro-field">
           Brush preset
           <select
@@ -148,14 +230,23 @@ export function ProProperties({
             aria-label="Brush preset"
             value=""
             onChange={(e) => {
-              const preset = brushPresets.find((item) => item.name === e.target.value);
-              if (preset) onApplyBrushPreset(preset.settings);
+              const preset = presets.find((item) => item.name === e.target.value);
+              if (preset)
+                onApplyBrushPreset(
+                  {
+                    ...preset.settings,
+                    dynamics: preset.settings.dynamics,
+                    sizePressure: preset.settings.sizePressure ?? false,
+                    smoothing: preset.settings.smoothing ?? 0,
+                  },
+                  preset.tool ?? "brush",
+                );
             }}
           >
             <option value="" disabled>
               Choose a preset
             </option>
-            {brushPresets.map((preset) => (
+            {presets.map((preset) => (
               <option key={preset.name} value={preset.name}>
                 {preset.name}
               </option>
@@ -174,7 +265,47 @@ export function ProProperties({
           </Button>
           <Button
             variant="ghost"
-            disabled={brushPresets.length <= 3}
+            onClick={() => {
+              const name = window.prompt("Custom preset to rename"),
+                next = name ? window.prompt("New preset name") : null;
+              if (name && next) {
+                try {
+                  onPresets(renameBrushPreset(brushPresets, name.trim(), next.trim()));
+                } catch (e) {
+                  window.alert((e as Error).message);
+                }
+              }
+            }}
+          >
+            Rename custom preset
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              const name = window.prompt("Preset to duplicate"),
+                next = name ? window.prompt("Name of duplicate") : null;
+              const original = presets.find((p) => p.name === name?.trim());
+              if (
+                original &&
+                next?.trim() &&
+                !brushPresets.some((p) => p.name === next.trim()) &&
+                brushPresets.length < 24
+              )
+                onPresets([
+                  ...brushPresets,
+                  {
+                    name: next.trim().slice(0, 40),
+                    settings: structuredClone(original.settings),
+                    ...(original.tool ? { tool: original.tool } : {}),
+                  },
+                ]);
+            }}
+          >
+            Duplicate preset
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={brushPresets.length <= DEFAULT_BRUSH_PRESETS.length}
             onClick={() => {
               const name = window.prompt("Enter the exact name of the custom preset to delete");
               if (name?.trim()) onDeleteBrushPreset(name.trim());
@@ -614,63 +745,114 @@ export function ProProperties({
               />
             )}
             <ProAppearance layer={selected} onPatch={onPatch} />
-            {selected.kind !== "group" && (
-              <ToolSection title="Layer mask">
-                <p className="pro-help">
-                  White reveals, eraser hides. The source pixels remain intact. A selection becomes
-                  a local mask on this layer.
-                </p>
-                <Button variant="secondary" onClick={onMask}>
-                  Mask from selection
-                </Button>
-                {selected.mask && (
-                  <>
-                    <label className="pro-check">
-                      <input
-                        aria-label="Enable layer mask"
-                        type="checkbox"
-                        checked={selected.mask.enabled}
-                        onChange={(e) =>
-                          onPatch({ mask: { ...selected.mask!, enabled: e.target.checked } })
-                        }
-                      />{" "}
-                      Enable mask
-                    </label>
-                    <label className="pro-check">
-                      <input
-                        aria-label="Paint layer mask"
-                        type="checkbox"
-                        checked={maskMode}
-                        onChange={(e) => setMaskMode(e.target.checked)}
-                      />{" "}
-                      Paint mask instead of pixels
-                    </label>
+            <ToolSection title="Layer mask">
+              <p className="pro-help">
+                White reveals, eraser hides. The source pixels remain intact. A selection becomes a
+                local mask on this layer.
+              </p>
+              <Button variant="secondary" onClick={onMask}>
+                Mask from selection
+              </Button>
+              <Button variant="ghost" disabled={!maskClipboard} onClick={onPasteMask}>
+                Paste mask in canvas position
+              </Button>
+              {selected.mask && (
+                <>
+                  <ProMaskThumbnail layer={selected} />
+                  <div className="pro-actions">
+                    <Button
+                      variant="secondary"
+                      disabled={!!selected.transform.deform}
+                      onClick={onCopyMask}
+                    >
+                      Copy mask
+                    </Button>
                     <Button
                       variant="ghost"
+                      disabled={!!selected.transform.deform}
                       onClick={() =>
-                        onPatch({
-                          mask: {
-                            ...selected.mask!,
-                            inverted: !selected.mask!.inverted,
-                          },
-                        })
+                        onPatch({ mask: setMaskLinked(selected, selected.mask!.linked === false) })
                       }
                     >
-                      Invert mask
+                      {selected.mask.linked === false
+                        ? "Link mask to layer"
+                        : "Unlink mask from layer"}
                     </Button>
                     <Button
-                      variant="ghost"
-                      onClick={() => {
-                        onPatch({ mask: undefined });
-                        setMaskMode(false);
-                      }}
+                      variant="danger"
+                      disabled={
+                        !selected.mask.enabled || !["raster", "paint"].includes(selected.kind)
+                      }
+                      onClick={onApplyMask}
                     >
-                      Remove mask
+                      Bake layer and mask (destructive)
                     </Button>
-                  </>
-                )}
-              </ToolSection>
-            )}
+                  </div>
+                  <div className="pro-number-grid">
+                    <ProNumber
+                      label="Mask density"
+                      value={(selected.mask.density ?? 1) * 100}
+                      min={0}
+                      max={100}
+                      onChange={(n) =>
+                        onPatch({ mask: { ...selected.mask!, density: n / 100 } }, "mask-density")
+                      }
+                    />
+                    <ProNumber
+                      label="Mask feather"
+                      value={selected.mask.feather ?? 0}
+                      min={0}
+                      max={100}
+                      onChange={(n) =>
+                        onPatch({ mask: { ...selected.mask!, feather: n } }, "mask-feather")
+                      }
+                    />
+                  </div>
+                  <label className="pro-check">
+                    <input
+                      aria-label="Enable layer mask"
+                      type="checkbox"
+                      checked={selected.mask.enabled}
+                      onChange={(e) =>
+                        onPatch({ mask: { ...selected.mask!, enabled: e.target.checked } })
+                      }
+                    />{" "}
+                    Enable mask
+                  </label>
+                  <label className="pro-check">
+                    <input
+                      aria-label="Paint layer mask"
+                      type="checkbox"
+                      checked={maskMode}
+                      onChange={(e) => setMaskMode(e.target.checked)}
+                    />{" "}
+                    Paint mask instead of pixels
+                  </label>
+                  <Button
+                    variant="ghost"
+                    onClick={() =>
+                      onPatch({
+                        mask: {
+                          ...selected.mask!,
+                          inverted: !selected.mask!.inverted,
+                        },
+                      })
+                    }
+                  >
+                    Invert mask
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      onPatch({ mask: undefined });
+                      setMaskMode(false);
+                    }}
+                  >
+                    Remove mask
+                  </Button>
+                </>
+              )}
+            </ToolSection>
           </fieldset>
         </>
       )}

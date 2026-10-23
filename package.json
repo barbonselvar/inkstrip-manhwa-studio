@@ -41,7 +41,10 @@
     "test:artboards:browser": "node --experimental-strip-types scripts/artboards-browser-check.mjs",
     "test:vector-final:browser": "node --experimental-strip-types scripts/vector-final-browser-check.mjs",
     "bench:vector": "node --experimental-strip-types scripts/vector-benchmark.mjs",
-    "test:production:browser": "node --experimental-strip-types scripts/production-vector-check.mjs"
+    "test:production:browser": "node --experimental-strip-types scripts/production-vector-check.mjs",
+    "test:raster-refinement:browser": "node --experimental-strip-types scripts/raster-refinement-browser-check.mjs",
+    "bench:raster": "node --expose-gc --experimental-strip-types scripts/raster-benchmark.mjs",
+    "bench:raster:browser": "node --experimental-strip-types scripts/raster-render-benchmark.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

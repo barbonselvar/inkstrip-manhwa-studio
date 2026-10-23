@@ -45,31 +45,52 @@ export async function nativeFile(s: ProSession): Promise<Blob> {
   // Curve/style features use envelope v2; artboards/layout use v3. Old readers
   // reject newer envelopes safely; v4 adds appearance, path text and binary clips.
   // Internal v1 geometry and legacy files still work.
-  const version = s.document.layers.some(
-    (l) => l.appearance !== undefined || l.textPath !== undefined || l.vectorClips !== undefined,
-  )
-    ? 4
-    : s.document.artboards !== undefined || s.document.layout !== undefined
-      ? 3
+  const version =
+    s.document.brushSettings !== undefined ||
+    s.document.savedSelections !== undefined ||
+    s.document.layers.some(
+      (l) =>
+        (l.kind === "group" && !!l.mask) ||
+        l.mask?.placement !== undefined ||
+        l.mask?.linked !== undefined ||
+        l.mask?.width !== undefined ||
+        l.mask?.density !== undefined ||
+        l.mask?.feather !== undefined ||
+        l.strokes.some((s) => s.dynamics !== undefined) ||
+        l.mask?.strokes.some((s) => s.dynamics !== undefined),
+    )
+      ? 5
       : s.document.layers.some(
             (l) =>
-              l.subpaths?.length ||
-              l.vectorOverflow ||
-              l.fillRule === "evenodd" ||
-              l.lineCap !== undefined ||
-              l.lineJoin !== undefined ||
-              l.miterLimit !== undefined ||
-              l.dash !== undefined ||
-              l.dashOffset !== undefined ||
-              l.fillOpacity !== undefined ||
-              l.strokeOpacity !== undefined,
+              l.appearance !== undefined || l.textPath !== undefined || l.vectorClips !== undefined,
           )
-        ? 2
-        : 1;
-  return new Blob(
+        ? 4
+        : s.document.artboards !== undefined || s.document.layout !== undefined
+          ? 3
+          : s.document.layers.some(
+                (l) =>
+                  l.subpaths?.length ||
+                  l.vectorOverflow ||
+                  l.fillRule === "evenodd" ||
+                  l.lineCap !== undefined ||
+                  l.lineJoin !== undefined ||
+                  l.miterLimit !== undefined ||
+                  l.dash !== undefined ||
+                  l.dashOffset !== undefined ||
+                  l.fillOpacity !== undefined ||
+                  l.strokeOpacity !== undefined,
+              )
+            ? 2
+            : 1;
+  const file = new Blob(
     [JSON.stringify({ format: "inkstrip-pro", version, document: s.document, assets })],
     { type: "application/json" },
   );
+  if (file.size > 70_000_000)
+    throw Error(
+      "The native document exceeds the 70MB portable-file limit. Simplify saved selections or split artwork into smaller editable documents before exporting; your current work and original images are unchanged.",
+    );
+  return file;
 }
 export async function readNative(
   blob: Blob,
@@ -81,13 +102,13 @@ export async function readNative(
   if (
     !value ||
     value.format !== "inkstrip-pro" ||
-    ![1, 2, 3, 4].includes(value.version) ||
+    ![1, 2, 3, 4, 5].includes(value.version) ||
     !value.assets ||
     typeof value.assets !== "object" ||
     Array.isArray(value.assets)
   )
     throw new Error(
-      "Unsupported native document. This editor supports Inkstrip Pro native versions 1, 2, 3 and 4.",
+      "Unsupported native document. This editor supports Inkstrip Pro native versions 1 through 5.",
     );
   const assets: Record<string, Blob> = Object.create(null);
   let total = 0;

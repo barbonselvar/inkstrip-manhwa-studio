@@ -1,5 +1,16 @@
 # Inkstrip release changelog
 
+## Phase E — Raster refinement (development; release validation pending)
+
+- Native-resolution Select and Mask with local color matting, morphology, cleanup,
+  preview/apply/cancel, canvas color samples and named selections.
+- Deterministic brush dynamics/presets, editable mask properties/linkage/clipboard,
+  group masks, undoable baking and native v5 compatibility.
+- Consistent 4096-square Pro budgets, tiled refinement, bounded mask previews and
+  history, measured real browser/native-export benchmarks.
+- [Feature audit, algorithm contracts and limits](PHASE_E_RASTER_REFINEMENT.md).
+  Existing Raster/Vector/Chapter/AI/3D engines and immutable sources are preserved.
+
 ## Phase D — complete vector engine implementation (release gated in PR #3)
 
 - Increment D: native v4 editable fill/stroke stacks, aligned and dashed strokes,

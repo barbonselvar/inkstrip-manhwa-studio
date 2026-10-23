@@ -1,3 +1,4 @@
+import type { RefineOptions } from "./refine-selection";
 import type { Frame, Artboard } from "./artboards";
 import type { RepairRequest } from "./repair";
 import type { ColorSelectionOptions } from "./selection";
@@ -6,6 +7,7 @@ type RenderReply = {
   bitmap?: ImageBitmap;
   blob?: Blob;
   region?: Region;
+  sample?: [number, number, number];
   document?: ProDocument;
   assetId?: string;
   layerId?: string;
@@ -76,7 +78,7 @@ export class ProRenderer {
       this.worker.postMessage({ id, type, ...input });
     });
   }
-  init(session: ProSession, maxArea = 16_000_000) {
+  init(session: ProSession, maxArea = 16_777_216) {
     return this.request("init", { session, maxArea });
   }
   render(document: ProDocument, maxArea: number, frame?: Frame) {
@@ -116,6 +118,20 @@ export class ProRenderer {
     options: ColorSelectionOptions,
   ) {
     return this.request("select", { document, maxArea, point, options });
+  }
+  sample(document: ProDocument, maxArea: number, point: { x: number; y: number }) {
+    return this.request("sample", { document, maxArea, point });
+  }
+  applyMask(document: ProDocument, maxArea: number, layerId: string) {
+    return this.request("apply-mask", { document, maxArea, layerId });
+  }
+  refine(
+    document: ProDocument,
+    maxArea: number,
+    options: RefineOptions,
+    progress?: (n: number, t: number) => void,
+  ) {
+    return this.request("refine", { document, maxArea, options }, progress);
   }
   repair(document: ProDocument, maxArea: number, request: RepairRequest) {
     return this.request("repair", { document, maxArea, request });

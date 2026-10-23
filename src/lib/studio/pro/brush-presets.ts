@@ -1,7 +1,12 @@
+import { validateDynamics } from "./brush-dynamics.ts";
 import type { Stroke } from "./model.ts";
 
 export type BrushSettings = Omit<Stroke, "points" | "erase" | "clip">;
-export type BrushPreset = { name: string; settings: BrushSettings };
+export type BrushPreset = {
+  name: string;
+  settings: BrushSettings;
+  tool?: "brush" | "pencil" | "eraser";
+};
 
 export const DEFAULT_BRUSH_PRESETS: BrushPreset[] = [
   {
@@ -36,6 +41,13 @@ export function browserBrushStorage(): Pick<Storage, "getItem" | "setItem"> | un
 const validSettings = (v: unknown): v is BrushSettings => {
   if (!v || typeof v !== "object") return false;
   const s = v as Record<string, unknown>;
+  if (s.dynamics !== undefined) {
+    try {
+      validateDynamics(s.dynamics as NonNullable<Stroke["dynamics"]>);
+    } catch {
+      return false;
+    }
+  }
   return (
     typeof s.size === "number" &&
     Number.isFinite(s.size) &&
@@ -69,6 +81,7 @@ export function validateBrushPreset(value: unknown): value is BrushPreset {
     typeof preset.name === "string" &&
     preset.name.trim().length > 0 &&
     preset.name.length <= 40 &&
+    (preset.tool === undefined || ["brush", "pencil", "eraser"].includes(preset.tool as string)) &&
     validSettings(preset.settings)
   );
 }
@@ -100,7 +113,213 @@ export function saveBrushPresets(
 
 export function upsertBrushPreset(presets: BrushPreset[], preset: BrushPreset): BrushPreset[] {
   if (!validateBrushPreset(preset)) throw new Error("Brush preset is invalid.");
-  const next = presets.filter((p) => p.name !== preset.name);
+  const next = presets.filter((p) => p.name !== preset.name.trim());
   if (next.length >= 24) throw new Error("A maximum of 24 brush presets can be saved.");
-  return [...next, { name: preset.name.trim(), settings: { ...preset.settings } }];
+  return [
+    ...next,
+    {
+      name: preset.name.trim(),
+      settings: { ...preset.settings },
+      ...(preset.tool ? { tool: preset.tool } : {}),
+    },
+  ];
+}
+
+/** Additional factory recipes use the same versioned dab renderer. The three
+ * historical presets remain unchanged, including existing saved preferences. */
+export const PROFESSIONAL_BRUSH_PRESETS: BrushPreset[] = [
+  {
+    name: "Pencil",
+    tool: "pencil",
+    settings: {
+      size: 3,
+      hardness: 1,
+      opacity: 1,
+      flow: 1,
+      color: "#172420",
+      tip: "square",
+      dynamics: {
+        spacing: 0.1,
+        roundness: 1,
+        angle: 0,
+        scatter: 0,
+        sizeJitter: 0,
+        opacityJitter: 0,
+        opacityPressure: false,
+        velocity: 0,
+        followDirection: false,
+      },
+    },
+  },
+  {
+    name: "Soft Brush",
+    settings: {
+      size: 64,
+      hardness: 0.1,
+      opacity: 0.6,
+      flow: 0.4,
+      color: "#172420",
+      dynamics: {
+        spacing: 0.08,
+        roundness: 1,
+        angle: 0,
+        scatter: 0,
+        sizeJitter: 0,
+        opacityJitter: 0,
+        opacityPressure: false,
+        velocity: 0,
+        followDirection: false,
+      },
+    },
+  },
+  {
+    name: "Eraser",
+    tool: "eraser",
+    settings: {
+      size: 32,
+      hardness: 0.8,
+      opacity: 1,
+      flow: 1,
+      color: "#172420",
+      dynamics: {
+        spacing: 0.08,
+        roundness: 1,
+        angle: 0,
+        scatter: 0,
+        sizeJitter: 0,
+        opacityJitter: 0,
+        opacityPressure: false,
+        velocity: 0,
+        followDirection: false,
+      },
+    },
+  },
+  {
+    name: "Ink Pen",
+    settings: {
+      size: 8,
+      hardness: 1,
+      opacity: 1,
+      flow: 1,
+      color: "#172420",
+      sizePressure: true,
+      smoothing: 0.3,
+      dynamics: {
+        spacing: 0.08,
+        roundness: 0.6,
+        angle: 35,
+        scatter: 0,
+        sizeJitter: 0,
+        opacityJitter: 0,
+        opacityPressure: false,
+        velocity: 0,
+        followDirection: false,
+      },
+    },
+  },
+  {
+    name: "Hard Round Brush",
+    settings: {
+      size: 24,
+      hardness: 1,
+      opacity: 1,
+      flow: 1,
+      color: "#172420",
+      dynamics: {
+        spacing: 0.1,
+        roundness: 1,
+        angle: 0,
+        scatter: 0,
+        sizeJitter: 0,
+        opacityJitter: 0,
+        opacityPressure: false,
+        velocity: 0,
+        followDirection: false,
+      },
+    },
+  },
+  {
+    name: "Airbrush",
+    settings: {
+      size: 80,
+      hardness: 0,
+      opacity: 0.7,
+      flow: 0.06,
+      color: "#172420",
+      dynamics: {
+        spacing: 0.05,
+        roundness: 1,
+        angle: 0,
+        scatter: 0,
+        sizeJitter: 0,
+        opacityJitter: 0,
+        opacityPressure: true,
+        velocity: 0,
+        followDirection: false,
+      },
+    },
+  },
+  {
+    name: "Line Art Brush",
+    settings: {
+      size: 5,
+      hardness: 1,
+      opacity: 1,
+      flow: 1,
+      color: "#172420",
+      sizePressure: true,
+      smoothing: 0.5,
+      dynamics: {
+        spacing: 0.07,
+        roundness: 1,
+        angle: 0,
+        scatter: 0,
+        sizeJitter: 0,
+        opacityJitter: 0,
+        opacityPressure: false,
+        velocity: 0.2,
+        followDirection: false,
+      },
+    },
+  },
+  {
+    name: "Texture Brush",
+    settings: {
+      size: 24,
+      hardness: 0.8,
+      opacity: 0.7,
+      flow: 0.5,
+      color: "#172420",
+      dynamics: {
+        spacing: 0.2,
+        roundness: 0.5,
+        angle: 25,
+        scatter: 0.8,
+        sizeJitter: 0.6,
+        opacityJitter: 0.4,
+        opacityPressure: false,
+        velocity: 0,
+        followDirection: true,
+      },
+    },
+  },
+];
+
+export function renameBrushPreset(presets: BrushPreset[], name: string, nextName: string) {
+  const preset = presets.find((p) => p.name === name);
+  if (!preset || DEFAULT_BRUSH_PRESETS.some((p) => p.name === name))
+    throw Error("Choose a custom preset to rename.");
+  if (presets.some((p) => p.name === nextName.trim()))
+    throw Error("A preset with that name already exists.");
+  return upsertBrushPreset(
+    presets.filter((p) => p.name !== name),
+    { ...preset, name: nextName },
+  );
+}
+
+/** Saved recipes can override a factory name without duplicate options/React keys.
+ * Deleting the custom override reveals the factory recipe again. */
+export function availableBrushPresets(stored: BrushPreset[]) {
+  const names = new Set(stored.map((p) => p.name));
+  return [...PROFESSIONAL_BRUSH_PRESETS.filter((p) => !names.has(p.name)), ...stored];
 }

@@ -113,7 +113,7 @@ export function validateGeometry(d: ProDocument) {
     s.height >= 1 &&
     s.width <= 16384 &&
     s.height <= 16384 &&
-    s.width * s.height <= 16_000_000;
+    s.width * s.height <= 16_777_216;
   if (
     d.crop !== undefined &&
     (!size(d.crop) ||
@@ -124,7 +124,7 @@ export function validateGeometry(d: ProDocument) {
       !Number.isFinite(d.crop.rotation) ||
       Math.abs(d.crop.rotation) > 180)
   )
-    throw new Error("Invalid crop (up to 16 megapixels / 16384px per side / ±180°).");
+    throw new Error("Invalid crop (up to 16.8 megapixels / 16384px per side / ±180°).");
   if (
     d.imageSize !== undefined &&
     (!size(d.imageSize) ||
