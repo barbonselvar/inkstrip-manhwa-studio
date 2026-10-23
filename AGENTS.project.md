@@ -35,9 +35,10 @@ Vercel Production domain. The baseline is 642 automated tests and 18 Chromium
 suites, including real AI and desktop/320px/390px workflows. See the final Phase D
 audit and `docs/PHASE_E_RASTER_REFINEMENT.md` before implementing anything.
 
-Next: audit and complete remaining professional Raster capabilities, starting
-with missing selection refinement, brush dynamics and mask/source-frame fidelity.
-Reuse the existing selection/repair/transform/color/effect/vector engines and
-native v4 persistence; do not duplicate completed tools. Future AI Studio is a
-separate later phase. Keep incomplete phase work on its development branch/draft
-PR and apply the release workflow above only when the entire phase is complete.
+Phase E Raster refinement is implemented on its development branch/PR #4. Read
+`docs/PHASE_E_RASTER_REFINEMENT.md` and PR #4 for the actual release/validation
+state before starting new work. Do not duplicate its selection, brush, mask,
+native v5 or high-resolution improvements. All native v1–v4 files remain readable.
+Future AI Studio is a separate phase, permitted only after the Phase E main
+release and live source-SHA verification. Preserve all source artwork and existing
+AI/Raster/Vector/Chapter/3D engines and the release policy above.

@@ -12,8 +12,9 @@ The historical inventory below is superseded for the Raster areas described in
 morphology/local color matting and staged refinement; named selections; seeded
 brush dynamics and eight factory recipes; mask density/feather/linkage/copy/paste,
 group masks, thumbnails and undoable baking; native v5 with v1–v4 compatibility;
-bounded high-resolution processing and measured native exports. Release validation
-is pending; these changes are not yet claimed as merged or deployed.
+bounded high-resolution processing and measured native exports. Release status and exact deployment evidence are recorded in
+[PR #4](https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/4); the feature
+inventory alone does not establish a deployment.
 
 Limited: color-based hair refinement needs contrast and a useful rough selection;
 affine mask placement, finite nonlinear source frames, 1,400-pixel previews,

@@ -2,8 +2,9 @@
 
 Baseline: Phase D PR #3 normal merge
 `a35e73ef90e71f79f711ce7830e8e8625e372aaa`. Development branch:
-`codex/phase-e-raster-refinement`. Release status: **development / validation**;
-this document does not claim a merge or a production deployment.
+`codex/phase-e-raster-refinement`. Release status, exact tested SHA, Actions and live deployment evidence are recorded
+in [PR #4](https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/4); this
+audit alone is not evidence of a merge or a production deployment.
 
 The shared document, worker compositor, immutable source pool and Chapter revision
 checks are retained. No replacement editor, AI model, paid API, database, auth or
@@ -105,7 +106,12 @@ pages and including browser/GPU/runtime processes and previously loaded document
 The browser benchmark overlapped regression suites. Zoom-click timing includes UI
 automation; it is not a frame-rate or gesture-latency claim.
 
-Final test counts, exact tested SHA, Actions, PR, normal merge, Vercel source SHA
-and live verification must be recorded after those gates actually finish. Do not
+Validation baseline: **673 passing automated tests**, TypeScript and production
+build/config/auth checks, with one pre-existing button fast-refresh lint warning.
+All **19 Chromium suites** passed on the integration build, including real
+Swin2SR inference and Chapter recovery. The final revision also receives the
+affected Raster/preset and release-verifier checks. Exact tested SHA, normal
+merge, Vercel source SHA and live verification are recorded in PR #4 only after
+those gates finish. Do not
 release from benchmark/build success alone. Phase F remains unstarted until the
 Phase E production release is fully verified.

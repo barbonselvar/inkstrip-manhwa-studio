@@ -1,6 +1,6 @@
 # Inkstrip release changelog
 
-## Phase E — Raster refinement (development; release validation pending)
+## Phase E — Raster refinement (PR #4)
 
 - Native-resolution Select and Mask with local color matting, morphology, cleanup,
   preview/apply/cancel, canvas color samples and named selections.
