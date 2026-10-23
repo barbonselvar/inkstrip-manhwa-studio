@@ -48,7 +48,7 @@ production environment configuration was added.
   New dynamics support at most 200,000 dabs/stroke, 10,000 recorded points/stroke,
   with the existing document command and layer limits. Texture is a stochastic dab
   recipe, not a sampled-image brush-tip library.
-- Mask placement is affine. Relink before Perspective/Warp; copying/unlinking an
+- Mask placement stores exact affine matrices (including inverses which exceed layer UI skew bounds); earlier development v5 Transform-form placements remain readable. Mask stroke selection clips capture the same exact matrix. Mask placement is affine. Relink before Perspective/Warp; copying/unlinking an
   already deformed mask is explicitly guarded. Group masks cannot be distributed
   losslessly across ungrouped children; remove/bake the group mask first. Bake is
   offered for raster/paint layers only and also commits their editable paint/tonal
@@ -106,7 +106,7 @@ pages and including browser/GPU/runtime processes and previously loaded document
 The browser benchmark overlapped regression suites. Zoom-click timing includes UI
 automation; it is not a frame-rate or gesture-latency claim.
 
-Validation baseline: **673 passing automated tests**, TypeScript and production
+Validation baseline: **674 passing automated tests**, TypeScript and production
 build/config/auth checks, with one pre-existing button fast-refresh lint warning.
 All **19 Chromium suites** passed on the integration build, including real
 Swin2SR inference and Chapter recovery. The final revision also receives the

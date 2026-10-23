@@ -45,7 +45,17 @@ export async function nativeFile(s: ProSession): Promise<Blob> {
   // Curve/style features use envelope v2; artboards/layout use v3. Old readers
   // reject newer envelopes safely; v4 adds appearance, path text and binary clips.
   // Internal v1 geometry and legacy files still work.
+  const matrixSelection = [
+    s.document.selection,
+    ...(s.document.savedSelections ?? []).map((s) => s.selection),
+    ...s.document.layers.flatMap((l) => [
+      l.colorSelection,
+      l.mask?.selection,
+      ...[...l.strokes, ...(l.mask?.strokes ?? [])].flatMap((s) => [s.clip, s.patch]),
+    ]),
+  ].some((s) => s?.frame?.matrix !== undefined);
   const version =
+    matrixSelection ||
     s.document.brushSettings !== undefined ||
     s.document.savedSelections !== undefined ||
     s.document.layers.some(

@@ -165,6 +165,21 @@ try {
       .evaluate((c) => [...c.getContext("2d").getImageData(0, 0, 1, 1).data]);
     assert.deepEqual(maskView, [0, 0, 0, 255]);
     await p.getByLabel("Selection preview", { exact: true }).selectOption("overlay");
+    // Strong non-uniform rotation needs an exact inverse, not a bounded QR skew.
+    d = fromPanel({ id: "p", name: "Affine mask", width: 128, height: 96 });
+    const affineShape = layer("shape", 20, 20, "affine-mask");
+    affineShape.fill = "#ff0000";
+    affineShape.strokeWidth = 0;
+    affineShape.transform = { x: 40, y: 0, scaleX: 10, scaleY: 1, rotation: 45 };
+    d.layers = [affineShape];
+    await load(p, d, source);
+    const affineBefore = await raster(p);
+    await p.getByRole("button", { name: "Select all", exact: true }).click();
+    await props(p);
+    await p.getByRole("button", { name: "Mask from selection", exact: true }).click();
+    same(await raster(p), affineBefore);
+    const affineNative = await native(p);
+    assert.ok(Array.isArray(affineNative.value.document.layers[0].mask.placement));
     // Mask density, feather, inversion, placement and native/export fidelity.
     d = fromPanel({ id: "p", name: "Masks", width: 128, height: 96 });
     d.layers = [];

@@ -2,7 +2,13 @@ import { validateDynamics, type DabDynamics } from "./brush-dynamics.ts";
 import { validateVectorClips, type VectorClip } from "./vector-clip.ts";
 import { validateAppearance, type AppearanceItem } from "./vector-appearance.ts";
 import { validateTextPath, checkPathText, type TextPath } from "./text-path.ts";
-import { mapping, validateTransform, type Deformation } from "./transform.ts";
+import {
+  mapping,
+  validateTransform,
+  validateAffineMatrix,
+  type Matrix,
+  type Deformation,
+} from "./transform.ts";
 import { validateGeometry, type Crop, type ImageSize } from "./geometry.ts";
 import type { Adjustments } from "../editor/adjustments";
 import { NEUTRAL, validateAdjustments } from "../editor/adjustments.ts";
@@ -44,7 +50,7 @@ export type Selection = {
   inverted: boolean;
   feather: number;
   /** Selection captured in document space; map the completed mask into this layer. */
-  frame?: { width: number; height: number; transform: Transform };
+  frame?: { width: number; height: number; transform: Transform; matrix?: Matrix };
 };
 export type CloneSource = {
   assetId: string;
@@ -93,7 +99,7 @@ export type Stroke = {
 export type Mask = {
   width?: number;
   height?: number;
-  placement?: Transform;
+  placement?: Transform | Matrix;
   linked?: boolean;
   selection: Selection;
   strokes: Stroke[];
@@ -282,6 +288,10 @@ export function validateSelection(s: Selection) {
   if (s.frame) {
     const { width, height, transform: t } = s.frame;
     validateTransform(t);
+    if (s.frame.matrix !== undefined) {
+      validateAffineMatrix(s.frame.matrix);
+      if (t.deform) throw Error("Selection frame cannot combine affine matrix and deformation.");
+    }
     if (
       !Number.isInteger(width) ||
       !Number.isInteger(height) ||
@@ -604,8 +614,12 @@ export function validateDocument(d: ProDocument) {
     }
     if (l.mask) {
       if (l.mask.placement !== undefined) {
-        validateTransform(l.mask.placement);
-        if (l.mask.placement.deform) throw Error("Mask placement supports affine transforms only.");
+        if (Array.isArray(l.mask.placement)) validateAffineMatrix(l.mask.placement);
+        else {
+          validateTransform(l.mask.placement);
+          if (l.mask.placement.deform)
+            throw Error("Mask placement supports affine transforms only.");
+        }
       }
       if (l.mask.linked === false && l.transform.deform)
         throw Error("Relink the mask before Perspective or Warp.");

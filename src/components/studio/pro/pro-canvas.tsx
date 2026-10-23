@@ -1,5 +1,4 @@
 import { maskPaintPoint, maskWorld } from "@/lib/studio/pro/masks";
-import { fromAffine } from "@/lib/studio/pro/transform";
 import { clipPath } from "@/lib/studio/pro/vector-clip";
 import { gradientHandles, moveGradientHandle } from "@/lib/studio/pro/vector-appearance";
 import { measureTextPath } from "@/lib/studio/pro/text-path";
@@ -825,22 +824,17 @@ export function ProCanvas({
         return;
       const clip =
         selection.regions.length || selection.inverted
-          ? toLocalSelection(
-              selection,
-              maskMode && selected.mask?.placement
-                ? {
-                    ...selected,
-                    transform: fromAffine(maskWorld(selected), {
-                      x: 0,
-                      y: 0,
-                      scaleX: 1,
-                      scaleY: 1,
-                      rotation: 0,
-                    }),
-                  }
-                : selected,
-              { width: doc.width, height: doc.height },
-            )
+          ? maskMode && selected.mask?.placement
+            ? {
+                ...selection,
+                frame: {
+                  width: doc.width,
+                  height: doc.height,
+                  transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+                  matrix: maskWorld(selected),
+                },
+              }
+            : toLocalSelection(selection, selected, { width: doc.width, height: doc.height })
           : undefined;
       gesture.current = {
         ...base,

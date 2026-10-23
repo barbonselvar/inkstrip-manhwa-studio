@@ -487,3 +487,47 @@ test("custom factory-name overrides are selectable once and deletion restores th
     original.settings.size,
   );
 });
+
+test("non-uniform rotated masks preserve exact affine inverses beyond bounded skew controls", async () => {
+  const { maskFromSelection, maskWorld, setMaskLinked } = await import("./masks.ts");
+  const { validateAffineMatrix } = await import("./transform.ts");
+  const d = doc(),
+    l = d.layers[0]!;
+  l.transform = { x: 5, y: 7, scaleX: 10, scaleY: 1, rotation: 45 };
+  l.mask = maskFromSelection({ regions: [], inverted: true, feather: 0 }, l, d);
+  validateDocument(d);
+  assert.ok(Array.isArray(l.mask.placement));
+  assert.ok(maskWorld(l).every((n, i) => Math.abs(n - [1, 0, 0, 1, 0, 0][i]!) < 1e-10));
+  l.mask = setMaskLinked(l, false);
+  l.transform.x += 20;
+  assert.ok(maskWorld(l).every((n, i) => Math.abs(n - [1, 0, 0, 1, 0, 0][i]!) < 1e-10));
+  l.mask = setMaskLinked(l, true);
+  validateDocument(d);
+  assert.throws(() => validateAffineMatrix([0, 0, 0, 0, 0, 0]), /Singular/);
+  assert.throws(() => validateAffineMatrix([NaN, 0, 0, 1, 0, 0]), /affine/);
+  l.mask.strokes = [
+    brush([{ x: 5, y: 5 }], {
+      clip: {
+        regions: [],
+        inverted: true,
+        feather: 0,
+        frame: {
+          width: 32,
+          height: 24,
+          transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+          matrix: maskWorld(l),
+        },
+      },
+    }),
+  ];
+  const s: ProSession = {
+    document: d,
+    assets: { source: new Blob([Uint8Array.of(1)], { type: "image/png" }) },
+    revision: 0,
+    acceptedBlobId: "source",
+    updatedAt: 0,
+  };
+  const file = await nativeFile(s);
+  assert.equal(JSON.parse(await file.text()).version, 5);
+  assert.deepEqual((await readNative(file, "p", "source")).document, d);
+});
