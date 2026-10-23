@@ -1,0 +1,41 @@
+{
+  "platform": "linux",
+  "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+  "node": "v22.22.0",
+  "method": "One cold run per size; generated line-art character silhouette with fine strands; source-resolution CPU processing; process peak RSS includes input/output and runtime, not browser/GPU memory.",
+  "measurements": [
+    {
+      "name": "2K square",
+      "width": 2048,
+      "height": 2048,
+      "refineMs": 2394.57,
+      "expand8pxMs": 192.72,
+      "peakProcessRssMiB": 131.5,
+      "centerAlpha": 255
+    },
+    {
+      "name": "4K square",
+      "width": 4096,
+      "height": 4096,
+      "refineMs": 8501.08,
+      "expand8pxMs": 891.94,
+      "peakProcessRssMiB": 245.4,
+      "centerAlpha": 255
+    },
+    {
+      "name": "Long chapter",
+      "width": 1024,
+      "height": 8192,
+      "refineMs": 4042.99,
+      "expand8pxMs": 449.19,
+      "peakProcessRssMiB": 245.5,
+      "centerAlpha": 255
+    }
+  ],
+  "brush": {
+    "strokes": 100,
+    "inputPointsPerStroke": 2000,
+    "dabs": 171200,
+    "ms": 40.61
+  }
+}
