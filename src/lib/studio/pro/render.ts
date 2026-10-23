@@ -25,6 +25,7 @@ import { cloneSourceMatrix } from "./operations";
 import { matchRepairColor } from "./repair";
 import { stacks, siblings, visibleLayerIds } from "./layers";
 import { blendClippedPixels } from "./clipping";
+import { featherAlpha, supportsCanvasFilter } from "./feather";
 type Ctx = OffscreenCanvasRenderingContext2D;
 function canvas(w: number, h: number) {
   return new OffscreenCanvas(Math.max(1, Math.ceil(w)), Math.max(1, Math.ceil(h)));
@@ -138,7 +139,19 @@ export function selectionCanvas(s: Selection, w: number, h: number, scale = 1) {
     ctx.globalCompositeOperation = "xor";
     ctx.fillRect(0, 0, output.width, output.height);
   }
-  if (s.feather) {
+  if (s.feather && !supportsCanvasFilter(ctx)) {
+    // Safari/iOS ignore Canvas `filter`; feather the coverage deterministically instead.
+    const image = ctx.getImageData(0, 0, output.width, output.height),
+      d = image.data,
+      alpha = new Uint8ClampedArray(d.length / 4);
+    for (let i = 0; i < alpha.length; i++) alpha[i] = d[i * 4 + 3]!;
+    const feathered = featherAlpha(alpha, output.width, output.height, s.feather * scale);
+    for (let i = 0; i < feathered.length; i++) {
+      d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = 255;
+      d[i * 4 + 3] = feathered[i]!;
+    }
+    ctx.putImageData(image, 0, 0);
+  } else if (s.feather) {
     const radius = s.feather * scale,
       pad = Math.ceil(radius * 3),
       w = output.width,
