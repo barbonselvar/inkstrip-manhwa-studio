@@ -24,41 +24,22 @@ import { appendSelection } from "@/lib/studio/pro/selection";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Crop as CropIcon,
-  Scan,
   ArrowLeft,
-  MousePointer2,
-  Hand,
   Brush,
-  Pencil,
-  Stamp,
-  Eraser,
-  Pipette,
-  Square,
-  Circle,
-  Minus,
-  Hexagon,
   PenTool,
-  Type,
-  MousePointer,
-  ScanLine,
-  Wand,
-  Lasso,
   Undo2,
   Redo2,
   Layers3,
-  Download,
   Save,
   Maximize2,
-  Sparkles,
-  Bandage,
   MessageCircle,
   PanelRightClose,
   PanelRightOpen,
-  Folder,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProCanvas, type ProTool } from "./pro-canvas";
+import { RASTER_TOOL_IDS, TOOLS, VECTOR_TOOL_IDS } from "./pro-tools";
+import { ProAiTab, ProAssetsTab, ProExportTab, ProHistoryTab } from "./pro-inspector-tabs";
 import { ProAnchors } from "./pro-anchors";
 import { ProPathfinder } from "./pro-pathfinder";
 import { PathfinderJob } from "@/lib/studio/pro/pathfinder-client";
@@ -75,7 +56,7 @@ import {
 import { ProTransform, type TransformDraft } from "./pro-transform";
 import { validateTransform, withPivot, bounds } from "@/lib/studio/pro/transform";
 import { ProGeometry } from "./pro-geometry";
-import { fullCrop, outputSize, type Crop } from "@/lib/studio/pro/geometry";
+import { fullCrop, type Crop } from "@/lib/studio/pro/geometry";
 import { ProProperties, ProNumber } from "./pro-properties";
 import {
   EMPTY_SELECTION,
@@ -119,107 +100,6 @@ import {
   type BrushPreset,
 } from "@/lib/studio/pro/brush-presets";
 type Entry = { doc: ProDocument; label: string };
-const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof Brush }> = [
-  { id: "gradient", name: "Vector Gradient", key: "G", Icon: ScanLine },
-  { id: "text-path", name: "Text on Path", key: "Shift+T", Icon: Type },
-  { id: "artboard", name: "Artboard Tool", key: "Q", Icon: Scan },
-  { id: "move", name: "Move", key: "V", Icon: MousePointer2 },
-  { id: "transform", name: "Free Transform", key: "F", Icon: Scan },
-  { id: "crop", name: "Crop", key: "C", Icon: CropIcon },
-  { id: "hand", name: "Hand", key: "H", Icon: Hand },
-  { id: "brush", name: "Brush", key: "B", Icon: Brush },
-  { id: "pencil", name: "Pencil", key: "N", Icon: Pencil },
-  { id: "clone", name: "Clone Stamp", key: "S", Icon: Stamp },
-  { id: "heal", name: "Healing Brush", key: "J", Icon: Brush },
-  { id: "spot", name: "Spot Healing Brush", key: "", Icon: Bandage },
-  { id: "patch", name: "Patch Repair", key: "", Icon: ScanLine },
-  { id: "eraser", name: "Eraser", key: "E", Icon: Eraser },
-  { id: "eyedropper", name: "Eyedropper", key: "I", Icon: Pipette },
-  { id: "select-rect", name: "Rectangle selection", key: "M", Icon: ScanLine },
-  { id: "select-ellipse", name: "Ellipse selection", key: "", Icon: Circle },
-  { id: "wand", name: "Magic Wand", key: "W", Icon: Wand },
-  { id: "color-range", name: "Color Range", key: "", Icon: Pipette },
-  { id: "lasso", name: "Freehand lasso", key: "L", Icon: Lasso },
-  { id: "poly-lasso", name: "Polygonal lasso", key: "", Icon: PenTool },
-  { id: "rectangle", name: "Rectangle", key: "R", Icon: Square },
-  { id: "ellipse", name: "Ellipse", key: "O", Icon: Circle },
-  { id: "line", name: "Line", key: "", Icon: Minus },
-  { id: "polygon", name: "Polygon", key: "", Icon: Hexagon },
-  { id: "pen", name: "Pen", key: "P", Icon: PenTool },
-  { id: "direct", name: "Direct select", key: "A", Icon: MousePointer },
-  { id: "text", name: "Text", key: "T", Icon: Type },
-];
-const RASTER_TOOL_IDS = new Set<ProTool>([
-  "transform",
-  "crop",
-  "move",
-  "hand",
-  "brush",
-  "pencil",
-  "clone",
-  "heal",
-  "spot",
-  "patch",
-  "eraser",
-  "eyedropper",
-  "select-rect",
-  "select-ellipse",
-  "wand",
-  "color-range",
-  "lasso",
-  "poly-lasso",
-  "rectangle",
-  "ellipse",
-  "line",
-  "polygon",
-  "pen",
-  "direct",
-  "text",
-]);
-const VECTOR_TOOL_IDS = new Set<ProTool>([
-  "gradient",
-  "text-path",
-  "artboard",
-  "transform",
-  "crop",
-  "move",
-  "hand",
-  "eyedropper",
-  "rectangle",
-  "ellipse",
-  "line",
-  "polygon",
-  "pen",
-  "direct",
-  "text",
-]);
-function ReferenceImage({
-  blob,
-  name,
-  onPlace,
-}: {
-  blob: Blob;
-  name: string;
-  onPlace: () => void;
-}) {
-  const [url, setUrl] = useState("");
-  useEffect(() => {
-    const u = URL.createObjectURL(blob);
-    setUrl(u);
-    return () => URL.revokeObjectURL(u);
-  }, [blob]);
-  return (
-    <div className="pro-reference">
-      <img src={url} alt={`${name} character reference`} />
-      <div>
-        <strong>{name}</strong>
-        <Button variant="secondary" onClick={onPlace}>
-          Place reference
-        </Button>
-      </div>
-    </div>
-  );
-}
 export default function ProWorkspace({
   panel,
   projectId,
@@ -2489,235 +2369,51 @@ export default function ProWorkspace({
                     />
                   )}
                   {tab === "history" && history && (
-                    <>
-                      <h3>Document history</h3>
-                      <p className="pro-help">
-                        Up to 50 metadata states. Brush gestures form one step. Pan and zoom never
-                        alter artwork.
-                      </p>
-                      <div className="pro-actions">
-                        <Button
-                          disabled={!history.past.length}
-                          onClick={() => actions.current.undo()}
-                        >
-                          <Undo2 />
-                          Undo
-                        </Button>
-                        <Button
-                          disabled={!history.future.length}
-                          onClick={() => actions.current.redo()}
-                        >
-                          <Redo2 />
-                          Redo
-                        </Button>
-                      </div>
-                      <ol className="pro-history-list">
-                        {[...history.past, history.present].map((entry, i) => (
-                          <li key={i} data-current={i === history.past.length}>
-                            <span>{String(i + 1).padStart(2, "0")}</span>
-                            {entry.label}
-                          </li>
-                        ))}
-                      </ol>
-                    </>
+                    <ProHistoryTab
+                      history={history}
+                      onUndo={() => actions.current.undo()}
+                      onRedo={() => actions.current.redo()}
+                    />
                   )}
                   {tab === "assets" && (
-                    <>
-                      <h3>Assets & characters</h3>
-                      <p className="pro-help">
-                        References belong to this project. Placing one creates a separate raster
-                        layer; no identity matching or upload occurs.
-                      </p>
-                      <label className="pro-import field">
-                        <Folder />
-                        Import image / SVG / native
-                        <input
-                          aria-label="Import Pro asset"
-                          disabled={busy || !!transformDraft}
-                          type="file"
-                          accept="image/png,image/jpeg,image/webp,image/svg+xml,.inkstrip"
-                          onChange={(e) => {
-                            void importFile(e.target.files?.[0]);
-                            e.target.value = "";
-                          }}
-                        />
-                      </label>
-                      <p className="pro-help">
-                        SVG imports editable paths, compound contours, affine transforms, nested
-                        groups and basic text. Gradients, clipping paths, masks and other unsafe or
-                        unsupported markup are rejected. Native import replaces this draft; Chapter
-                        artwork is retained.
-                      </p>
-                      {project?.characters?.length ? (
-                        project.characters.map((c) => (
-                          <div key={c.id}>
-                            <h4>{c.name}</h4>
-                            <p className="pro-help">{c.notes}</p>
-                            {c.references.map((r) => (
-                              <ReferenceImage
-                                key={r.id}
-                                blob={r.blob}
-                                name={`${c.name} · ${r.angle}`}
-                                onPlace={() =>
-                                  void addAsset(r.blob, c.name).catch((e) =>
-                                    setError(storageMessage(e)),
-                                  )
-                                }
-                              />
-                            ))}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="pro-empty">
-                          <Folder />
-                          <p>No saved character references yet.</p>
-                          <span>
-                            Use the existing image tools to select and save a reference face.
-                          </span>
-                        </div>
-                      )}
-                    </>
+                    <ProAssetsTab
+                      disabled={busy || !!transformDraft}
+                      characters={project?.characters}
+                      onImport={(file) => void importFile(file)}
+                      onPlace={(blob, name) =>
+                        void addAsset(blob, name).catch((e) => setError(storageMessage(e)))
+                      }
+                    />
                   )}
                   {tab === "ai" && (
-                    <>
-                      <div className="pro-section-heading">
-                        <h3>Artwork intelligence</h3>
-                        <Sparkles />
-                      </div>
-                      <p className="pro-help">
-                        Apply the current composite, then continue in the existing tested image
-                        workflow. Layered Pro drafts remain editable here. These actions change the
-                        chapter only after the composite succeeds.
-                      </p>
-                      <Button
-                        intent="ai"
-                        disabled={busy || stale || !!transformDraft}
-                        onClick={() =>
-                          void apply().then((ok) => {
-                            if (ok) onContinue("enhance");
-                          })
-                        }
-                      >
-                        Apply + Swin2SR Enhance
-                      </Button>
-                      <p className="pro-help">
-                        Genuine local ONNX/WASM inference. First use downloads model assets; no
-                        artwork upload.
-                      </p>
-                      <Button
-                        variant="secondary"
-                        disabled={busy || stale || !!transformDraft}
-                        onClick={() =>
-                          void apply().then((ok) => {
-                            if (ok) onContinue("image");
-                          })
-                        }
-                      >
-                        Apply + Image tools
-                      </Button>
-                      <p className="pro-help">
-                        Crop, adjustments, object masks, traditional local texture repair and
-                        trained anime-face detection. Cloud generative editing requires the existing
-                        server configuration and explicit upload consent.
-                      </p>
-                      <Button
-                        variant="secondary"
-                        disabled={busy || stale || !!transformDraft}
-                        onClick={() =>
-                          void apply().then((ok) => {
-                            if (ok) onContinue("face");
-                          })
-                        }
-                      >
-                        Apply + AI Face Fix
-                      </Button>
-                      <p className="pro-help">
-                        Optional reference-guided cloud generation. No local face generator or
-                        guaranteed identity preservation. Upload consent is requested in that
-                        workflow.
-                      </p>
-                    </>
+                    <ProAiTab
+                      disabled={busy || stale || !!transformDraft}
+                      onContinue={(next) =>
+                        void apply().then((ok) => {
+                          if (ok) onContinue(next);
+                        })
+                      }
+                    />
                   )}
                   {tab === "export" && doc && (
-                    <>
-                      <h3>Save & export</h3>
-                      {cropDraft && (
-                        <p className="pro-help">
-                          Apply or cancel your crop draft before exporting. Exports use committed
-                          boundaries.
-                        </p>
-                      )}
-                      <p className="pro-help">
-                        Native documents keep layers and source bytes. Raster exports flatten the
-                        current document at its exact dimensions. JPEG uses a white background for
-                        transparency.
-                      </p>
-                      <Button onClick={() => void exportFile("native")}>
-                        <Save />
-                        Export editable .inkstrip
-                      </Button>
-                      <Button variant="secondary" onClick={() => void exportFile("svg")}>
-                        Export SVG · vectors only
-                      </Button>
-                      <label className="pro-field">
-                        Raster format
-                        <select
-                          className="field"
-                          aria-label="Pro export format"
-                          value={mime}
-                          onChange={(e) => setMime(e.target.value)}
-                        >
-                          {["image/png", "image/jpeg", "image/webp"].map((m) => (
-                            <option value={m} key={m}>
-                              {m.split("/")[1]!.toUpperCase()}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      {mime !== "image/png" && (
-                        <ProNumber
-                          label="Export quality"
-                          value={quality * 100}
-                          min={10}
-                          max={100}
-                          onChange={(n) => setQuality(n / 100)}
-                        />
-                      )}
-                      <Button
-                        intent="export"
-                        disabled={busy || !ready}
-                        onClick={() => void exportFile("raster")}
-                      >
-                        <Download />
-                        Export composite · {outputSize(doc).width} × {outputSize(doc).height}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setTab("geometry");
-                          setPanelOpen(true);
-                        }}
-                      >
-                        Crop, canvas & image size
-                      </Button>
-                      <ToolSection title="Document background">
-                        <label className="pro-field">
-                          Background
-                          <select
-                            className="field"
-                            aria-label="Document background"
-                            value={doc.background}
-                            onChange={(e) =>
-                              commit({ ...doc, background: e.target.value }, "Change background")
-                            }
-                          >
-                            <option value="transparent">Transparent</option>
-                            <option value="#ffffff">White</option>
-                            <option value="#172420">Ink</option>
-                          </select>
-                        </label>
-                      </ToolSection>
-                    </>
+                    <ProExportTab
+                      doc={doc}
+                      cropPending={!!cropDraft}
+                      busy={busy}
+                      ready={!!ready}
+                      mime={mime}
+                      quality={quality}
+                      onMime={setMime}
+                      onQuality={setQuality}
+                      onExport={(kind) => void exportFile(kind)}
+                      onOpenGeometry={() => {
+                        setTab("geometry");
+                        setPanelOpen(true);
+                      }}
+                      onBackground={(background) =>
+                        commit({ ...doc, background }, "Change background")
+                      }
+                    />
                   )}
                 </div>
                 <div className="pro-panel-resizer">
