@@ -1,10 +1,12 @@
+import { NEUTRAL } from "../editor/adjustments";
 /// <reference lib="webworker" />
+import { refineTiled, coverageRegion } from "./refine-selection";
 import { artboards } from "./artboards";
 import { effectPadding } from "./effects";
 import { renderOutput } from "./output";
 import { renderRepair } from "./repair-worker";
 import { selectColor } from "./selection";
-import { composite } from "./render";
+import { composite, selectionCanvas, surface } from "./render";
 import { planMerge, finishMerge, descendants, visibleLayerIds } from "./layers";
 import { documentSources } from "./raster-budget";
 import { type ProSession, type ProDocument, validateAssets } from "./model";
@@ -127,6 +129,50 @@ self.onmessage = async ({ data }) => {
       }
       return cache.get(key)!;
     };
+    if (type === "apply-mask") {
+      const layer = doc.layers.find((l) => l.id === data.layerId);
+      if (
+        !layer ||
+        !["raster", "paint"].includes(layer.kind) ||
+        !layer.mask?.enabled ||
+        layer.locked
+      )
+        throw Error("Choose an unlocked raster or paint layer with an enabled mask.");
+      const output = await surface(layer, 1, get);
+      try {
+        const blob = await output.convertToBlob({ type: "image/png" }),
+          assetId = crypto.randomUUID();
+        const replacement = {
+          ...layer,
+          kind: "raster" as const,
+          assetId,
+          mask: undefined,
+          strokes: [],
+          adjustments: { ...NEUTRAL },
+          color: undefined,
+          colorSelection: undefined,
+          hue: 0,
+          black: 0,
+          white: 255,
+          gamma: 1,
+          curve: [0, 64, 128, 192, 255],
+        };
+        if (latest !== id) throw new DOMException("Cancelled", "AbortError");
+        self.postMessage({
+          id,
+          type: "apply-mask",
+          blob,
+          assetId,
+          document: {
+            ...doc,
+            layers: doc.layers.map((l) => (l.id === layer.id ? replacement : l)),
+          },
+        });
+      } finally {
+        output.width = output.height = 1;
+      }
+      return;
+    }
     if (type === "thumbnails") {
       const thumbnails: { id: string; blob: Blob }[] = [],
         thumbScale = Math.min(
@@ -266,6 +312,67 @@ self.onmessage = async ({ data }) => {
         self.postMessage({ id, type: "repair", ...result });
       } finally {
         output.width = output.height = 1;
+      }
+      return;
+    }
+    if (type === "sample") {
+      try {
+        const point = data.point;
+        if (
+          !point ||
+          !Number.isFinite(point.x) ||
+          !Number.isFinite(point.y) ||
+          point.x < 0 ||
+          point.y < 0 ||
+          point.x >= doc.width ||
+          point.y >= doc.height
+        )
+          throw Error("Sample inside the document.");
+        const rgba = output
+          .getContext("2d")!
+          .getImageData(Math.floor(point.x), Math.floor(point.y), 1, 1).data;
+        if (rgba[3] === 0) throw Error("Choose a visible foreground or background pixel.");
+        self.postMessage({ id, type: "sample", sample: [rgba[0], rgba[1], rgba[2]] });
+      } finally {
+        output.width = output.height = 1;
+      }
+      return;
+    }
+    if (type === "refine") {
+      const mask = selectionCanvas(
+        doc.selection ?? { regions: [], inverted: false, feather: 0 },
+        doc.width,
+        doc.height,
+      );
+      try {
+        const alpha = mask.getContext("2d")!.getImageData(0, 0, doc.width, doc.height).data,
+          input = new Uint8Array(doc.width * doc.height);
+        for (let i = 0; i < input.length; i++) input[i] = alpha[i * 4 + 3]!;
+        const pixels = output.getContext("2d")!.getImageData(0, 0, doc.width, doc.height).data;
+        let yielded = performance.now();
+        const result = await refineTiled(
+          pixels,
+          input,
+          doc.width,
+          doc.height,
+          data.options,
+          async () => {
+            if (latest !== id) throw new DOMException("Refinement cancelled", "AbortError");
+            if (performance.now() - yielded > 12) {
+              await new Promise((resolve) => setTimeout(resolve, 0));
+              yielded = performance.now();
+            }
+          },
+          (done, total) => self.postMessage({ id, type: "progress", done, total }),
+        );
+        if (latest !== id) throw new DOMException("Refinement cancelled", "AbortError");
+        self.postMessage({
+          id,
+          type: "selection",
+          region: coverageRegion(result, doc.width, doc.height),
+        });
+      } finally {
+        mask.width = mask.height = output.width = output.height = 1;
       }
       return;
     }

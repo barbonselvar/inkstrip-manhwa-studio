@@ -52,7 +52,7 @@ export function validateLayout(d: ProDocument) {
         !Number.isInteger(b.height) ||
         !finite(b.width, 1, 16384) ||
         !finite(b.height, 1, 16384) ||
-        b.width * b.height > 16_000_000 ||
+        b.width * b.height > 16_777_216 ||
         typeof b.background !== "string" ||
         !/^(transparent|#[a-f\d]{6})$/i.test(b.background)
       )

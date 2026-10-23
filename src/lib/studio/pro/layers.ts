@@ -1,3 +1,4 @@
+import { transformGroupMask } from "./masks.ts";
 /** Layer structure is bottom-to-top within each parent. Clipping stacks never cross groups. */
 import { layer, validateDocument, type Layer, type ProDocument, type Point } from "./model.ts";
 import { isLocked } from "./operations.ts";
@@ -175,7 +176,9 @@ export function translateLayers(d: ProDocument, ids: string[], delta: Point): Pr
             ...l,
             transform: { ...l.transform, x: l.transform.x + delta.x, y: l.transform.y + delta.y },
           }
-        : l,
+        : all.has(l.id)
+          ? transformGroupMask(l, [1, 0, 0, 1, delta.x, delta.y])
+          : l,
     ),
   });
 }

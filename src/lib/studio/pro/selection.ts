@@ -33,7 +33,7 @@ export function selectColor(
     !Number.isInteger(height) ||
     width < 1 ||
     height < 1 ||
-    width * height > 16_000_000 ||
+    width * height > 16_777_216 ||
     pixels.length !== width * height * 4 ||
     !Number.isFinite(point.x) ||
     !Number.isFinite(point.y) ||

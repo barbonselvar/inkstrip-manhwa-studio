@@ -5,6 +5,25 @@ Photoshop and Illustrator workflows for planning original Inkstrip functionality
 It does not use Adobe source code, private APIs, assets, icons, branding, or
 reverse-engineered file internals. It makes no claim of Adobe feature parity.
 
+## Phase E implementation status (2026-10-23, development branch)
+
+The historical inventory below is superseded for the Raster areas described in
+[the Phase E audit](PHASE_E_RASTER_REFINEMENT.md). Implemented: source-resolution
+morphology/local color matting and staged refinement; named selections; seeded
+brush dynamics and eight factory recipes; mask density/feather/linkage/copy/paste,
+group masks, thumbnails and undoable baking; native v5 with v1–v4 compatibility;
+bounded high-resolution processing and measured native exports. Release status and exact deployment evidence are recorded in
+[PR #4](https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/4); the feature
+inventory alone does not establish a deployment.
+
+Limited: color-based hair refinement needs contrast and a useful rough selection;
+affine mask placement, finite nonlinear source frames, 1,400-pixel previews,
+device/payload budgets and sRGB Canvas color. Missing: semantic model selection,
+matte color decontamination, sampled-image brush tips, stationary airbrush timing,
+CMYK/ICC soft proofing and an unlimited/disk-backed tile compositor. These are not
+advertised as implemented. Existing Phase D vector and AI functionality is retained;
+Phase F has not begun.
+
 ## Repository snapshot and implementation baseline
 
 - Repository: `barbonselvar/inkstrip-manhwa-studio`; default branch `main`.

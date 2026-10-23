@@ -1,10 +1,14 @@
+import { previewCoverage } from "./coverage-preview";
+import { maskLocal, maskWorld } from "./masks";
+import { brushDabs } from "./brush-dynamics";
+import { boxFilter } from "./refine-selection";
 import { maskVectorClips } from "./vector-clip";
 import { drawVectorAppearance } from "./vector-render";
 import type { Frame } from "./artboards.ts";
 import { gradientPixels } from "./gradient";
 import { effectPadding, effectPixels } from "./effects";
 import { NEUTRAL } from "../editor/adjustments";
-import { affine } from "./transform";
+import { affine, inverse, compose } from "./transform";
 import { projectSurface, sampleSurface } from "./transform-surface";
 import {
   type ProDocument,
@@ -40,18 +44,29 @@ function region(ctx: Ctx, r: Selection["regions"][number]) {
       a!.x,
       a!.y,
     );
-    const bitmap = canvas(width, height),
+    const t = ctx.getTransform(),
+      density = Math.min(1, Math.max(Math.hypot(t.a, t.b), Math.hypot(t.c, t.d))),
+      previewWidth = Math.max(1, Math.ceil(width * density)),
+      previewHeight = Math.max(1, Math.ceil(height * density)),
+      bitmap = canvas(previewWidth, previewHeight),
       bc = bitmap.getContext("2d")!,
-      image = bc.createImageData(width, height);
-    for (let i = 0; i < runs.length; i += 3) {
-      const end = runs[i]! + runs[i + 1]!;
-      for (let p = runs[i]!; p < end; p++) {
+      image = bc.createImageData(previewWidth, previewHeight);
+    if (density < 1) {
+      const alpha = previewCoverage(width, height, runs, previewWidth, previewHeight);
+      for (let p = 0; p < alpha.length; p++) {
         image.data[p * 4] = image.data[p * 4 + 1] = image.data[p * 4 + 2] = 255;
-        image.data[p * 4 + 3] = runs[i + 2]!;
+        image.data[p * 4 + 3] = alpha[p]!;
       }
-    }
+    } else
+      for (let i = 0; i < runs.length; i += 3) {
+        const end = runs[i]! + runs[i + 1]!;
+        for (let p = runs[i]!; p < end; p++) {
+          image.data[p * 4] = image.data[p * 4 + 1] = image.data[p * 4 + 2] = 255;
+          image.data[p * 4 + 3] = runs[i + 2]!;
+        }
+      }
     bc.putImageData(image, 0, 0);
-    ctx.drawImage(bitmap, 0, 0);
+    ctx.drawImage(bitmap, 0, 0, width, height);
     bitmap.width = bitmap.height = 1;
     ctx.restore();
     return;
@@ -87,9 +102,11 @@ export function selectionCanvas(s: Selection, w: number, h: number, scale = 1) {
   if (s.frame) {
     const { width, height, transform } = s.frame,
       source = selectionCanvas({ ...s, frame: undefined }, width, height, scale);
-    if (transform.deform) sampleSurface(source, output, transform, scale);
+    if (transform.deform)
+      sampleSurface(source, output, transform, scale, undefined, s.frame.matrix);
     else {
-      ctx.setTransform(...cloneSourceMatrix({ transform }, { x: 0, y: 0 }, scale));
+      const m = inverse(compose(affine(transform), s.frame.matrix ?? [1, 0, 0, 1, 0, 0]));
+      ctx.setTransform(m[0], m[1], m[2], m[3], m[4] * scale, m[5] * scale);
       ctx.drawImage(source, 0, 0);
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -152,7 +169,10 @@ export function stroke(ctx: Ctx, s: Stroke) {
   // Flow accumulates per dab; opacity caps the complete stroke independently.
   if (s.opacity < 1) {
     const t = ctx.getTransform(),
-      r = s.size / 2;
+      r =
+        (s.size / 2) *
+        (1 + (s.dynamics?.scatter ?? 0)) *
+        (s.dynamics && s.tip === "square" ? Math.SQRT2 : 1);
     const xs = s.points.map((p) => p.x),
       ys = s.points.map((p) => p.y);
     const left = Math.max(0, Math.floor((Math.min(...xs) - r) * t.a + t.e)),
@@ -194,6 +214,19 @@ export function stroke(ctx: Ctx, s: Stroke) {
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fill();
   };
+  if (s.dynamics) {
+    for (const dab of brushDabs(s)) {
+      ctx.save();
+      ctx.translate(dab.x, dab.y);
+      ctx.rotate(dab.angle);
+      ctx.scale(1, dab.roundness);
+      ctx.globalAlpha = dab.alpha;
+      dot(0, 0, dab.radius / radius);
+      ctx.restore();
+    }
+    ctx.restore();
+    return;
+  }
   dot(s.points[0]!.x, s.points[0]!.y, s.points[0]!.pressure);
   for (let i = 1; i < s.points.length; i++) {
     const a = s.points[i - 1]!,
@@ -309,7 +342,7 @@ function vector(ctx: Ctx, l: Layer) {
   maskVectorClips(ctx, l);
   ctx.restore();
 }
-async function surface(
+export async function surface(
   l: Layer,
   scale: number,
   asset: (id: string, scale: number) => Promise<ImageBitmap>,
@@ -446,24 +479,66 @@ async function surface(
     ctx.putImageData(image, 0, 0);
   }
   if (l.mask?.enabled) {
-    const mask = selectionCanvas(l.mask.selection, l.width, l.height, scale),
-      m = mask.getContext("2d")!;
-    m.scale(scale, scale);
-    for (const s of l.mask.strokes)
-      clippedStroke(m, { ...s, color: "#ffffff" }, l.width, l.height, scale);
-    if (l.mask.inverted) {
-      m.save();
-      m.setTransform(1, 0, 0, 1, 0, 0);
-      m.globalCompositeOperation = "xor";
-      m.fillStyle = "#ffffff";
-      m.fillRect(0, 0, mask.width, mask.height);
-      m.restore();
-    }
+    const mask = await layerMaskCanvas(l, scale);
     ctx.globalCompositeOperation = "destination-in";
     ctx.drawImage(mask, 0, 0);
     mask.width = mask.height = 1;
   }
   return out;
+}
+export async function layerMaskCanvas(layer: Layer, scale = 1) {
+  const mask = layer.mask!;
+  return maskCanvas(mask, layer.width, layer.height, scale, maskLocal(layer));
+}
+/** Density is applied after inversion/feather, matching a disabled (white) mask
+ * at zero density. Feathering changes coverage, never original layer pixels. */
+export async function maskCanvas(
+  mask: NonNullable<Layer["mask"]>,
+  width: number,
+  height: number,
+  scale = 1,
+  placement: import("./transform").Matrix = [1, 0, 0, 1, 0, 0],
+) {
+  const w = mask.width ?? width,
+    h = mask.height ?? height;
+  const raw = selectionCanvas(mask.selection, w, h, scale),
+    rawCtx = raw.getContext("2d")!;
+  rawCtx.scale(scale, scale);
+  for (const s of mask.strokes) clippedStroke(rawCtx, { ...s, color: "#ffffff" }, w, h, scale);
+  const identity =
+    placement.every((v, i) => v === [1, 0, 0, 1, 0, 0][i]) &&
+    raw.width === Math.ceil(width * scale) &&
+    raw.height === Math.ceil(height * scale);
+  const output = identity ? raw : canvas(width * scale, height * scale),
+    ctx = output.getContext("2d")!;
+  if (!identity) {
+    ctx.setTransform(
+      placement[0],
+      placement[1],
+      placement[2],
+      placement[3],
+      placement[4] * scale,
+      placement[5] * scale,
+    );
+    ctx.drawImage(raw, 0, 0);
+    raw.width = raw.height = 1;
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (mask.inverted || mask.feather || mask.density !== undefined) {
+    const image = ctx.getImageData(0, 0, output.width, output.height);
+    let alpha: Float32Array = new Float32Array(output.width * output.height);
+    for (let i = 0; i < alpha.length; i++)
+      alpha[i] = mask.inverted ? 255 - image.data[i * 4 + 3]! : image.data[i * 4 + 3]!;
+    if (mask.feather)
+      for (let pass = 0; pass < 3; pass++)
+        alpha = await boxFilter(alpha, output.width, output.height, (mask.feather * scale) / 2);
+    for (let i = 0; i < alpha.length; i++) {
+      image.data[i * 4] = image.data[i * 4 + 1] = image.data[i * 4 + 2] = 255;
+      image.data[i * 4 + 3] = Math.round(255 - (mask.density ?? 1) * (255 - alpha[i]!));
+    }
+    ctx.putImageData(image, 0, 0);
+  }
+  return output;
 }
 export async function composite(
   d: ProDocument,
@@ -539,12 +614,21 @@ export async function composite(
     release(bitmap);
     return full;
   };
+  const worldMask = (l: Layer) => {
+    const m = maskWorld(l);
+    return maskCanvas(
+      { ...l.mask!, width: l.mask!.width ?? l.width, height: l.mask!.height ?? l.height },
+      output.width / scale,
+      output.height / scale,
+      scale,
+      [m[0], m[1], m[2], m[3], m[4] + originX / scale, m[5] + originY / scale],
+    );
+  };
   const node = async (l: Layer): Promise<OffscreenCanvas> => {
     if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
     const direct =
       (l.kind === "shape" || l.kind === "text") &&
       !l.transform.deform &&
-      !l.mask &&
       !l.strokes.length &&
       !hasAdjustments(l.adjustments) &&
       !l.hue &&
@@ -577,10 +661,27 @@ export async function composite(
       }
       vector(ctx, l);
       ctx.restore();
+      if (l.mask?.enabled) {
+        const mask = await worldMask(l);
+        ctx.globalCompositeOperation = "destination-in";
+        ctx.drawImage(mask, 0, 0);
+        ctx.globalCompositeOperation = "source-over";
+        release(mask);
+      }
       documentPlanes.add(bitmap);
     }
     try {
-      if (l.kind === "group") await branch(bitmap, l.id);
+      if (l.kind === "group") {
+        await branch(bitmap, l.id);
+        if (l.mask?.enabled) {
+          const mask = await worldMask(l),
+            ctx = bitmap.getContext("2d")!;
+          ctx.globalCompositeOperation = "destination-in";
+          ctx.drawImage(mask, 0, 0);
+          ctx.globalCompositeOperation = "source-over";
+          release(mask);
+        }
+      }
       if (l.effects?.some((e) => e.enabled)) {
         // Project the original masked artwork once; render styles in document pixels.
         if (l.kind !== "group" && !documentPlanes.has(bitmap)) {

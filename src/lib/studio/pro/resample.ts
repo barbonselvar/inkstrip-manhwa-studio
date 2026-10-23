@@ -46,8 +46,8 @@ export function resample(
     ![width, height, outWidth, outHeight].every(
       (n) => Number.isInteger(n) && n > 0 && n <= 16384,
     ) ||
-    width * height > 16_000_000 ||
-    outWidth * outHeight > 16_000_000 ||
+    width * height > 16_777_216 ||
+    outWidth * outHeight > 16_777_216 ||
     pixels.length !== width * height * 4 ||
     !["nearest", "bilinear", "bicubic", "lanczos"].includes(method)
   )

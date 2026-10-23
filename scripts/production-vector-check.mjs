@@ -34,6 +34,7 @@ const {
   raster: rawRaster,
   same,
   records,
+  artboardBounds,
 } = proBrowserFixtures(base, errors);
 async function panels(p) {
   const b = p.getByRole("button", { name: "Toggle Pro panels", exact: true });
@@ -56,6 +57,181 @@ async function load(p, ...a) {
   return rawLoad(p, ...a);
 }
 const at = (im, x, y) => im.pixels.slice((y * im.width + x) * 4, (y * im.width + x) * 4 + 4);
+async function rasterRelease(p, width) {
+  await panels(p);
+  const gesture = async (cancel = false) => {
+    const r = await artboardBounds(p),
+      point = (x, y) => ({ x: r.x + (x / 128) * r.width, y: r.y + (y / 96) * r.height });
+    const a = point(24, 24),
+      b = point(76, 52);
+    if (width === 1440) {
+      await p.mouse.move(a.x, a.y);
+      await p.mouse.down();
+      await p.mouse.move(b.x, b.y, { steps: 8 });
+      if (cancel) await p.keyboard.press("Escape");
+      await p.mouse.up();
+    } else {
+      const cdp = await p.context().newCDPSession(p);
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchStart",
+        touchPoints: [{ ...a, id: 1 }],
+      });
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{ ...b, id: 1 }],
+      });
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: cancel ? "touchCancel" : "touchEnd",
+        touchPoints: [],
+      });
+      await cdp.detach();
+    }
+  };
+  await p.getByRole("button", { name: "Rectangle selection tool", exact: true }).click();
+  await gesture();
+  await tab(p, "Refine");
+  await p.getByLabel("Edge-aware color refinement", { exact: true }).uncheck();
+  await p.getByLabel("Expand / contract pixels", { exact: true }).fill("2");
+  await p.getByLabel("Refine feather", { exact: true }).fill("1");
+  await p.getByRole("button", { name: "Preview refinement", exact: true }).click();
+  await p.getByRole("button", { name: "Apply refinement", exact: true }).click();
+  await p.getByLabel("Selection name", { exact: true }).fill("Release selection");
+  await p.getByRole("button", { name: "Save selection", exact: true }).click();
+  let n = await native(p);
+  assert.equal(n.value.version, 5);
+  assert.ok(n.value.document.selection.regions[0].pixels);
+  assert.equal(n.value.document.savedSelections[0].name, "Release selection");
+  await tab(p, "Properties");
+  await p.getByLabel("Brush preset", { exact: true }).selectOption("Ink Pen");
+  await p.getByLabel("Brush color", { exact: true }).fill("#d14b75");
+  const beforeStroke = await raster(p);
+  await gesture();
+  const stroke = await raster(p);
+  assert.notDeepEqual(stroke.pixels, beforeStroke.pixels);
+  await p.getByRole("button", { name: "Pro undo", exact: true }).click();
+  same(await raster(p), beforeStroke);
+  await p.getByRole("button", { name: "Pro redo", exact: true }).click();
+  same(await raster(p), stroke);
+  await tab(p, "Properties");
+  const maskSummary = p.locator("summary").filter({ hasText: /^Layer mask$/ });
+  if (!(await maskSummary.locator("..").getAttribute("open"))) await maskSummary.click();
+  await p.getByRole("button", { name: "Mask from selection", exact: true }).click();
+  await p.getByLabel("Mask density", { exact: true }).fill("80");
+  await p.getByLabel("Mask feather", { exact: true }).fill("1");
+  const masked = await raster(p);
+  n = await native(p);
+  const painted = n.value.document.layers.find((l) => l.kind === "paint");
+  assert.ok(painted?.strokes[0].dynamics);
+  assert.equal(painted.mask.density, 0.8);
+  assert.equal(painted.mask.feather, 1);
+  await gesture(true);
+  const cancelled = await native(p);
+  assert.deepEqual(cancelled.value.document.layers, n.value.document.layers);
+  await tab(p, "Assets");
+  await p.getByLabel("Import Pro asset", { exact: true }).setInputFiles({
+    name: "raster-release.inkstrip",
+    mimeType: "application/json",
+    buffer: n.bytes,
+  });
+  await p
+    .getByText("Native document imported into this Pro draft. Chapter unchanged.", { exact: true })
+    .waitFor();
+  same(await raster(p), masked);
+  for (const mime of ["image/jpeg", "image/webp"]) {
+    const image = await raster(p, mime);
+    assert.equal(image.width, 128);
+    assert.equal(image.height, 96);
+  }
+  results.push({
+    width,
+    rasterRefinement: true,
+    nativeV5: true,
+    selectionSaved: true,
+    realBrushStroke: true,
+    maskProperties: true,
+    historyPixels: true,
+    strokeCancellation: true,
+    pngJpegWebp: true,
+  });
+}
+async function largeRasterRelease() {
+  const context = await browser.newContext({
+      viewport: { width: 1440, height: 1000 },
+      acceptDownloads: true,
+    }),
+    p = await context.newPage();
+  p.setDefaultTimeout(120000);
+  watch(p);
+  await start(p);
+  await open(p, "Raster");
+  const source = await p.evaluate(() => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 4096;
+    const x = c.getContext("2d");
+    x.fillStyle = "#24473b";
+    x.fillRect(0, 0, 4096, 4096);
+    x.fillStyle = "#eeeade";
+    for (let y = 0; y < 4096; y += 128) x.fillRect(128, y, 3840, 32);
+    return c.toDataURL().split(",")[1];
+  });
+  const d = fromPanel({ id: "large-release", name: "4K source QA", width: 4096, height: 4096 });
+  d.layers[0].mask = {
+    enabled: true,
+    density: 0.8,
+    feather: 1,
+    strokes: [],
+    selection: {
+      regions: [
+        {
+          kind: "rectangle",
+          operation: "add",
+          points: [
+            { x: 0, y: 0 },
+            { x: 2048, y: 4096 },
+          ],
+        },
+      ],
+      inverted: false,
+      feather: 0,
+    },
+  };
+  await load(p, d, source);
+  await tab(p, "Export");
+  await p.getByLabel("Pro export format", { exact: true }).selectOption("image/png");
+  const event = p.waitForEvent("download");
+  await p.getByRole("button", { name: /^Export composite ·/ }).click();
+  const bytes = await readFile(await (await event).path());
+  const actual = await p.evaluate(
+    async (data) => {
+      const bitmap = await createImageBitmap(
+          new Blob([Uint8Array.from(data)], { type: "image/png" }),
+        ),
+        c = document.createElement("canvas");
+      c.width = bitmap.width;
+      c.height = bitmap.height;
+      const x = c.getContext("2d");
+      x.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      return {
+        width: c.width,
+        height: c.height,
+        left: [...x.getImageData(512, 96, 1, 1).data],
+        right: [...x.getImageData(3072, 96, 1, 1).data],
+      };
+    },
+    [...bytes],
+  );
+  assert.equal(actual.width, 4096);
+  assert.equal(actual.height, 4096);
+  assert.deepEqual(actual.left, [36, 71, 59, 255]);
+  assert.ok(Math.abs(actual.right[3] - 51) <= 1);
+  results.push({
+    largeNativeSource: [4096, 4096],
+    maskedPngDimensionsAndPixels: actual,
+    failedAssets: 0,
+  });
+  await context.close();
+}
 function watch(p) {
   p.on("pageerror", (e) => errors.push(e.message));
   p.on("console", (m) => {
@@ -112,7 +288,7 @@ try {
     const before = await p.evaluate(() => window.__inkstripReleaseQA.draws);
     await p.waitForFunction((n) => window.__inkstripReleaseQA.draws > n, before);
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-    await p.screenshot({ path: `/workspace/screenshots/dd-release-home-${width}.png` });
+    await p.screenshot({ path: `/workspace/screenshots/ee-release-home-${width}.png` });
     const source = await start(p),
       original = (await records(p))[0];
     await open(p, "Vector");
@@ -210,6 +386,7 @@ try {
     assert.deepEqual((await records(p))[0], original);
     await p.getByRole("button", { name: "Raster", exact: true }).click();
     same(composite, await raster(p));
+    if (process.argv.includes("--raster")) await rasterRelease(p, width);
     await tab(p, "AI tools");
     assert.ok(
       await p.getByRole("button", { name: "Apply + Swin2SR Enhance", exact: true }).isVisible(),
@@ -223,7 +400,7 @@ try {
       .waitFor();
     assert.equal((await records(p))[0].original.blobId, original.blobId);
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-    await p.screenshot({ path: `/workspace/screenshots/dd-release-editor-${width}.png` });
+    await p.screenshot({ path: `/workspace/screenshots/ee-release-editor-${width}.png` });
     results.push({
       width,
       release: expected,
@@ -241,6 +418,7 @@ try {
     });
     await context.close();
   }
+  if (process.argv.includes("--raster")) await largeRasterRelease();
   if (process.argv.includes("--ai")) {
     const context = await browser.newContext({
         viewport: { width: 390, height: 844 },
@@ -287,7 +465,7 @@ try {
       });
     assert.deepEqual(size, [32, 48]);
     results.push({ realSwin2SRInference: true, input: [16, 24], output: size });
-    await p.screenshot({ path: "/workspace/screenshots/dd-release-ai.png" });
+    await p.screenshot({ path: "/workspace/screenshots/ee-release-ai.png" });
     await context.close();
   }
   assert.deepEqual(errors, []);

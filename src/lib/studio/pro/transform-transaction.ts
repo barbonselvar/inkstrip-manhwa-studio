@@ -1,3 +1,4 @@
+import { transformGroupMask } from "./masks.ts";
 import {
   validateDocument,
   contours,
@@ -30,7 +31,9 @@ export function transformForest(
     layers: doc.layers.map((l) =>
       !unchanged && members.has(l.id) && l.kind !== "group"
         ? { ...l, transform: fromAffine(compose(delta, affine(l.transform)), l.transform) }
-        : l,
+        : !unchanged && members.has(l.id)
+          ? transformGroupMask(l, delta)
+          : l,
     ),
   };
   validateDocument(result);

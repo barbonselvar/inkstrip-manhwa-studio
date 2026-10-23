@@ -239,7 +239,7 @@ export function validateTransform(t: Transform) {
       !["perspective", "warp"].includes(d.kind) ||
       !n(d.width, 1, 16384) ||
       !n(d.height, 1, 16384) ||
-      d.width * d.height > 16_000_000 ||
+      d.width * d.height > 16_777_216 ||
       !Array.isArray(d.points) ||
       d.points.length !== (d.kind === "warp" ? 9 : 4) ||
       !d.points.every((p) => p && n(p.x, -2, 3) && n(p.y, -2, 3))
@@ -438,4 +438,16 @@ export function transformHandles(
   }
   handles.push({ id: "rotate", p: rotation }, { id: "pivot", p: center });
   return { ...f, handles, rotation, center };
+}
+
+/** Captured inverse frames need the complete affine matrix: QR controls with a
+ * bounded shear range cannot represent every valid inverse of a layer pose. */
+export function validateAffineMatrix(value: unknown): asserts value is Matrix {
+  if (
+    !Array.isArray(value) ||
+    value.length !== 6 ||
+    !value.every((n) => typeof n === "number" && Number.isFinite(n) && Math.abs(n) <= 1e12)
+  )
+    throw Error("Invalid affine coordinate frame.");
+  inverse(value as Matrix);
 }

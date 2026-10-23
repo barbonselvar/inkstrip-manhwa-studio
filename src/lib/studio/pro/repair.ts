@@ -131,7 +131,7 @@ export function findRepairDonor(
     ![width, height, x, y, w, h].every(Number.isInteger) ||
     width < 1 ||
     height < 1 ||
-    width * height > 16_000_000 ||
+    width * height > 16_777_216 ||
     w < 1 ||
     h < 1 ||
     x < 0 ||
