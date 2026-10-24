@@ -40,6 +40,7 @@ async function start(p) {
   await p.getByRole("button", { name: "New project", exact: true }).click();
   await p.getByPlaceholder("Night Market").fill("Raster repair QA");
   await p.getByRole("button", { name: "Create chapter 1", exact: true }).click();
+  await p.getByText("Chapter workspace", { exact: true }).waitFor();
   const source = await p.evaluate(() => {
     const c = document.createElement("canvas");
     c.width = 128;
