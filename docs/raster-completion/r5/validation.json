@@ -1,0 +1,451 @@
+{
+  "runtimeCommit": "f12094e5c805f08f93fe519950bc11cb8bc0049f",
+  "base": "7538ee31d119276e37eae56c6694c9113f7e2e03",
+  "recoveryParent": "0c2b7cb4e7ae9ec7d82bf78fe1d8c819ee17136e",
+  "recordedAt": "2026-10-24T23:57:18.886513+00:00",
+  "unit": {
+    "total": 837,
+    "passed": 837,
+    "failed": 0,
+    "skipped": 0,
+    "newTests": 24
+  },
+  "gates": {
+    "npm ci": 0,
+    "npm test": 0,
+    "typecheck": 0,
+    "lint": 0,
+    "build": 0,
+    "check:build": 0,
+    "check:auth": 0,
+    "diff --check": 0
+  },
+  "browserSuites": [
+    {
+      "script": "test:adjustments:browser",
+      "exit": 0,
+      "seconds": 24.32,
+      "environment": "dev",
+      "log": "regression-adjustments.log"
+    },
+    {
+      "script": "test:appearance:browser",
+      "exit": 0,
+      "seconds": 113.6,
+      "environment": "dev",
+      "log": "regression-appearance.log"
+    },
+    {
+      "script": "test:artboards:browser",
+      "exit": 0,
+      "seconds": 177.36,
+      "environment": "dev",
+      "log": "regression-artboards.log"
+    },
+    {
+      "script": "test:chapter-import:browser",
+      "exit": 0,
+      "seconds": 39.75,
+      "environment": "dev",
+      "log": "regression-chapter-import.log"
+    },
+    {
+      "script": "test:color:browser",
+      "exit": 0,
+      "seconds": 109.95,
+      "environment": "dev",
+      "log": "regression-color.log"
+    },
+    {
+      "script": "test:compound:browser",
+      "exit": 0,
+      "environment": "built",
+      "log": "compound-built.log"
+    },
+    {
+      "script": "test:dialogue:browser",
+      "exit": 0,
+      "seconds": 43.21,
+      "environment": "dev",
+      "log": "regression-dialogue.log"
+    },
+    {
+      "script": "test:dialogue:ocr",
+      "exit": 0,
+      "environment": "dev (module-level source imports)",
+      "log": "dialogue-ocr-final.log"
+    },
+    {
+      "script": "test:dialogue:render",
+      "exit": 0,
+      "environment": "dev (module-level source imports)",
+      "log": "dialogue-render-final.log"
+    },
+    {
+      "script": "test:dialogue:security",
+      "exit": 0,
+      "environment": "dev (module-level source imports)",
+      "log": "dialogue-security-final.log"
+    },
+    {
+      "script": "test:dialogue:workflow",
+      "exit": 0,
+      "seconds": 26.96,
+      "log": "final-test-dialogue-workflow.log",
+      "environment": "built f12094e"
+    },
+    {
+      "script": "test:editor:browser",
+      "exit": 0,
+      "environment": "built",
+      "log": "editor-built.log"
+    },
+    {
+      "script": "test:geometry:browser",
+      "exit": 0,
+      "environment": "built",
+      "log": "geometry-built.log"
+    },
+    {
+      "script": "test:homepage:browser",
+      "exit": 0,
+      "seconds": 64.39,
+      "environment": "dev",
+      "log": "regression-homepage.log"
+    },
+    {
+      "script": "test:layers:browser",
+      "exit": 0,
+      "seconds": 56.79,
+      "environment": "dev",
+      "log": "regression-layers.log"
+    },
+    {
+      "script": "test:pathfinder:browser",
+      "exit": 0,
+      "environment": "built",
+      "log": "pathfinder-built.log"
+    },
+    {
+      "script": "test:pro:browser",
+      "exit": 0,
+      "environment": "built",
+      "log": "pro-built.log"
+    },
+    {
+      "script": "test:r2:browser",
+      "exit": 0,
+      "environment": "built",
+      "log": "r2-built.log"
+    },
+    {
+      "script": "test:r2:gesture:browser",
+      "exit": 0,
+      "seconds": 14.3,
+      "environment": "dev",
+      "log": "regression-r2-gesture.log"
+    },
+    {
+      "script": "test:r5:browser",
+      "exit": 0,
+      "seconds": 168.65,
+      "log": "final-test-r5-browser.log",
+      "environment": "built f12094e"
+    },
+    {
+      "script": "test:raster-refinement:browser",
+      "exit": 0,
+      "seconds": 96.86,
+      "log": "final-test-raster-refinement-browser.log",
+      "environment": "built f12094e"
+    },
+    {
+      "script": "test:repair:browser",
+      "exit": 0,
+      "seconds": 68.67,
+      "environment": "dev",
+      "log": "regression-repair.log"
+    },
+    {
+      "script": "test:retouch:browser",
+      "exit": 0,
+      "seconds": 8.1,
+      "environment": "dev",
+      "log": "regression-retouch.log"
+    },
+    {
+      "script": "test:studio:browser",
+      "exit": 0,
+      "environment": "built (identity WASM transport)",
+      "log": "studio-identity.log"
+    },
+    {
+      "script": "test:transform:browser",
+      "exit": 0,
+      "environment": "dev frozen runtime",
+      "log": "transform-final-browser.log"
+    },
+    {
+      "script": "test:ui:browser",
+      "exit": 0,
+      "seconds": 21.64,
+      "environment": "dev",
+      "log": "regression-ui.log"
+    },
+    {
+      "script": "test:vector-final:browser",
+      "exit": 0,
+      "seconds": 205.51,
+      "log": "final-test-vector-final-browser.log",
+      "environment": "built f12094e"
+    },
+    {
+      "script": "test:vector:browser",
+      "exit": 0,
+      "seconds": 152.05,
+      "environment": "dev",
+      "log": "regression-vector.log"
+    },
+    {
+      "script": "test:workflow:browser",
+      "exit": 0,
+      "seconds": 28.22,
+      "environment": "dev",
+      "log": "regression-workflow.log"
+    }
+  ],
+  "additional": {
+    "production-vector-check --raster": {
+      "exit": 0,
+      "environment": "local built",
+      "expectedSource": "f12094e5c805f08f93fe519950bc11cb8bc0049f",
+      "log": "production-built.log"
+    },
+    "devSmoke": 0,
+    "builtSmoke": 0,
+    "benchmark": 0
+  },
+  "initialAttempts": [
+    {
+      "script": "test:studio:browser",
+      "exit": 1,
+      "seconds": 285.05
+    },
+    {
+      "script": "test:editor:browser",
+      "exit": 1,
+      "seconds": 38.33
+    },
+    {
+      "script": "test:adjustments:browser",
+      "exit": 0,
+      "seconds": 24.32
+    },
+    {
+      "script": "test:retouch:browser",
+      "exit": 0,
+      "seconds": 8.1
+    },
+    {
+      "script": "test:workflow:browser",
+      "exit": 0,
+      "seconds": 28.22
+    },
+    {
+      "script": "test:ui:browser",
+      "exit": 0,
+      "seconds": 21.64
+    },
+    {
+      "script": "test:pro:browser",
+      "exit": 1,
+      "seconds": 71.68
+    },
+    {
+      "script": "test:layers:browser",
+      "exit": 0,
+      "seconds": 56.79
+    },
+    {
+      "script": "test:repair:browser",
+      "exit": 0,
+      "seconds": 68.67
+    },
+    {
+      "script": "test:color:browser",
+      "exit": 0,
+      "seconds": 109.95
+    },
+    {
+      "script": "test:appearance:browser",
+      "exit": 0,
+      "seconds": 113.6
+    },
+    {
+      "script": "test:vector:browser",
+      "exit": 0,
+      "seconds": 152.05
+    },
+    {
+      "script": "test:compound:browser",
+      "exit": 1,
+      "seconds": 169.25
+    },
+    {
+      "script": "test:pathfinder:browser",
+      "exit": 1,
+      "seconds": 54.05
+    },
+    {
+      "script": "test:artboards:browser",
+      "exit": 0,
+      "seconds": 177.36
+    },
+    {
+      "script": "test:vector-final:browser",
+      "exit": 1,
+      "seconds": 255.15
+    },
+    {
+      "script": "test:raster-refinement:browser",
+      "exit": 1,
+      "seconds": 78.79
+    },
+    {
+      "script": "test:homepage:browser",
+      "exit": 0,
+      "seconds": 64.39
+    },
+    {
+      "script": "test:dialogue:ocr",
+      "exit": 1,
+      "seconds": 162.8
+    },
+    {
+      "script": "test:dialogue:browser",
+      "exit": 0,
+      "seconds": 43.21
+    },
+    {
+      "script": "test:dialogue:workflow:browser",
+      "exit": 1,
+      "seconds": 0.64
+    },
+    {
+      "script": "test:dialogue:render:browser",
+      "exit": 1,
+      "seconds": 0.4
+    },
+    {
+      "script": "test:dialogue:security:browser",
+      "exit": 1,
+      "seconds": 0.35
+    },
+    {
+      "script": "test:chapter-import:browser",
+      "exit": 0,
+      "seconds": 39.75
+    },
+    {
+      "script": "test:r2:browser",
+      "exit": 1,
+      "seconds": 44.32
+    },
+    {
+      "script": "test:r2:gesture:browser",
+      "exit": 0,
+      "seconds": 14.3
+    }
+  ],
+  "builtReruns": [
+    {
+      "script": "test:r5:browser",
+      "exit": 0,
+      "seconds": 168.65,
+      "log": "final-test-r5-browser.log"
+    },
+    {
+      "script": "test:vector-final:browser",
+      "exit": 0,
+      "seconds": 205.51,
+      "log": "final-test-vector-final-browser.log"
+    },
+    {
+      "script": "test:raster-refinement:browser",
+      "exit": 0,
+      "seconds": 96.86,
+      "log": "final-test-raster-refinement-browser.log"
+    },
+    {
+      "script": "test:dialogue:ocr",
+      "exit": 1,
+      "seconds": 3.74,
+      "log": "final-test-dialogue-ocr.log"
+    },
+    {
+      "script": "test:dialogue:workflow",
+      "exit": 0,
+      "seconds": 26.96,
+      "log": "final-test-dialogue-workflow.log"
+    },
+    {
+      "script": "test:dialogue:render",
+      "exit": 1,
+      "seconds": 2.4,
+      "log": "final-test-dialogue-render.log"
+    },
+    {
+      "script": "test:dialogue:security",
+      "exit": 1,
+      "seconds": 0.74,
+      "log": "final-test-dialogue-security.log"
+    }
+  ],
+  "retryNotes": [
+    "Initial live-dev attempts affected by edits, server lifetime and ONNX/Tesseract optimization reloads were rerun.",
+    "Three initial Dialogue command aliases were invalid; supported scripts were then invoked.",
+    "OCR/render/security import /src modules directly, so built-server attempts failed to fetch those modules; final passes used the frozen dev server.",
+    "Real Studio neural QA requests identical identity-encoded WASM from local Nitro; runtime/model/assertions/deadlines are unchanged."
+  ],
+  "sourceSha256": {
+    "package.json": "b15c3cd523c8a72800a9c5c9763b5d226cb3d68b47dccbc5338b5bf45ec7c14d",
+    "scripts/r5-benchmark.mjs": "c2ffc20a2fe35865abe8165adfb511a01a5feda6fe6c8cc8c4493d8b3e8aecae",
+    "scripts/r5-browser-check.mjs": "c43c54bab0df00c88179c8703efb87d42123a7f3eaa7743375382883e5b38799",
+    "scripts/studio-browser-check.mjs": "0fc7d0334298274dd6d3b2491b9f0658cdc1cbd7510779a85ce1a9c946bc30f5",
+    "src/components/studio/pro/pro-canvas.tsx": "9b963f77caff7f345e09c957bc4d85806a81c1f8e4bf4bbcb8c30695641f6824",
+    "src/components/studio/pro/pro-geometry.tsx": "4dee67b0a7c5384b6d73629d9521c383d79285ae0af9a740cdbcc61fa34acfde",
+    "src/components/studio/pro/pro-properties.tsx": "ecd0a8584b73034c7bc93d12f857161b30431e1764037b6faae944a636469471",
+    "src/components/studio/pro/pro-transform.tsx": "f1303283535abb6e2ca6df8e496fe8f820a03132dbb840c3120cbd8435c8f9c3",
+    "src/components/studio/pro/pro-workspace.tsx": "c48b92ca5dec526ea81196435055e2fa99fd3bc713d2d9772e76b28c85dfafe9",
+    "src/lib/studio/image-policy.test.ts": "8e4d71a8770d484a9b59d52f1412eb557bba96337f81f82eb43ed3c42c0a0be6",
+    "src/lib/studio/image-policy.ts": "bc2886733a401b10f8ec8a975e178f978d1a054bb3fc57dfab83aa29c835dace",
+    "src/lib/studio/pro/client.ts": "ecd7ef87a0c689d726bc810a388ea04fdbaa19b5f6367e0814716278ecbeabc8",
+    "src/lib/studio/pro/geometry-operations.test.ts": "09dcab362d3f6ad5093651bfe38e70cc2545a076b07fae75c5da67f082a1f743",
+    "src/lib/studio/pro/geometry-operations.ts": "c3efc9eb2989da89d7e3517f1d02b8c8cf36795a2456d05e2f5c5ead6ad896cf",
+    "src/lib/studio/pro/selection-transform-worker.ts": "7c2738c0817d1596a8e1f9b272046e596b064ddaa69b848a3f98abee4fcd0b9f",
+    "src/lib/studio/pro/selection-transform.test.ts": "a9b0ba766e8f86984320641a481332ca67509a7d9ad7bbb2e54a3970bd00ad75",
+    "src/lib/studio/pro/selection-transform.ts": "18c2cdba7a1b06add5ceba93703c701c392334f5e3429e51d60d95a796d63011",
+    "src/lib/studio/pro/transform-session.test.ts": "f16bb8de95962df7ea2c9db1fd48b31fd5df5aee3244d698fd06a964e3796283",
+    "src/lib/studio/pro/transform-session.ts": "7651e2480134e5b91a739d18a36c81d204cf24d354ce8e4f117f6eb0bbe65c88",
+    "src/lib/studio/pro/worker.ts": "3602c3a7f323d8ef471e01d6d6296467aa7505b7fb065f6432b5a47e4237a02b",
+    "vercel.json": "145233bd06a6f000395a62b8777f5438209ac8d889f6d6295e7a567ab8648b69"
+  },
+  "compatibility": {
+    "mainUnchanged": true,
+    "r3": "848ebf85395f5586ad4c2d40bf987902a4c65639",
+    "r3PatchApplicability": "conflicts in package.json and pro-canvas.tsx; inspected without merging",
+    "r4": "no published branch/PR found",
+    "nativeSchemaChanged": false
+  },
+  "limitations": [
+    "Selected-pixel staging:4MP single visible unlocked affine raster/paint layer; links/clipping/enabled effects/nonlinear starting layer rejected.",
+    "Finite Canvas/PNG feather rounding; measured alpha difference0 and premultiplied color <=1.459.",
+    "Independent mask geometry is affine only.",
+    "No physical Android/stylus, Safari/Firefox or combined R3/R4 runtime validation."
+  ],
+  "knownR5ReleaseBlockingDefects": [],
+  "hosting": {
+    "automaticDeploymentDisabledFor": "codex/r5-transform-geometry-engine",
+    "deploymentCommandInvoked": false
+  }
+}

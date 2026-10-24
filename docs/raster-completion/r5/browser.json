@@ -1,0 +1,70 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "selectedPixels": true,
+      "cancel": true,
+      "protectedPixels": true,
+      "native": true,
+      "history": true,
+      "maskOnly": true,
+      "nudge": true,
+      "percent": true,
+      "canvasAnchor": true,
+      "resampling": true
+    },
+    {
+      "width": 768,
+      "selectedPixels": true,
+      "cancel": true,
+      "protectedPixels": true,
+      "native": true,
+      "history": true,
+      "maskOnly": true,
+      "nudge": true,
+      "percent": true,
+      "canvasAnchor": true,
+      "resampling": true
+    },
+    {
+      "width": 390,
+      "selectedPixels": true,
+      "cancel": true,
+      "protectedPixels": true,
+      "native": true,
+      "history": true,
+      "maskOnly": true,
+      "nudge": true,
+      "percent": true,
+      "canvasAnchor": true,
+      "resampling": true
+    },
+    {
+      "width": 360,
+      "selectedPixels": true,
+      "cancel": true,
+      "protectedPixels": true,
+      "native": true,
+      "history": true,
+      "maskOnly": true,
+      "nudge": true,
+      "percent": true,
+      "canvasAnchor": true,
+      "resampling": true
+    },
+    {
+      "width": 320,
+      "selectedPixels": true,
+      "cancel": true,
+      "protectedPixels": true,
+      "native": true,
+      "history": true,
+      "maskOnly": true,
+      "nudge": true,
+      "percent": true,
+      "canvasAnchor": true,
+      "resampling": true
+    }
+  ],
+  "errors": []
+}

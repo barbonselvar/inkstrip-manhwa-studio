@@ -1,54 +1,80 @@
-# R5 implementation checkpoint — BLOCKED
+# R5 execution recovery and implementation report
 
-Branch: `codex/r5-transform-geometry-engine`  
-Draft PR: https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/15  
-Verified integration base: main `7538ee31d119276e37eae56c6694c9113f7e2e03`  
-Verified pushed audit checkpoint: `be5417f336ef33cbbae0e468b4f2c32087fa0443`  
-The exact documentation-checkpoint HEAD is recorded in PR #15 and the delivery report.
+Branch: `codex/r5-transform-geometry-engine` · [Draft PR #15](https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/15)
 
-## Disposition
+Published recovery checkpoint: `0c2b7cb4e7ae9ec7d82bf78fe1d8c819ee17136e`.
+Initial reconstructed implementation commit: `2dd5875` (follow-up fixes and final delivery SHA are
+recorded in the PR). Final runtime: `f12094e5c805f08f93fe519950bc11cb8bc0049f`. Main/base: `7538ee31d119276e37eae56c6694c9113f7e2e03`.
 
-**BLOCKED by unavailable execution infrastructure. R5 is not complete or ready for independent implementation review.** Only the initial audit and these checkpoint reports are published. Local source drafts must not be represented as pushed, browser-verified or production-ready.
+## Environment and recovery
 
-The executor disconnected while preparing selection-transform UI/session integration:
-`Failed to create unified exec process: exec-server transport disconnected`.
-A subsequent minimal command returned:
-`No usable execution environment is available. Wait for an environment to become available before using this tool.`
+The replacement executor became usable. Repository clone/access, terminal commands,
+source writes, `npm ci`, tests, Git commit and authenticated push dry-run all worked.
+The fresh workspace initially had no repository or old `/workspace/r5-evidence` directory.
+Workspace/scratch/shared/tmp inspection, the published branch/PR reports and `git fsck
+--no-reflogs --unreachable` found no recoverable unpublished drafts. No prior filesystem
+snapshot is exposed by the available runtime interfaces. This is a reconstruction of the
+missing drafts, not a claim that the lost local source or its old test logs were recovered.
 
-The selected environment was reported unavailable. Its management API still reported running/connected, but had no diagnostic history or exposed recovery capability. GitHub access remained functional. No GitHub permission change is required; the execution workspace must be restored/reconnected before implementation can be completed.
+The existing R5 branch and PR were reused. Both published audit commits remain ancestors.
+No existing engine was restarted or replaced. Existing affine/projective/warp, rendering,
+precision, crop/output, masks, native storage, resource policy and history were reused.
 
-## Audit retained
+## Reconstructed work
 
-Read the initial [gap analysis](R5_GAP_ANALYSIS.md), existing R1/R1.1/R2 release audit, transform/crop/resize/resampling code, mask frames, native model, worker/client, history, precision/view mapping and regression scripts. Existing source-backed affine/perspective transforms, bounded warp, crop/output metadata, four resamplers, groups, masks and exports are reused.
+- `geometry-operations.ts`: nine anchored canvas-origin operations; captured selection
+  prematrix rebasing; ordinary/group/unlinked mask alignment; crop, artboard, guide and
+  Dialogue region translation; affine mask-only placement and document-space nudges.
+- Transform/Geometry controls: explicit scope, percentages, +/-90/180 content rotation,
+  configurable large nudge step, percentage image size, pending cancellation/summary,
+  canvas anchor selector and independent layer/mask targeting. Existing touch styling is reused.
+- `transform-session.ts`: immutable origin/revision guard for preview and Apply; safe
+  gesture cloning; one transactional publication; stale drafts cannot target a newer document.
+- `selection-transform.ts` and worker/client integration: explicit selected-pixel lift,
+  fractional alpha/premultiplied residual factoring, native-resolution immutable PNGs,
+  tight visible-pixel transform frame and pivot, live floating preview, hidden editable
+  original, one Apply transaction, native/export/history integration. Session persistence
+  never receives an unaccepted stage. Worker cancellation and late replies cannot publish
+  into a changed/unmounted document.
+- Confirmed workload defects fixed: color rounding at translucent feather edges; drift
+  from rounded odd center anchors; Restore initial transform losing the centered preview
+  pivot; high-entropy chunked PNGs falsely exhausting the import header-reading budget.
+- New reproducible commands: `test:r5:browser`, `bench:r5`; geometry, selected-pixel,
+  revision, PNG-policy and actual browser/worker/native tests. Existing assertions remain.
 
-No R3/R4/F1 branch was incorporated. R3 PR #14 and AI PR #6 were separate Drafts; no R4 branch/PR appeared in the audited inventory. Main was independently rechecked at the same base after the disconnection.
+## Safe supported scope
 
-## Local work observed before disconnection — not published implementation
+Whole-layer operations retain the normal existing16.8MP/16384-side and device budgets.
+Selected-pixel staging is bounded to4MP and existing asset/source/layer/group budgets.
+It accepts one visible unlocked affine raster/paint layer. Links, clipping stacks, enabled
+layer effects and nonlinear starting layers reject explicitly; masks/adjustments on an
+accepted layer are baked into the processed pieces, with the original retained hidden.
+The selection itself stays at its original document coordinates. Feathered reassembly has
+small measured Canvas/PNG rounding; see the exact metrics, not a lossless blanket claim.
 
-- New pure geometry-operation helpers: nine canvas anchors; whole-document coordinate rebasing; ordinary/group/unlinked masks; captured selection frames; crop/artboard/guide/Dialogue coordinates; affine mask-only positioning; budget validation and document-space nudges. A focused local test run passed 13 cases.
-- Draft Transform/Geometry controls: percentages, quick layer/mask rotation, pending-size cancellation, larger nudge step and mask-only scope.
-- Draft revision-bound transform origin and mask-aware Move integration.
-- Draft selected-pixel planning/splitting and worker/client operation, using existing raster/group layers and immutable assets. The intended lifecycle retains the original layer hidden, factors fractional selection alpha, stages remaining/lifted PNGs, previews an editable floating layer, and publishes one transaction only on Apply.
-- The final command wiring staged selection sessions, renderer assets and UI was rejected before a process could be created. Its application must not be assumed.
+Image Resize retains the existing professional output-grid workflow: the final cropped
+composite is truly resampled; source layers do not undergo repeated destructive resizing.
+Masks support independent affine transforms; nonlinear mask-only targets remain unsupported.
+Existing bounded perspective/warp support was preserved, without introducing a new mesh engine.
+No native fields or envelope versions were added, and source asset bytes remain immutable.
 
-Observed local draft files include:
-`src/lib/studio/pro/geometry-operations.ts`,
-`geometry-operations.test.ts`, `selection-transform.ts`,
-`client.ts`, `worker.ts`,
-`src/components/studio/pro/pro-canvas.tsx`,
-`pro-workspace.tsx`, `pro-transform.tsx`,
-`pro-geometry.tsx`, and the geometry controls in `pro-properties.tsx`.
-Their survival/current content cannot be verified until filesystem access returns. Inspect and preserve the worktree before continuing; do not overwrite it from these notes.
+## Compatibility and publication controls
 
-## Resume requirements and known unfinished integration
+R1/R1.1/R2 source and regressions were inspected and exercised. R3's separate brush branch
+was inspected read-only. Shared UI/import/script hunks need normal conflict resolution when
+integrated later; a clean combined runtime is not claimed. No R4 branch/PR is published.
+No R3/R4/F1 commit was incorporated, and PRs #6/#14 remain independent.
 
-1. Restore the environment, inspect Git/worktree and actual file contents, and fetch current refs without incorporating R3/R4/F1.
-2. Finish transform-origin safety: deep-cloning a gesture's draft must preserve the immutable origin reference. A raw `structuredClone(transformDraft)` would clone that reference and invalidate the origin check. The attempted correction was in the rejected command; verify before browser tests.
-3. Finish selected-pixel staging and rollback. Preview-only assets must not enter session persistence/history until Apply. Cancel/Undo/close must discard them, and late worker replies must not target a newer document.
-4. Validate clipping/effects/group-depth restrictions, exact coverage reassembly, native asset budgets, protected pixels, original bytes and staging cancellation. The proposed selected-pixel operation has a conservative4MP working-canvas cap; this was not release-validated and must be justified by measurements. Whole-layer/native import limits must remain unchanged.
-5. Complete real pixel/native/undo/export/UI regression at1440/768/390/360/320px, performance measurements, full checks and exact implementation-HEAD CI.
-6. Update the gap analysis and both reports with actual supported/deferred cases. Keep PR #15 Draft. Do not merge or deploy.
+The Vercel Git configuration excludes only `codex/r5-transform-geometry-engine` from automatic
+deployments. This prevents an ordinary requested branch push from invoking the existing
+preview integration. No deployment command or hosting API was invoked. Main, production
+configuration for other branches, dependency versions/lockfile and native formats are unchanged.
 
-## Compatibility and release safety
+## Validation and disposition
 
-No source implementation is committed by this checkpoint, no native schema/dependency/deployment configuration changed, and no main mutation, merge, production deployment or R6 work occurred. Existing production functionality is unaffected. No completed new UI or selected-pixel transform is claimed. Performance benchmarks, browser validation and final resource/compatibility claims remain pending.
+Local validation passed: **837 automated tests,29 browser suites, typecheck, lint, build,
+configuration/auth checks and local production-build acceptance**. No known R5 release-blocking
+defect remains within the documented supported scope. Final test counts, browser reruns, measured staging results and remaining limitations are
+recorded in [R5_TEST_REPORT.md](R5_TEST_REPORT.md). The PR stays Draft. No main write, PR merge,
+Vercel deployment or R6 work occurred. Implementation delivery is not authorization to release;
+any unresolved full-suite validation failure remains visible in that report.

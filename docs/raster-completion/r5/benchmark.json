@@ -1,0 +1,42 @@
+[
+  {
+    "transformAndLanczosExportMs": 318.39999999990687,
+    "width": 128,
+    "height": 96,
+    "alpha": 0.5,
+    "stageMs": 70.5999999998603,
+    "assetBytes": 26769,
+    "maxAlpha": 0,
+    "maxPremultiplied": 1.0941176470588374
+  },
+  {
+    "transformAndLanczosExportMs": 272.69999999995343,
+    "width": 512,
+    "height": 512,
+    "alpha": 1,
+    "stageMs": 91.5,
+    "assetBytes": 363941,
+    "maxAlpha": 0,
+    "maxPremultiplied": 1.4588235294117737
+  },
+  {
+    "transformAndLanczosExportMs": 525.4000000001397,
+    "width": 1024,
+    "height": 1024,
+    "alpha": 1,
+    "stageMs": 288.20000000018626,
+    "assetBytes": 1331535,
+    "maxAlpha": 0,
+    "maxPremultiplied": 1.4588235294117737
+  },
+  {
+    "transformAndLanczosExportMs": 1277.3000000000466,
+    "width": 2000,
+    "height": 2000,
+    "alpha": 1,
+    "stageMs": 803.6000000000931,
+    "assetBytes": 4590225,
+    "maxAlpha": 0,
+    "maxPremultiplied": 1.4588235294117737
+  }
+]

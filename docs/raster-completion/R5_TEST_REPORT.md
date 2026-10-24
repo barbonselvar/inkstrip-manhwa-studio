@@ -1,43 +1,127 @@
-# R5 test checkpoint — incomplete
+# R5 recovery validation report
 
-Draft PR: https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/15  
-Branch: `codex/r5-transform-geometry-engine`  
-Base: `7538ee31d119276e37eae56c6694c9113f7e2e03`  
-Audit checkpoint: `be5417f336ef33cbbae0e468b4f2c32087fa0443`
+Runtime under final acceptance: `f12094e5c805f08f93fe519950bc11cb8bc0049f` on
+`codex/r5-transform-geometry-engine`. Recovery parent: `0c2b7cb4e7ae9ec7d82bf78fe1d8c819ee17136e`.
+The final documentation/delivery HEAD and its GitHub Actions links are recorded in
+[Draft PR #15](https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/15).
 
-## Confirmed observations
+Node24.19.0, npm11.9.0, lockfile install; Playwright Chromium156.0.8078.4 on the
+replacement Linux executor. These are newly executed results, not the lost workspace's
+13-test draft run. No physical Android, stylus, Safari or Firefox result is claimed.
 
-| Command / check | Result and scope |
-| --- | --- |
-| `git fetch origin --prune`, GitHub main/open-PR inspection | Passed; isolated branch created directly from main; R3/R4/F1 not incorporated |
-| `npm ci` | Completed with exit0 using the repository lockfile; no dependency additions |
-| `npm test` before adding the new geometry test file | Completed baseline run; the final Pro group reported464 passed,0 failures/skips/cancellations. This was not the final R5 source |
-| `node --experimental-strip-types --test src/lib/studio/pro/geometry-operations.test.ts` | **13 passed,0 failed/skipped/cancelled**, local draft only; output was read before disconnection |
-| Intermediate `npm run typecheck` invocations | Invoked; no errors in the logs inspected at that point, but final completion status for the latest draft was not captured. Do not count this as final R5 validation |
-| GitHub Actions on audit-only be5417f | Both passed: [Configuration40141470422](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/40141470422), [Build40141470444](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/40141470444). These checks test baseline code plus documentation, not the uncommitted R5 runtime drafts |
+## Unit, integration and build gates
 
-The 13 local cases cover nine-anchor source translation/IDs, shrink/re-expand source recovery, linked/unlinked/group mask alignment, crop/saved-selection/artboard/Dialogue coordinate shifts, captured-selection prematrices, invalid dimensions/budgets, affine mask-only preservation, invalid/locked/projective mask targets, linked-layer nudges, independent mask nudges, Undo/Redo, native metadata/source-byte round trip and content-angle normalization.
+| Gate                                                               | Actual result                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository access, source write, commands, dependency installation | Passed; fresh clone of the existing branch, `npm ci` exited0                                                                                                                                                                                       |
+| Git commit / push authorization                                    | Local commits and authenticated push dry-run passed; final remote HEAD is in PR #15                                                                                                                                                                |
+| `npm test`                                                         | **837 passed;0 failed, cancelled or skipped** (200 script +59 app/auth +91 Studio +487 Pro tests)                                                                                                                                                  |
+| New test coverage                                                  | 24 new tests:12 geometry operations,8 selected-pixel,3 transform-session,1 PNG-policy. Internal oracles exercise all65,536 alpha/selection combinations and quantized premultiplied residual colors; these are not counted as65,536 separate tests |
+| `npm run typecheck`                                                | Passed, including config TypeScript                                                                                                                                                                                                                |
+| `npm run lint`                                                     | Passed                                                                                                                                                                                                                                             |
+| `npm run build`                                                    | Passed. The standard database migration script reported DATABASE_URL unset and skipped its external migration; no production database operation occurred                                                                                           |
+| `npm run check:build`                                              | Passed: Vercel output/server, browser/AI runtime artifacts, PWA and tslib bundling                                                                                                                                                                 |
+| `npm run check:auth`                                               | Passed: dev/build both use the existing sign-in-off configuration                                                                                                                                                                                  |
+| `git diff --check`                                                 | Passed                                                                                                                                                                                                                                             |
 
-Do not combine the focused13 cases with the earlier baseline run into a claimed final R5 test count.
+The focused tests cover all nine anchors, locked source rebasing, exact odd half-pixel
+centering and inverse resize, group/linked/unlinked masks, captured selection prematrices,
+crop/artboard/guide/Dialogue coordinates, budgets, independent mask geometry/nudging,
+layer links/locks, history/native bytes, content-angle normalization, staging restrictions,
+layer/group limits, alpha/color factoring, tight lifted frames and immutable revision guards.
 
-## Blocked / not completed
+## Browser acceptance
 
-- Final combined unit/integration suite on the complete R5 runtime.
-- Final TypeScript, ESLint, production build, `check:build`, `check:auth`.
-- New selected-pixel algorithm and staging integration tests.
-- R5 pixel-level/browser coverage, desktop and touch-emulated1440/768/390/360/320px.
-- Crop/canvas/image-size actual pixel comparisons and final transform preview/export equality.
-- Full Chapter/Raster/Vector/Dialogue/homepage/AI/import-safety regressions for the new runtime.
-- Performance/memory benchmarks and resource-cap validation.
-- Final implementation-HEAD GitHub Actions.
-- Physical Android/stylus validation (not performed).
+**All29 browser command suites passed**, plus the local production-build acceptance check.
+The complete browser evidence inventory accompanies this report in `r5/validation.json`. The added
+`npm run test:r5:browser` passed against the final production build at1440/768/390/360/320px,
+with actual mouse/CDP touch selected-pixel handles. It checks initial-pose pixel equality,
+Apply/Cancel, unchanged pixels outside the moved region, a single history transaction,
+Undo/Redo, native byte retention/reimport, PNG export, Save/close exclusion of temporary
+assets, independent mask transforms/nudges, percentages, content rotation, arrow nudges at
+all four view quarter turns, anchored canvas pixels, pending output cancellation and real
+Lanczos output dimensions. It reports zero browser errors and no horizontal overflow.
 
-No benchmark timings, peak-memory measurements, browser passes or rendering-quality findings are claimed for R5.
+Existing browser commands are retained and run with their original assertions. This
+includes Studio neural inference; editor; adjustments; retouch; workflow; UI; Pro; layers;
+repair; geometry; transform; color; appearance; vector; compound; Pathfinder; artboards;
+vector-final; raster-refinement; homepage; Dialogue OCR/UI/workflow/render/security;
+Chapter import safety; R2 document and R2 gesture coverage. Exact per-command outcomes,
+reruns and the production-build acceptance result are listed in the evidence inventory.
+No source or assertion was weakened to make a run pass.
 
-## Infrastructure failure and reproducibility
+Dev and built homepage smoke checks use the existing readiness-selector option, await
+visible content, and report no console/page errors, branding/auth warnings or overflow.
+Built output agrees with the dev baseline. Desktop/mobile screenshots were visually
+inspected, including the R5 workspace; early loading-screen captures were replaced with
+ready-state captures. Production acceptance is local-only; it does not contact or deploy
+the Vercel production application.
 
-Logs were written under `/workspace/r5-evidence` while the workspace was usable. Their persistence cannot currently be checked. The execution service first reported an exec-server transport disconnection, then explicitly reported no usable execution environment. The command wiring the selected-pixel workspace/renderer/UI stage was rejected before process creation; assume it is unapplied until the worktree is inspected.
+## Failures investigated and reruns
 
-Restore/reconnect this task's execution workspace, inspect the existing worktree and logs, then rerun every pending gate. The Draft PR must remain blocked; a documentation-only green CI result is not evidence that R5 editing works.
+- Early background development-server lifetime failure caused connection/download timeouts.
+  A persistent server replaced it; that run is not counted as a pass.
+- Vite's first lazy ONNX/Tesseract dependency optimization and edits during reconstruction
+  reloaded open QA pages. Several suites failed with navigation-destroyed contexts or missing
+  dialogs/controls after reload. Their successful partial messages were not treated as full
+  suite success. Affected suites were rerun against frozen built output; original logs remain
+  in the execution evidence directory.
+- The initial regression orchestrator supplied an invalid `:browser` suffix to three Dialogue
+  commands. The actual supported workflow/render/security scripts were then run explicitly.
+- Three module-level Dialogue probes import `/src` modules directly and therefore failed
+  when pointed at built output. They passed on the frozen dev server with the supported
+  commands; their built-server attempts are retained in the evidence inventory.
+- The new R5 test initially assumed native IDs were preserved. Native import intentionally
+  remaps IDs; assertions now compare real imported IDs and immutable bytes. No runtime rule
+  was changed to satisfy that fixture assumption.
+- Pixel benchmarking found feathered color error above2 premultiplied levels; the residual
+  now factors quantized premultiplied color, reducing the measured maximum to1.459. Tight
+  selected-pixel bounds and restoring the original centered preview pivot were also fixed.
+- A real4MP canvas PNG exceeded the header-read budget because IDAT header reads speculatively
+  charged compressed pixel payload. Exact header reads preserve the2MiB budget and pass both
+  a600-chunk unit fixture and actual4MP worker PNG encode/redecode.
+- Real neural inference initially stalled while the local Nitro QA server compressed WASM.
+  A direct transport probe served identical11,210,254 bytes in0.225s with identity encoding;
+  the compressed request exceeded20s without returning bytes. The local Studio QA context now
+  requests identity encoding, with TLS verification enabled and unchanged model, runtime,
+  deadlines and assertions. Real Swin2SR inference, comparison, apply/reload, original recovery,
+  cancellation and batch enhancement then passed. No mocked inference is reported.
 
-No existing assertions were weakened or removed. No source draft was pushed without its required final verification. Main remains unchanged and production was not deployed.
+## Native workload measurements
+
+`npm run bench:r5` runs the actual rendering worker, PNG encoding/decoding and export.
+One sample per size, shared executor under concurrent browser load; timings are not phone
+promises, latency percentiles or peak memory measurements. Source/selection fixtures are
+procedural gradients and feathered ellipses, with layer opacity0.73 and Multiply.
+
+| Canvas           | Lift/encode stage | Affine transform + Lanczos half-size PNG export | New PNG asset bytes | Maximum alpha difference | Maximum premultiplied color difference |
+| ---------------- | ----------------- | ----------------------------------------------- | ------------------- | ------------------------ | -------------------------------------- |
+| 128×96, alpha0.5 | 70.6ms            | 318.4ms                                         | 26,769              | 0                        | 1.0941                                 |
+| 512×512          | 91.5ms            | 272.7ms                                         | 363,941             | 0                        | 1.4588                                 |
+| 1024×1024        | 288.2ms           | 525.4ms                                         | 1,331,535           | 0                        | 1.4588                                 |
+| 2000×2000 (4MP)  | 803.6ms           | 1277.3ms                                        | 4,590,225           | 0                        | 1.4588                                 |
+
+The final encoded export dimensions are decoded and checked, not inferred from metadata.
+Raw measurements are in `r5/benchmark.json`. The4MP staging cap remains independent of
+unchanged ordinary document/device/source/asset/history budgets. No peak staging-memory,
+physical-device throughput or arbitrary16.8MP selected-pixel throughput is claimed.
+
+## Compatibility, limits and release disposition
+
+Main remained `7538ee31d119276e37eae56c6694c9113f7e2e03` on fresh fetch. R1/R1.1/R2
+native/import/history/source preservation are covered by the full tests and real browser
+regressions. Existing native versions1–5/Dialogue7 and the separate unreleased AI6 boundary
+are preserved. The lockfile, dependencies and native schema were not changed.
+
+R3 `848ebf8` was inspected without merging. Its brush changes share UI files/scripts;
+read-only patch applicability identifies conflicts in `package.json` and `pro-canvas.tsx`.
+No combined-branch runtime test or clean merge is claimed. No published R4 ref/PR was found.
+Selected-pixel and mask-only boundaries are explicit in the [gap inventory](R5_GAP_ANALYSIS.md):
+4MP single-layer staging, no linked/clipped/effected/nonlinear starting layer, existing source
+and asset budgets, retained hidden original, finite feather rounding, affine-only independent
+mask geometry. Physical Android/stylus and other browser engines remain untested.
+
+**All local gates passed; no known R5 release-blocking defect remains within the documented
+supported scope.** Keep PR #15 Draft. Publication is not a merge/deployment approval. No main mutation,
+unrelated merge, deployment or R6 work occurred. Any unfinished validation gate is identified
+in the evidence inventory and PR, rather than marked complete.
