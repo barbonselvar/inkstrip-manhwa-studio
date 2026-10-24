@@ -9,6 +9,7 @@ export function brushPoint(
   enabled: boolean,
   smoothing: number,
   stabilization = 0,
+  pressureGamma = 1,
 ): BrushPoint {
   const dt =
     previous?.time !== undefined && point.time !== undefined
@@ -32,9 +33,73 @@ export function brushPoint(
     y: previous ? previous.y + (point.y - previous.y) * factor : point.y,
     ...(point.time !== undefined ? { time: point.time } : {}),
     ...(enabled && pointerType === "pen"
-      ? { pressure: Math.max(0.05, Math.min(1, Number.isFinite(pressure) ? pressure : 1)) }
+      ? { pressure: pressureResponse(Number.isFinite(pressure) ? pressure : 1, pressureGamma) }
       : {}),
   };
+}
+
+/** Pen pressure response curve, p^gamma, applied once as input is recorded. Stored
+ * pressures keep their existing meaning, so documents render the same everywhere. */
+export const PRESSURE_GAMMA = { min: 0.25, max: 4 } as const;
+export function pressureResponse(pressure: number, gamma = 1) {
+  const g = Number.isFinite(gamma)
+    ? Math.max(PRESSURE_GAMMA.min, Math.min(PRESSURE_GAMMA.max, gamma))
+    : 1;
+  return Math.max(0.05, Math.min(1, Math.max(0, Math.min(1, pressure)) ** g));
+}
+
+export const MAX_STROKE_POINTS = 10_000;
+type RecordedStroke = Pick<Stroke, "points" | "size" | "smoothing" | "sizePressure" | "dynamics">;
+type Sample = { pointerType: string; pressure: number; pressureGamma?: number };
+/** Filter every sample, but store a point only when it moves a size-relative step or
+ * pressure changes, so long or slow strokes stay inside the 10,000-point budget.
+ * Returns the new filter state; `full` once the stroke cannot take more points. */
+export function appendBrushSample(
+  s: RecordedStroke,
+  filtered: BrushPoint | undefined,
+  raw: BrushPoint,
+  input: Sample,
+) {
+  const last = s.points.at(-1)!,
+    state = filtered ?? last;
+  if (s.points.length >= MAX_STROKE_POINTS) return { filtered: state, full: true };
+  if (Math.hypot(raw.x - state.x, raw.y - state.y) <= 0.001)
+    return { filtered: state, full: false };
+  const next = brushPoint(
+    state,
+    raw,
+    input.pointerType,
+    input.pressure,
+    (s.sizePressure || s.dynamics?.opacityPressure) ?? false,
+    s.smoothing ?? 0,
+    s.dynamics?.stabilization ?? 0,
+    input.pressureGamma,
+  );
+  const step = Math.max(0.25, s.size * 0.02);
+  if (
+    Math.hypot(next.x - last.x, next.y - last.y) >= step ||
+    Math.abs((next.pressure ?? 1) - (last.pressure ?? 1)) >= 0.02
+  )
+    s.points.push(next);
+  return { filtered: next, full: s.points.length >= MAX_STROKE_POINTS };
+}
+/** On release, end exactly at the lifted pointer: smoothing and stabilization lag
+ * behind it by design, so append the unfiltered final position (catch-up). */
+export function finishBrushStroke(
+  s: RecordedStroke,
+  filtered: BrushPoint | undefined,
+  raw: BrushPoint,
+) {
+  const last = s.points.at(-1)!,
+    pressure = (filtered ?? last).pressure;
+  if (s.points.length >= MAX_STROKE_POINTS || Math.hypot(raw.x - last.x, raw.y - last.y) <= 0.001)
+    return;
+  s.points.push({
+    x: raw.x,
+    y: raw.y,
+    ...(raw.time !== undefined ? { time: Math.max(raw.time, last.time ?? 0) } : {}),
+    ...(pressure !== undefined ? { pressure } : {}),
+  });
 }
 
 export type DabDynamics = {
