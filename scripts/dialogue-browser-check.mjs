@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -130,6 +131,47 @@ try {
         c.getContext("2d").getImageData(5, 5, 1, 1).data[3] === 255
       );
     });
+    if (width === 1440) {
+      await page
+        .getByRole("navigation", { name: "Pro panels", exact: true })
+        .getByRole("button", { name: "Export", exact: true })
+        .click();
+      const pending = page.waitForEvent("download");
+      await page.getByRole("button", { name: "Export layered assets ZIP", exact: true }).click();
+      const file = await pending,
+        path = "/workspace/screenshots/dialogue-bubble-layers.zip";
+      await file.saveAs(path);
+      const proof = JSON.parse(
+        execFileSync(
+          "python3",
+          [
+            "-c",
+            'import zipfile,json,sys,base64;z=zipfile.ZipFile(sys.argv[1]);assert z.testzip() is None;n=next(n for n in z.namelist() if n.startswith("layers/") and "bubble" in n);d=json.loads(z.read("project.inkstrip"));b=next(l for l in d["document"]["layers"] if "bubble" in l);assert any(l["id"]==b["bubble"]["textId"] for l in d["document"]["layers"]);print(json.dumps({"png":base64.b64encode(z.read(n)).decode(),"layers":sum(n.startswith("layers/") for n in z.namelist())}))',
+            path,
+          ],
+          { encoding: "utf8" },
+        ),
+      );
+      assert.equal(proof.layers, 3);
+      const coverage = await page.evaluate(async (data) => {
+        const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0)),
+          b = await createImageBitmap(new Blob([bytes])),
+          c = new OffscreenCanvas(b.width, b.height),
+          x = c.getContext("2d");
+        x.drawImage(b, 0, 0);
+        b.close();
+        const p = x.getImageData(0, 0, c.width, c.height).data;
+        let ink = 0;
+        for (let i = 3; i < p.length; i += 4) if (p[i]) ink++;
+        return { ink, corner: p[(5 * c.width + 5) * 4 + 3] };
+      }, proof.png);
+      assert.ok(coverage.ink > 1000);
+      assert.equal(coverage.corner, 0);
+      await page
+        .getByRole("navigation", { name: "Pro panels", exact: true })
+        .getByRole("button", { name: "Dialogue", exact: true })
+        .click();
+    }
     await page.screenshot({ path: `/workspace/screenshots/dialogue-${width}.png`, fullPage: true });
     assert.ok(
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),

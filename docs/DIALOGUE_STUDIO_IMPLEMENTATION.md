@@ -72,3 +72,10 @@ Checkpoint validation:742 automated tests pass (200 script,59 shared,49 Studio,4
 - **Unicode/export safety:** valid multilingual/combined/emoji text is escaped losslessly for SVG; invalid XML characters are rejected without modifying the source. ZIP filenames reject traversal, drive paths and hidden direction controls. No untrusted remote inference/proxy endpoint was added.
 
 Current unit total:744 (200 script +59 shared +49 Studio +436 Pro), all passing. TypeScript/lint/build/config/auth checks pass. Final built regression rerun, exact-HEAD CI and release verification remain gates. No Dialogue production deployment has occurred at this checkpoint.
+
+
+## Final integration checks
+
+Locked bubbles/text now respect own and inherited layer locks in the operations layer and UI. Replacing reviewed lettering edits its existing text layer rather than stacking duplicates. Explicit rasterization removes obsolete parametric controls while retaining dialogue classification. An isolated bubble PNG strips only its omitted text association from the temporary render view; the archived native document retains that association. Actual ZIP/PNG browser checks cover this case.
+
+Chapter and layered ZIP accumulation now share the editor's device limits:4MP raster /128MB archives for touch or low-memory devices,16.8MP /512MB on desktop. Native backups remain available without rendering oversized pages. No final artwork is silently reduced. Final automated count is747; the final production-build regression run and exact-HEAD CI are still required before merge.

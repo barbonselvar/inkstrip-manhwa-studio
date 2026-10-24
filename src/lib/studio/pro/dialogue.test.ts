@@ -332,3 +332,31 @@ test("custom dialogue presets preserve editable opacity, dashes, effects and tex
     }),
   );
 });
+
+test("bubble and text editing respect own and inherited layer locks without changing the source", async () => {
+  const { createBubble, updateBubble, updateLettering } = await import("../dialogue/operations.ts");
+  const r = createBubble(fromPanel({ id: "p", name: "Page", width: 640, height: 480 }), "speech"),
+    locked = {
+      ...r.document,
+      layers: r.document.layers.map((l) => (l.id === r.id ? { ...l, locked: true } : l)),
+    },
+    before = JSON.stringify(locked);
+  assert.throws(() => updateBubble(locked, r.id, { fill: "#000000" }), /Unlock/);
+  assert.throws(() => updateLettering(locked, r.id, { text: "Changed" }), /Unlock/);
+  assert.equal(JSON.stringify(locked), before);
+});
+
+test("explicit rasterization retains dialogue classification but removes obsolete parametric controls", async () => {
+  const { createBubble, reconcileDialogue } = await import("../dialogue/operations.ts");
+  const original = createBubble(
+    fromPanel({ id: "p", name: "Page", width: 640, height: 480 }),
+    "speech",
+  ).document;
+  const body = original.layers.find((l) => l.bubble)!;
+  const next = reconcileDialogue(original, {
+    ...original,
+    layers: original.layers.map((l) => (l.id === body.id ? { ...l, kind: "raster" as const } : l)),
+  });
+  assert.equal(next.layers.find((l) => l.id === body.id)!.bubble, undefined);
+  assert.equal(next.layers.find((l) => l.id === body.id)!.dialogueRole, "bubble");
+});

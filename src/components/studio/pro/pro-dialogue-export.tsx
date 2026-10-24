@@ -1,3 +1,4 @@
+import { boundedEntries } from "@/lib/studio/dialogue/budget";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ToolSection } from "../design/tool-section";
@@ -5,7 +6,7 @@ import { ProRenderer } from "@/lib/studio/pro/client";
 import { nativeFile, vectorSvg } from "@/lib/studio/pro/files";
 import type { ProDocument, ProSession } from "@/lib/studio/pro/model";
 import { cleanView } from "@/lib/studio/dialogue/operations";
-import { zipStore, safeAssetName, type ZipEntry } from "@/lib/studio/dialogue/zip";
+import { zipStore, safeAssetName } from "@/lib/studio/dialogue/zip";
 function download(blob: Blob, name: string) {
   const u = URL.createObjectURL(blob),
     a = document.createElement("a");
@@ -81,19 +82,18 @@ export function ProDialogueExport({
           `${base}-${cleaned ? "cleaned" : "without-dialogue"}.${mime.split("/")[1]}`,
         );
       } else {
-        const entries: ZipEntry[] = [
-          { name: "project.inkstrip", blob: await nativeFile({ ...session, document: d }) },
-          {
-            name: "document.json",
-            blob: new Blob([JSON.stringify(d, null, 2)], { type: "application/json" }),
-          },
-        ];
+        const { entries, add } = boundedEntries(maxArea <= 4_000_000 ? 128_000_000 : 512_000_000);
+        add({ name: "project.inkstrip", blob: await nativeFile({ ...session, document: d }) });
+        add({
+          name: "document.json",
+          blob: new Blob([JSON.stringify(d, null, 2)], { type: "application/json" }),
+        });
         let assetNumber = 0;
         const assets: Record<string, string> = {};
         for (const [id, blob] of Object.entries(session.assets)) {
           const name = `assets/${String(++assetNumber).padStart(4, "0")}.${blob.type.split("/")[1] ?? "bin"}`;
           assets[id] = name;
-          entries.push({ name, blob });
+          add({ name, blob });
         }
         const manifest: {
           id: string;
@@ -137,21 +137,24 @@ export function ProDialogueExport({
           const imageDoc = {
             ...d,
             background: "transparent",
-            layers: [{ ...l, parentId: undefined, visible: true }],
+            dialogue: undefined,
+            // Render the real outline, without its UI association to a text
+            // layer omitted from this isolated PNG. Native metadata stays intact.
+            layers: [{ ...l, parentId: undefined, visible: true, bubble: undefined }],
           };
           const file = `layers/${String(i + 1).padStart(4, "0")}-${safeAssetName(l.name)}.png`;
-          entries.push({ name: file, blob: await render(imageDoc, "image/png") });
+          add({ name: file, blob: await render(imageDoc, "image/png") });
           manifest.push({ id: l.id, name: l.name, file, visible: l.visible });
         }
         try {
-          entries.push({
+          add({
             name: "vectors.svg",
             blob: new Blob([vectorSvg(d)], { type: "image/svg+xml" }),
           });
         } catch (e) {
-          entries.push({ name: "SVG-LIMITATIONS.txt", blob: new Blob([(e as Error).message]) });
+          add({ name: "SVG-LIMITATIONS.txt", blob: new Blob([(e as Error).message]) });
         }
-        entries.push({
+        add({
           name: "manifest.json",
           blob: new Blob(
             [

@@ -1,3 +1,4 @@
+import { isLocked } from "@/lib/studio/pro/operations";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ToolSection } from "../design/tool-section";
@@ -363,7 +364,7 @@ export function ProDialogue({
             </Button>
             <Button
               variant="ghost"
-              disabled={!body}
+              disabled={!body || body.kind !== "shape"}
               onClick={() => {
                 onSelect(body!.id);
                 onTool("direct");
@@ -375,337 +376,351 @@ export function ProDialogue({
         </ToolSection>
         {body?.bubble && (
           <ToolSection title="Bubble & tails" defaultOpen>
-            <div className="pro-field-grid">
-              <ProNumber
-                label="Bubble width"
-                value={body.width}
-                min={1}
-                max={16384}
-                onChange={(width) => patchBody({ width })}
-              />
-              <ProNumber
-                label="Bubble height"
-                value={body.height}
-                min={1}
-                max={16384}
-                onChange={(height) => patchBody({ height })}
-              />
-            </div>
-            <ProNumber
-              label="Bubble fill opacity"
-              value={body.fillOpacity ?? 1}
-              min={0}
-              max={1}
-              step={0.05}
-              onChange={(fillOpacity) => patchBody({ fillOpacity })}
-            />
-            <ProNumber
-              label="Bubble border opacity"
-              value={body.strokeOpacity ?? 1}
-              min={0}
-              max={1}
-              step={0.05}
-              onChange={(strokeOpacity) => patchBody({ strokeOpacity })}
-            />
-            <Color label="Bubble fill" value={body.fill} onChange={(fill) => patchBody({ fill })} />
-            <Color
-              label="Bubble border"
-              value={body.stroke}
-              onChange={(stroke) => patchBody({ stroke })}
-            />
-            <ProNumber
-              label="Bubble opacity"
-              value={body.opacity}
-              min={0}
-              max={1}
-              step={0.05}
-              onChange={(opacity) => patchBody({ opacity })}
-            />
-            <ProNumber
-              label="Border width"
-              value={body.strokeWidth}
-              min={0}
-              max={100}
-              onChange={(strokeWidth) => patchBody({ strokeWidth })}
-            />
-            <Choice
-              label="Border style"
-              value={body.dash?.length ? "dash" : "solid"}
-              values={{ solid: "Solid", dash: "Dashed" }}
-              onChange={(v) => patchBody({ dash: v === "dash" ? [6, 4] : [] })}
-            />
-            <ProNumber
-              label="Bubble padding"
-              value={body.bubble.padding}
-              min={0}
-              max={1000}
-              onChange={(padding) => patchBody({}, { padding })}
-            />
-            <label className="pro-check">
-              <input
-                type="checkbox"
-                checked={!!body.effects?.some((e) => e.kind === "dropShadow" && e.enabled)}
-                onChange={(e) =>
-                  patchBody({ effects: e.target.checked ? [defaultEffect("dropShadow")] : [] })
-                }
-              />
-              Bubble shadow (raster/native export)
-            </label>
-            {body.bubble.tails.map((t, i) => (
-              <div className="dialogue-tail" key={t.id}>
-                <h3>Tail {i + 1}</h3>
+            <fieldset className="dialogue-fieldset" disabled={isLocked(d, body.id)}>
+              <div className="pro-field-grid">
                 <ProNumber
-                  label={`Tail ${i + 1} attachment`}
-                  value={t.attachment}
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  onChange={(attachment) => tail(t.id, { attachment })}
-                />
-                <ProNumber
-                  label={`Tail ${i + 1} width`}
-                  value={t.width}
+                  label="Bubble width"
+                  value={body.width}
                   min={1}
-                  max={10000}
-                  onChange={(width) => tail(t.id, { width })}
+                  max={16384}
+                  onChange={(width) => patchBody({ width })}
                 />
-                <div className="pro-field-grid">
-                  <ProNumber
-                    label={`Tail ${i + 1} tip X`}
-                    value={t.tip.x}
-                    onChange={(x) => tail(t.id, { tip: { ...t.tip, x } })}
-                  />
-                  <ProNumber
-                    label={`Tail ${i + 1} tip Y`}
-                    value={t.tip.y}
-                    onChange={(y) => tail(t.id, { tip: { ...t.tip, y } })}
-                  />
-                </div>
                 <ProNumber
-                  label={`Tail ${i + 1} curvature`}
-                  value={t.curvature}
-                  min={-1}
-                  max={1}
-                  step={0.05}
-                  onChange={(curvature) => tail(t.id, { curvature })}
+                  label="Bubble height"
+                  value={body.height}
+                  min={1}
+                  max={16384}
+                  onChange={(height) => patchBody({ height })}
                 />
-                <Choice
-                  label={`Tail ${i + 1} shape`}
-                  value={t.kind}
-                  values={{ point: "Curved point", dots: "Thought trail" }}
-                  onChange={(kind) => tail(t.id, { kind: kind as BubbleTail["kind"] })}
-                />
-                <Button
-                  variant="ghost"
-                  onClick={() =>
-                    patchBody({}, { tails: body.bubble!.tails.filter((v) => v.id !== t.id) })
-                  }
-                >
-                  Remove tail {i + 1}
-                </Button>
               </div>
-            ))}
-            <Button
-              disabled={body.bubble.tails.length >= 8}
-              onClick={() =>
-                patchBody(
-                  {},
-                  {
-                    tails: [
-                      ...body.bubble!.tails,
-                      {
-                        id: crypto.randomUUID(),
-                        attachment: (0.42 + body.bubble!.tails.length * 0.14) % 1,
-                        width: Math.max(2, body.width * 0.08),
-                        tip: { x: body.width * 0.8, y: body.height * 1.3 },
-                        curvature: 0,
-                        kind: "point",
-                      },
-                    ],
-                  },
-                )
-              }
-            >
-              Add connected tail
-            </Button>
+              <ProNumber
+                label="Bubble fill opacity"
+                value={body.fillOpacity ?? 1}
+                min={0}
+                max={1}
+                step={0.05}
+                onChange={(fillOpacity) => patchBody({ fillOpacity })}
+              />
+              <ProNumber
+                label="Bubble border opacity"
+                value={body.strokeOpacity ?? 1}
+                min={0}
+                max={1}
+                step={0.05}
+                onChange={(strokeOpacity) => patchBody({ strokeOpacity })}
+              />
+              <Color
+                label="Bubble fill"
+                value={body.fill}
+                onChange={(fill) => patchBody({ fill })}
+              />
+              <Color
+                label="Bubble border"
+                value={body.stroke}
+                onChange={(stroke) => patchBody({ stroke })}
+              />
+              <ProNumber
+                label="Bubble opacity"
+                value={body.opacity}
+                min={0}
+                max={1}
+                step={0.05}
+                onChange={(opacity) => patchBody({ opacity })}
+              />
+              <ProNumber
+                label="Border width"
+                value={body.strokeWidth}
+                min={0}
+                max={100}
+                onChange={(strokeWidth) => patchBody({ strokeWidth })}
+              />
+              <Choice
+                label="Border style"
+                value={body.dash?.length ? "dash" : "solid"}
+                values={{ solid: "Solid", dash: "Dashed" }}
+                onChange={(v) => patchBody({ dash: v === "dash" ? [6, 4] : [] })}
+              />
+              <ProNumber
+                label="Bubble padding"
+                value={body.bubble.padding}
+                min={0}
+                max={1000}
+                onChange={(padding) => patchBody({}, { padding })}
+              />
+              <label className="pro-check">
+                <input
+                  type="checkbox"
+                  checked={!!body.effects?.some((e) => e.kind === "dropShadow" && e.enabled)}
+                  onChange={(e) =>
+                    patchBody({ effects: e.target.checked ? [defaultEffect("dropShadow")] : [] })
+                  }
+                />
+                Bubble shadow (raster/native export)
+              </label>
+              {body.bubble.tails.map((t, i) => (
+                <div className="dialogue-tail" key={t.id}>
+                  <h3>Tail {i + 1}</h3>
+                  <ProNumber
+                    label={`Tail ${i + 1} attachment`}
+                    value={t.attachment}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    onChange={(attachment) => tail(t.id, { attachment })}
+                  />
+                  <ProNumber
+                    label={`Tail ${i + 1} width`}
+                    value={t.width}
+                    min={1}
+                    max={10000}
+                    onChange={(width) => tail(t.id, { width })}
+                  />
+                  <div className="pro-field-grid">
+                    <ProNumber
+                      label={`Tail ${i + 1} tip X`}
+                      value={t.tip.x}
+                      onChange={(x) => tail(t.id, { tip: { ...t.tip, x } })}
+                    />
+                    <ProNumber
+                      label={`Tail ${i + 1} tip Y`}
+                      value={t.tip.y}
+                      onChange={(y) => tail(t.id, { tip: { ...t.tip, y } })}
+                    />
+                  </div>
+                  <ProNumber
+                    label={`Tail ${i + 1} curvature`}
+                    value={t.curvature}
+                    min={-1}
+                    max={1}
+                    step={0.05}
+                    onChange={(curvature) => tail(t.id, { curvature })}
+                  />
+                  <Choice
+                    label={`Tail ${i + 1} shape`}
+                    value={t.kind}
+                    values={{ point: "Curved point", dots: "Thought trail" }}
+                    onChange={(kind) => tail(t.id, { kind: kind as BubbleTail["kind"] })}
+                  />
+                  <Button
+                    variant="ghost"
+                    onClick={() =>
+                      patchBody({}, { tails: body.bubble!.tails.filter((v) => v.id !== t.id) })
+                    }
+                  >
+                    Remove tail {i + 1}
+                  </Button>
+                </div>
+              ))}
+              <Button
+                disabled={body.bubble.tails.length >= 8}
+                onClick={() =>
+                  patchBody(
+                    {},
+                    {
+                      tails: [
+                        ...body.bubble!.tails,
+                        {
+                          id: crypto.randomUUID(),
+                          attachment: (0.42 + body.bubble!.tails.length * 0.14) % 1,
+                          width: Math.max(2, body.width * 0.08),
+                          tip: { x: body.width * 0.8, y: body.height * 1.3 },
+                          curvature: 0,
+                          kind: "point",
+                        },
+                      ],
+                    },
+                  )
+                }
+              >
+                Add connected tail
+              </Button>
+            </fieldset>
           </ToolSection>
         )}
         {text && (
           <ToolSection title="Lettering" defaultOpen>
-            <label className="pro-field">
-              Dialogue text
-              <textarea
-                className="field"
-                aria-label="Dialogue text"
-                dir={settings.direction}
-                value={text.text}
-                maxLength={5000}
-                rows={4}
-                onChange={(e) => patchText({ text: e.target.value })}
-              />
-            </label>
-            <Choice
-              label="Text language"
-              value={settings.language}
-              values={LANGUAGES}
-              onChange={(v) =>
-                patchText(
-                  {},
-                  {
-                    language: v as Lettering["language"],
-                    direction: v === "ar" ? "rtl" : "ltr",
-                    writing: "horizontal",
-                  },
-                )
-              }
-            />
-            <Choice
-              label="Font family"
-              value={settings.font}
-              values={{
-                Arial: "Arial / system sans",
-                Georgia: "Georgia / serif",
-                "Noto Sans CJK JP": "Noto CJK / system fallback",
-                "Noto Sans Arabic": "Noto Arabic / system fallback",
-                "Courier New": "Courier / monospace",
-              }}
-              onChange={(font) => patchText({}, { font })}
-            />
-            <div className="pro-field-grid">
-              <ProNumber
-                label="Lettering size"
-                value={text.fontSize}
-                min={1}
-                max={1000}
-                onChange={(fontSize) => patchText({ fontSize })}
-              />
-              <ProNumber
-                label="Lettering weight"
-                value={text.fontWeight}
-                min={100}
-                max={900}
-                step={100}
-                onChange={(fontWeight) => patchText({ fontWeight })}
-              />
-            </div>
-            <Color label="Text color" value={text.fill} onChange={(fill) => patchText({ fill })} />
-            <ProNumber
-              label="Text opacity"
-              value={text.opacity}
-              min={0}
-              max={1}
-              step={0.05}
-              onChange={(opacity) => patchText({ opacity })}
-            />
-            <Choice
-              label="Text alignment"
-              value={text.align}
-              values={{ left: "Left", center: "Center", right: "Right" }}
-              onChange={(align) => patchText({ align: align as Layer["align"] })}
-            />
-            <Choice
-              label="Text direction"
-              value={settings.direction}
-              values={{ ltr: "Left to right", rtl: "Right to left" }}
-              onChange={(direction) =>
-                patchText({}, { direction: direction as Lettering["direction"] })
-              }
-            />
-            {settings.language === "ja" && (
-              <Choice
-                label="Japanese writing"
-                value={settings.writing}
-                values={{ horizontal: "Horizontal", vertical: "Vertical · upright CJK" }}
-                onChange={(writing) => patchText({}, { writing: writing as Lettering["writing"] })}
-              />
-            )}
-            <div className="pro-field-grid">
-              <ProNumber
-                label="Text box width"
-                value={text.width}
-                min={1}
-                max={16384}
-                onChange={(width) => patchText({ width })}
-              />
-              <ProNumber
-                label="Text box height"
-                value={text.height}
-                min={1}
-                max={16384}
-                onChange={(height) => patchText({ height })}
-              />
-            </div>
-            <ProNumber
-              label="Line height"
-              value={text.lineHeight}
-              min={0.5}
-              max={3}
-              step={0.05}
-              onChange={(lineHeight) => patchText({ lineHeight })}
-            />
-            <ProNumber
-              label="Letter spacing"
-              value={text.letterSpacing}
-              min={-20}
-              max={100}
-              step={0.5}
-              onChange={(letterSpacing) => patchText({ letterSpacing })}
-            />
-            <ProNumber
-              label="Paragraph spacing"
-              value={settings.paragraphSpacing}
-              min={0}
-              max={1000}
-              onChange={(paragraphSpacing) => patchText({}, { paragraphSpacing })}
-            />
-            <ProNumber
-              label="Text padding"
-              value={settings.padding}
-              min={0}
-              max={1000}
-              onChange={(padding) => patchText({}, { padding })}
-            />
-            {(["italic", "wrap", "fit"] as const).map((k) => (
-              <label className="pro-check" key={k}>
-                <input
-                  type="checkbox"
-                  checked={settings[k]}
-                  onChange={(e) => patchText({}, { [k]: e.target.checked })}
+            <fieldset className="dialogue-fieldset" disabled={isLocked(d, text.id)}>
+              <label className="pro-field">
+                Dialogue text
+                <textarea
+                  className="field"
+                  aria-label="Dialogue text"
+                  dir={settings.direction}
+                  value={text.text}
+                  maxLength={5000}
+                  rows={4}
+                  onChange={(e) => patchText({ text: e.target.value })}
                 />
-                {k === "fit"
-                  ? "Fit text within box"
-                  : k === "wrap"
-                    ? "Automatic wrapping"
-                    : "Italic"}
               </label>
-            ))}
-            <Color
-              label="Text outline"
-              value={text.stroke}
-              onChange={(stroke) => patchText({ stroke })}
-            />
-            <ProNumber
-              label="Outline width"
-              value={text.strokeWidth}
-              min={0}
-              max={100}
-              onChange={(strokeWidth) => patchText({ strokeWidth })}
-            />
-            <label className="pro-check">
-              <input
-                type="checkbox"
-                checked={!!text.effects?.some((e) => e.kind === "dropShadow" && e.enabled)}
-                onChange={(e) =>
-                  patchText({ effects: e.target.checked ? [defaultEffect("dropShadow")] : [] })
+              <Choice
+                label="Text language"
+                value={settings.language}
+                values={LANGUAGES}
+                onChange={(v) =>
+                  patchText(
+                    {},
+                    {
+                      language: v as Lettering["language"],
+                      direction: v === "ar" ? "rtl" : "ltr",
+                      writing: "horizontal",
+                    },
+                  )
                 }
               />
-              Text shadow (raster/native export)
-            </label>
-            <p className="pro-help">
-              Fonts use installed system fallbacks. SVG recipients need matching fonts. Japanese
-              vertical uses upright CJK and rotated Latin; advanced font-specific vertical shaping
-              is limited.
-            </p>
+              <Choice
+                label="Font family"
+                value={settings.font}
+                values={{
+                  Arial: "Arial / system sans",
+                  Georgia: "Georgia / serif",
+                  "Noto Sans CJK JP": "Noto CJK / system fallback",
+                  "Noto Sans Arabic": "Noto Arabic / system fallback",
+                  "Courier New": "Courier / monospace",
+                }}
+                onChange={(font) => patchText({}, { font })}
+              />
+              <div className="pro-field-grid">
+                <ProNumber
+                  label="Lettering size"
+                  value={text.fontSize}
+                  min={1}
+                  max={1000}
+                  onChange={(fontSize) => patchText({ fontSize })}
+                />
+                <ProNumber
+                  label="Lettering weight"
+                  value={text.fontWeight}
+                  min={100}
+                  max={900}
+                  step={100}
+                  onChange={(fontWeight) => patchText({ fontWeight })}
+                />
+              </div>
+              <Color
+                label="Text color"
+                value={text.fill}
+                onChange={(fill) => patchText({ fill })}
+              />
+              <ProNumber
+                label="Text opacity"
+                value={text.opacity}
+                min={0}
+                max={1}
+                step={0.05}
+                onChange={(opacity) => patchText({ opacity })}
+              />
+              <Choice
+                label="Text alignment"
+                value={text.align}
+                values={{ left: "Left", center: "Center", right: "Right" }}
+                onChange={(align) => patchText({ align: align as Layer["align"] })}
+              />
+              <Choice
+                label="Text direction"
+                value={settings.direction}
+                values={{ ltr: "Left to right", rtl: "Right to left" }}
+                onChange={(direction) =>
+                  patchText({}, { direction: direction as Lettering["direction"] })
+                }
+              />
+              {settings.language === "ja" && (
+                <Choice
+                  label="Japanese writing"
+                  value={settings.writing}
+                  values={{ horizontal: "Horizontal", vertical: "Vertical · upright CJK" }}
+                  onChange={(writing) =>
+                    patchText({}, { writing: writing as Lettering["writing"] })
+                  }
+                />
+              )}
+              <div className="pro-field-grid">
+                <ProNumber
+                  label="Text box width"
+                  value={text.width}
+                  min={1}
+                  max={16384}
+                  onChange={(width) => patchText({ width })}
+                />
+                <ProNumber
+                  label="Text box height"
+                  value={text.height}
+                  min={1}
+                  max={16384}
+                  onChange={(height) => patchText({ height })}
+                />
+              </div>
+              <ProNumber
+                label="Line height"
+                value={text.lineHeight}
+                min={0.5}
+                max={3}
+                step={0.05}
+                onChange={(lineHeight) => patchText({ lineHeight })}
+              />
+              <ProNumber
+                label="Letter spacing"
+                value={text.letterSpacing}
+                min={-20}
+                max={100}
+                step={0.5}
+                onChange={(letterSpacing) => patchText({ letterSpacing })}
+              />
+              <ProNumber
+                label="Paragraph spacing"
+                value={settings.paragraphSpacing}
+                min={0}
+                max={1000}
+                onChange={(paragraphSpacing) => patchText({}, { paragraphSpacing })}
+              />
+              <ProNumber
+                label="Text padding"
+                value={settings.padding}
+                min={0}
+                max={1000}
+                onChange={(padding) => patchText({}, { padding })}
+              />
+              {(["italic", "wrap", "fit"] as const).map((k) => (
+                <label className="pro-check" key={k}>
+                  <input
+                    type="checkbox"
+                    checked={settings[k]}
+                    onChange={(e) => patchText({}, { [k]: e.target.checked })}
+                  />
+                  {k === "fit"
+                    ? "Fit text within box"
+                    : k === "wrap"
+                      ? "Automatic wrapping"
+                      : "Italic"}
+                </label>
+              ))}
+              <Color
+                label="Text outline"
+                value={text.stroke}
+                onChange={(stroke) => patchText({ stroke })}
+              />
+              <ProNumber
+                label="Outline width"
+                value={text.strokeWidth}
+                min={0}
+                max={100}
+                onChange={(strokeWidth) => patchText({ strokeWidth })}
+              />
+              <label className="pro-check">
+                <input
+                  type="checkbox"
+                  checked={!!text.effects?.some((e) => e.kind === "dropShadow" && e.enabled)}
+                  onChange={(e) =>
+                    patchText({ effects: e.target.checked ? [defaultEffect("dropShadow")] : [] })
+                  }
+                />
+                Text shadow (raster/native export)
+              </label>
+              <p className="pro-help">
+                Fonts use installed system fallbacks. SVG recipients need matching fonts. Japanese
+                vertical uses upright CJK and rotated Latin; advanced font-specific vertical shaping
+                is limited.
+              </p>
+            </fieldset>
           </ToolSection>
         )}
         <ToolSection title="Reusable presets">
@@ -720,7 +735,13 @@ export function ProDialogue({
             />
           </label>
           <Button
-            disabled={!body || !text || !presetName.trim() || data.presets.length >= 100}
+            disabled={
+              !body ||
+              body.kind !== "shape" ||
+              !text ||
+              !presetName.trim() ||
+              data.presets.length >= 100
+            }
             onClick={() =>
               safe(() => {
                 const preset = {
@@ -1051,6 +1072,31 @@ export function ProDialogue({
                 disabled={!region.replacement.trim()}
                 onClick={() =>
                   safe(() => {
+                    if (region.layerId && d.layers.some((l) => l.id === region.layerId)) {
+                      const candidate = updateLettering(
+                        d,
+                        region.layerId,
+                        { text: region.replacement },
+                        {
+                          language: region.targetLanguage,
+                          direction: region.targetLanguage === "ar" ? "rtl" : "ltr",
+                        },
+                      );
+                      preview(
+                        {
+                          ...candidate,
+                          dialogue: {
+                            ...data,
+                            regions: data.regions.map((v) =>
+                              v.id === region.id ? { ...v, status: "lettered" as const } : v,
+                            ),
+                          },
+                        },
+                        "Approve replacement lettering",
+                        region.layerId,
+                      );
+                      return;
+                    }
                     const r = createText(d, region.replacement),
                       l = r.document.layers.find((v) => v.id === r.id)!;
                     const placed = {

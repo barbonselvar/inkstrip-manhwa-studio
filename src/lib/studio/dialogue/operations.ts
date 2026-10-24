@@ -1,3 +1,4 @@
+import { isLocked } from "../pro/operations.ts";
 import { layer, validateDocument, type Layer, type ProDocument } from "../pro/model.ts";
 import { applyMatrix, affine } from "../pro/transform.ts";
 import { bubbleContours } from "./bubbles.ts";
@@ -183,6 +184,7 @@ export function updateBubble(
 ) {
   const old = bubbleFor(d, id);
   if (!old?.bubble) throw Error("Select a bubble.");
+  if (isLocked(d, old.id)) throw Error("Unlock the bubble in Layers before editing it.");
   if (old.transform.deform && (patch.width !== undefined || patch.height !== undefined))
     throw Error("Use Free Transform to resize this deformed bubble without discarding its mesh.");
   const changed = bubbleLayer({ ...old, ...patch, bubble: { ...old.bubble, ...spec } });
@@ -217,6 +219,7 @@ export function updateLettering(
 ) {
   const l = textFor(d, id);
   if (!l) throw Error("Select a text layer.");
+  if (isLocked(d, l.id)) throw Error("Unlock the text in Layers before editing it.");
   const next = {
     ...d,
     layers: d.layers.map((v) =>
@@ -233,6 +236,8 @@ export function reconcileDialogue(previous: ProDocument, next: ProDocument): Pro
   if (!previous.dialogue && !next.dialogue) return next;
   const ids = new Set(next.layers.map((l) => l.id));
   const layers = next.layers.map((l) => {
+    if (l.kind !== "shape" && l.bubble) return { ...l, bubble: undefined };
+    if (l.kind !== "text" && l.lettering) return { ...l, lettering: undefined };
     if (!l.bubble) return l;
     const old = previous.layers.find((v) => v.id === l.id);
     if (

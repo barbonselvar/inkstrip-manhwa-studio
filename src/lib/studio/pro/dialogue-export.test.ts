@@ -68,3 +68,16 @@ test("SVG preserves multilingual Unicode and rejects invalid XML without replaci
     assert.throws(() => escapeXml(invalid), /source data was not changed/);
   assert.equal(escapeXml("a\nb\tc\r"), "a\nb\tc\r");
 });
+
+test("mobile export budgets match the editor and stop accumulation before exceeding device limits", async () => {
+  const { dialogueBudget, boundedEntries } = await import("../dialogue/budget.ts");
+  assert.deepEqual(dialogueBudget(8, true), { maxArea: 4_000_000, archiveBytes: 128_000_000 });
+  assert.deepEqual(dialogueBudget(4, false), dialogueBudget(8, true));
+  assert.equal(dialogueBudget(8, false).maxArea, 16_777_216);
+  const b = boundedEntries(4);
+  b.add({ name: "a", blob: new Blob(["abc"]) });
+  assert.throws(() => b.add({ name: "b", blob: new Blob(["de"]) }), /device budget/);
+  assert.equal(b.entries.length, 1);
+  b.add({ name: "c", blob: new Blob(["d"]) });
+  assert.equal(b.entries.length, 2);
+});

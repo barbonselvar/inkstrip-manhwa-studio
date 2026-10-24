@@ -1,3 +1,4 @@
+import { browserDialogueBudget } from "@/lib/studio/dialogue/budget";
 import { saveProjectPresets } from "@/lib/studio/dialogue/presets";
 import { ProDialogueExport } from "./pro-dialogue-export";
 import { ProDialogue } from "./pro-dialogue";
@@ -231,12 +232,7 @@ export default function ProWorkspace({
     operationRun = useRef(0);
   const project = useStudio((s) => s.projects.find((p) => p.id === projectId)),
     livePanel = useStudio((s) => s.panels.find((p) => p.id === panel.id));
-  const maxArea =
-    (typeof navigator !== "undefined" &&
-      ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) <= 4) ||
-    (typeof matchMedia !== "undefined" && matchMedia("(pointer:coarse)").matches)
-      ? 4_000_000
-      : 16_777_216;
+  const maxArea = browserDialogueBudget().maxArea;
   const doc = useMemo(() => {
       const current = transient ?? history?.present.doc;
       if (!current || !transformDraft) return current;

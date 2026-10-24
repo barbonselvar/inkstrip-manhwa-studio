@@ -136,6 +136,11 @@ try {
   await page.getByRole("button", { name: "Approve dialogue preview", exact: true }).click();
   await page.getByRole("button", { name: "Approve reviewed region", exact: true }).click();
   await saved(page);
+  await page.getByLabel("Replacement text", { exact: true }).fill("A NEW WORLD");
+  await page.getByRole("button", { name: "Preview replacement lettering", exact: true }).click();
+  await page.getByRole("button", { name: "Approve dialogue preview", exact: true }).click();
+  await page.getByRole("button", { name: "Approve reviewed region", exact: true }).click();
+  await saved(page);
   const accepted = await state(page);
   assert.equal(accepted[0].doc.dialogue.regions[0].status, "approved");
   assert.equal(accepted[0].doc.layers.filter((l) => l.dialogueRole === "text").length, 1);

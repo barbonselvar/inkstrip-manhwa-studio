@@ -1,3 +1,4 @@
+import { browserDialogueBudget, boundedEntries } from "@/lib/studio/dialogue/budget";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ToolSection } from "./design/tool-section";
@@ -9,7 +10,7 @@ import { nativeFile } from "@/lib/studio/pro/files";
 import { fromPanel } from "@/lib/studio/pro/model";
 import { cleanView } from "@/lib/studio/dialogue/operations";
 import { pageRange } from "@/lib/studio/dialogue/ranges";
-import { safeAssetName, zipStore, type ZipEntry } from "@/lib/studio/dialogue/zip";
+import { safeAssetName, zipStore } from "@/lib/studio/dialogue/zip";
 export function DialogueChapterExport({ panels, title }: { panels: Panel[]; title: string }) {
   const [range, setRange] = useState(""),
     [mode, setMode] = useState("dialogue"),
@@ -35,16 +36,10 @@ export function DialogueChapterExport({ panels, title }: { panels: Panel[]; titl
     setBusy(true);
     setError("");
     try {
+      const { maxArea, archiveBytes } = browserDialogueBudget(),
+        { entries, add } = boundedEntries(archiveBytes);
       const ordered = [...panels].sort((a, b) => a.order - b.order || a.createdAt - b.createdAt),
-        pages = pageRange(range, ordered.length),
-        entries: ZipEntry[] = [];
-      let bytes = 0;
-      const add = (entry: ZipEntry) => {
-        bytes += entry.blob.size;
-        if (bytes > 512_000_000)
-          throw Error("This export exceeds the512MB memory budget. Export fewer pages.");
-        entries.push(entry);
-      };
+        pages = pageRange(range, ordered.length);
       for (const [i, index] of pages.entries()) {
         controller.signal.throwIfAborted();
         const panel = ordered[index]!;
@@ -72,13 +67,13 @@ export function DialogueChapterExport({ panels, title }: { panels: Panel[]; titl
           const renderer = new ProRenderer();
           job.current!.renderer = renderer;
           try {
-            await renderer.init(session);
+            await renderer.init(session, maxArea);
             controller.signal.throwIfAborted();
             const d =
               mode === "dialogue"
                 ? session.document
                 : cleanView(session.document, mode === "cleaned");
-            const result = await renderer.export(d, 16_777_216, mime, 0.95, (n, t) => {
+            const result = await renderer.export(d, maxArea, mime, 0.95, (n, t) => {
               if (alive.current) setStatus(`Page ${i + 1}/${pages.length} · layer ${n}/${t}`);
             });
             controller.signal.throwIfAborted();
@@ -203,8 +198,9 @@ export function DialogueChapterExport({ panels, title }: { panels: Panel[]; titl
       </p>
       {error && <p role="alert">{error}</p>}
       <p className="pro-help">
-        Native dimensions and committed crop. Up to250 pages /512MB per export. Saves are never
-        modified. Save or apply open editors before exporting.
+        Native dimensions and committed crop. Up to250 pages;128MB /4MP on touch or low-memory
+        devices,512MB /16.8MP on desktop. Saves are never modified. Save or apply open editors
+        before exporting.
       </p>
     </ToolSection>
   );
