@@ -1,3 +1,4 @@
+import { useImageUrl } from "@/lib/studio/use-image-url";
 import { ToolSection } from "../design/tool-section";
 import { CharacterControls } from "./character-controls";
 import { NumberField } from "../editor/number-field";
@@ -51,12 +52,7 @@ export function RetouchDialog({
     [before, setBefore] = useState(false);
   const current = versions[index]!;
   const display = before ? blob : (candidate ?? current);
-  const [url, setUrl] = useState("");
-  useEffect(() => {
-    const value = URL.createObjectURL(display);
-    setUrl(value);
-    return () => URL.revokeObjectURL(value);
-  }, [display]);
+  const { url, error: imageError } = useImageUrl(display);
   const [strokes, setStrokes] = useState<Selection[]>([]),
     [redo, setRedo] = useState<Selection[]>([]),
     [tool, setTool] = useState<SelectionTool>("brush"),
@@ -250,7 +246,7 @@ export function RetouchDialog({
                   className="retouch-plane"
                   style={{ width: fitWidth * zoom, aspectRatio: `${width}/${height}` }}
                 >
-                  <img src={url} alt="Retouch image preview" draggable={false} />
+                  <img src={url || undefined} alt="Retouch image preview" draggable={false} />
                   {!candidate && !before
                     ? faces.map((face, i) => (
                         <button
@@ -652,9 +648,9 @@ export function RetouchDialog({
             </aside>
           </div>
           <footer className="image-editor-footer">
-            {error ? (
+            {error || imageError ? (
               <p role="alert" className="text-sm text-danger">
-                {error}
+                {error || imageError}
               </p>
             ) : null}
             {busy ? (

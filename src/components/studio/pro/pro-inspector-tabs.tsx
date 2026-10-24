@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useImageUrl } from "@/lib/studio/use-image-url";
 import { Download, Folder, Redo2, Save, Sparkles, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ToolSection } from "../design/tool-section";
@@ -56,15 +56,10 @@ function ReferenceImage({
   name: string;
   onPlace: () => void;
 }) {
-  const [url, setUrl] = useState("");
-  useEffect(() => {
-    const u = URL.createObjectURL(blob);
-    setUrl(u);
-    return () => URL.revokeObjectURL(u);
-  }, [blob]);
+  const { url, error } = useImageUrl(blob);
   return (
     <div className="pro-reference">
-      <img src={url} alt={`${name} character reference`} />
+      <img src={url || undefined} title={error || undefined} alt={`${name} character reference`} />
       <div>
         <strong>{name}</strong>
         <Button variant="secondary" onClick={onPlace}>

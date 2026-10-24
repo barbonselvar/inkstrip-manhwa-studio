@@ -42,10 +42,19 @@ import { brushPoint } from "@/lib/studio/pro/brush-dynamics";
 import { patchSelection, type RepairRequest, type RepairKind } from "@/lib/studio/pro/repair";
 import { appendSelection } from "@/lib/studio/pro/selection";
 import { editedAnchor } from "@/lib/studio/pro/anchor-edit";
+import {
+  viewFit,
+  rotatePoint,
+  rotateCanvasView,
+  canvasPoint,
+  centerViewOn,
+  frameHandleAt,
+  type CanvasView,
+} from "@/lib/studio/pro/viewport";
 import { anchorCurve, cubicPoint, splitAnchorSegment } from "@/lib/studio/pro/bezier";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointer } from "react";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Scan, Hand } from "lucide-react";
+import { ZoomIn, ZoomOut, Scan, Hand, RotateCcw, RotateCw, RefreshCw } from "lucide-react";
 import {
   layer,
   validateDocument,
@@ -97,8 +106,10 @@ export type ProTool =
   | "fill"
   | "lasso"
   | "poly-lasso";
-type View = { zoom: number; x: number; y: number };
+type View = CanvasView;
 type Gesture = {
+  origin: ProDocument;
+  maskMode: boolean;
   appearanceIndex?: number;
   snap?: SnapIndex;
   moveFrame?: Frame;
@@ -128,6 +139,7 @@ type Gesture = {
 export function ProCanvas({
   dialogueOverlays = false,
   doc,
+  documentBase,
   viewportFrame,
   appearanceId,
   onFitCanvas,
@@ -177,6 +189,7 @@ export function ProCanvas({
 }: {
   dialogueOverlays?: boolean;
   doc: ProDocument;
+  documentBase: ProDocument;
   viewportFrame: Frame;
   appearanceId: string;
   onFitCanvas: () => void;
@@ -202,7 +215,7 @@ export function ProCanvas({
   tool: ProTool;
   selection: Selection;
   selectionView?: "overlay" | "mask" | "ants";
-  onSelection: (s: Selection) => void;
+  onSelection: (s: Selection, expected?: ProDocument) => void;
   brush: Omit<Stroke, "points" | "erase">;
   operation: Region["operation"];
   maskMode: boolean;
@@ -212,7 +225,7 @@ export function ProCanvas({
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   renderVersion: number;
   onTransient: (d: ProDocument | null) => void;
-  onCommit: (d: ProDocument, label: string) => void;
+  onCommit: (d: ProDocument, label: string, expected?: ProDocument) => void;
   onSelect: (id: string) => void;
   onColor: (c: string) => void;
   disabled: boolean;
@@ -246,7 +259,7 @@ export function ProCanvas({
   const [patchPreview, setPatchPreview] = useState<Region | null>(null);
   const [selectionDraft, setSelectionDraft] = useState<Selection | null>(null);
   const visibleSelection = selectionDraft ?? selection;
-  const [view, setView] = useState<View>({ zoom: 1, x: 0, y: 0 }),
+  const [view, setView] = useState<View>({ zoom: 1, x: 0, y: 0, rotation: 0 }),
     gesture = useRef<Gesture | null>(null),
     pointers = useRef(new Map<number, Point>()),
     pinch = useRef<{ distance: number; view: View; center: Point } | null>(null),
@@ -260,34 +273,46 @@ export function ProCanvas({
   const cropActions = useRef({ onCancelCrop, onApplyCrop });
   cropActions.current = { onCancelCrop, onApplyCrop };
   const shownCrop = cropDraft ?? doc.crop;
-  const fit = Math.min(
-      Math.max(1, size.width - 64) / viewportFrame.width,
-      Math.max(1, size.height - 64) / viewportFrame.height,
-    ),
+  const fit = viewFit(size, viewportFrame, view.rotation),
     selected = doc.layers.find((l) => l.id === activeId),
     dialogueBody = dialogueOverlays ? bubbleFor(doc, activeId) : undefined,
     transformTarget =
       selected && transformDraft?.frame ? { ...selected, ...transformDraft.frame } : selected;
-  const focusFrame = useRef({ viewportFrame, fit, size });
-  focusFrame.current = { viewportFrame, fit, size };
+  const changeRotation = useCallback(
+    (angle: number | "left" | "right") => {
+      if (gesture.current || pointers.current.size) return;
+      setCursor(null);
+      setSnapGuides([]);
+      setView((v) =>
+        rotateCanvasView(
+          v,
+          typeof angle === "number" ? angle : v.rotation + (angle === "left" ? -90 : 90),
+          size,
+          viewportFrame,
+        ),
+      );
+    },
+    [size, viewportFrame],
+  );
+  const focusFrame = useRef({ viewportFrame, fit, size, rotation: view.rotation });
+  focusFrame.current = { viewportFrame, fit, size, rotation: view.rotation };
   useEffect(() => {
     if (!fitRequest) return;
     const { frame } = fitRequest,
-      { viewportFrame: f, fit, size } = focusFrame.current;
-    const zoom = Math.max(
-      0.1,
-      Math.min(
-        12,
-        Math.min(
-          Math.max(1, size.width - 64) / frame.width,
-          Math.max(1, size.height - 64) / frame.height,
-        ) / fit,
-      ),
+      { viewportFrame: f, fit, size, rotation } = focusFrame.current;
+    const zoom = Math.max(0.1, Math.min(12, viewFit(size, frame, rotation) / fit));
+    const pan = rotatePoint(
+      {
+        x: f.x + f.width / 2 - frame.x - frame.width / 2,
+        y: f.y + f.height / 2 - frame.y - frame.height / 2,
+      },
+      rotation,
     );
     setView({
       zoom,
-      x: (f.x + f.width / 2 - frame.x - frame.width / 2) * fit * zoom,
-      y: (f.y + f.height / 2 - frame.y - frame.height / 2) * fit * zoom,
+      rotation,
+      x: pan.x * fit * zoom,
+      y: pan.y * fit * zoom,
     });
   }, [fitRequest]);
   const selectedPath = selected ? contourAt(selected, activeContour) : undefined;
@@ -309,6 +334,19 @@ export function ProCanvas({
         )
       : null;
   useEffect(() => {
+    // A gesture owns one immutable history revision. Undo, import or another
+    // edit invalidates it; transient previews must never become the new base.
+    if (gesture.current && gesture.current.origin !== documentBase) {
+      gesture.current = null;
+      pointers.current.clear();
+      pinch.current = null;
+      setSelectionDraft(null);
+      setSnapGuides([]);
+      setPatchPreview(null);
+      onTransient(null);
+    }
+  }, [documentBase, onTransient]);
+  useEffect(() => {
     pathId.current = "";
     setSnapGuides([]);
     gesture.current = null;
@@ -319,6 +357,20 @@ export function ProCanvas({
   }, [tool, onTransient]);
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target?.closest('[role="menu"],[role="alertdialog"]')) return;
+      const input = target?.closest('input,textarea,select,[contenteditable="true"]');
+      if (
+        !input &&
+        e.altKey &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        ["BracketLeft", "BracketRight", "Backslash"].includes(e.code)
+      ) {
+        e.preventDefault();
+        changeRotation(e.code === "Backslash" ? 0 : e.code === "BracketLeft" ? "left" : "right");
+        return;
+      }
       if (tool === "transform" && e.key === "Escape") {
         e.preventDefault();
         transformActions.current.onCancelTransform();
@@ -335,13 +387,15 @@ export function ProCanvas({
         e.preventDefault();
         cropActions.current.onApplyCrop();
       }
-      if ((e.target as HTMLElement)?.closest("input,textarea,select")) return;
+      // Preserve existing Enter/Escape Apply/Cancel from transform fields;
+      // ordinary typing must not activate view rotation, panning or tools.
+      if (input) return;
       if (e.code === "Space") {
         e.preventDefault();
         space.current = true;
       }
       if (e.key === "Enter" && tool === "artboard" && gesture.current?.preview) {
-        onCommit(gesture.current.preview, "Edit artboard / guide");
+        onCommit(gesture.current.preview, "Edit artboard / guide", gesture.current.origin);
         gesture.current = null;
         onTransient(null);
         setSnapGuides([]);
@@ -380,13 +434,9 @@ export function ProCanvas({
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", blur);
     };
-  }, [polygon, selection, operation, onSelection, onTransient, onCommit, tool]);
+  }, [polygon, selection, operation, onSelection, onTransient, onCommit, tool, changeRotation]);
   const docPoint = (p: Point): Point => {
-    const r = board.current!.getBoundingClientRect();
-    return {
-      x: viewportFrame.x + ((p.x - r.left) / r.width) * viewportFrame.width,
-      y: viewportFrame.y + ((p.y - r.top) / r.height) * viewportFrame.height,
-    };
+    return canvasPoint(p, board.current!.getBoundingClientRect(), viewportFrame, view.rotation);
   };
   const zoomAt = (zoom: number, client?: Point) => {
     const r = viewport.current!.getBoundingClientRect(),
@@ -396,7 +446,7 @@ export function ProCanvas({
     setView((v) => {
       const next = Math.max(0.1, Math.min(12, zoom)),
         ratio = next / v.zoom;
-      return { zoom: next, x: p.x - (p.x - v.x) * ratio, y: p.y - (p.y - v.y) * ratio };
+      return { ...v, zoom: next, x: p.x - (p.x - v.x) * ratio, y: p.y - (p.y - v.y) * ratio };
     });
   };
   useEffect(() => {
@@ -411,7 +461,7 @@ export function ProCanvas({
           y = e.clientY - r.top - r.height / 2,
           z = Math.max(0.1, Math.min(12, v.zoom * factor)),
           q = z / v.zoom;
-        return { zoom: z, x: x - (x - v.x) * q, y: y - (y - v.y) * q };
+        return { ...v, zoom: z, x: x - (x - v.x) * q, y: y - (y - v.y) * q };
       });
     };
     el.addEventListener("wheel", wheel, { passive: false });
@@ -598,7 +648,16 @@ export function ProCanvas({
     }
     setSnapGuides([]);
     const p = docPoint(screen),
-      base: Gesture = { type: tool, start: p, screen, doc, view, selection };
+      base: Gesture = {
+        type: tool,
+        start: p,
+        screen,
+        doc,
+        origin: documentBase,
+        maskMode,
+        view,
+        selection,
+      };
     // Legacy Direct Select never snapped. Enabling precision settings (or adding
     // an artboard) explicitly opts the document into anchor/grid acquisition.
     if (tool === "direct" && doc.layout) base.snap = buildSnapIndex(doc, [activeId]);
@@ -645,7 +704,9 @@ export function ProCanvas({
           ...base,
           type: "artboard",
           board: b,
-          corner: target?.getAttribute("data-board-handle") ?? "move",
+          corner: target?.hasAttribute("data-board-handle")
+            ? frameHandleAt(b, p, fit * view.zoom)
+            : "move",
           snap: buildSnapIndex(doc, [], b.id),
         };
       }
@@ -1092,7 +1153,8 @@ export function ProCanvas({
     },
   ): ProDocument | null => {
     const g = gesture.current;
-    if (!g) return null;
+    if (!g || g.origin !== documentBase) return null;
+    const maskMode = g.maskMode;
     const p = docPoint(screen);
     if (g.type === "bubble-tail" && g.id && g.part) {
       const body = g.doc.layers.find((l) => l.id === g.id)!;
@@ -1445,6 +1507,7 @@ export function ProCanvas({
         z = Math.max(0.1, Math.min(12, (g.view.zoom * d) / g.distance)),
         q = z / g.view.zoom;
       setView({
+        ...g.view,
         zoom: z,
         x: now.x - (initial.x - g.view.x) * q,
         y: now.y - (initial.y - g.view.y) * q,
@@ -1483,7 +1546,7 @@ export function ProCanvas({
     if (!g) return;
     if (cancel && g.transform) onTransformDraft(g.transform);
     if (cancel && g.crop) onCropDraft(g.crop);
-    if (!cancel) {
+    if (!cancel && g.origin === documentBase) {
       const next = update(
         { x: e.clientX, y: e.clientY },
         {
@@ -1544,7 +1607,7 @@ export function ProCanvas({
         onCommit(
           next,
           g.type === "paint"
-            ? maskMode
+            ? g.maskMode
               ? "Paint mask"
               : g.stroke?.clone
                 ? g.stroke.clone.mode === "heal"
@@ -1556,6 +1619,7 @@ export function ProCanvas({
             : g.type === "pen"
               ? "Add Bézier anchor"
               : `Edit ${g.type}`,
+          g.origin,
         );
       if (g.type === "paint" && g.stroke?.clone && cloneSource?.aligned) {
         const layer = g.doc.layers.find((l) => l.id === g.id);
@@ -1565,7 +1629,8 @@ export function ProCanvas({
           onCloneAdvance({ x: last.x - first.x, y: last.y - first.y });
         }
       }
-      if (g.type === "selection" && g.region) onSelection(appendSelection(g.selection, g.region));
+      if (g.type === "selection" && g.region)
+        onSelection(appendSelection(g.selection, g.region), g.origin);
     }
     setSelectionDraft(null);
     setSnapGuides([]);
@@ -1577,35 +1642,67 @@ export function ProCanvas({
   return (
     <section className="pro-canvas-area" aria-label="Pro canvas workspace">
       <div className="pro-viewport-bar">
-        <div>
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="Pro zoom out"
-            onClick={() => zoomAt(view.zoom / 1.25)}
-          >
-            <ZoomOut />
-          </Button>
-          <output aria-label="Pro zoom">{Math.round(view.zoom * 100)}%</output>
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="Pro zoom in"
-            onClick={() => zoomAt(view.zoom * 1.25)}
-          >
-            <ZoomIn />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="Fit Pro canvas"
-            onClick={() => {
-              onFitCanvas();
-              setView({ zoom: 1, x: 0, y: 0 });
-            }}
-          >
-            <Scan />
-          </Button>
+        <div className="pro-view-controls">
+          <div className="pro-zoom-controls">
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Pro zoom out"
+              onClick={() => zoomAt(view.zoom / 1.25)}
+            >
+              <ZoomOut />
+            </Button>
+            <output aria-label="Pro zoom">{Math.round(view.zoom * 100)}%</output>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Pro zoom in"
+              onClick={() => zoomAt(view.zoom * 1.25)}
+            >
+              <ZoomIn />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Fit Pro canvas"
+              onClick={() => {
+                onFitCanvas();
+                setView((v) => ({ ...v, zoom: 1, x: 0, y: 0 }));
+              }}
+            >
+              <Scan />
+            </Button>
+          </div>
+          <div className="pro-view-rotation" role="group" aria-label="Canvas view rotation">
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Rotate canvas view left"
+              title="Rotate canvas view left 90° (Alt+[). Artwork unchanged."
+              onClick={() => changeRotation("left")}
+            >
+              <RotateCcw />
+            </Button>
+            <output aria-label="Canvas view angle">{view.rotation}°</output>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Rotate canvas view right"
+              title="Rotate canvas view right 90° (Alt+]). Artwork unchanged."
+              onClick={() => changeRotation("right")}
+            >
+              <RotateCw />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Reset canvas view rotation"
+              title="Reset canvas view rotation (Alt + backslash). Export orientation is unchanged."
+              onClick={() => changeRotation(0)}
+            >
+              <RefreshCw />
+            </Button>
+          </div>
         </div>
         <span role="status">
           {tool === "patch"
@@ -1645,6 +1742,7 @@ export function ProCanvas({
           ref={board}
           className="pro-artboard"
           data-grid={grid}
+          data-view-rotation={view.rotation}
           style={
             {
               "--pro-grid-size": `${layout(doc).spacing * fit}px`,
@@ -1653,7 +1751,7 @@ export function ProCanvas({
               backgroundPosition: `${-viewportFrame.x * fit}px ${-viewportFrame.y * fit}px`,
               width: viewportFrame.width * fit,
               height: viewportFrame.height * fit,
-              transform: `translate(-50%,-50%) translate(${view.x}px,${view.y}px) scale(${view.zoom})`,
+              transform: `translate(-50%,-50%) translate(${view.x}px,${view.y}px) rotate(${view.rotation}deg) scale(${view.zoom})`,
             } as React.CSSProperties
           }
         >
@@ -1678,6 +1776,7 @@ export function ProCanvas({
           {!before && (
             <svg
               className="pro-overlays"
+              preserveAspectRatio="none"
               viewBox={`${viewportFrame.x} ${viewportFrame.y} ${viewportFrame.width} ${viewportFrame.height}`}
               aria-label="Pro selection overlays"
             >
@@ -2275,11 +2374,14 @@ export function ProCanvas({
               s = Math.min(r.width / viewportFrame.width, r.height / viewportFrame.height),
               x = (e.clientX - r.left - (r.width - viewportFrame.width * s) / 2) / s,
               y = (e.clientY - r.top - (r.height - viewportFrame.height * s) / 2) / s;
-            setView((v) => ({
-              ...v,
-              x: (viewportFrame.width / 2 - x) * fit * v.zoom,
-              y: (viewportFrame.height / 2 - y) * fit * v.zoom,
-            }));
+            setView((v) =>
+              centerViewOn(
+                v,
+                { x: viewportFrame.x + x, y: viewportFrame.y + y },
+                viewportFrame,
+                fit,
+              ),
+            );
           }}
         >
           <canvas ref={mini} width={160} height={110} />
@@ -2306,7 +2408,7 @@ export function ProCanvas({
           <Button
             onClick={() => {
               onFitCanvas();
-              setView({ zoom: 1, x: 0, y: 0 });
+              setView((v) => ({ ...v, zoom: 1, x: 0, y: 0 }));
               setContext(false);
             }}
           >

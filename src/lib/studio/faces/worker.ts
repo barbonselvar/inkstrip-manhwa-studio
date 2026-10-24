@@ -1,11 +1,13 @@
 /// <reference lib="webworker" />
+import { safeBitmap } from "../image-decode";
+import { imagePolicy } from "../image-policy";
 import model from "./anime-cascade.json";
 import { scanCascade, groupFaces, type FaceBox } from "./detect";
 const scope = self as unknown as DedicatedWorkerGlobalScope;
 scope.onmessage = async ({ data }: { data: { blob: Blob } }) => {
   let image: ImageBitmap | null = null;
   try {
-    image = await createImageBitmap(data.blob);
+    image = await safeBitmap(data.blob, { policy: imagePolicy(true) });
     if (image.width * image.height > 16_000_000)
       throw new Error("Detect on images under 16 megapixels or select a face manually.");
     const scale = Math.min(1, 1024 / Math.max(image.width, image.height)),

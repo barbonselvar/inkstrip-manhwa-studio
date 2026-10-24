@@ -1,4 +1,6 @@
 import { NEUTRAL } from "../editor/adjustments";
+import { preflightImage, imagePolicy } from "../image-policy";
+import { thumbnailDocument, thumbnailScale } from "./thumbnails";
 /// <reference lib="webworker" />
 import { refineTiled, coverageRegion } from "./refine-selection";
 import { artboards } from "./artboards";
@@ -7,7 +9,7 @@ import { renderOutput } from "./output";
 import { renderRepair } from "./repair-worker";
 import { selectColor } from "./selection";
 import { composite, selectionCanvas, surface } from "./render";
-import { planMerge, finishMerge, descendants, visibleLayerIds } from "./layers";
+import { planMerge, finishMerge, visibleLayerIds } from "./layers";
 import { documentSources } from "./raster-budget";
 import { type ProSession, type ProDocument, validateAssets } from "./model";
 let assets: ProSession["assets"] = {},
@@ -116,6 +118,11 @@ self.onmessage = async ({ data }) => {
       if (!size || !assets[assetId]) throw new Error("A raster asset is missing.");
       const key = `${assetId}:${size.width}x${size.height}:${s}`;
       if (!cache.has(key)) {
+        await preflightImage(assets[assetId]!, {
+          ...imagePolicy(data.maxArea <= 4_000_000),
+          maxPixels: data.maxArea,
+          maxSide: 16384,
+        });
         const bitmap = await createImageBitmap(assets[assetId]!, {
           resizeWidth: Math.max(1, Math.round(size.width * s)),
           resizeHeight: Math.max(1, Math.round(size.height * s)),
@@ -187,31 +194,20 @@ self.onmessage = async ({ data }) => {
     }
     if (type === "thumbnails") {
       const thumbnails: { id: string; blob: Blob }[] = [],
-        thumbScale = Math.min(
-          1,
-          64 / Math.max(doc.width, doc.height, ...doc.layers.flatMap((l) => [l.width, l.height])),
-        );
-      for (const l of doc.layers) {
+        thumbScale = thumbnailScale(doc);
+      if (
+        data.layerIds !== undefined &&
+        (!Array.isArray(data.layerIds) ||
+          data.layerIds.length > 48 ||
+          new Set(data.layerIds).size !== data.layerIds.length ||
+          data.layerIds.some(
+            (id: unknown) => typeof id !== "string" || !doc.layers.some((l) => l.id === id),
+          ))
+      )
+        throw Error("Invalid thumbnail layer request.");
+      for (const l of doc.layers.filter((l) => !data.layerIds || data.layerIds.includes(l.id))) {
         if (latest !== id) throw new DOMException("Cancelled", "AbortError");
-        const ids = descendants(doc, [l.id]),
-          isolated = {
-            ...doc,
-            background: "transparent",
-            layers: doc.layers
-              .filter((c) => ids.has(c.id))
-              .map((c) =>
-                c.id === l.id
-                  ? {
-                      ...c,
-                      parentId: undefined,
-                      visible: true,
-                      clipped: false,
-                      opacity: 1,
-                      blend: "source-over" as const,
-                    }
-                  : c,
-              ),
-          },
+        const isolated = thumbnailDocument(doc, l.id),
           thumb = await composite(
             isolated,
             thumbScale,

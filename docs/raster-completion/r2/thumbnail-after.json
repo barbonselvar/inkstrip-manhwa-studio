@@ -1,0 +1,31 @@
+{
+  "events": [
+    {
+      "count": 36,
+      "workerWallMs": 27
+    }
+  ],
+  "changedJobs": 0,
+  "changedRequests": 0,
+  "interactionWallMs": 3531.3999999910593,
+  "reusedThumbnailUrls": 36,
+  "errors": [],
+  "environment": {
+    "chromium": "156.0.8078.4",
+    "sharedCPU": "AMD EPYC 9V74 80-Core Processor",
+    "availableCPUs": 2,
+    "viewport": [
+      1440,
+      1000
+    ]
+  },
+  "fixture": {
+    "document": [
+      1024,
+      1024
+    ],
+    "shapeLayers": 36,
+    "visibilityToggles": 3,
+    "quietWindowMs": 1100
+  }
+}

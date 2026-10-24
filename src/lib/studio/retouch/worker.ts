@@ -1,4 +1,6 @@
 /// <reference lib="webworker" />
+import { safeBitmap } from "../image-decode";
+import { imagePolicy } from "../image-policy";
 import { paintSelection, selectionBox, type Selection } from "./selection";
 import { textureRepair } from "./texture";
 const scope = self as unknown as DedicatedWorkerGlobalScope;
@@ -13,7 +15,7 @@ const ctx = (c: OffscreenCanvas) => {
 };
 async function compose(generated: Blob) {
   if (!original || !mask) throw new Error("Repair session expired.");
-  const result = await createImageBitmap(generated);
+  const result = await safeBitmap(generated, { policy: imagePolicy(true) });
   try {
     const full = new OffscreenCanvas(original.width, original.height),
       fc = ctx(full);
@@ -76,7 +78,7 @@ scope.onmessage = async ({
       return;
     }
     original?.close();
-    original = await createImageBitmap(data.blob!);
+    original = await safeBitmap(data.blob!, { policy: { ...imagePolicy(true), maxSide: 16384 } });
     if (
       original.width * original.height > 16_000_000 ||
       Math.max(original.width, original.height) > 16384

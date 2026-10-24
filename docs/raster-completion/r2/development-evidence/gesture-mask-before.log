@@ -1,0 +1,19 @@
+History interleaving: Undo cancels the pending stale stroke without restoring old document data.
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: pointer-down mask target stays fixed for this stroke
+
+0 !== 1
+
+    at file:///workspace/r2-evidence/gesture-mask-before.mjs:86:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

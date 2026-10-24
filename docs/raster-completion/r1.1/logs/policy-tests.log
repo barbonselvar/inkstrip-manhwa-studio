@@ -1,0 +1,56 @@
+✔ bounded decoder closes a mismatching result and never publishes it (1.469786ms)
+✔ orientation transposes the validated plane without relaxing dimensions (0.156351ms)
+✔ late decoder responses after cancellation are closed rather than accepted (0.647779ms)
+✔ timeout rejects, clears bookkeeping and closes a late bitmap (5.299745ms)
+✔ main decode leases serialize temporary surfaces and cancellation does not unlock an active lease (0.6417ms)
+✔ decoder failures propagate and an already cancelled request never calls the decoder (0.483535ms)
+✔ valid internally created png signature/dimensions ignore the supplied MIME (13.010419ms)
+✔ valid internally created jpg signature/dimensions ignore the supplied MIME (1.316249ms)
+✔ valid internally created webp signature/dimensions ignore the supplied MIME (1.531958ms)
+✔ valid internally created gif signature/dimensions ignore the supplied MIME (1.443536ms)
+✔ valid internally created bmp signature/dimensions ignore the supplied MIME (1.140718ms)
+✔ valid internally created ico signature/dimensions ignore the supplied MIME (2.719125ms)
+✔ valid internally created tiff signature/dimensions ignore the supplied MIME (1.145806ms)
+✔ valid internally created avif signature/dimensions ignore the supplied MIME (1.219055ms)
+✔ source policy retains 65535-side /32MP desktop and16MP constrained bounds including tall Chapter sources (1.547911ms)
+✔ zero/negative/NaN/infinite/overflow dimensions and invalid policies fail safely (2.559038ms)
+✔ encoded bytes and empty files are rejected before any payload read (0.634189ms)
+✔ PNG huge declared dimensions fail before CRC or decoder processing (1.70244ms)
+✔ PNG corrupt checksum, truncated chunk and missing termination are rejected (1.508423ms)
+✔ JPEG malformed markers/dimensions and missing EOI are refused (1.148641ms)
+✔ WebP container truncation, malformed signature and forged sizes are refused (1.374475ms)
+✔ GIF frame accounting, truncation and decompression-bomb-like dimensions are bounded (2.844501ms)
+✔ ICO directories cannot conceal an oversized nested PNG or allocate huge entry lists (1.201819ms)
+✔ TIFF offsets, directory counts/cycles and unsupported embedded image structures fail closed (1.788768ms)
+✔ AVIF box sizes, nested declared image planes and64-bit overflow are checked (1.436386ms)
+✔ BMP embedded JPEG/PNG and invalid pixel offsets cannot bypass the container budget (1.116032ms)
+✔ unknown and falsely labelled non-images are not admitted (0.759734ms)
+✔ SVG scripts, external resources, entities and active markup are refused before DOM decoding (1.278032ms)
+✔ batch preflight keeps valid image order and reports mixed invalid items without decoding (2.190202ms)
+✖ batch count, aggregate bytes/pixels/header work and resident estimates are independent gates (2.456806ms)
+✔ single-image decoded-memory estimates reject before allocation (1.603384ms)
+✔ cancelled header/batch validation never proceeds to later assets (1.321957ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 31
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 311.077762
+
+✖ failing tests:
+
+test at src/lib/studio/image-policy.test.ts:104:1
+✖ batch count, aggregate bytes/pixels/header work and resident estimates are independent gates (2.456806ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/inkstrip-manhwa-studio/src/lib/studio/image-policy.test.ts:110:6)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /Batch/,
+    operator: 'rejects',
+    diff: 'simple'
+  }

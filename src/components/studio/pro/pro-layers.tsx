@@ -31,11 +31,22 @@ import {
   type MergeMode,
 } from "@/lib/studio/pro/layers";
 import { ProRenderer } from "@/lib/studio/pro/client";
+import { thumbnailKeys } from "@/lib/studio/pro/thumbnails";
+import { ProMaskThumbnail } from "./pro-mask-thumbnail";
+import { ProNumber } from "./pro-properties";
+import {
+  BLEND_GROUPS,
+  BLEND_GROUP_NAMES,
+  BLEND_LABELS,
+  type BlendMode,
+} from "@/lib/studio/pro/blend";
 export function ProLayers({
   doc,
   session,
   selectedIds,
   onSelect,
+  maskMode,
+  onSelectMask,
   onChange,
   onError,
   onDuplicate,
@@ -52,7 +63,9 @@ export function ProLayers({
   session: ProSession;
   selectedIds: string[];
   onSelect: (ids: string[]) => void;
-  onChange: (doc: ProDocument, label: string) => void;
+  maskMode: boolean;
+  onSelectMask: (id: string) => void;
+  onChange: (doc: ProDocument, label: string, group?: string) => void;
   onError: (message: string) => void;
   onDuplicate: () => void;
   onDelete: () => void;
@@ -60,18 +73,22 @@ export function ProLayers({
   onUngroup: () => void;
   onCompound: (operation: "create" | "release") => void;
   onMerge: (mode: MergeMode) => void;
-  onAdd: (kind: "paint" | "text" | "gradient" | "adjustment") => void;
+  onAdd: (kind: "paint" | "text" | "gradient" | "adjustment" | "group") => void;
   disabled: boolean;
   maxArea: number;
 }) {
   const [multi, setMulti] = useState(false),
     [collapsed, setCollapsed] = useState(new Set<string>()),
     [menuId, setMenuId] = useState(""),
+    [renaming, setRenaming] = useState(""),
+    [name, setName] = useState(""),
     [flatten, setFlatten] = useState(false),
     [drop, setDrop] = useState<{ id: string; edge: "before" | "after" } | null>(null),
     [thumbs, setThumbs] = useState<Record<string, string>>({});
   const assets = session.assets;
-  const urls = useRef<string[]>([]),
+  const cache = useRef(new Map<string, { key?: string; url: string }>()),
+    assetTokens = useRef(new WeakMap<Blob, number>()),
+    nextToken = useRef(0),
     tree = useRef<HTMLDivElement>(null),
     dragging = useRef<string[]>([]),
     touch = useRef<{ pointer: number; y: number; moved: boolean } | null>(null),
@@ -79,11 +96,24 @@ export function ProLayers({
     scrollFrame = useRef<number | null>(null),
     dropRef = useRef(drop),
     anchor = useRef("");
-  useEffect(() => () => urls.current.forEach((url) => URL.revokeObjectURL(url)), []);
+  useEffect(() => () => cache.current.forEach(({ url }) => URL.revokeObjectURL(url)), []);
   useEffect(() => {
     if (disabled) return;
     let active = true,
       worker: ProRenderer | undefined;
+    const keys = thumbnailKeys(doc, assets, (blob) => {
+      if (!assetTokens.current.has(blob)) assetTokens.current.set(blob, ++nextToken.current);
+      return assetTokens.current.get(blob)!;
+    });
+    for (const [id, entry] of cache.current)
+      if (!keys.has(id)) {
+        URL.revokeObjectURL(entry.url);
+        cache.current.delete(id);
+      }
+    const dirty = [...keys]
+      .filter(([id, key]) => key === undefined || cache.current.get(id)?.key !== key)
+      .map(([id]) => id);
+    if (!dirty.length) return;
     const timer = setTimeout(() => {
       try {
         worker = new ProRenderer();
@@ -92,13 +122,23 @@ export function ProLayers({
             { document: doc, assets, revision: 0, acceptedBlobId: "thumbnail", updatedAt: 0 },
             maxArea,
           )
-          .then(() => worker!.thumbnails(doc, maxArea))
+          .then(() => worker!.thumbnails(doc, maxArea, dirty))
           .then((r) => {
             if (!active || !r.thumbnails) return;
-            const entries = r.thumbnails.map((t) => [t.id, URL.createObjectURL(t.blob)] as const);
-            urls.current.forEach((url) => URL.revokeObjectURL(url));
-            urls.current = entries.map(([, url]) => url);
-            setThumbs(Object.fromEntries(entries));
+            const staged: { id: string; url: string }[] = [];
+            try {
+              for (const t of r.thumbnails)
+                staged.push({ id: t.id, url: URL.createObjectURL(t.blob) });
+            } catch (error) {
+              staged.forEach(({ url }) => URL.revokeObjectURL(url));
+              throw error;
+            }
+            for (const t of staged) {
+              const previous = cache.current.get(t.id);
+              cache.current.set(t.id, { key: keys.get(t.id), url: t.url });
+              if (previous) URL.revokeObjectURL(previous.url);
+            }
+            setThumbs(Object.fromEntries([...cache.current].map(([id, entry]) => [id, entry.url])));
           })
           .catch(() => {
             /* Keep previous thumbnails; full rendering owns actionable errors. */
@@ -115,10 +155,10 @@ export function ProLayers({
     };
   }, [doc, assets, maxArea, disabled]);
   const active = doc.layers.find((l) => l.id === selectedIds[0]);
-  const run = (task: () => ProDocument, label: string) => {
+  const run = (task: () => ProDocument, label: string, group?: string) => {
     if (disabled) return;
     try {
-      onChange(task(), label);
+      onChange(task(), label, group);
     } catch (e) {
       onError((e as Error).message);
     }
@@ -237,6 +277,7 @@ export function ProLayers({
             className="pro-layer-row pro-layer-managed"
             data-layer-id={l.id}
             data-active={selectedIds.includes(l.id)}
+            data-current={selectedIds[0] === l.id}
             data-drop={drop?.id === l.id ? drop.edge : undefined}
             style={{ paddingLeft: 4 + depth * 10 }}
             onContextMenu={(e) => {
@@ -272,6 +313,7 @@ export function ProLayers({
                 className="pro-layer-select"
                 type="button"
                 aria-pressed={selectedIds.includes(l.id)}
+                aria-current={selectedIds[0] === l.id ? "true" : undefined}
                 disabled={disabled}
                 onClick={(e) => choose(l.id, e.ctrlKey || e.metaKey, e.shiftKey)}
               >
@@ -327,6 +369,15 @@ export function ProLayers({
                     onCloseAutoFocus={(e) => e.preventDefault()}
                   >
                     <Menu.Label>Layer actions</Menu.Label>
+                    <Menu.Item
+                      disabled={isLocked(doc, l.id)}
+                      onSelect={() => {
+                        setName(l.name);
+                        setRenaming(l.id);
+                      }}
+                    >
+                      Rename layer…
+                    </Menu.Item>
                     <Menu.Item onSelect={onDuplicate}>Duplicate selected</Menu.Item>
                     <Menu.Item
                       onSelect={() =>
@@ -365,6 +416,37 @@ export function ProLayers({
               </Menu.Root>
             </div>
             <div className="pro-layer-details">
+              {selectedIds[0] === l.id && (
+                <span className="pro-layer-indicator" aria-label={`Active layer ${l.name}`}>
+                  Active{maskMode ? " mask" : ""}
+                </span>
+              )}
+              {isLocked(doc, l.id) && (
+                <span
+                  className="pro-layer-indicator"
+                  aria-label={`${l.locked ? "Locked" : "Parent locked"} layer ${l.name}`}
+                  title={l.locked ? "Layer locked" : "Locked by a parent group"}
+                >
+                  <Lock />
+                </span>
+              )}
+              {l.mask && (
+                <button
+                  type="button"
+                  className="pro-layer-mask-target"
+                  aria-label={`Edit mask ${l.name}`}
+                  aria-pressed={selectedIds[0] === l.id && maskMode}
+                  title={
+                    l.mask.enabled
+                      ? "Edit layer mask; select the artwork thumbnail to return to the layer"
+                      : "Edit disabled mask (enable it in Properties to affect the artwork)"
+                  }
+                  disabled={disabled || isLocked(doc, l.id)}
+                  onClick={() => onSelectMask(l.id)}
+                >
+                  <ProMaskThumbnail layer={l} />
+                </button>
+              )}
               {l.kind === "group" && (
                 <button
                   type="button"
@@ -476,6 +558,57 @@ export function ProLayers({
                 </>
               )}
             </div>
+            {renaming === l.id && (
+              <div className="pro-layer-rename">
+                <input
+                  className="field"
+                  aria-label="Rename layer"
+                  autoFocus
+                  value={name}
+                  maxLength={100}
+                  disabled={disabled || isLocked(doc, l.id)}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setRenaming("");
+                    }
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      run(
+                        () => ({
+                          ...doc,
+                          layers: doc.layers.map((x) => (x.id === l.id ? { ...x, name } : x)),
+                        }),
+                        "Rename layer",
+                      );
+                      setRenaming("");
+                    }
+                  }}
+                />
+                <Button
+                  variant="secondary"
+                  disabled={disabled || isLocked(doc, l.id)}
+                  onClick={() => {
+                    run(
+                      () => ({
+                        ...doc,
+                        layers: doc.layers.map((x) => (x.id === l.id ? { ...x, name } : x)),
+                      }),
+                      "Rename layer",
+                    );
+                    setRenaming("");
+                  }}
+                >
+                  Save name
+                </Button>
+                <Button variant="ghost" onClick={() => setRenaming("")}>
+                  Cancel rename
+                </Button>
+              </div>
+            )}
           </div>
           {l.kind === "group" && !collapsed.has(l.id) ? branch(l.id, depth + 1) : null}
         </div>
@@ -512,6 +645,60 @@ export function ProLayers({
         Top row is in front. Use checkboxes, Shift-click a range or Ctrl-click. Drag a grip or use
         arrows. Clipped layers share their base’s alpha.
       </p>
+      {active && (
+        <div className="pro-number-grid">
+          <ProNumber
+            label="Layer panel opacity"
+            value={active.opacity * 100}
+            min={0}
+            max={100}
+            disabled={disabled || isLocked(doc, active.id)}
+            onChange={(n) =>
+              run(
+                () => ({
+                  ...doc,
+                  layers: doc.layers.map((l) =>
+                    l.id === active.id ? { ...l, opacity: n / 100 } : l,
+                  ),
+                }),
+                "Layer opacity",
+                `layer-panel-opacity:${active.id}`,
+              )
+            }
+          />
+          <label className="pro-field">
+            Layer panel blend
+            <select
+              className="field"
+              aria-label="Layer panel blend"
+              value={active.blend}
+              disabled={disabled || isLocked(doc, active.id)}
+              onChange={(e) =>
+                run(
+                  () => ({
+                    ...doc,
+                    layers: doc.layers.map((l) =>
+                      l.id === active.id ? { ...l, blend: e.target.value as BlendMode } : l,
+                    ),
+                  }),
+                  "Layer blend mode",
+                )
+              }
+            >
+              {BLEND_GROUPS.map((group, i) => (
+                <optgroup key={group[0]} label={BLEND_GROUP_NAMES[i]}>
+                  {group.map((mode) => (
+                    <option key={mode} value={mode}>
+                      {BLEND_LABELS[mode]}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <p className="pro-help">Opacity and blend affect the active layer.</p>
+        </div>
+      )}
       <div ref={tree} className="pro-layer-tree" role="group" aria-label="Layer stack">
         {branch()}
       </div>
@@ -536,6 +723,9 @@ export function ProLayers({
         separate shapes. Both operations change appearance and are undoable.
       </p>
       <div className="pro-actions">
+        <Button variant="secondary" disabled={disabled} onClick={() => onAdd("group")}>
+          Empty group
+        </Button>
         <Button variant="secondary" disabled={disabled} onClick={() => onAdd("paint")}>
           Paint layer
         </Button>

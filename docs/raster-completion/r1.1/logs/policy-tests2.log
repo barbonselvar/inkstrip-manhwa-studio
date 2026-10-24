@@ -1,0 +1,40 @@
+✔ bounded decoder closes a mismatching result and never publishes it (1.713286ms)
+✔ orientation transposes the validated plane without relaxing dimensions (0.246045ms)
+✔ late decoder responses after cancellation are closed rather than accepted (0.707858ms)
+✔ timeout rejects, clears bookkeeping and closes a late bitmap (4.209291ms)
+✔ main decode leases serialize temporary surfaces and cancellation does not unlock an active lease (0.694268ms)
+✔ decoder failures propagate and an already cancelled request never calls the decoder (0.400202ms)
+✔ valid internally created png signature/dimensions ignore the supplied MIME (8.93093ms)
+✔ valid internally created jpg signature/dimensions ignore the supplied MIME (1.687408ms)
+✔ valid internally created webp signature/dimensions ignore the supplied MIME (1.261547ms)
+✔ valid internally created gif signature/dimensions ignore the supplied MIME (1.211964ms)
+✔ valid internally created bmp signature/dimensions ignore the supplied MIME (0.97958ms)
+✔ valid internally created ico signature/dimensions ignore the supplied MIME (3.01349ms)
+✔ valid internally created tiff signature/dimensions ignore the supplied MIME (1.011728ms)
+✔ valid internally created avif signature/dimensions ignore the supplied MIME (1.381976ms)
+✔ source policy retains 65535-side /32MP desktop and16MP constrained bounds including tall Chapter sources (1.584125ms)
+✔ zero/negative/NaN/infinite/overflow dimensions and invalid policies fail safely (2.035883ms)
+✔ encoded bytes and empty files are rejected before any payload read (0.299112ms)
+✔ PNG huge declared dimensions fail before CRC or decoder processing (2.01271ms)
+✔ PNG corrupt checksum, truncated chunk and missing termination are rejected (2.23636ms)
+✔ JPEG malformed markers/dimensions and missing EOI are refused (1.381225ms)
+✔ WebP container truncation, malformed signature and forged sizes are refused (1.355677ms)
+✔ GIF frame accounting, truncation and decompression-bomb-like dimensions are bounded (2.644625ms)
+✔ ICO directories cannot conceal an oversized nested PNG or allocate huge entry lists (1.505208ms)
+✔ TIFF offsets, directory counts/cycles and unsupported embedded image structures fail closed (1.9659ms)
+✔ AVIF box sizes, nested declared image planes and64-bit overflow are checked (2.004998ms)
+✔ BMP embedded JPEG/PNG and invalid pixel offsets cannot bypass the container budget (1.253174ms)
+✔ unknown and falsely labelled non-images are not admitted (0.80394ms)
+✔ SVG scripts, external resources, entities and active markup are refused before DOM decoding (1.899021ms)
+✔ batch preflight keeps valid image order and reports mixed invalid items without decoding (2.266796ms)
+✔ batch count, aggregate bytes/pixels/header work and resident estimates are independent gates (1.645135ms)
+✔ single-image decoded-memory estimates reject before allocation (0.894023ms)
+✔ cancelled header/batch validation never proceeds to later assets (2.538278ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 306.660482

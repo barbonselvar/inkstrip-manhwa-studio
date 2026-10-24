@@ -1,3 +1,4 @@
+import { safeBitmap } from "../image-decode";
 /// <reference lib="webworker" />
 import { env, InferenceSession, Tensor } from "onnxruntime-web/wasm";
 import wasmUrl from "../../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
@@ -105,7 +106,7 @@ self.onmessage = async (event: MessageEvent<{ blob: Blob; options: EnhanceOption
   let bitmap: ImageBitmap | undefined;
   try {
     const { blob, options } = event.data;
-    bitmap = await createImageBitmap(blob);
+    bitmap = await safeBitmap(blob);
     const size = enhancementSize(bitmap.width, bitmap.height, options.scale);
     progress("Loading AI model · first download may take a few minutes");
     model ??= loadModel();

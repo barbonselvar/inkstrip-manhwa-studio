@@ -21,11 +21,63 @@ import {
 import { blendClippedPixels } from "./clipping.ts";
 import { nativeFile, readNative, vectorSvg } from "./files.ts";
 import { createHistory, record, undo, redo } from "../editor/history.ts";
+import { readFile } from "node:fs/promises";
 const doc = () => {
   const d = fromPanel({ id: "panel", name: "Layer test", width: 32, height: 24 });
   d.layers = [layer("shape", 10, 10, "a"), layer("shape", 10, 10, "b"), layer("text", 10, 10, "c")];
   return d;
 };
+test("nested masks, hidden layers, clipping, transforms and stable IDs survive native reopen and atomic group deletion undo", async () => {
+  let d = doc();
+  const inner = groupLayers(d, ["a", "b"]);
+  d = inner.document;
+  const outer = groupLayers(d, [inner.id, "c"]);
+  d = outer.document;
+  d = setClipping(d, ["b"], true);
+  const g = d.layers.find((l) => l.id === inner.id)!;
+  g.mask = {
+    enabled: true,
+    inverted: true,
+    density: 0.75,
+    feather: 2,
+    strokes: [],
+    selection: { regions: [], inverted: true, feather: 0 },
+  };
+  g.opacity = 0.65;
+  g.blend = "multiply";
+  d.layers.find((l) => l.id === "c")!.visible = false;
+  d.layers.find((l) => l.id === "a")!.transform.rotation = 30;
+  validateDocument(d);
+  const assets = {
+    source: new Blob(
+      [
+        Uint8Array.from(
+          await readFile(new URL("../fixtures/import/original.png", import.meta.url)),
+        ),
+      ],
+      { type: "image/png" },
+    ),
+  };
+  const saved = await nativeFile({
+    document: d,
+    assets,
+    revision: 0,
+    acceptedBlobId: "original",
+    updatedAt: 0,
+  });
+  const restored = await readNative(saved, d.panelId, "original");
+  // JSON omits undefined optional parentId; compare every persistable field.
+  assert.deepEqual(restored.document, JSON.parse(JSON.stringify(d)));
+  assert.deepEqual(await restored.assets.source!.arrayBuffer(), await assets.source.arrayBuffer());
+  assert.deepEqual(
+    restored.document.layers.map((l) => l.id),
+    d.layers.map((l) => l.id),
+  );
+  const h = record(createHistory(d), deleteLayers(d, [outer.id]));
+  assert.equal(h.present.layers.length, 0);
+  assert.deepEqual(undo(h).present, d);
+  assert.equal(redo(undo(h)).present.layers.length, 0);
+});
 test("clipping chains use the nearest base and reset at each sibling group", () => {
   let d = doc();
   d = setClipping(d, ["b", "c"], true);
@@ -45,6 +97,21 @@ test("hidden base and ancestors hide every clip without leaking to a previous ba
   d.layers[0]!.visible = false;
   assert.equal(visibleLayerIds(d).size, 0);
   assert.throws(() => setClipping(doc(), ["a"], true), /base below/);
+});
+test("reordering a clip below every base fails atomically instead of silently hiding artwork", () => {
+  const d = setClipping(doc(), ["b", "c"], true),
+    original = structuredClone(d);
+  const history = createHistory(d);
+  assert.throws(() => reorderLayers(d, ["b"], "a", "before"), /must remain above a base/);
+  assert.deepEqual(d, original);
+  assert.deepEqual(history, createHistory(original));
+  // Reordering individual clips above a valid base remains supported.
+  const moved = reorderLayers(d, ["c"], "b", "before");
+  assert.equal(clipBase(moved, "c")?.id, "a");
+  assert.deepEqual(
+    moved.layers.map((l) => l.id),
+    ["a", "c", "b"],
+  );
 });
 test("clipping preserves fractional base alpha across several translucent clips", () => {
   const b = new Uint8ClampedArray([100, 100, 100, 128, 10, 20, 30, 0]);

@@ -1,0 +1,16 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'Mask from selection', exact: true })
+
+    at /workspace/inkstrip-manhwa-studio/scripts/r2-document-browser-check.mjs:89:100 {
+  log: [
+    "  - waiting for getByRole('button', { name: 'Mask from selection', exact: true })"
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v24.19.0

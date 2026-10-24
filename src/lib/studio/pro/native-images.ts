@@ -1,5 +1,7 @@
 import { documentSources } from "./raster-budget.ts";
-import type { ProSession } from "./model.ts";
+import { MAX_ASSET_BYTES, type ProSession } from "./model.ts";
+import { safeBitmap } from "../image-decode.ts";
+import { imagePolicy } from "../image-policy.ts";
 
 /** Read bounded container headers before allocating decoded pixels from untrusted files. */
 export async function rasterSize(blob: Blob) {
@@ -57,27 +59,41 @@ export async function rasterSize(blob: Blob) {
   );
 }
 
+/** Bound standalone Raster assets before either bitmap or HTML image decoding.
+ * This shares native-import policy; metadata checks after decode cannot prevent
+ * allocation of a decompression bomb. JPEG orientation can swap axes, not area. */
+export async function validateRasterInput(blob: Blob, maxArea: number) {
+  if (!Number.isFinite(maxArea) || maxArea < 1 || maxArea > 16_777_216)
+    throw Error("Invalid Raster image pixel budget.");
+  if (blob.size > MAX_ASSET_BYTES)
+    throw Error("Raster image exceeds the48MB asset budget. Current document unchanged.");
+  const size = await rasterSize(blob);
+  if (
+    !size.width ||
+    !size.height ||
+    Math.max(size.width, size.height) > 16384 ||
+    size.width * size.height > maxArea
+  )
+    throw Error("Image exceeds this device's decoded pixel budget. Current document unchanged.");
+  return size;
+}
+
 /** Import preflight must finish before replacing the open draft or its immutable pool. */
 export async function validateNativeImages(
   session: ProSession,
   maxArea: number,
-  decode: typeof createImageBitmap = createImageBitmap,
+  decode?: typeof createImageBitmap,
 ) {
   documentSources(session.document, maxArea);
   for (const blob of Object.values(session.assets)) {
-    const size = await rasterSize(blob);
-    if (
-      !size.width ||
-      !size.height ||
-      Math.max(size.width, size.height) > 16384 ||
-      size.width * size.height > maxArea
-    )
-      throw Error(
-        "Embedded image exceeds this device's decoded pixel budget. Current document unchanged.",
-      );
+    const size = await validateRasterInput(blob, maxArea);
     let image: ImageBitmap | undefined;
     try {
-      image = await decode(blob, { imageOrientation: "none" });
+      image = decode
+        ? await decode(blob, { imageOrientation: "none" })
+        : await safeBitmap(blob, {
+            policy: { ...imagePolicy(maxArea <= 4_000_000), maxPixels: maxArea, maxSide: 16384 },
+          });
       // Chromium honors EXIF even with imageOrientation:none. A quarter-turn
       // swaps JPEG axes but preserves the preflight pixel/side budgets.
       const orientedJpeg =

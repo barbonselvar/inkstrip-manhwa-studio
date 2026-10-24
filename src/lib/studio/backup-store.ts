@@ -10,6 +10,8 @@ import {
   type ProjectData,
 } from "./backup";
 import type { Chapter, Panel, Project } from "./types";
+import { preflightRecoveryImages } from "./image-policy";
+import { matchingDimensions } from "./image-decode";
 
 /** Project backup/restore and storage persistence, kept beside (not inside) the core store. */
 
@@ -103,6 +105,61 @@ export async function readProjectData(projectId: string): Promise<ProjectData> {
 
 /** Restore a decoded backup atomically. Refuses to overwrite a project that already exists. */
 export async function writeProjectData(data: ProjectData) {
+  // Backup metadata is not a trust marker. Check every source/thumbnail/reference
+  // and native asset before publishing any URL, session or Chapter record.
+  const thumbnails = new Set(
+    data.panels.flatMap((p) =>
+      [p.thumbId, p.original?.thumbId, p.edit?.source.thumbId, p.draft?.source.thumbId].filter(
+        (id): id is string => !!id,
+      ),
+    ),
+  );
+  const media = [...data.blobs].map(([id, blob]) => ({ blob, thumbnail: thumbnails.has(id) }));
+  const references = (data.project.characters ?? []).flatMap((c) =>
+    c.references.map((r) => ({ blob: r.blob })),
+  );
+  const entries = [
+    ...media,
+    ...references,
+    ...(data.sessions ?? []).flatMap((s) =>
+      Object.values(s.assets).map((blob) => ({ blob, decode: true })),
+    ),
+  ];
+  let checked: Awaited<ReturnType<typeof preflightRecoveryImages>>;
+  try {
+    checked = await preflightRecoveryImages(entries);
+  } catch (error) {
+    throw Error(
+      `Backup image rejected: ${(error as Error).message} Existing projects are unchanged.`,
+    );
+  }
+  const canonicalBlobs = new Map(
+    [...data.blobs].map(([id, blob], i) => [
+      id,
+      blob.type === checked[i]!.mime ? blob : blob.slice(0, blob.size, checked[i]!.mime),
+    ]),
+  );
+  const dimensions = new Map([...data.blobs.keys()].map((id, i) => [id, checked[i]!]));
+  // A tiny valid source must not smuggle huge document/canvas dimensions through
+  // backup metadata. Original, edit and draft references use the same policy.
+  for (const panel of data.panels) {
+    for (const ref of [panel, panel.original, panel.edit?.source, panel.draft?.source]) {
+      if (!ref) continue;
+      const info = dimensions.get(ref.blobId);
+      if (!info || !matchingDimensions(ref.width, ref.height, info))
+        throw Error(
+          "Backup image dimensions disagree with its source header. Existing projects are unchanged.",
+        );
+    }
+  }
+  for (const chapter of data.chapters)
+    for (const part of chapter.strip?.parts ?? []) {
+      const info = dimensions.get(part.blobId);
+      if (!info || !matchingDimensions(chapter.strip!.width, part.height, info))
+        throw Error(
+          "Backup strip dimensions disagree with its image header. Existing projects are unchanged.",
+        );
+    }
   for (const panel of data.panels)
     if (await loadSession(panel.id))
       throw Error(
@@ -124,7 +181,7 @@ export async function writeProjectData(data: ProjectData) {
     for (const panel of data.panels)
       if (await request(tx.objectStore("panels").getKey(panel.id)))
         throw Error("A page in this backup already exists.");
-    for (const [id, blob] of data.blobs) {
+    for (const [id, blob] of canonicalBlobs) {
       if (await request(tx.objectStore("blobs").getKey(id)))
         throw Error("A backup asset ID already exists; no artwork was overwritten.");
       tx.objectStore("blobs").add(blob, id);

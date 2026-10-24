@@ -1,0 +1,79 @@
+Mixed import {
+  banner: null,
+  dom: '\n' +
+    'Chapter 1\n' +
+    'Studio\n' +
+    'Images\n' +
+    'Text & Bubbles\n' +
+    '\n' +
+    'CHAPTER WORKSPACE\n' +
+    '\n' +
+    'Local storage\n' +
+    'Add images\n' +
+    '\n' +
+    'Your panels, at their original quality. Drop, paste, or choose files.\n' +
+    'JPG, PNG, WebP, GIF, BMP, ICO, still AVIF/HEIF, classic TIFF and safe SVG. Browser codec support and resource limits apply.\n' +
+    '\n' +
+    'Open in Raster Studio\n' +
+    'Open in Vector Studio\n' +
+    'AI Enhance · 1 selected\n' +
+    'AI Face Fix\n' +
+    'Batch edit selected\n' +
+    '\n' +
+    'Enhance on-device. Face Fix requires optional cloud AI.\n' +
+    '\n' +
+    'Export images\n' +
+    'Chapter settings\n' +
+    'READING ORDER\n' +
+    'Undo reorder\n' +
+    '\n' +
+    'Drag the grip to reorder; image long-press opens editing. Arrows work with a keyboard.\n' +
+    '\n' +
+    '1 of 1 checked\n' +
+    '\n' +
+    'All\n' +
+    'None\n' +
+    '01\n' +
+    'geometry.png\n' +
+    '128 × 96\n' +
+    '\n' +
+    'Adding 3 of 3\n' +
+    '\n' +
+    'Cancel image import\n' +
+    'Delete chapter\n' +
+    '\n' +
+    'LIVE CHAPTER PREVIEW\n' +
+    '\n' +
+    'Display\n' +
+    '\n' +
+    'The stitched chapter shows up here.\n' +
+    '\n' +
+    'YOUR CHAPTER CANVAS\n' +
+    '\n' +
+    'Nothing stitched yet.\n' +
+    '\n' +
+    'Check at least two photos, then press Display. Add more later and stitch them into the same chapter.'
+}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    'geometry.png',
+-   'valid-as-text.dat',
+-   'valid-jpeg.jpg'
+  ]
+
+    at file:///workspace/inkstrip-manhwa-studio/scripts/chapter-import-safety-browser-check.mjs:89:12 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [ 'geometry.png' ],
+  expected: [ 'geometry.png', 'valid-as-text.dat', 'valid-jpeg.jpg' ],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

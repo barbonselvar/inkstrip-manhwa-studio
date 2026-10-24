@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Inkstrip",
+      "hasCanvas": false,
+      "bodyTextLen": 48,
+      "bodyTextHash": "50f33519900024d5e228f1b74655e39b42b49a6ec64177a01639a2d2ed507df2",
+      "bodyTextPrefix": "Skip to workspace inkstrip. Opening your studio…",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/r2-release-dev.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Inkstrip",
+      "hasCanvas": false,
+      "bodyTextLen": 1509,
+      "bodyTextHash": "7e12cc70a4434d794289950f211e0e5328b3f843f9a65c42715c77a115a44dd3",
+      "bodyTextPrefix": "Skip to workspace My projects On-device studio A STUDIO FOR VISU",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/r2-release-dev-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/r2-release-dev.json"
+}

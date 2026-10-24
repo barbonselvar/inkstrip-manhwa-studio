@@ -1,6 +1,7 @@
 import { hasLegacyAiDraft } from "./dialogue/storage-compat";
 import { mediaIds } from "./editor/references";
 import { validateRecipe } from "./editor/geometry";
+import { preflightImage, thumbnailPolicy } from "./image-policy";
 import type { Chapter, Panel, Project, Strip } from "@/lib/studio/types";
 
 const DB_NAME = "inkstrip";
@@ -136,6 +137,74 @@ export async function getBlob(id: string) {
   await transactionDone(tx);
   return blob;
 }
+/** Keep raw getBlob for byte-exact download/recovery; validate only decode consumers. */
+export async function getImageBlob(id: string, thumbnail = false) {
+  const blob = await getBlob(id);
+  if (!blob) return undefined;
+  const info = await preflightImage(blob, thumbnail ? thumbnailPolicy() : undefined);
+  return blob.type === info.mime ? blob : blob.slice(0, blob.size, info.mime);
+}
+
+/** Publish a staged import as one transaction. No orphan blobs on quota/cancel,
+ * no append into a deleted chapter or over a concurrently reordered image list. */
+export async function commitChapterImages(
+  chapterId: string,
+  expected: { id: string; blobId: string; order: number }[],
+  panels: Panel[],
+  blobs: { id: string; blob: Blob }[],
+  signal?: AbortSignal,
+) {
+  signal?.throwIfAborted();
+  const db = await openDb();
+  signal?.throwIfAborted();
+  const tx = db.transaction(["projects", "chapters", "panels", "blobs"], "readwrite"),
+    done = transactionDone(tx);
+  const abort = () => {
+    try {
+      tx.abort();
+    } catch {
+      /* already completed */
+    }
+  };
+  signal?.addEventListener("abort", abort, { once: true });
+  try {
+    const chapter = await request<Chapter | undefined>(tx.objectStore("chapters").get(chapterId));
+    const current = (
+      await request<Panel[]>(tx.objectStore("panels").index("by_chapter").getAll(chapterId))
+    ).sort((a, b) => a.order - b.order || a.createdAt - b.createdAt);
+    const actual = current.map(({ id, blobId, order }) => ({ id, blobId, order }));
+    if (!chapter || JSON.stringify(actual) !== JSON.stringify(expected))
+      throw Error(
+        "Chapter images changed while importing. Reload Inkstrip and retry; nothing was added.",
+      );
+    const project = await request<Project | undefined>(
+      tx.objectStore("projects").get(chapter.projectId),
+    );
+    if (!project) throw Error("The destination project was deleted. Nothing was imported.");
+    signal?.throwIfAborted();
+    let order = current.reduce((n, p) => Math.max(n, p.order), -1) + 1;
+    const added = panels.map((p) => {
+      if (p.chapterId !== chapterId) throw Error("Import destination mismatch.");
+      return { ...p, order: order++ };
+    });
+    for (const { id, blob } of blobs) tx.objectStore("blobs").add(blob, id);
+    for (const panel of added) tx.objectStore("panels").add(panel);
+    const updatedAt = Date.now(),
+      nextChapter = { ...chapter, updatedAt },
+      nextProject = { ...project, updatedAt };
+    tx.objectStore("chapters").put(nextChapter);
+    tx.objectStore("projects").put(nextProject);
+    await done;
+    return { panels: added, chapter: nextChapter, project: nextProject };
+  } catch (error) {
+    abort();
+    await done.catch(() => {});
+    signal?.throwIfAborted();
+    throw error;
+  } finally {
+    signal?.removeEventListener("abort", abort);
+  }
+}
 
 export async function removeRecords(input: {
   projects?: string[];
@@ -192,10 +261,21 @@ export async function commitPanelMedia(
   expectedBlobId: string,
   blobs: { id: string; blob: Blob }[],
   obsolete: string[],
+  signal?: AbortSignal,
 ) {
+  signal?.throwIfAborted();
   const db = await openDb();
+  signal?.throwIfAborted();
   const tx = db.transaction(["panels", "blobs", "chapters", "projects"], "readwrite");
   const done = transactionDone(tx);
+  const cancel = () => {
+    try {
+      tx.abort();
+    } catch {
+      /* already committed */
+    }
+  };
+  signal?.addEventListener("abort", cancel, { once: true });
   try {
     const current = await request<Panel | undefined>(tx.objectStore("panels").get(panel.id));
     if (!current || current.blobId !== expectedBlobId)
@@ -228,6 +308,7 @@ export async function commitPanelMedia(
     const updatedAt = next.mediaUpdatedAt ?? Date.now();
     const nextChapter = { ...chapter, updatedAt };
     const nextProject = project ? { ...project, updatedAt } : null;
+    signal?.throwIfAborted();
     for (const { id, blob } of blobs) tx.objectStore("blobs").put(blob, id);
     tx.objectStore("panels").put(next);
     tx.objectStore("chapters").put(nextChapter);
@@ -243,7 +324,10 @@ export async function commitPanelMedia(
       /* The transaction may already have aborted. */
     }
     await done.catch(() => {});
+    signal?.throwIfAborted();
     throw error;
+  } finally {
+    signal?.removeEventListener("abort", cancel);
   }
 }
 
