@@ -61,3 +61,14 @@ Checkpoint validation:742 automated tests pass (200 script,59 shared,49 Studio,4
 - Backup restore refuses existing page/native IDs rather than overwriting unrelated drafts. Native undo history follows existing session behavior; the complete undo timeline is not serialized into native files.
 - Desktop Chromium and touch emulation are tested; physical Android remains outstanding. Optional advanced inference requires a separately secured backend and genuine model validation; none is configured or advertised as operational.
 - Full regression, exact-HEAD CI, final inventory/security review and actual production verification must pass before release.
+
+
+## Release-audit fixes after the implementation checkpoint
+
+- **Legacy F1 reader compatibility:** the Chapter DB upgrade now checks for unreleased same-origin AI drafts first and leaves the older Chapter DB version readable. A seeded v1 Chapter/v2 AI profile remains readable from the homepage, while unsafe Pro migration is rejected. F1 source/PR remains separate.
+- **OCR model cache:** verified weights now seed Tesseract's documented namespaced cache path through its existing Apache-licensed idb-keyval dependency (explicitly pinned6.3.0). Real cached inference succeeds with all model-network requests blocked:0 requests. The actual in-engine traineddata SHA-256 is still checked. Corrupt cached language files are removed and rejected, allowing a safe retry. Cache failure falls back to disclosed network retrieval, never an image upload.
+- **JPEG compositing:** reproduced a translucent Screen-blended bubble exporting as white (expected RGB99/121/144, actual255/255/255; maximum error156). Moving the white matte after editable compositing yields99/121/144, error0. This is a narrow shared-engine correction; PNG/native geometry is unchanged.
+- **Preset fidelity:** saved basic designs retain native dimensions, opacity, fill/stroke alpha, dash styles, effects and typography styling. Native/project copies remain independent. Advanced multi-appearance stacks are rejected explicitly by the preset saver; they remain fully editable in the native document.
+- **Unicode/export safety:** valid multilingual/combined/emoji text is escaped losslessly for SVG; invalid XML characters are rejected without modifying the source. ZIP filenames reject traversal, drive paths and hidden direction controls. No untrusted remote inference/proxy endpoint was added.
+
+Current unit total:744 (200 script +59 shared +49 Studio +436 Pro), all passing. TypeScript/lint/build/config/auth checks pass. Final built regression rerun, exact-HEAD CI and release verification remain gates. No Dialogue production deployment has occurred at this checkpoint.

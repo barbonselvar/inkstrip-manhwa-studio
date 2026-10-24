@@ -44,7 +44,11 @@ export function createBubble(d: ProDocument, preset: BubblePreset, custom?: Dial
   const w = Math.max(1, Math.min(d.width * 0.65, Math.max(100, d.width * 0.32))),
     h = Math.max(1, Math.min(d.height * 0.4, w * 0.6));
   const group = layer("group", d.width, d.height),
-    body = layer("shape", preset === "circle" || preset === "square" ? h : w, h),
+    body = layer(
+      "shape",
+      custom?.width ?? (preset === "circle" || preset === "square" ? h : w),
+      custom?.height ?? h,
+    ),
     text = layer("text", Math.max(1, body.width * 0.78), Math.max(1, h * 0.7));
   group.name = `${preset} dialogue`;
   group.dialogueRole = "group";
@@ -64,6 +68,7 @@ export function createBubble(d: ProDocument, preset: BubblePreset, custom?: Dial
     "narration",
     "custom",
   ].includes(preset);
+  if (custom?.bodyStyle) Object.assign(body, structuredClone(custom.bodyStyle));
   body.bubble = custom
     ? structuredClone(custom.bubble)
     : {
@@ -86,7 +91,7 @@ export function createBubble(d: ProDocument, preset: BubblePreset, custom?: Dial
   body.bubble.textId = text.id;
   body.transform.x = (d.width - body.width) / 2;
   body.transform.y = Math.max(0, d.height * 0.1);
-  if (preset === "whisper") body.dash = [3, 3];
+  if (preset === "whisper" && custom?.bodyStyle?.dash === undefined) body.dash = [3, 3];
   text.name = "Dialogue text";
   text.parentId = group.id;
   text.dialogueRole = "text";
@@ -99,6 +104,7 @@ export function createBubble(d: ProDocument, preset: BubblePreset, custom?: Dial
   text.lettering = custom
     ? structuredClone(custom.lettering)
     : { ...DEFAULT_LETTERING, padding: 2 };
+  if (custom?.textStyle) Object.assign(text, structuredClone(custom.textStyle));
   const box = textBox(body);
   text.width = box.width;
   text.height = box.height;

@@ -73,6 +73,48 @@ try {
     results.push(result);
     console.log(JSON.stringify(result));
   }
+  let unexpectedModelRequests = 0;
+  await page.route("https://raw.githubusercontent.com/**", (route) => {
+    unexpectedModelRequests++;
+    return route.abort();
+  });
+  const cachedInference = await page.evaluate(async () => {
+    const { LocalOcr } = await import("/src/lib/studio/dialogue/ocr.ts");
+    const c = new OffscreenCanvas(640, 200),
+      x = c.getContext("2d");
+    x.fillStyle = "#fff";
+    x.fillRect(0, 0, 640, 200);
+    x.fillStyle = "#111";
+    x.font = "48px Arial";
+    x.fillText("CACHE WORKS", 30, 110);
+    const output = await new LocalOcr().recognize(x.getImageData(0, 0, 640, 200), "eng");
+    return { text: output.text, elapsedMs: output.elapsedMs };
+  });
+  assert.match(cachedInference.text, /CACHE WORKS/);
+  assert.equal(
+    unexpectedModelRequests,
+    0,
+    "real warm OCR uses verified cached model bytes without network retrieval",
+  );
+  const corruption = await page.evaluate(async () => {
+    const [{ LocalOcr }, { OCR_SOURCE }] = await Promise.all([
+      import("/src/lib/studio/dialogue/ocr.ts"),
+      import("/src/lib/studio/dialogue/ocr-models.ts"),
+    ]);
+    const cache = await caches.open("inkstrip-ocr-verified-v1"),
+      url = `${OCR_SOURCE}/eng.traineddata`;
+    await cache.put(url, new Response(new Uint8Array([1, 2, 3, 4])));
+    let message = "";
+    try {
+      await new LocalOcr().recognize(new ImageData(32, 32), "eng");
+    } catch (e) {
+      message = e.message;
+    }
+    return { message, removed: !(await cache.match(url)) };
+  });
+  assert.match(corruption.message, /incomplete/);
+  assert.equal(corruption.removed, true);
+  await page.unroute("https://raw.githubusercontent.com/**");
   const cancelled = await page.evaluate(async () => {
     const { LocalOcr } = await import("/src/lib/studio/dialogue/ocr.ts");
     const ocr = new LocalOcr();
@@ -90,6 +132,9 @@ try {
   const report = {
     results,
     cancelled,
+    cachedInference,
+    unexpectedModelRequests,
+    corruption,
     errors,
     chromium: browser.version(),
     notes:

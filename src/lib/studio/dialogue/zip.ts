@@ -9,7 +9,7 @@ export function safeAssetName(value: string) {
   return (
     value
       .normalize("NFKC")
-      .replace(/[\\/:*?"<>|\p{Cc}]/gu, "-")
+      .replace(/[\\/:*?"<>|\p{Cc}\p{Cf}]/gu, "-")
       .replace(/^[.\s]+|[.\s]+$/g, "")
       .slice(0, 80) || "asset"
   );
@@ -20,7 +20,7 @@ export function zipPath(value: string) {
     value.length > 240 ||
     value.startsWith("/") ||
     value.includes("\\") ||
-    /[\p{Cc}]/u.test(value) ||
+    /[<>:"|?*\p{Cc}\p{Cf}]/u.test(value) ||
     value.split("/").some((p) => !p || p === "." || p === "..")
   )
     throw Error("Unsafe archive filename.");

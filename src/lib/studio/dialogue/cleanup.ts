@@ -12,6 +12,8 @@ export function flatBackground(image: { width: number; height: number; data: Uin
   if (
     !Number.isInteger(image.width) ||
     !Number.isInteger(image.height) ||
+    image.width > 16384 ||
+    image.height > 16384 ||
     image.width < 3 ||
     image.height < 3 ||
     image.width * image.height > 4_000_000 ||

@@ -42,6 +42,19 @@
       "ink": 4951
     }
   ],
+  "jpeg": {
+    "reference": [
+      99,
+      121,
+      144
+    ],
+    "actual": [
+      99,
+      121,
+      144
+    ],
+    "maxError": 0
+  },
   "region": {
     "dimensions": [
       90,

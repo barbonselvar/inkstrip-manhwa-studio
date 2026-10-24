@@ -2,6 +2,7 @@
   "protectedDraft": {
     "error": "This origin contains an unreleased F1 AI draft. Its storage was left unchanged; use a separate Dialogue preview until the AI branch is integrated.",
     "version": 2,
+    "mainVersion": 1,
     "model": "protected"
   },
   "ordinaryResults": {

@@ -7,9 +7,33 @@ const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] }
 try {
   const context = await browser.newContext(),
     page = await context.newPage();
-  await page.goto(base);
-  await page.getByRole("button", { name: "New project", exact: true }).waitFor();
+  await page.goto(`${base}/gallery/provenance.json`);
   const protectedDraft = await page.evaluate(async () => {
+    const legacy = await new Promise((resolve, reject) => {
+      const r = indexedDB.open("inkstrip", 1);
+      r.onupgradeneeded = () => {
+        const db = r.result;
+        db.createObjectStore("projects", { keyPath: "id" });
+        db.createObjectStore("chapters", { keyPath: "id" }).createIndex("by_project", "projectId");
+        db.createObjectStore("panels", { keyPath: "id" }).createIndex("by_chapter", "chapterId");
+        db.createObjectStore("blobs");
+      };
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+    await new Promise((resolve, reject) => {
+      const tx = legacy.transaction("projects", "readwrite");
+      tx.objectStore("projects").put({
+        id: "legacy-project",
+        title: "Protected F1 project",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    legacy.close();
+
     const db = await new Promise((resolve, reject) => {
       const r = indexedDB.open("inkstrip-pro", 2);
       r.onupgradeneeded = () => r.result.createObjectStore("sessions", { keyPath: "id" });
@@ -26,6 +50,9 @@ try {
       tx.onerror = () => reject(tx.error);
     });
     db.close();
+    const { openDb } = await import("/src/lib/studio/db.ts");
+    const main = await openDb(),
+      mainVersion = main.version;
     const { loadSession } = await import("/src/lib/studio/pro/storage.ts");
     let error = "";
     try {
@@ -44,10 +71,13 @@ try {
     });
     const version = old.version;
     old.close();
-    return { error, version, model: data.session.document.layers[0].ai.modelId };
+    return { error, version, mainVersion, model: data.session.document.layers[0].ai.modelId };
   });
   assert.match(protectedDraft.error, /unreleased F1 AI draft/);
   assert.equal(protectedDraft.version, 2);
+  assert.equal(protectedDraft.mainVersion, 1);
+  await page.goto(base);
+  await page.getByText("Protected F1 project", { exact: true }).waitFor();
   assert.equal(protectedDraft.model, "protected");
   await context.close();
   const ordinary = await browser.newContext(),

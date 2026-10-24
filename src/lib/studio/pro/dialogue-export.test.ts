@@ -31,7 +31,7 @@ test("archive entries retain exact bytes and deterministic UTF8 directory offset
   assert.equal(v.getUint32(dir + 42, true), 0);
 });
 test("archives reject traversal, duplicates, oversized entry counts and honour cancellation", async () => {
-  for (const path of ["../x", "/x", "x/../y", "x\\y", "x//y", "x\u0000y"])
+  for (const path of ["../x", "/x", "x/../y", "x\\y", "x//y", "x\u0000y", "C:/art.png", "x\u202ey"])
     assert.throws(() => zipPath(path));
   assert.equal(safeAssetName("../章/One:*"), "-章-One--");
   await assert.rejects(
@@ -58,4 +58,13 @@ test("Chapter page ranges preserve reading order, reject invalid input and bound
     assert.throws(() => pageRange(input, 6));
   assert.throws(() => pageRange("", 251), /250/);
   assert.throws(() => pageRange("1-251", 300), /250/);
+});
+
+test("SVG preserves multilingual Unicode and rejects invalid XML without replacing source text", async () => {
+  const { escapeXml } = await import("./xml.ts");
+  const source = "مرحبا 世界 새로운 Á 👩‍👩‍👧‍👧 <&>";
+  assert.equal(escapeXml(source), "مرحبا 世界 새로운 Á 👩‍👩‍👧‍👧 &lt;&amp;&gt;");
+  for (const invalid of ["a\u0000b", "a\u0001b", "a\ud800b", "a\uffffb"])
+    assert.throws(() => escapeXml(invalid), /source data was not changed/);
+  assert.equal(escapeXml("a\nb\tc\r"), "a\nb\tc\r");
 });

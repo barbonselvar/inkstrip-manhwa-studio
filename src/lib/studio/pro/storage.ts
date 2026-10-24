@@ -42,14 +42,24 @@ function open(): Promise<IDBDatabase> {
 export async function loadSession(panelId: string): Promise<ProSession | undefined> {
   // Project restore commits this recovery journal atomically with Chapter records.
   // Once a normal Pro save succeeds it takes precedence; no cross-database partial import.
-  const main = await openDb();
+  const db = await open();
+  const main = await openDb().catch((error) => {
+    db.close();
+    throw error;
+  });
   const staged = await new Promise<ProSession | undefined>((resolve, reject) => {
+    if (!main.objectStoreNames.contains("nativeRestores")) {
+      resolve(undefined);
+      return;
+    }
     const tx = main.transaction("nativeRestores"),
       r = tx.objectStore("nativeRestores").get(panelId);
     tx.oncomplete = () => resolve(r.result?.session);
     tx.onerror = () => reject(tx.error);
+  }).catch((error) => {
+    db.close();
+    throw error;
   });
-  const db = await open();
   return new Promise((resolve, reject) => {
     const tx = db.transaction("sessions"),
       r = tx.objectStore("sessions").get(panelId);

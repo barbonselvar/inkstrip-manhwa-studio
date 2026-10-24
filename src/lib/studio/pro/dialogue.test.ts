@@ -271,3 +271,64 @@ test("dangling bubble text references are rejected before a native document is i
   body.bubble!.textId = "missing";
   assert.throws(() => validateDocument(d), /missing text layer/);
 });
+
+test("custom dialogue presets preserve editable opacity, dashes, effects and text styling", async () => {
+  const { createBubble } = await import("../dialogue/operations.ts"),
+    { presetStyles } = await import("../dialogue/types.ts"),
+    { defaultEffect } = await import("./effects.ts");
+  const original = createBubble(
+    fromPanel({ id: "p", name: "Page", width: 640, height: 480 }),
+    "speech",
+  ).document;
+  const body = original.layers.find((l) => l.bubble)!,
+    text = original.layers.find((l) => l.lettering)!;
+  Object.assign(body, {
+    opacity: 0.6,
+    fillOpacity: 0.4,
+    dash: [7, 4],
+    effects: [defaultEffect("dropShadow")],
+  });
+  Object.assign(text, {
+    opacity: 0.8,
+    stroke: "#336699",
+    strokeWidth: 2,
+    fontWeight: 700,
+    lineHeight: 1.7,
+    letterSpacing: 2,
+  });
+  const preset = {
+    id: "preset",
+    name: "Styled speech",
+    width: body.width,
+    height: body.height,
+    bubble: structuredClone(body.bubble!),
+    fill: body.fill,
+    stroke: body.stroke,
+    strokeWidth: body.strokeWidth,
+    textColor: text.fill,
+    fontSize: text.fontSize,
+    lettering: text.lettering!,
+    ...presetStyles(body, text),
+  };
+  validateDialogue({ version: 1, regions: [], presets: [preset] });
+  const next = createBubble(original, "speech", preset).document,
+    cloned = next.layers.at(-2)!,
+    lettering = next.layers.at(-1)!;
+  assert.equal(cloned.width, body.width);
+  assert.equal(cloned.height, body.height);
+  assert.equal(cloned.opacity, 0.6);
+  assert.equal(cloned.fillOpacity, 0.4);
+  assert.deepEqual(cloned.dash, [7, 4]);
+  assert.deepEqual(cloned.effects, body.effects);
+  assert.equal(lettering.fontWeight, 700);
+  assert.equal(lettering.stroke, "#336699");
+  assert.equal(lettering.lineHeight, 1.7);
+  assert.notEqual(cloned.effects, body.effects);
+  assert.throws(() =>
+    validateDialogue({
+      version: 1,
+      regions: [],
+      presets: [{ ...preset, bodyStyle: { opacity: Infinity } }],
+    }),
+  );
+});

@@ -152,8 +152,47 @@ try {
       } catch {
         rejected = true;
       }
+      const jpegDoc = fromPanel({
+        id: "jpeg",
+        name: "Transparent dialogue blend",
+        width: 96,
+        height: 64,
+      });
+      jpegDoc.source = undefined;
+      jpegDoc.background = "transparent";
+      const bubble = layer("shape", 64, 32);
+      bubble.shape = "rectangle";
+      bubble.dialogueRole = "bubble";
+      bubble.fill = "#204060";
+      bubble.strokeWidth = 0;
+      bubble.opacity = 0.7;
+      bubble.blend = "screen";
+      bubble.transform.x = 16;
+      bubble.transform.y = 16;
+      jpegDoc.layers = [bubble];
+      await renderer.init({
+        document: jpegDoc,
+        assets: {},
+        revision: 0,
+        acceptedBlobId: "s",
+        updatedAt: 0,
+      });
+      const transparent = await decode(
+          (await renderer.export(jpegDoc, 16_777_216, "image/png", 1, () => {})).blob,
+        ),
+        jpeg = await decode(
+          (await renderer.export(jpegDoc, 16_777_216, "image/jpeg", 1, () => {})).blob,
+        );
+      const at = (32 * 96 + 48) * 4,
+        alpha = transparent.pixels[at + 3] / 255,
+        reference = [0, 1, 2].map((i) =>
+          Math.round(transparent.pixels[at + i] * alpha + 255 * (1 - alpha)),
+        ),
+        actual = [...jpeg.pixels.slice(at, at + 3)],
+        jpegError = Math.max(...actual.map((n, i) => Math.abs(n - reference[i])));
       return {
         cases,
+        jpeg: { reference, actual, maxError: jpegError },
         region: {
           dimensions: [roi.width, roi.height],
           mismatch,
@@ -190,16 +229,15 @@ try {
     assert.ok(c.ink > 100);
     assert.ok(c.mean < 2 && c.fraction < 0.03, JSON.stringify(c));
   }
+  assert.ok(
+    result.jpeg.maxError <= 3,
+    `JPEG matte must follow transparent layer blending: ${JSON.stringify(result.jpeg)}`,
+  );
   assert.equal(result.region.mismatch, 0);
   assert.deepEqual(result.region.dimensions, [90, 88]);
   assert.equal(result.region.rejected, true);
   assert.equal(result.region.documentUnchanged, true);
   assert.deepEqual(errors, []);
-  await writeFile(
-    "/workspace/screenshots/dialogue-render-results.json",
-    JSON.stringify(result, null, 2),
-  );
-  console.log(JSON.stringify(result, null, 2));
 } finally {
   await browser.close();
 }

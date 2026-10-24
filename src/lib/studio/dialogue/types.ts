@@ -1,4 +1,6 @@
-import type { Contour } from "../pro/model.ts";
+import { validateEffects } from "../pro/effects.ts";
+import { isBlendMode } from "../pro/blend.ts";
+import type { Layer, Contour } from "../pro/model.ts";
 /** Additive shared Pro-document metadata. It contains no executable content or remote URLs. */
 export const BUBBLE_PRESETS = [
   "speech",
@@ -63,7 +65,55 @@ export type DialogueRegion = {
   layerId?: string;
   cleanupLayerId?: string;
 };
+export const BODY_STYLE_KEYS = [
+  "opacity",
+  "blend",
+  "fillOpacity",
+  "strokeOpacity",
+  "dash",
+  "dashOffset",
+  "fillRule",
+  "lineCap",
+  "lineJoin",
+  "miterLimit",
+  "effects",
+] as const;
+export const TEXT_STYLE_KEYS = [
+  "opacity",
+  "blend",
+  "fillOpacity",
+  "strokeOpacity",
+  "stroke",
+  "strokeWidth",
+  "fontWeight",
+  "align",
+  "lineHeight",
+  "letterSpacing",
+  "effects",
+] as const;
+export type DialogueBodyStyle = Partial<Pick<Layer, (typeof BODY_STYLE_KEYS)[number]>>;
+export type DialogueTextStyle = Partial<Pick<Layer, (typeof TEXT_STYLE_KEYS)[number]>>;
+export function presetStyles(body: Layer, text: Layer) {
+  if (body.appearance || text.appearance)
+    throw Error(
+      "Custom presets support basic fills/strokes and layer effects. Keep advanced appearance stacks in the native document; no preset was saved.",
+    );
+  return {
+    bodyStyle: structuredClone(
+      Object.fromEntries(
+        BODY_STYLE_KEYS.filter((k) => body[k] !== undefined).map((k) => [k, body[k]]),
+      ),
+    ) as DialogueBodyStyle,
+    textStyle: structuredClone(
+      Object.fromEntries(
+        TEXT_STYLE_KEYS.filter((k) => text[k] !== undefined).map((k) => [k, text[k]]),
+      ),
+    ) as DialogueTextStyle,
+  };
+}
 export type DialoguePreset = {
+  bodyStyle?: DialogueBodyStyle;
+  textStyle?: DialogueTextStyle;
   width?: number;
   height?: number;
   contours?: Contour[];
@@ -151,6 +201,57 @@ export function validateBubble(value: BubbleSpec) {
     ids.add(tail.id);
   }
 }
+function validateStyle(
+  style: DialogueBodyStyle | DialogueTextStyle | undefined,
+  kind: "body" | "text",
+) {
+  if (style === undefined) return;
+  const keys = kind === "body" ? BODY_STYLE_KEYS : TEXT_STYLE_KEYS;
+  if (
+    !style ||
+    typeof style !== "object" ||
+    Array.isArray(style) ||
+    Object.keys(style).some((k) => !(keys as readonly string[]).includes(k))
+  )
+    throw Error("Invalid preset style fields.");
+  const values = style as Record<string, unknown>;
+  for (const key of ["opacity", "fillOpacity", "strokeOpacity"])
+    if (values[key] !== undefined && !number(values[key], 0, 1))
+      throw Error("Invalid preset opacity.");
+  for (const [key, min, max] of [
+    ["dashOffset", -100000, 100000],
+    ["miterLimit", 1, 1000],
+    ["strokeWidth", 0, 100],
+    ["fontWeight", 100, 900],
+    ["lineHeight", 0.5, 3],
+    ["letterSpacing", -20, 100],
+  ] as const)
+    if (values[key] !== undefined && !number(values[key], min, max))
+      throw Error("Invalid preset numeric style.");
+  if (values.blend !== undefined && !isBlendMode(values.blend))
+    throw Error("Invalid preset blending.");
+  for (const [key, valid] of [
+    ["fillRule", ["evenodd", "nonzero"]],
+    ["lineCap", ["butt", "round", "square"]],
+    ["lineJoin", ["miter", "round", "bevel"]],
+    ["align", ["left", "center", "right"]],
+  ] as const)
+    if (values[key] !== undefined && !(valid as readonly unknown[]).includes(values[key]))
+      throw Error("Invalid preset style choice.");
+  if (
+    values.stroke !== undefined &&
+    !(typeof values.stroke === "string" && /^(?:#[0-9a-f]{6}|transparent)$/i.test(values.stroke))
+  )
+    throw Error("Invalid preset text outline.");
+  if (
+    values.dash !== undefined &&
+    (!Array.isArray(values.dash) ||
+      values.dash.length > 32 ||
+      !values.dash.every((v) => number(v, 0, 100000)))
+  )
+    throw Error("Invalid preset dash array.");
+  if (style.effects !== undefined) validateEffects(style.effects);
+}
 export function validateDialogue(value: DialogueData) {
   if (
     !value ||
@@ -192,7 +293,7 @@ export function validateDialogue(value: DialogueData) {
       !text(preset.name, 100) ||
       !preset.name.trim() ||
       !number(preset.fontSize, 1, 1000) ||
-      !number(preset.strokeWidth, 0, 1000) ||
+      !number(preset.strokeWidth, 0, 100) ||
       ![preset.fill, preset.stroke, preset.textColor].every(
         (v) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v),
       )
@@ -225,6 +326,8 @@ export function validateDialogue(value: DialogueData) {
             throw Error("Invalid or oversized custom preset path.");
       }
     }
+    validateStyle(preset.bodyStyle, "body");
+    validateStyle(preset.textStyle, "text");
     validateBubble(preset.bubble);
     validateLettering(preset.lettering);
     ids.add(preset.id);

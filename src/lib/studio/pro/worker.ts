@@ -28,10 +28,9 @@ self.onmessage = async ({ data }) => {
       self.postMessage({ id, type: "ready" });
       return;
     }
-    const doc: ProDocument =
-      data.mime === "image/jpeg" && data.document.background === "transparent"
-        ? { ...data.document, background: "#ffffff" }
-        : data.document;
+    // Composite on the editable background first. A JPEG matte must not become
+    // the backdrop of Screen/Overlay/etc., which can erase or recolor dialogue.
+    const doc: ProDocument = data.document;
     if (doc.width * doc.height > data.maxArea)
       throw new Error(
         "This document exceeds the device memory budget. Export the native document or use the existing chapter strip workflow. No resolution was reduced.",
@@ -425,11 +424,12 @@ self.onmessage = async ({ data }) => {
       const bitmap = output.transferToImageBitmap();
       self.postMessage({ id, type: "preview", bitmap }, [bitmap]);
     } else {
-      if (board && data.mime === "image/jpeg") {
+      if ((board || data.fullCanvas) && data.mime === "image/jpeg") {
         const ctx = output.getContext("2d")!;
         ctx.globalCompositeOperation = "destination-over";
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, output.width, output.height);
+        ctx.globalCompositeOperation = "source-over";
       }
       if (!data.fullCanvas && !board)
         output = renderOutput(output, doc, data.maxArea, data.mime === "image/jpeg");

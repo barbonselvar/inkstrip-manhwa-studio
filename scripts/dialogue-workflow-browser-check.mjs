@@ -4,9 +4,19 @@ import { chromium } from "playwright";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 const base = process.argv[2] ?? "http://127.0.0.1:8080";
-assert.ok(["localhost", "127.0.0.1"].includes(new URL(base).hostname));
+const production = new URL(base).hostname === "inkstrip-manhwa-studio.vercel.app",
+  expected = process.argv[3];
+assert.ok(production || ["127.0.0.1", "localhost"].includes(new URL(base).hostname));
+if (production)
+  assert.match(expected ?? "", /^[a-f0-9]{40}$/i, "Supply the intended production SHA");
 await mkdir("/workspace/screenshots", { recursive: true });
-const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+const browser = await chromium.launch({
+  headless: true,
+  args: ["--no-sandbox"],
+  ...(production && process.env.HTTPS_PROXY
+    ? { proxy: { server: process.env.HTTPS_PROXY, bypass: "localhost,127.0.0.1" } }
+    : {}),
+});
 async function state(page) {
   return page.evaluate(async () => {
     const db = await new Promise((resolve, reject) => {
@@ -58,6 +68,11 @@ try {
   page.on("pageerror", (e) => errors.push(e.message));
   page.setDefaultTimeout(45000);
   await page.goto(base);
+  if (production)
+    assert.equal(
+      await page.locator('meta[name="inkstrip-release"]').getAttribute("content"),
+      expected,
+    );
   await page.getByRole("button", { name: "New project", exact: true }).click();
   await page.getByPlaceholder("Night Market").fill("Dialogue workflow");
   await page.getByRole("button", { name: "Create chapter 1", exact: true }).click();

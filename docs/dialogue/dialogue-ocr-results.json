@@ -3,7 +3,7 @@
     {
       "regions": [
         {
-          "id": "b6361e71-c070-4a90-8093-638c244a250b",
+          "id": "5349ddb3-06c3-4259-a465-acdc01201858",
           "x": 50,
           "y": 119,
           "width": 859,
@@ -18,7 +18,7 @@
         }
       ],
       "text": "A WORLD IN EVERY FRAME\n",
-      "elapsedMs": 1443.800000011921,
+      "elapsedMs": 1398.3999999910593,
       "engine": "Tesseract.js7.0.0 / tessdata_fast",
       "language": "eng",
       "dimensions": [
@@ -31,7 +31,7 @@
     {
       "regions": [
         {
-          "id": "428f6d4c-3397-45ce-b64a-32c33cdb056b",
+          "id": "0b60e8dc-14eb-40c5-8850-36c8ac7d6b45",
           "x": 53,
           "y": 111,
           "width": 736,
@@ -46,7 +46,7 @@
         }
       ],
       "text": "새로운 이야기가 시작됩니다\n",
-      "elapsedMs": 917.2000000029802,
+      "elapsedMs": 1169.1000000089407,
       "engine": "Tesseract.js7.0.0 / tessdata_fast",
       "language": "kor",
       "dimensions": [
@@ -59,7 +59,7 @@
     {
       "regions": [
         {
-          "id": "fb3fd10f-e52a-4c0d-a78f-c0e6e71c2d94",
+          "id": "9c8d02be-e5c4-4152-a1b7-ec1f5acd4f2a",
           "x": 762,
           "y": 118,
           "width": 310,
@@ -74,7 +74,7 @@
         }
       ],
       "text": " مرحبابالعالم\n",
-      "elapsedMs": 1228.8999999910593,
+      "elapsedMs": 587.6000000089407,
       "engine": "Tesseract.js7.0.0 / tessdata_fast",
       "language": "ara",
       "dimensions": [
@@ -87,7 +87,7 @@
     {
       "regions": [
         {
-          "id": "2120cd30-5f70-40c5-9371-979d6737c84c",
+          "id": "911191a4-fd88-492a-8081-dde2b240b015",
           "x": 53,
           "y": 110,
           "width": 439,
@@ -102,7 +102,7 @@
         }
       ],
       "text": "次の駅で会おう\n",
-      "elapsedMs": 1564.0999999940395,
+      "elapsedMs": 1203.2999999970198,
       "engine": "Tesseract.js7.0.0 / tessdata_fast",
       "language": "jpn",
       "dimensions": [
@@ -115,7 +115,7 @@
     {
       "regions": [
         {
-          "id": "eac0caff-f9a8-4cb7-aa88-abe19cbd53da",
+          "id": "35397fce-3532-4ac7-a3bf-6d22576180a2",
           "x": 110,
           "y": 70,
           "width": 66,
@@ -130,7 +130,7 @@
         }
       ],
       "text": "次の駅で会おう\n",
-      "elapsedMs": 1150.6000000089407,
+      "elapsedMs": 1689,
       "engine": "Tesseract.js7.0.0 / tessdata_fast",
       "language": "jpn_vert",
       "dimensions": [
@@ -142,6 +142,15 @@
     }
   ],
   "cancelled": true,
+  "cachedInference": {
+    "text": "CACHE WORKS\n",
+    "elapsedMs": 387.8999999910593
+  },
+  "unexpectedModelRequests": 0,
+  "corruption": {
+    "message": "OCR model download is incomplete; any corrupt cached copy was removed. Retry to download verified data.",
+    "removed": true
+  },
   "errors": [],
   "chromium": "156.0.8078.4",
   "notes": "Character coverage is a diagnostic, not a character-error rate or proof of reliable OCR on real comics. Glyph fonts are system Noto in this QA host. No physical Android test."

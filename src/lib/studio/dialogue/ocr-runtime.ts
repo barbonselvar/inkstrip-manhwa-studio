@@ -1,3 +1,4 @@
+import { set as cacheModel } from "idb-keyval";
 import { createWorker, OEM, PSM, type Worker } from "tesseract.js";
 import workerUrl from "../../../../node_modules/tesseract.js/dist/worker.min.js?url";
 import coreUrl from "../../../../node_modules/tesseract.js-core/tesseract-core-lstm.wasm.js?url";
@@ -26,8 +27,10 @@ async function weights(
       redirect: "error",
       referrerPolicy: "no-referrer",
     });
-  if (!response.ok || !response.body)
+  if (!response.ok || !response.body) {
+    if (cached) await cache?.delete(url);
     throw Error("OCR language data could not be downloaded. No image was uploaded.");
+  }
   const chunks: Uint8Array<ArrayBuffer>[] = [];
   let received = 0;
   const reader = response.body.getReader();
@@ -39,6 +42,7 @@ async function weights(
       received += value.byteLength;
       if (received > model.bytes) {
         await reader.cancel();
+        if (cached) await cache?.delete(url);
         throw Error("OCR model exceeds its verified size.");
       }
       chunks.push(new Uint8Array(value));
@@ -52,7 +56,12 @@ async function weights(
   } finally {
     reader.releaseLock();
   }
-  if (received !== model.bytes) throw Error("OCR model download is incomplete.");
+  if (received !== model.bytes) {
+    if (cached) await cache?.delete(url);
+    throw Error(
+      "OCR model download is incomplete; any corrupt cached copy was removed. Retry to download verified data.",
+    );
+  }
   const bytes = await new Blob(chunks).arrayBuffer();
   const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
     .map((n) => n.toString(16).padStart(2, "0"))
@@ -108,7 +117,22 @@ export class OcrRuntime {
         throw new DOMException("OCR cancelled.", "AbortError");
     };
     try {
-      await weights(language, controller.signal, progress);
+      const verified = await weights(language, controller.signal, progress);
+      current();
+      const cachePath = `inkstrip-ocr-v1/${OCR_MODELS[language].sha256}`;
+      let cachedModel = false;
+      try {
+        // Seed Tesseract's documented cachePath with the verified bytes. String
+        // languages avoid its byte-object initialization bug, without a second
+        // network retrieval or an offline dependency after caching.
+        await cacheModel(`${cachePath}/${language}.traineddata`, new Uint8Array(verified));
+        cachedModel = true;
+      } catch {
+        progress({
+          stage: "OCR model cache unavailable · network required, no artwork upload",
+          progress: 0,
+        });
+      }
       current();
       const pending = await createWorker(language, OEM.LSTM_ONLY, {
         workerPath: new URL(workerUrl, location.origin).href,
@@ -116,7 +140,8 @@ export class OcrRuntime {
         workerBlobURL: false,
         langPath: OCR_SOURCE,
         gzip: false,
-        cacheMethod: "none",
+        cacheMethod: cachedModel ? "readOnly" : "none",
+        cachePath,
         logger: (message) => {
           if (serial === this.serial)
             progress({ stage: message.status, progress: message.progress });

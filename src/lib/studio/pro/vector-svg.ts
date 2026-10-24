@@ -1,14 +1,10 @@
+import { escapeXml as xml } from "./xml.ts";
 import { canvasLetteringLayout, svgWordSpacing } from "../dialogue/lettering.ts";
 import { appearance, gradientMatrix } from "./vector-appearance.ts";
 import { measureTextPath, trimmedTextContour } from "./text-path.ts";
 import { contourData, type Layer } from "./model.ts";
 import { affine } from "./transform.ts";
 import { shapePath } from "./paths.ts";
-const xml = (s: string) =>
-  s.replace(
-    /[&<>"']/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]!,
-  );
 /** Standard SVG geometry with identical stacked paths/text; no embedded scripts/images. */
 export function appearanceSvg(l: Layer, definitions: string[]) {
   const id = () => `ink-${definitions.length}`,

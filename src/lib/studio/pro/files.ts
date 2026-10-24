@@ -1,3 +1,5 @@
+import { escapeXml } from "./xml.ts";
+export { escapeXml } from "./xml.ts";
 import { appearanceSvg } from "./vector-svg.ts";
 import type { Artboard } from "./artboards.ts";
 import {
@@ -150,11 +152,6 @@ export async function readNative(
   validateAssets(session);
   return session;
 }
-export const escapeXml = (s: string) =>
-  s.replace(
-    /[&<>"']/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]!,
-  );
 /** Explicit vector-only export. Reject unsupported vector effects instead of silently changing them. */
 export function vectorSvg(d: ProDocument, board?: Artboard): string {
   validateDocument(d);

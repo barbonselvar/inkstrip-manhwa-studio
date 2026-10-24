@@ -8,6 +8,7 @@ import { contours } from "@/lib/studio/pro/model";
 import type { Frame } from "@/lib/studio/pro/artboards";
 import {
   BUBBLE_PRESETS,
+  presetStyles,
   DEFAULT_LETTERING,
   type DialogueRegion,
   type Lettering,
@@ -132,9 +133,12 @@ export function ProDialogue({
     [status, setStatus] = useState(""),
     [processing, setProcessing] = useState(false),
     [presetName, setPresetName] = useState("My bubble"),
-    [proposal, setProposal] = useState<{ doc: ProDocument; base: string; label: string } | null>(
-      null,
-    );
+    [proposal, setProposal] = useState<{
+      doc: ProDocument;
+      base: string;
+      label: string;
+      selectId?: string;
+    } | null>(null);
   const [area, setArea] = useState<Frame>({
     x: 0,
     y: 0,
@@ -166,9 +170,9 @@ export function ProDialogue({
     };
   }, [onPreview]);
   const safe = (fn: () => void) => {
+    onError("");
     try {
       fn();
-      onError("");
     } catch (e) {
       onError((e as Error).message);
     }
@@ -198,9 +202,9 @@ export function ProDialogue({
       },
       "Edit OCR review",
     );
-  const preview = (next: ProDocument, label: string) => {
+  const preview = (next: ProDocument, label: string, selectId?: string) => {
     onPending(true);
-    setProposal({ doc: next, base: JSON.stringify(d), label });
+    setProposal({ doc: next, base: JSON.stringify(d), label, selectId });
     onPreview(next);
   };
   const cancel = () => {
@@ -734,6 +738,7 @@ export function ProDialogue({
                   textColor: text!.fill,
                   fontSize: text!.fontSize,
                   lettering: structuredClone(settings),
+                  ...presetStyles(body!, text!),
                 };
                 commit(
                   { ...d, dialogue: { ...data, presets: [...data.presets, preset] } },
@@ -1078,7 +1083,7 @@ export function ProDialogue({
                         ),
                       },
                     };
-                    preview(placed, "Approve replacement lettering");
+                    preview(placed, "Approve replacement lettering", r.id);
                   })
                 }
               >
@@ -1130,6 +1135,7 @@ export function ProDialogue({
                   setProposal(null);
                   onPending(false);
                   onDocument(proposal.doc, proposal.label);
+                  if (proposal.selectId) onSelect(proposal.selectId);
                 })
               }
             >
