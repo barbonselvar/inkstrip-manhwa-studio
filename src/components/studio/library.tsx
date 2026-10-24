@@ -1,5 +1,5 @@
-import { Atmosphere } from "./design/atmosphere";
-import { ChapterSculpture } from "./design/chapter-sculpture";
+import { AuroraFlow } from "./design/aurora-flow";
+import { CinematicGallery } from "./design/cinematic-gallery";
 import { ArtworkCover } from "./design/artwork-cover";
 import { DepthSurface } from "./design/depth-surface";
 import { AppearanceButton } from "./design/preferences";
@@ -149,7 +149,7 @@ export function Library() {
           </div>
         </nav>
         <section className="library-heading library-hero">
-          <Atmosphere />
+          <AuroraFlow />
           <div className="hero-copy">
             <p className="eyebrow">
               <span className="mini-line" />A studio for visual storytellers
@@ -200,8 +200,8 @@ export function Library() {
               Your originals always have a way home.
             </div>
           </div>
-          <div className="hero-art" aria-hidden="true">
-            <ChapterSculpture />
+          <div className="hero-art">
+            <CinematicGallery />
           </div>
         </section>
         <div className="studio-stats library-metrics">

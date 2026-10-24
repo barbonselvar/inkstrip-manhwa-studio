@@ -1,0 +1,203 @@
+{
+  "purpose": "Original Inkstrip homepage illustrations, generated specifically for this project. Not user project artwork. No hotlinks, franchise assets or imitation of named artists. Dialogue and SFX are separate accessible typography layers. Copyright/exclusivity of generated art varies by jurisdiction; no exclusive copyright claim.",
+  "artworks": [
+    {
+      "id": "adventure",
+      "generator": "OpenAI image generation tool",
+      "original": "exec-3e51354c-ef75-4d06-a9f1-3c365164db10.png",
+      "originalSha256": "68c1bccc28e5268ac5c1fc019f1265db8e3b7c55773da8b721928970ded7004a",
+      "variants": [
+        {
+          "file": "adventure-360.webp",
+          "width": 360,
+          "height": 480,
+          "bytes": 72754,
+          "sha256": "47f91d075ac8c8297a050598c98d79040938654604da5020c216d53927d7ddf1"
+        },
+        {
+          "file": "adventure-720.webp",
+          "width": 720,
+          "height": 960,
+          "bytes": 251248,
+          "sha256": "e02ae6659c7b06e92625b061bee68aa1df03075ef1e74adcee7dfcf7e8aa1148"
+        }
+      ]
+    },
+    {
+      "id": "murim",
+      "generator": "OpenAI image generation tool",
+      "original": "exec-a34ba92c-5235-4d92-be92-7faad5e8ad75.png",
+      "originalSha256": "7f6bf9cb871e765e739d7a18c4d7beae1a8e486e7a805116e0c92560529b01c4",
+      "variants": [
+        {
+          "file": "murim-360.webp",
+          "width": 360,
+          "height": 480,
+          "bytes": 55872,
+          "sha256": "e6638b8cc0922c5867c33951da4218be16b8e4d406fef37d9a6f39baecf778dc"
+        },
+        {
+          "file": "murim-720.webp",
+          "width": 720,
+          "height": 960,
+          "bytes": 193286,
+          "sha256": "c48fdd69e7220ec26ba1bde54832b6ba4215b6566519b7a74bacdde164ec3608"
+        }
+      ]
+    },
+    {
+      "id": "fantasy",
+      "generator": "OpenAI image generation tool",
+      "original": "exec-f81ca86f-1d42-4208-adc9-1ca335a5ed6f.png",
+      "originalSha256": "0c7c9c66ea804e397ca6831ba9ebcfa4785184d7f52790bf6fc820d3c988db97",
+      "variants": [
+        {
+          "file": "fantasy-360.webp",
+          "width": 360,
+          "height": 480,
+          "bytes": 62368,
+          "sha256": "8c37e6a4596e16becf751d60595d9d804ff43253a4923a29abc63b5730e136f2"
+        },
+        {
+          "file": "fantasy-720.webp",
+          "width": 720,
+          "height": 960,
+          "bytes": 209792,
+          "sha256": "8585d104a05aa3792affb46b0a1a3e7e19a2d69ac63a224b5834a80f0fe5f4db"
+        }
+      ]
+    },
+    {
+      "id": "medieval",
+      "generator": "OpenAI image generation tool",
+      "original": "exec-c84fd1e0-73a9-403e-b798-7c7caab12d66.png",
+      "originalSha256": "e1f3ca29bf6a37d3001eeb4b45f76c0c371919dee3e1e87f06ce6c6b92bf1cce",
+      "variants": [
+        {
+          "file": "medieval-360.webp",
+          "width": 360,
+          "height": 480,
+          "bytes": 54760,
+          "sha256": "42395b1b4d38793511f1c33b30e2ed7530c7d298b5b140b8197d080732a91015"
+        },
+        {
+          "file": "medieval-720.webp",
+          "width": 720,
+          "height": 960,
+          "bytes": 167382,
+          "sha256": "ed1340eb336d643bc6becff7c922271f934d7b5bdb789416d3d95958e808a0f7"
+        }
+      ]
+    },
+    {
+      "id": "action",
+      "generator": "OpenAI image generation tool",
+      "original": "exec-87115768-3e1e-4d80-b91e-0d90668bfba5.png",
+      "originalSha256": "e477e4b74092166971aa93d0189ee5e8e16fb4f95c773669e62c2d3370a05c17",
+      "variants": [
+        {
+          "file": "action-360.webp",
+          "width": 360,
+          "height": 480,
+          "bytes": 67358,
+          "sha256": "f9e1fa145c68151566aa32ee7caa85dd337b664e1caa17775c4390b98c585316"
+        },
+        {
+          "file": "action-720.webp",
+          "width": 720,
+          "height": 960,
+          "bytes": 214454,
+          "sha256": "7a69fc4d6f6db70061a4d5e04d560f765ae4233ec28f61887e405592448f829f"
+        }
+      ]
+    },
+    {
+      "id": "manga",
+      "generator": "OpenAI image generation tool",
+      "original": "exec-1823fdf0-5a0e-4e7d-9bea-78ad1cfa5143.png",
+      "originalSha256": "d2407690c733b8455ec6dd725f4908d4d0d8f190103817287d5bde0d2d2e02f4",
+      "variants": [
+        {
+          "file": "manga-360.webp",
+          "width": 360,
+          "height": 480,
+          "bytes": 57784,
+          "sha256": "3ebc4c7206885a71c5e8cdfb7f7555dd0e32fb337b47e058968034f7af6edff9"
+        },
+        {
+          "file": "manga-720.webp",
+          "width": 720,
+          "height": 960,
+          "bytes": 226154,
+          "sha256": "454cc65493c1b513432463294a80e6c392df799cce687b7b41ed0a08e3241628"
+        }
+      ]
+    },
+    {
+      "id": "romance",
+      "generator": "OpenAI image generation tool",
+      "original": "exec-d695d652-b53f-4905-b677-0e0376686bec.png",
+      "originalSha256": "ac2b2484dbb4a270d1477fb87e4753d5f0dac4b44f46d8f9915a20d1b3eb67a6",
+      "variants": [
+        {
+          "file": "romance-360.webp",
+          "width": 360,
+          "height": 480,
+          "bytes": 64062,
+          "sha256": "200f339777af3f204f228ad4d08744a0e1ee32d4aad6f05357654b52f1e2ec69"
+        },
+        {
+          "file": "romance-720.webp",
+          "width": 720,
+          "height": 960,
+          "bytes": 207464,
+          "sha256": "76359780ddef14933d3700e7b7f20cb33d41660188b36ce53591888b0f8de24b"
+        }
+      ]
+    },
+    {
+      "id": "horror",
+      "generator": "OpenAI image generation tool",
+      "original": "exec-f2525e9c-ab3a-4ccf-999d-6f417e63f95e.png",
+      "originalSha256": "88e198c6625f535b2eb8c331724dcfbc8abac375df50b135e9317a6b0598e3eb",
+      "variants": [
+        {
+          "file": "horror-360.webp",
+          "width": 360,
+          "height": 480,
+          "bytes": 52128,
+          "sha256": "ee799f59033428700b9fa5be7ac62d50cd6234314bbd0acdd61726a37ffd9edd"
+        },
+        {
+          "file": "horror-720.webp",
+          "width": 720,
+          "height": 960,
+          "bytes": 191242,
+          "sha256": "9a5bfdf629ccdc9e8c557d92a52e3448cded771c5c74dbdcb1b8c660b836e03e"
+        }
+      ]
+    },
+    {
+      "id": "scifi",
+      "generator": "OpenAI image generation tool",
+      "original": "exec-ea7f453b-3f97-4950-975c-4dca20b4175e.png",
+      "originalSha256": "8d1007cac46abfd59b0477c8ed05c14a573d46b91e779f01abf24fcbbe325ff2",
+      "variants": [
+        {
+          "file": "scifi-360.webp",
+          "width": 360,
+          "height": 480,
+          "bytes": 64220,
+          "sha256": "2304075d87dcd0228f526edf913a07af24a0738f40983070cfd5fa0b74fc7c25"
+        },
+        {
+          "file": "scifi-720.webp",
+          "width": 720,
+          "height": 960,
+          "bytes": 212136,
+          "sha256": "022857df4864ca1dad9c93bf8c7aa6384fedc5a0919ca5eefab0b4c2b23c563e"
+        }
+      ]
+    }
+  ]
+}

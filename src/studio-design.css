@@ -832,7 +832,7 @@ body:has([role="dialog"]) .studio-notice {
 .mobile-library-nav > a[aria-current] {
   color: var(--color-fg);
 }
-/* Event-driven depth and CSS print sculpture: decorative surfaces only. */
+/* Event-driven depth on project cards: never applied to editing planes. */
 .depth-surface {
   perspective: 900px;
 }
@@ -841,185 +841,6 @@ body:has([role="dialog"]) .studio-notice {
   transition:
     transform var(--motion-slow) var(--ease-studio),
     border-color var(--motion-fast);
-}
-.chapter-sculpture {
-  width: min(100%, 32rem);
-  height: 100%;
-  margin: auto;
-  position: relative;
-  perspective: 1000px;
-}
-.sculpture-sheet {
-  position: absolute;
-  width: 45%;
-  height: 84%;
-  top: 3%;
-  border: 1px solid #ffffff20;
-  border-radius: 0.45rem;
-  box-shadow: 0 22px 40px #0007;
-  overflow: hidden;
-  transition: transform 600ms var(--ease-studio);
-  transform-style: preserve-3d;
-}
-.sheet-back {
-  left: 13%;
-  background: #233732;
-  color: #d4e8dd;
-  transform: rotateY(-14deg) rotateZ(-17deg) translateY(14px);
-  padding: 1rem;
-}
-.sheet-back > span {
-  font-size: 0.35rem;
-  letter-spacing: 0.25em;
-}
-.sheet-back > strong {
-  display: block;
-  font-family: var(--font-editorial);
-  font-size: clamp(1.6rem, 3vw, 3rem);
-  font-weight: 500;
-  font-style: italic;
-  line-height: 1;
-  margin-top: 1.5rem;
-}
-.sheet-mid {
-  right: 10%;
-  background: #c4d6c8;
-  color: #263a33;
-  transform: rotateY(-20deg) rotateZ(17deg) translateY(14px);
-  padding: 1rem;
-}
-.sheet-mid > svg {
-  width: 1rem;
-}
-.ink-lines {
-  position: absolute;
-  inset: 30% -20% -20%;
-  border: 1px solid #23373266;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 10px #23373215,
-    0 0 0 20px #23373215,
-    0 0 0 30px #23373215,
-    0 0 0 40px #23373215;
-  transform: rotate(-35deg);
-}
-.sheet-front {
-  left: 29%;
-  background: #e1e7dc;
-  color: #23362e;
-  transform: rotateY(-12deg) rotateZ(-3deg) translateZ(40px);
-}
-.print-topline {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.7rem;
-  border-bottom: 1px solid #23373225;
-  font-size: 0.35rem;
-  letter-spacing: 0.12em;
-}
-.print-composition {
-  position: absolute;
-  left: 0.7rem;
-  right: 0.7rem;
-  top: 17%;
-  bottom: 23%;
-  overflow: hidden;
-  background: #283d34;
-}
-.print-eclipse {
-  position: absolute;
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: #acbba3;
-  left: 25%;
-  top: -18%;
-  box-shadow:
-    0 0 0 12px #e1e7dc0c,
-    0 0 0 24px #e1e7dc08;
-}
-.print-eclipse::after {
-  content: "";
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background: #283d34;
-  border-radius: 50%;
-  left: -25%;
-  top: -18%;
-}
-.print-horizon {
-  position: absolute;
-  inset: 50% -40% -40%;
-  transform: rotate(-25deg);
-  background: repeating-linear-gradient(
-    0deg,
-    #acbba3 0,
-    #acbba3 1px,
-    transparent 1px,
-    transparent 7px
-  );
-}
-.print-index {
-  position: absolute;
-  left: 0.5rem;
-  bottom: -0.25rem;
-  font-size: 2.5rem;
-  font-family: var(--font-editorial);
-  font-style: italic;
-  color: #e1e7dc;
-  letter-spacing: -0.1em;
-}
-.print-bottomline {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  font-size: 0.35rem;
-  line-height: 1.5;
-  letter-spacing: 0.08em;
-}
-.sculpture-caption {
-  position: absolute;
-  bottom: -0.1rem;
-  left: 0;
-  right: 0;
-  text-align: center;
-  color: var(--color-subtle);
-  font-size: 0.45rem;
-  letter-spacing: 0.3em;
-}
-.sculpture-orbit {
-  position: absolute;
-  width: 90%;
-  height: 60%;
-  border: 1px solid var(--line-soft);
-  border-radius: 50%;
-  top: 21%;
-  left: 5%;
-  transform: rotate(-25deg);
-}
-.sculpture-halo {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse, #a4efd60a, transparent 65%);
-}
-@media (hover: hover) and (pointer: fine) {
-  .chapter-sculpture:hover .sheet-front {
-    transform: rotateX(var(--depth-y, 0deg)) rotateY(calc(-12deg + var(--depth-x, 0deg)))
-      rotateZ(-1deg) translateZ(50px) translateY(-4px);
-  }
-  .chapter-sculpture:hover .sheet-back {
-    transform: rotateY(-14deg) rotateZ(-20deg) translateY(12px) translateX(-5px);
-  }
-  .chapter-sculpture:hover .sheet-mid {
-    transform: rotateY(-20deg) rotateZ(20deg) translateY(12px) translateX(5px);
-  }
 }
 .studio-atmosphere {
   position: absolute;
@@ -1196,24 +1017,7 @@ html[data-atmosphere="false"] .studio-atmosphere {
   .mobile-library-nav {
     display: none;
   }
-  .sheet-front .print-topline {
-    font-size: 0.45rem;
-    padding: 0.9rem;
-  }
-  .print-composition {
-    left: 0.9rem;
-    right: 0.9rem;
-  }
-  .print-index {
-    font-size: 4rem;
-  }
-  .print-bottomline {
-    font-size: 0.45rem;
-    padding: 0.9rem;
-  }
-  .sheet-back > span {
-    font-size: 0.45rem;
-  }
+
   .library-empty {
     min-height: 13rem;
   }
@@ -1324,8 +1128,7 @@ html[data-studio-motion="quiet"] *::after {
   transition: none !important;
   scroll-behavior: auto !important;
 }
-html[data-studio-motion="quiet"] .depth-surface > a,
-html[data-studio-motion="quiet"] .chapter-sculpture:hover .sculpture-sheet {
+html[data-studio-motion="quiet"] .depth-surface > a {
   transform: none;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1338,15 +1141,6 @@ html[data-studio-motion="quiet"] .chapter-sculpture:hover .sculpture-sheet {
   }
   .depth-surface > a {
     transform: none !important;
-  }
-  .chapter-sculpture:hover .sheet-back {
-    transform: rotateY(-14deg) rotateZ(-17deg) translateY(14px);
-  }
-  .chapter-sculpture:hover .sheet-mid {
-    transform: rotateY(-20deg) rotateZ(17deg) translateY(14px);
-  }
-  .chapter-sculpture:hover .sheet-front {
-    transform: rotateY(-12deg) rotateZ(-3deg) translateZ(40px);
   }
 }
 /* The chapter library uses real, lazy thumbnails; no artwork bytes are rewritten. */
@@ -1483,15 +1277,7 @@ body .story-space.project-workspace {
 html[data-studio-motion="quiet"] .depth-surface > .project-shelf-card.project-card {
   transform: none;
 }
-html[data-studio-motion="quiet"] .chapter-sculpture:hover .sheet-back {
-  transform: rotateY(-14deg) rotateZ(-17deg) translateY(14px);
-}
-html[data-studio-motion="quiet"] .chapter-sculpture:hover .sheet-mid {
-  transform: rotateY(-20deg) rotateZ(17deg) translateY(14px);
-}
-html[data-studio-motion="quiet"] .chapter-sculpture:hover .sheet-front {
-  transform: rotateY(-12deg) rotateZ(-3deg) translateZ(40px);
-}
+
 @media (prefers-reduced-motion: reduce) {
   .depth-surface > .project-shelf-card.project-card {
     transform: none;
@@ -2212,10 +1998,7 @@ html[data-transparency="solid"] .chapter-display-action {
     align-self: center;
   }
 }
-.sculpture-halo {
-  transform: translateX(var(--light-shift, 0px));
-  transition: transform var(--motion-slow) var(--ease-studio);
-}
+
 .library-hero .hero-copy,
 .story-space .story-heading-copy {
   animation: editorial-arrive var(--motion-slow) var(--ease-studio) both;
@@ -2317,36 +2100,8 @@ html[data-studio-motion="quiet"] .studio-button:active:not(:disabled) {
   }
 }
 
-/* Homepage motion director: the Three.js companion is painted beneath the
-   print sheets, so the browser's own stacking order gives it true occlusion. */
-.chapter-sculpture {
-  isolation: isolate;
-  animation: sculpture-float 7s ease-in-out 1.2s infinite;
-}
-.robot-companion {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-.robot-companion-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.sculpture-sheet {
-  animation: sculpture-assemble 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-.sheet-back {
-  animation-delay: 120ms;
-}
-.sheet-mid {
-  animation-delay: 230ms;
-}
-.sheet-front {
-  animation-delay: 340ms;
-}
+/* Homepage typography retains the existing editorial entrance. */
+
 .library-hero .hero-title {
   transform-origin: left center;
   animation: hero-title-in 850ms cubic-bezier(0.2, 0.8, 0.2, 1) 90ms both;
@@ -2411,25 +2166,6 @@ html[data-studio-motion="quiet"] .studio-button:active:not(:disabled) {
   to {
     opacity: 1;
     transform: perspective(650px) translate3d(0, 0, 0) rotateX(0);
-  }
-}
-@keyframes sculpture-assemble {
-  from {
-    opacity: 0.4;
-    translate: 0 2rem -5rem;
-  }
-  to {
-    opacity: 1;
-    translate: 0 0 0;
-  }
-}
-@keyframes sculpture-float {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 -0.35rem;
   }
 }
 
@@ -2534,22 +2270,12 @@ html[data-studio-motion="quiet"] .studio-button:active:not(:disabled) {
 .depth-surface > .workflow-card {
   transform: rotateX(var(--depth-y, 0deg)) rotateY(var(--depth-x, 0deg));
 }
-html[data-studio-motion="quiet"] .chapter-sculpture,
-html[data-studio-motion="quiet"] .sculpture-sheet {
-  animation: none;
-}
-html[data-studio-motion="quiet"] .robot-companion {
-  visibility: hidden;
-}
+
 html[data-studio-motion="quiet"] .depth-surface:hover > .project-shelf-card.project-card {
   transform: none;
   box-shadow: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .chapter-sculpture,
-  .sculpture-sheet {
-    animation: none;
-  }
   .project-shelf > li > .depth-surface[data-motion-ready="true"],
   .workflow-card-depth[data-motion-ready="true"] {
     transition: none;
@@ -2572,4 +2298,294 @@ html[data-studio-motion="quiet"] .depth-surface:hover > .project-shelf-card.proj
     animation: none;
     filter: none;
   }
+}
+
+/* CINEMATIC GALLERY — isolated from all editing coordinate planes. */
+:root {
+  --gallery-ink: #101915;
+  --gallery-paper: #fafaf2;
+  --aurora-emerald: #218b69;
+  --aurora-teal: #176762;
+  --gallery-transition: 800ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.library-shell .library-hero {
+  overflow: clip;
+  padding-block: 2.5rem;
+}
+.library-hero .hero-art {
+  height: auto;
+  min-width: 0;
+  margin-top: 2rem;
+}
+.cinematic-gallery {
+  position: relative;
+  width: min(100%, 34rem);
+  margin-inline: auto;
+  isolation: isolate;
+}
+.gallery-kicker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  font-size: 0.5rem;
+  letter-spacing: 0.17em;
+  color: var(--color-muted);
+  margin-bottom: 1rem;
+}
+.gallery-kicker > span {
+  width: 1.25rem;
+  height: 1px;
+  background: var(--color-accent);
+}
+.gallery-stage {
+  position: relative;
+  height: clamp(18rem, 72vw, 26rem);
+  perspective: 1100px;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+}
+.gallery-card {
+  position: absolute;
+  inset: 4% auto auto 20%;
+  width: 60%;
+  aspect-ratio: 3 / 4;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 0.6rem;
+  background: var(--gallery-ink);
+  box-shadow:
+    0 18px 32px #0008,
+    0 0 0 1px #ffffff24;
+  opacity: 0;
+  transform: translate3d(40%, 5%, -100px) rotateY(-12deg) rotateZ(10deg) scale(0.82);
+  transition:
+    transform var(--gallery-transition),
+    opacity 500ms ease;
+  pointer-events: none;
+}
+.gallery-card[data-position="front"] {
+  opacity: 1;
+  z-index: 3;
+  transform: translate3d(0, 0, 40px) rotateY(-4deg) rotateZ(-2deg) scale(1);
+}
+.gallery-card[data-position="left"] {
+  opacity: 1;
+  z-index: 1;
+  transform: translate3d(-39%, 3%, -100px) rotateY(12deg) rotateZ(-13deg) scale(0.84);
+}
+.gallery-card[data-position="right"] {
+  opacity: 1;
+  z-index: 2;
+  transform: translate3d(39%, 3%, -100px) rotateY(-12deg) rotateZ(12deg) scale(0.84);
+}
+.gallery-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.gallery-card figcaption {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 2.5rem 0.8rem 0.8rem;
+  color: var(--gallery-paper);
+  background: linear-gradient(transparent, #081510e8);
+  display: grid;
+  gap: 0.25rem;
+}
+.gallery-card figcaption > span {
+  font-size: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+}
+.gallery-card figcaption > strong {
+  font-family: var(--font-editorial);
+  font-size: clamp(0.85rem, 2.8vw, 1.25rem);
+  font-weight: 500;
+  line-height: 1.15;
+}
+.gallery-dialogue {
+  position: absolute;
+  left: 5%;
+  top: 5%;
+  width: 46%;
+  padding: 7% 5%;
+  background: var(--gallery-paper);
+  color: var(--gallery-ink);
+  border: 1px solid var(--gallery-ink);
+  border-radius: 50%;
+  box-shadow: 0 2px 3px #0003;
+  text-align: center;
+  font-family: var(--font-sans), "Noto Sans CJK KR", "Noto Sans CJK JP", sans-serif;
+  font-size: clamp(0.6rem, 1.8vw, 0.8rem);
+  font-weight: 600;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+.gallery-dialogue::after {
+  content: "";
+  position: absolute;
+  right: 14%;
+  bottom: -10%;
+  width: 16%;
+  height: 25%;
+  background: var(--gallery-paper);
+  border-right: 1px solid var(--gallery-ink);
+  transform: skewY(30deg);
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+.gallery-sfx {
+  position: absolute;
+  left: 4%;
+  bottom: 27%;
+  color: var(--gallery-paper);
+  font-family: var(--font-sans);
+  font-size: clamp(1.4rem, 5vw, 2.8rem);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.08em;
+  transform: rotate(-17deg);
+  -webkit-text-stroke: 1px var(--gallery-ink);
+  paint-order: stroke fill;
+  text-shadow: 2px 3px var(--gallery-ink);
+}
+.gallery-controls {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  color: var(--color-muted);
+}
+.gallery-controls button {
+  min-width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  transition:
+    background-color var(--motion-fast),
+    color var(--motion-fast);
+}
+.gallery-controls button:hover {
+  color: var(--color-accent);
+  background: var(--surface-light);
+}
+.gallery-counter {
+  font-size: 0.625rem;
+  letter-spacing: 0.15em;
+  font-variant-numeric: tabular-nums;
+}
+.gallery-counter > span {
+  color: var(--color-subtle);
+}
+.gallery-pause {
+  margin-left: 0.5rem;
+  border: 1px solid var(--line-soft);
+}
+.aurora-flow {
+  inset: 0;
+  background: radial-gradient(ellipse at 75% 40%, #10231e99, transparent 70%);
+}
+.aurora-ribbon {
+  position: absolute;
+  inset: 0 -20% 0 5%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    transparent 27%,
+    color-mix(in srgb, var(--aurora-emerald) 29%, transparent) 43%,
+    color-mix(in srgb, var(--color-accent) 12%, transparent) 47%,
+    transparent 61%
+  );
+  transform: rotate(-24deg) scaleY(0.64);
+  animation: aurora-sweep 14s ease-in-out infinite alternate;
+  opacity: 0.8;
+}
+.aurora-second {
+  inset: -20% -35% -15% 20%;
+  background: radial-gradient(
+    ellipse,
+    transparent 26%,
+    color-mix(in srgb, var(--aurora-teal) 30%, transparent) 43%,
+    transparent 60%
+  );
+  animation-duration: 19s;
+  animation-direction: alternate-reverse;
+}
+.aurora-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, var(--color-bg) 0%, transparent 70%),
+    linear-gradient(0deg, var(--color-bg), transparent 18%, transparent 80%, var(--color-bg));
+}
+@keyframes aurora-sweep {
+  to {
+    transform: translate3d(-4%, 7%, 0) rotate(-12deg) scaleY(0.85);
+    opacity: 0.5;
+  }
+}
+.aurora-flow[data-quality="quiet"] .aurora-ribbon {
+  animation: none;
+}
+@media (max-width: 639px) {
+  .aurora-second {
+    display: none;
+  }
+  .aurora-ribbon {
+    animation-duration: 20s;
+  }
+}
+@media (min-width: 640px) {
+  .gallery-stage {
+    height: 30rem;
+  }
+  .gallery-card {
+    left: 23%;
+    width: 54%;
+  }
+}
+@media (min-width: 1024px) {
+  .library-hero .hero-art {
+    margin-top: 0;
+  }
+  .gallery-stage {
+    height: clamp(22rem, 34vw, 30rem);
+  }
+  .gallery-kicker {
+    font-size: 0.5rem;
+  }
+  .library-shell .library-hero {
+    min-height: 37rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gallery-card {
+    transition: none;
+  }
+  .aurora-ribbon {
+    animation: none;
+  }
+}
+@font-face {
+  font-family: "Inkstrip Gallery Korean";
+  src: url("/gallery/inkstrip-lettering-ko.woff") format("woff");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inkstrip Gallery Japanese";
+  src: url("/gallery/inkstrip-lettering-ja.woff") format("woff");
+  font-weight: 600;
+  font-display: swap;
+}
+.gallery-dialogue:lang(ko) {
+  word-break: keep-all;
+  font-family: "Inkstrip Gallery Korean", sans-serif;
+}
+.gallery-dialogue:lang(ja) {
+  font-family: "Inkstrip Gallery Japanese", sans-serif;
 }
