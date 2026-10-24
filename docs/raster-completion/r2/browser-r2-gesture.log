@@ -1,0 +1,2 @@
+History interleaving: Undo cancels the pending stale stroke without restoring old document data.
+{"historyInterleaving":true,"redo":true,"staleSelection":true,"concurrentPropertyEdit":true,"maskPlaneSnapshot":true,"native":true,"pixels":true,"errors":[],"physicalAndroid":false}

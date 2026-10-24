@@ -1,0 +1,1 @@
+{"name": "artboards", "command": ["node", "--experimental-strip-types", "scripts/artboards-browser-check.mjs", "http://127.0.0.1:8081"], "returncode": 0, "seconds": 78.63, "target": 8081}

@@ -1,0 +1,56 @@
+{"renderDifference":{"mean":0.03001333997140529,"fraction":0}}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"center gradient stack SVG/native/raster roundtrip","pass":true}
+{"renderDifference":{"mean":0.02344643586601304,"fraction":0}}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"inside gradient stack SVG/native/raster roundtrip","pass":true}
+{"renderDifference":{"mean":0.036016007965686395,"fraction":0}}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"outside gradient stack SVG/native/raster roundtrip","pass":true}
+{"renderDifference":{"mean":0.029082414215686303,"fraction":0}}
+{"case":"radial transformed fill, gradient dashes and paint blending","pass":true}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"renderDifference":{"mean":0.7996976964613963,"fraction":0.014241536458333334}}
+{"case":"compound winding, affine gradients and radial outside strokes","pass":true}
+{"renderDifference":{"mean":0.10247762842116004,"fraction":0.004231770833333333}}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"curved clipping applies once to the whole stacked appearance, including SVG reopen","pass":true}
+{"case":"advanced appearance with raster masks and layer clipping","pass":true}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"creating and exporting a vertical gradient stroke uses a valid user-space fallback","pass":true}
+{"case":"appearance CRUD, ordering, visibility, clipboard, undo/redo and actual pixels","pass":true}
+{"renderDifference":{"mean":0.43622280943627506,"fraction":0.006103515625}}
+{"case":"editable text local save/reload, source bytes, Raster switch and JPEG/WebP exports","pass":true}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"curved Unicode text, typography, positioning, SVG/native and undo","pass":true}
+{"renderDifference":{"mean":1.0860732932495971,"fraction":0.029459635416666668}}
+{"case":"linear text-path paint coordinates, overlapping glyph opacity and native/SVG fidelity","pass":true}
+{"renderDifference":{"mean":1.0854354958129113,"fraction":0.029459635416666668}}
+{"case":"radial text-path paint coordinates, overlapping glyph opacity and native/SVG fidelity","pass":true}
+{"renderDifference":{"mean":0.07412029590481899,"fraction":0}}
+{"case":"SVG standards oracle 1","pass":true}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"SVG standards oracle 2","pass":true}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"SVG standards oracle 3","pass":true}
+{"renderDifference":{"mean":0.000060716018178104576,"fraction":0}}
+{"case":"SVG standards oracle 4","pass":true}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"SVG standards oracle 5","pass":true}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"SVG standards oracle 6","pass":true}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"SVG standards oracle 7","pass":true}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"SVG standards oracle 8","pass":true}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"SVG standards oracle 9","pass":true}
+{"renderDifference":{"mean":0,"fraction":0}}
+{"case":"SVG standards oracle 10","pass":true}
+{"case":"unsafe and unrepresentable SVG rejection is transactional","pass":true}
+{"case":"generic/default font fallback is reported explicitly without losing editable text","pass":true}
+{"benchmark":{"paths":40,"anchors":40000,"artboards":32,"width":1024,"height":1024,"importAndPreviewWallMs":1488,"pngExportDownloadWallMs":625.5,"chromium":"156.0.8078.4"}}
+{"case":"representative 40k-anchor/32-artboard import, preview and native-resolution PNG","pass":true}
+{"case":"320px touch gradient apply/cancel, undo and responsive controls","pass":true}
+{"case":"390px touch gradient apply/cancel, undo and responsive controls","pass":true}
+{"suite":"vector-final","cases":28,"errors":[]}

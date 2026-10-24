@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Layers3, Image as ImageIcon } from "lucide-react";
-import { getBlob } from "@/lib/studio/db";
+import { getImageBlob as getBlob } from "@/lib/studio/db";
 /** Lazy thumbnails only. Each component owns and releases its URL; no storage writes. */
 export function ArtworkCover({
   thumbId,
@@ -21,7 +21,7 @@ export function ArtworkCover({
     const load = () => {
       if (started || !thumbId) return;
       started = true;
-      void getBlob(thumbId)
+      void getBlob(thumbId, true)
         .then((blob) => {
           if (!active || !blob) return;
           url = URL.createObjectURL(blob);

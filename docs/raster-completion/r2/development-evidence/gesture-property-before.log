@@ -1,0 +1,19 @@
+History interleaving: Undo cancels the pending stale stroke without restoring old document data.
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: separate layer property edit must not implicitly commit pending stroke
+
+1 !== 0
+
+    at file:///workspace/r2-evidence/gesture-property-probe.mjs:83:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

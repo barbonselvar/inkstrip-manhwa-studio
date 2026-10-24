@@ -1,0 +1,32 @@
+{
+  "typecheck": {
+    "command": "npm run typecheck",
+    "exitCode": 0,
+    "seconds": 24.02
+  },
+  "lint": {
+    "command": "npm run lint",
+    "exitCode": 0,
+    "seconds": 17.09
+  },
+  "tests": {
+    "command": "npm test",
+    "exitCode": 0,
+    "seconds": 29.21
+  },
+  "build": {
+    "command": "npm run build",
+    "exitCode": 0,
+    "seconds": 8.15
+  },
+  "config": {
+    "command": "npm run check:build",
+    "exitCode": 0,
+    "seconds": 0.14
+  },
+  "auth": {
+    "command": "npm run check:auth",
+    "exitCode": 0,
+    "seconds": 0.17
+  }
+}

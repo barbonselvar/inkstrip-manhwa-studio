@@ -1,0 +1,130 @@
+{
+  "classification": "COMPLETE for R2 within the documented existing-engine limits",
+  "repository": "https://github.com/barbonselvar/inkstrip-manhwa-studio",
+  "branch": "codex/raster-studio-completion",
+  "pr": 13,
+  "draft": true,
+  "merged": false,
+  "mainBase": "a90c656c8b68cb2016a7a1cd09e720ef3ed145ab",
+  "startingR11Head": "8336d5bb0b97b7226df22efbd0312b8b56ef798f",
+  "runtimeCommit": "3428a0dfc31a25cbf3496d929c4bb476b1594af5",
+  "sourceTree": "9218ccf3090f810dd2b28d7c7c01f6cb293823ce",
+  "runtimeCommits": [
+    "bb87ff85fde322ca7c02e9eb9aa2b906b6017baa",
+    "deb514c9ef9f2e25c204605cad597440240b5909",
+    "4ff27dcc6181381d588abcacea3ced8e9e52454b",
+    "3428a0dfc31a25cbf3496d929c4bb476b1594af5"
+  ],
+  "commands": [
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "log": "tests-final.log"
+    },
+    {
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "log": "typecheck-final.log"
+    },
+    {
+      "command": "npm run lint",
+      "exitCode": 0,
+      "log": "lint-final.log"
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0,
+      "log": "build-final.log"
+    },
+    {
+      "command": "npm run check:build",
+      "exitCode": 0,
+      "log": "config-final.log"
+    },
+    {
+      "command": "npm run check:auth",
+      "exitCode": 0,
+      "log": "auth-final.log"
+    },
+    {
+      "command": "npm audit --json",
+      "exitCode": 0,
+      "log": "dependency-audit.json"
+    }
+  ],
+  "nodeTests": {
+    "total": 809,
+    "script": 200,
+    "shared": 59,
+    "studio": 87,
+    "pro": 463,
+    "new": 18,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "environment": {
+    "os": "Linux x64 shared container",
+    "cpu": "AMD EPYC 9V74",
+    "availableCPUs": 2,
+    "node": "24.19.0",
+    "chromium": "156.0.8078.4",
+    "physicalAndroid": false,
+    "stylusHardware": false,
+    "alternateBrowserEngines": false
+  },
+  "schemaChanged": false,
+  "dependenciesChanged": false,
+  "limits": [
+    "Independent transparency lock unsupported and not advertised",
+    "Quarter-turn view UI only; no continuous/twist gesture",
+    "48 layers and group depth <=3 retained",
+    "Existing history/source/native/pixel/preview budgets retained",
+    "Full preview composition remains; no new tiled compositor",
+    "8-bit browser Canvas/encoded-sRGB; no new CMYK/ICC/16-bit pipeline",
+    "Native saves current document, not cross-session undo history",
+    "F1 native-v6 remains on separate unmerged branch; baseline rejects it without provenance loss",
+    "No peak native/GPU memory measurement",
+    "No physical Android/stylus/alternate-engine validation"
+  ],
+  "performance": {
+    "thumbnailBefore": "thumbnail-before-with-requests.json",
+    "thumbnailAfter": "thumbnail-after.json",
+    "maskControlledComparison": "mask-thumbnail-benchmark.json",
+    "quietWindowWarning": "Wall time includes three1100ms waits; not interaction latency",
+    "memoryWarning": "Requested surface capacity only; not measured peak RAM"
+  },
+  "productionChanged": false,
+  "productionCheck": "production-readonly-final.json",
+  "furtherPhasesStarted": false,
+  "completedUTC": "2026-10-24T19:40:21.710626+00:00",
+  "chromium": {
+    "suiteCount": 28,
+    "passed": 28,
+    "failed": 0,
+    "skipped": 0,
+    "commandLedger": "browser-ledger.json",
+    "r2ViewportWidths": [1440, 320, 360, 390, 768],
+    "phoneHeight": 844,
+    "touchEmulated": true,
+    "physicalAndroid": false,
+    "actualInference": ["Existing Swin2SR", "Existing Tesseract OCR"],
+    "injectedBoundaryTests": [
+      "URL allocation failure",
+      "main-window mask-surface allocation instrumentation"
+    ],
+    "productionReleaseSuite": "Not run against Production: no release/deployment authorized"
+  },
+  "githubActions": "runtime-actions.json",
+  "failureHistory": {
+    "firstFullRun": "26/27 pass, Artboards genuine regression fixed without changing existing assertions",
+    "corrected4ffRun": "27/27 passed before subsequent transaction findings",
+    "intermediateRun": "Explicitly interrupted for confirmed property/preview transaction fix; not counted as a completed run",
+    "finalRun": "28/28 passed on frozen runtime; all original failures retained in development-evidence",
+    "newTestsBeforeFix": [
+      "Undo removes committed stroke, pending old stroke restores2 instead of0",
+      "Mask-plane toggle redirects stroke, mask count0 instead of1",
+      "Property update includes1 pending stroke instead of0"
+    ]
+  }
+}

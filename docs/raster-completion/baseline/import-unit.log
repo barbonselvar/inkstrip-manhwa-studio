@@ -1,0 +1,16 @@
+✔ standalone Raster preflight accepts supported header dimensions and the exact device boundary (3.554313ms)
+✔ standalone Raster preflight rejects oversized pixels, long sides and invalid budgets without decoding (1.173298ms)
+✔ standalone Raster preflight rejects corrupt, unsupported and excessive compressed files before reading headers (0.669206ms)
+✔ native preflight rejects corrupt PNG, JPEG, WebP headers before image decoding (7.095077ms)
+✔ native preflight bounds actual PNG dimensions before allocation regardless of document metadata (0.770778ms)
+✔ native decode failure leaves input untouched and closes successful images sequentially (0.99408ms)
+✔ native header parser recognizes JPEG SOF and lossless, lossy, extended WebP dimensions (0.539934ms)
+✔ native preflight accepts EXIF-oriented JPEG axis swaps without relaxing the pixel budget (1.064976ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 677.454067

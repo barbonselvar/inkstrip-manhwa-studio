@@ -1,0 +1,8 @@
+{
+  "url": "https://inkstrip-manhwa-studio.vercel.app/",
+  "method": "GET only, no production interaction or writes",
+  "releaseSha": "a90c656c8b68cb2016a7a1cd09e720ef3ed145ab",
+  "expectedUnchangedMain": "a90c656c8b68cb2016a7a1cd09e720ef3ed145ab",
+  "matches": true,
+  "observedUTC": "2026-10-24T18:46:10.614006+00:00"
+}

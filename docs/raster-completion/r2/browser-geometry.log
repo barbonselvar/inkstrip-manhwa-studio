@@ -1,0 +1,10 @@
+Crop/cancel/history/export pixel checks passed.
+Four worker resampling filters and alpha checks passed.
+Straighten/transparent JPEG/ratio/mouse handles/Escape checks passed.
+Native reopen and independent canvas resizing checks passed.
+Crop-aware masks, text and full-canvas Clone sampling passed.
+Source-resolution crop and resize beyond the preview cap passed.
+Desktop: crop Apply/Cancel, 8-handle math, mouse corners/edges, ratio, straighten, RGBA/export, 4 resamplers, undo/redo, native reopen, masks/text, canvas size and Chapter preservation passed.
+Chromium touch 320px: both Chapter entry points, selected image, 44px crop handles, pinch/pan, no page scroll/overflow, Apply, export and undo/redo passed.
+Chromium touch 390px: both Chapter entry points, selected image, 44px crop handles, pinch/pan, no page scroll/overflow, Apply, export and undo/redo passed.
+Geometry browser checks passed; no console/page errors. Physical Android hardware was not tested.

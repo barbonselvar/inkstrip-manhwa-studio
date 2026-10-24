@@ -1,0 +1,1 @@
+Interrupted after a newly confirmed concurrent layer-property/pending-stroke bug required another runtime correction. Not counted as a final full-suite result. Prior frozen runtime 4ff full27-suite pass is preserved separately.

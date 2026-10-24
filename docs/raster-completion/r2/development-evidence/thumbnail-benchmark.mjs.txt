@@ -1,0 +1,25 @@
+import {chromium} from '/workspace/inkstrip-manhwa-studio/node_modules/playwright/index.mjs';
+import {proBrowserFixtures} from '/workspace/inkstrip-manhwa-studio/scripts/pro-browser-fixtures.mjs';
+import {fromPanel,layer} from '/workspace/inkstrip-manhwa-studio/src/lib/studio/pro/model.ts';
+import {writeFile} from 'node:fs/promises';
+const base=process.argv[2]??'http://127.0.0.1:8081', tag=process.argv[3]??'before';
+const browser=await chromium.launch({headless:true,args:['--no-sandbox']});const errors=[];
+try{
+const p=await browser.newPage({viewport:{width:1440,height:1000}}), fx=proBrowserFixtures(base,errors);
+const source=await fx.start(p);await fx.open(p);
+await p.evaluate(()=>{
+ const post=Worker.prototype.postMessage, tracked=new WeakSet(), pending=new WeakMap();window.__thumbBench=[];window.__thumbRequests=0;
+ Worker.prototype.postMessage=function(data,...rest){
+  if(!tracked.has(this)){tracked.add(this);pending.set(this,new Map());this.addEventListener('message',({data:d})=>{if(d.type==='thumbnails'){const start=pending.get(this).get(d.id);window.__thumbBench.push({count:d.thumbnails.length,workerWallMs:performance.now()-start});pending.get(this).delete(d.id);}});}
+  if(data.type==='thumbnails'){window.__thumbRequests++;pending.get(this).set(data.id,performance.now());}return post.call(this,data,...rest);
+ };
+});
+const d=fromPanel({id:'thumbs',name:'Thumbs',width:128,height:96});d.width=d.height=1024;d.layers=[];
+for(let i=0;i<36;i++){const l=layer('shape',96,96,`tile-${i}`);l.name=`Tile ${i}`;l.fill=i%2?'#55cc99':'#332244';l.strokeWidth=0;l.transform.x=(i%6)*150;l.transform.y=Math.floor(i/6)*150;d.layers.push(l);}
+await fx.load(p,d,source);await fx.tab(p,'Layers');await p.waitForFunction(()=>window.__thumbBench.length>=1);await p.waitForTimeout(300);
+const start=await p.evaluate(()=>({events:window.__thumbBench.length,requests:window.__thumbRequests,time:performance.now()}));
+for(let i=0;i<3;i++){await p.getByRole('button',{name:`${i%2?'Show':'Hide'} layer Tile 0`,exact:true}).click();await p.waitForTimeout(1100);}
+const result=await p.evaluate((start)=>({events:window.__thumbBench,changedJobs:window.__thumbBench.length-start.events,changedRequests:window.__thumbRequests-start.requests,interactionWallMs:performance.now()-start.time}),start);
+result.errors=errors;result.environment={chromium:browser.version(),sharedCPU:'AMD EPYC 9V74',availableCPUs:2,viewport:[1440,1000]};result.fixture={document:[1024,1024],shapeLayers:36,visibilityToggles:3,quietWindowMs:1100};
+await writeFile(`/workspace/r2-evidence/thumbnail-${tag}.json`,JSON.stringify(result,null,2));console.log(JSON.stringify(result));
+}finally{await browser.close();}

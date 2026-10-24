@@ -1,0 +1,6 @@
+
+> typecheck
+> tsc --noEmit && tsc --project tsconfig.config.json
+
+src/components/studio/retouch/character-controls.tsx(49,3): error TS2304: Cannot find name 'useEffect'.
+src/components/studio/retouch/character-controls.tsx(53,3): error TS2304: Cannot find name 'useEffect'.

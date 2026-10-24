@@ -1,0 +1,326 @@
+[
+  {
+    "name": "artboards",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/artboards-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 67.86,
+    "target": 8081
+  },
+  {
+    "name": "studio",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/studio-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 247.46,
+    "target": 8081
+  },
+  {
+    "name": "editor",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/editor-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 34.2,
+    "target": 8081
+  },
+  {
+    "name": "adjustments",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/adjustments-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 36.21,
+    "target": 8081
+  },
+  {
+    "name": "retouch",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/retouch-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 14.95,
+    "target": 8081
+  },
+  {
+    "name": "workflow",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/workflow-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 45.55,
+    "target": 8081
+  },
+  {
+    "name": "ui",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/ui-redesign-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 46.65,
+    "target": 8081
+  },
+  {
+    "name": "pro",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/pro-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 81.3,
+    "target": 8081
+  },
+  {
+    "name": "layers",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/layers-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 66.6,
+    "target": 8081
+  },
+  {
+    "name": "repair",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/repair-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 50.72,
+    "target": 8081
+  },
+  {
+    "name": "geometry",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/geometry-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 39.3,
+    "target": 8081
+  },
+  {
+    "name": "transform",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/transform-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 58.68,
+    "target": 8081
+  },
+  {
+    "name": "color",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/color-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 43.5,
+    "target": 8081
+  },
+  {
+    "name": "appearance",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/appearance-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 44.47,
+    "target": 8081
+  },
+  {
+    "name": "vector",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/vector-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 46.2,
+    "target": 8081
+  },
+  {
+    "name": "compound",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/compound-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 67.98,
+    "target": 8081
+  },
+  {
+    "name": "pathfinder",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/pathfinder-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 86.65,
+    "target": 8081
+  },
+  {
+    "name": "vector-final",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/vector-final-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 101.77,
+    "target": 8081
+  },
+  {
+    "name": "raster-refinement",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/raster-refinement-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 82.56,
+    "target": 8081
+  },
+  {
+    "name": "homepage",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/homepage-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 62.47,
+    "target": 8081
+  },
+  {
+    "name": "dialogue",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/dialogue-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 28.03,
+    "target": 8081
+  },
+  {
+    "name": "dialogue-workflow",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/dialogue-workflow-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 34.45,
+    "target": 8081
+  },
+  {
+    "name": "dialogue-render",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/dialogue-render-browser-check.mjs",
+      "http://127.0.0.1:8080"
+    ],
+    "returncode": 0,
+    "seconds": 3.4,
+    "target": 8080
+  },
+  {
+    "name": "dialogue-security",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/dialogue-security-browser-check.mjs",
+      "http://127.0.0.1:8080"
+    ],
+    "returncode": 0,
+    "seconds": 4.22,
+    "target": 8080
+  },
+  {
+    "name": "dialogue-ocr",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/dialogue-ocr-browser-check.mjs",
+      "http://127.0.0.1:8080"
+    ],
+    "returncode": 0,
+    "seconds": 11.54,
+    "target": 8080
+  },
+  {
+    "name": "chapter-import",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/chapter-import-safety-browser-check.mjs",
+      "http://127.0.0.1:8080"
+    ],
+    "returncode": 0,
+    "seconds": 33.21,
+    "target": 8080
+  },
+  {
+    "name": "r2-document",
+    "command": [
+      "node",
+      "--experimental-strip-types",
+      "scripts/r2-document-browser-check.mjs",
+      "http://127.0.0.1:8081"
+    ],
+    "returncode": 0,
+    "seconds": 83.49,
+    "target": 8081
+  }
+]

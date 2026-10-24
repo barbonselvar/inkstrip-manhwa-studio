@@ -1,0 +1,452 @@
+{
+  "schema": 1,
+  "phase": "R1.1 only",
+  "date": "2026-10-24",
+  "classification": "RESOLVED",
+  "finding": "H02",
+  "branch": "codex/raster-studio-completion",
+  "startingHead": "612f3bab6be29e6ce5358e2322335e67e98e8a66",
+  "mainAndMergeBase": "a90c656c8b68cb2016a7a1cd09e720ef3ed145ab",
+  "implementationCommit": "211fea54963374f0965aaf07843c55dce1de64b6",
+  "testedSrcTree": "0125c61cb20338140af26fc2a08d2f744ac8c984",
+  "draftPr": "https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/13",
+  "finalRemoteHeadAndActions": "See PR13 and final delivery; documentation commit follows the runtime commit without changing tested source.",
+  "automated": {
+    "passed": 791,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "newPolicyAndDecodeTests": 38,
+    "commands": [
+      "npm run typecheck",
+      "npm run lint",
+      "npm test",
+      "npm run build",
+      "npm run check:build",
+      "npm run check:auth",
+      "npm audit --json"
+    ]
+  },
+  "browser": {
+    "existingCompletedSuitesPassed": 25,
+    "newChapterImportSuitePassed": true,
+    "completedSuitesTotal": 26,
+    "firstExecutionPassed": 24,
+    "firstExecutionFailed": 1,
+    "firstExecutionLedger": [
+      {
+        "name": "studio",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/studio-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 253.75,
+        "target": 8081
+      },
+      {
+        "name": "editor",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/editor-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 33.1,
+        "target": 8081
+      },
+      {
+        "name": "adjustments",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/adjustments-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 43.24,
+        "target": 8081
+      },
+      {
+        "name": "retouch",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/retouch-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 13.15,
+        "target": 8081
+      },
+      {
+        "name": "workflow",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/workflow-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 44.82,
+        "target": 8081
+      },
+      {
+        "name": "ui",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/ui-redesign-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 46.64,
+        "target": 8081
+      },
+      {
+        "name": "pro",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/pro-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 97.16,
+        "target": 8081
+      },
+      {
+        "name": "layers",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/layers-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 63.49,
+        "target": 8081
+      },
+      {
+        "name": "repair",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/repair-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 49.68,
+        "target": 8081
+      },
+      {
+        "name": "geometry",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/geometry-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 39.86,
+        "target": 8081
+      },
+      {
+        "name": "transform",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/transform-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 58.75,
+        "target": 8081
+      },
+      {
+        "name": "color",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/color-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 42.65,
+        "target": 8081
+      },
+      {
+        "name": "appearance",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/appearance-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 46.55,
+        "target": 8081
+      },
+      {
+        "name": "vector",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/vector-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 43.99,
+        "target": 8081
+      },
+      {
+        "name": "compound",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/compound-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 66.01,
+        "target": 8081
+      },
+      {
+        "name": "pathfinder",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/pathfinder-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 89.0,
+        "target": 8081
+      },
+      {
+        "name": "artboards",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/artboards-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 52.46,
+        "target": 8081
+      },
+      {
+        "name": "vector-final",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/vector-final-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 99.53,
+        "target": 8081
+      },
+      {
+        "name": "raster-refinement",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/raster-refinement-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 82.04,
+        "target": 8081
+      },
+      {
+        "name": "homepage",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/homepage-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 64.52,
+        "target": 8081
+      },
+      {
+        "name": "dialogue",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/dialogue-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 27.07,
+        "target": 8081
+      },
+      {
+        "name": "dialogue-workflow",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/dialogue-workflow-browser-check.mjs",
+          "http://127.0.0.1:8081"
+        ],
+        "returncode": 0,
+        "seconds": 28.29,
+        "target": 8081
+      },
+      {
+        "name": "dialogue-render",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/dialogue-render-browser-check.mjs",
+          "http://127.0.0.1:8080"
+        ],
+        "returncode": 0,
+        "seconds": 3.79,
+        "target": 8080
+      },
+      {
+        "name": "dialogue-security",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/dialogue-security-browser-check.mjs",
+          "http://127.0.0.1:8080"
+        ],
+        "returncode": 0,
+        "seconds": 4.4,
+        "target": 8080
+      },
+      {
+        "name": "dialogue-ocr",
+        "command": [
+          "node",
+          "--experimental-strip-types",
+          "scripts/dialogue-ocr-browser-check.mjs",
+          "http://127.0.0.1:8080"
+        ],
+        "returncode": 1,
+        "seconds": 1.51,
+        "target": 8080
+      }
+    ],
+    "retry": {
+      "name": "dialogue-ocr",
+      "command": [
+        "node",
+        "--experimental-strip-types",
+        "scripts/dialogue-ocr-browser-check.mjs",
+        "http://127.0.0.1:8080"
+      ],
+      "returncode": 0,
+      "reason": "Execution context destroyed during navigation before first inference. Exact unchanged suite rerun passed; initial failure retained. Root navigation trigger not conclusively identified."
+    },
+    "chapterCommand": "npm run test:chapter-import:browser",
+    "chapterViewports": [
+      1440,
+      320,
+      390
+    ],
+    "rejectedDecodeCalls": 0,
+    "realInference": [
+      "existing Swin2SR",
+      "existing local Tesseract"
+    ],
+    "physicalAndroid": false,
+    "otherBrowserEngines": "not run"
+  },
+  "smoke": {
+    "dev": "passed",
+    "built": "passed",
+    "divergence": false,
+    "screenshotsVisuallyInspected": true,
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "horizontalOverflow": false
+  },
+  "dependency": {
+    "added": "image-size@2.0.4",
+    "license": "MIT",
+    "runtimeDependencies": 0,
+    "entry": "pure browser Uint8Array, no fromFile",
+    "advisories": 0
+  },
+  "policy": {
+    "desktop": {
+      "maxSide": 65535,
+      "maxPixels": 32000000,
+      "maxBytesMiB": 80,
+      "maxMemoryEstimateMiB": 512,
+      "maxBatchBytesMiB": 256,
+      "maxBatchPixels": 128000000
+    },
+    "constrained": {
+      "maxSide": 65535,
+      "maxPixels": 16000000,
+      "maxBytesMiB": 40,
+      "maxMemoryEstimateMiB": 256,
+      "maxBatchBytesMiB": 128,
+      "maxBatchPixels": 64000000
+    },
+    "maxFiles": 250,
+    "maxFrames": 64,
+    "maxHeaderBytesMiB": 2,
+    "maxBatchHeadersMiB": 32,
+    "recoveryRefs": 4000,
+    "thumbnailMaxSide": 512,
+    "thumbnailMaxPixels": 262144,
+    "thumbnailMaxBytesMiB": 2,
+    "estimateFormula": "pixels *12 + encodedBytes *2 +4MiB; admission estimate, not process peak"
+  },
+  "failureBoundaryInjection": [
+    "delayed actual ImageBitmap response",
+    "second-write IndexedDB quota failure",
+    "stored original corruption",
+    "unit mock decoders for orchestration only"
+  ],
+  "formatLimitations": [
+    "compressed PNG ancillary metadata rejected",
+    "timed/external HEIF, BigTIFF and unsupported nested image variants rejected",
+    "worker SVG requires PNG conversion because DOM validation unavailable",
+    "Chromium TIFF codec unavailable",
+    "real HEIC decoder unavailable",
+    "not full compressed-bitstream or color-profile validation"
+  ],
+  "remainingLimits": [
+    "native decoding cannot be forcibly interrupted",
+    "late bitmap closed and native busy retained until settled",
+    "memory estimates are not OS/GPU hard quotas",
+    "independent contexts/tabs may add total memory",
+    "storage estimate advisory; transactions authoritative",
+    "no physical Android validation"
+  ],
+  "environment": {
+    "node": "24.19.0",
+    "npm": "11.9.0",
+    "chromium": "156.0.8078.4",
+    "cpu": "AMD EPYC 9V74",
+    "availableCPUs": 2,
+    "sharedLinuxX64": true
+  },
+  "safety": {
+    "mainChanged": false,
+    "merged": false,
+    "productionDeployed": false,
+    "productionConfigChanged": false,
+    "prDraft": true,
+    "R2Started": false,
+    "F2Started": false,
+    "homepageRedesigned": false
+  },
+  "normalization": "Committed logs remove terminal ANSI decoration and trailing line whitespace only. Original execution logs remain in /workspace/r11-evidence; assertions/outcomes unchanged.",
+  "changedFileSecretScan": {
+    "textFiles": 91,
+    "findings": 0,
+    "scope": "new/modified files in R1.1 only; bounded patterns, not a complete secrets audit"
+  }
+}

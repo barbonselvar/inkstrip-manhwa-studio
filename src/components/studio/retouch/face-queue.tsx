@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { RetouchDialog } from "./retouch-dialog";
-import { getBlob, storageMessage } from "@/lib/studio/db";
+import { getImageBlob as getBlob, storageMessage } from "@/lib/studio/db";
 import { useStudio } from "@/lib/studio/store";
 import type { Panel } from "@/lib/studio/types";
 import { Button } from "@/components/ui/button";

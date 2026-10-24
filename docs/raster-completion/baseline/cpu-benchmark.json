@@ -1,0 +1,41 @@
+{
+  "platform": "linux",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "node": "v24.19.0",
+  "method": "One cold run per size; generated line-art character silhouette with fine strands; source-resolution CPU processing; process peak RSS includes input/output and runtime, not browser/GPU memory.",
+  "measurements": [
+    {
+      "name": "2K square",
+      "width": 2048,
+      "height": 2048,
+      "refineMs": 1765.78,
+      "expand8pxMs": 177.49,
+      "peakProcessRssMiB": 112.6,
+      "centerAlpha": 255
+    },
+    {
+      "name": "4K square",
+      "width": 4096,
+      "height": 4096,
+      "refineMs": 6671.45,
+      "expand8pxMs": 699.12,
+      "peakProcessRssMiB": 214.7,
+      "centerAlpha": 255
+    },
+    {
+      "name": "Long chapter",
+      "width": 1024,
+      "height": 8192,
+      "refineMs": 3283.43,
+      "expand8pxMs": 297.25,
+      "peakProcessRssMiB": 214.7,
+      "centerAlpha": 255
+    }
+  ],
+  "brush": {
+    "strokes": 100,
+    "inputPointsPerStroke": 2000,
+    "dabs": 171200,
+    "ms": 32
+  }
+}

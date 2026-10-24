@@ -1,4 +1,6 @@
 /// <reference lib="webworker" />
+import { safeBitmap } from "../image-decode";
+import { imagePolicy } from "../image-policy";
 import {
   assertSize,
   defaultRecipe,
@@ -139,7 +141,12 @@ self.onmessage = async ({
       const version = ++generation;
       if (!data.blob || data.blob.size > 80 * 1024 * 1024)
         throw new Error("Choose an image smaller than 80 MB for editing.");
-      const next = await createImageBitmap(data.blob, { imageOrientation: "from-image" });
+      const next = await safeBitmap(data.blob, {
+        policy: {
+          ...imagePolicy(data.limits.maxArea <= 16_000_000),
+          maxPixels: Math.min(data.limits.maxArea, SOURCE_LIMITS.maxArea),
+        },
+      });
       if (version !== generation) {
         next.close();
         return;

@@ -139,8 +139,8 @@ export class ProRenderer {
   repair(document: ProDocument, maxArea: number, request: RepairRequest) {
     return this.request("repair", { document, maxArea, request });
   }
-  thumbnails(document: ProDocument, maxArea: number) {
-    return this.request("thumbnails", { document, maxArea });
+  thumbnails(document: ProDocument, maxArea: number, layerIds?: string[]) {
+    return this.request("thumbnails", { document, maxArea, layerIds });
   }
   merge(
     document: ProDocument,

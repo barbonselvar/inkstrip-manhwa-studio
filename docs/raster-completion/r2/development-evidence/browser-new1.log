@@ -1,0 +1,17 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:8080/
+Call log:
+  - navigating to "http://127.0.0.1:8080/", waiting until "load"
+
+    at Object.start (/workspace/inkstrip-manhwa-studio/scripts/pro-browser-fixtures.mjs:51:13)
+    at /workspace/inkstrip-manhwa-studio/scripts/r2-document-browser-check.mjs:35:25 {
+  log: [
+    '  - navigating to "http://127.0.0.1:8080/", waiting until "load"'
+  ],
+  name: 'Error'
+}
+
+Node.js v24.19.0

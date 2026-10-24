@@ -1,0 +1,16 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: undefined is not near 20
+    at near (file:///workspace/inkstrip-manhwa-studio/scripts/r2-document-browser-check.mjs:30:26)
+    at file:///workspace/inkstrip-manhwa-studio/scripts/r2-document-browser-check.mjs:59:74 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

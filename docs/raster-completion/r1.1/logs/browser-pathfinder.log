@@ -1,0 +1,11 @@
+Unite: independent pixel coverage, real worker, native/history, SVG reimport and source bytes passed.
+Subtract: independent pixel coverage, real worker, native/history, SVG reimport and source bytes passed.
+Intersect: independent pixel coverage, real worker, native/history, SVG reimport and source bytes passed.
+Exclude: independent pixel coverage, real worker, native/history, SVG reimport and source bytes passed.
+Divide: independent pixel coverage, real worker, native/history, SVG reimport and source bytes passed.
+Trim: independent pixel coverage, real worker, native/history, SVG reimport and source bytes passed.
+Merge: independent pixel coverage, real worker, native/history, SVG reimport and source bytes passed.
+Curves, holes, result editing, explicit empty/invalid rollback, cancellation, keyboard, local reopen and Chapter/Raster/Vector handoff passed.
+Chromium 320px: touch multi-selection, Pathfinder controls, geometric subtraction, anchor drag, history/native/export and no overflow/scroll passed.
+Chromium 390px: touch multi-selection, Pathfinder controls, geometric subtraction, anchor drag, history/native/export and no overflow/scroll passed.
+{"ok":true,"physicalAndroid":false}

@@ -1,0 +1,81 @@
+{"width":1440,"pass":true}
+{"width":320,"pass":true}
+{"width":360,"pass":true}
+{"width":390,"pass":true}
+{"width":768,"pass":true}
+{
+  "results": [
+    {
+      "width": 1440,
+      "touchEmulation": false,
+      "viewOnly": true,
+      "inverseDrawing": true,
+      "cancellation": true,
+      "selection": true,
+      "transformHandleCancel": true,
+      "nativePanelProperties": true,
+      "maskTarget": true,
+      "saveReopen": true,
+      "exportOrientation": true,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "touchEmulation": true,
+      "viewOnly": true,
+      "inverseDrawing": true,
+      "cancellation": true,
+      "selection": true,
+      "transformHandleCancel": true,
+      "nativePanelProperties": true,
+      "maskTarget": true,
+      "saveReopen": true,
+      "exportOrientation": true,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "touchEmulation": true,
+      "viewOnly": true,
+      "inverseDrawing": true,
+      "cancellation": true,
+      "selection": true,
+      "transformHandleCancel": true,
+      "nativePanelProperties": true,
+      "maskTarget": true,
+      "saveReopen": true,
+      "exportOrientation": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "touchEmulation": true,
+      "viewOnly": true,
+      "inverseDrawing": true,
+      "cancellation": true,
+      "selection": true,
+      "transformHandleCancel": true,
+      "nativePanelProperties": true,
+      "maskTarget": true,
+      "saveReopen": true,
+      "exportOrientation": true,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "touchEmulation": true,
+      "viewOnly": true,
+      "inverseDrawing": true,
+      "cancellation": true,
+      "selection": true,
+      "transformHandleCancel": true,
+      "nativePanelProperties": true,
+      "maskTarget": true,
+      "saveReopen": true,
+      "exportOrientation": true,
+      "overflow": false
+    }
+  ],
+  "errors": [],
+  "physicalAndroid": false
+}

@@ -1,12 +1,13 @@
 import { useEffect, useRef } from "react";
 import type { Layer } from "@/lib/studio/pro/model";
 import { layerMaskCanvas } from "@/lib/studio/pro/render";
+import { maskThumbnailScale } from "@/lib/studio/pro/thumbnails";
 /** Preview uses the same coverage/compositing path as native exports. */
 export function ProMaskThumbnail({ layer }: { layer: Layer }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     let active = true;
-    void layerMaskCanvas(layer, Math.min(1, 96 / layer.width, 72 / layer.height))
+    void layerMaskCanvas(layer, maskThumbnailScale(layer))
       .then((mask) => {
         if (active && ref.current) {
           const c = ref.current;

@@ -1,0 +1,34 @@
+{
+  "events": [
+    {
+      "count": 36,
+      "workerWallMs": 24.100000008940697
+    },
+    {
+      "count": 36,
+      "workerWallMs": 30
+    }
+  ],
+  "changedJobs": 1,
+  "changedRequests": 3,
+  "interactionWallMs": 3540.2000000029802,
+  "errors": [],
+  "environment": {
+    "chromium": "156.0.8078.4",
+    "sharedCPU": "AMD EPYC 9V74",
+    "availableCPUs": 2,
+    "viewport": [
+      1440,
+      1000
+    ]
+  },
+  "fixture": {
+    "document": [
+      1024,
+      1024
+    ],
+    "shapeLayers": 36,
+    "visibilityToggles": 3,
+    "quietWindowMs": 1100
+  }
+}
