@@ -10,6 +10,7 @@ import type { Frame } from "@/lib/studio/pro/artboards";
 import {
   BUBBLE_PRESETS,
   presetStyles,
+  letteringSettings,
   DEFAULT_LETTERING,
   type DialogueRegion,
   type Lettering,
@@ -128,7 +129,7 @@ export function ProDialogue({
 }) {
   const body = bubbleFor(d, selectedId),
     text = textFor(d, selectedId),
-    settings = text?.lettering ?? DEFAULT_LETTERING,
+    settings = text ? letteringSettings(text) : DEFAULT_LETTERING,
     data = dialogueData(d);
   const [language, setLanguage] = useState<OcrLanguage>("eng"),
     [regionId, setRegionId] = useState(""),
@@ -538,7 +539,13 @@ export function ProDialogue({
             </fieldset>
           </ToolSection>
         )}
-        {text && (
+        {text?.textPath && (
+          <p className="pro-help">
+            This is editable text on a path. Use Vector Studio’s Typography panel to preserve and
+            edit its curve layout.
+          </p>
+        )}
+        {text && !text.textPath && (
           <ToolSection title="Lettering" defaultOpen>
             <fieldset className="dialogue-fieldset" disabled={isLocked(d, text.id)}>
               <label className="pro-field">
@@ -577,6 +584,7 @@ export function ProDialogue({
                   "Noto Sans CJK JP": "Noto CJK / system fallback",
                   "Noto Sans Arabic": "Noto Arabic / system fallback",
                   "Courier New": "Courier / monospace",
+                  monospace: "System monospace",
                 }}
                 onChange={(font) => patchText({}, { font })}
               />

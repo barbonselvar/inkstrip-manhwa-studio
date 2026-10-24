@@ -633,6 +633,8 @@ export default function ProWorkspace({
   const patch = (p: Partial<Layer>, group?: string) => {
     const current = historyRef.current?.present.doc;
     if (!current || !active || isLocked(current, active.id)) return;
+    if (p.fontFamily && active.lettering)
+      p = { ...p, lettering: { ...active.lettering, font: p.fontFamily } };
     try {
       const next = p.transform
         ? translateLayers(current, selectedIds, {

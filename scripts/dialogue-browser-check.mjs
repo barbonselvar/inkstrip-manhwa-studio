@@ -27,6 +27,8 @@ try {
       }),
       page = await context.newPage(),
       errors = [];
+    const sourceName =
+      width === 320 ? `dialogue-${"long-name-".repeat(8)}.png` : "dialogue-source.png";
     page.on("pageerror", (e) => errors.push(e.message));
     page.setDefaultTimeout(30000);
     await page.goto(base);
@@ -55,17 +57,17 @@ try {
       .locator("input[type=file]")
       .first()
       .setInputFiles({
-        name: "dialogue-source.png",
+        name: sourceName,
         mimeType: "image/png",
         buffer: Buffer.from(bytes, "base64"),
       });
-    await page
-      .getByRole("button", { name: "Edit Image dialogue-source.png", exact: true })
-      .waitFor();
+    await page.getByRole("button", { name: `Edit Image ${sourceName}`, exact: true }).waitFor();
     await page.getByRole("button", { name: "Text & Bubbles", exact: true }).click();
-    await page
-      .getByRole("button", { name: "Edit dialogue · dialogue-source.png", exact: true })
-      .click();
+    assert.ok(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      "Page names do not overflow the Text & Bubbles entry",
+    );
+    await page.getByRole("button", { name: `Edit dialogue · ${sourceName}`, exact: true }).click();
     await page.getByRole("dialog", { name: "Inkstrip Dialogue Studio", exact: true }).waitFor();
     await page.getByRole("button", { name: "Speech", exact: true }).click();
     await page.getByLabel("Dialogue text", { exact: true }).fill("Every frame.\nA world.");
@@ -129,9 +131,7 @@ try {
     await page
       .getByRole("dialog", { name: "Inkstrip Dialogue Studio", exact: true })
       .waitFor({ state: "detached" });
-    await page
-      .getByRole("button", { name: "Edit dialogue · dialogue-source.png", exact: true })
-      .click();
+    await page.getByRole("button", { name: `Edit dialogue · ${sourceName}`, exact: true }).click();
     await page.getByLabel("Dialogue text", { exact: true }).waitFor();
     assert.equal(
       await page.getByLabel("Dialogue text", { exact: true }).inputValue(),
@@ -146,6 +146,21 @@ try {
         c.getContext("2d").getImageData(5, 5, 1, 1).data[3] === 255
       );
     });
+    if (width === 1440) {
+      await page.getByLabel("Font family", { exact: true }).selectOption("Georgia");
+      await page.getByRole("button", { name: "Vector", exact: true }).click();
+      await page
+        .getByRole("navigation", { name: "Pro panels", exact: true })
+        .getByRole("button", { name: "Properties", exact: true })
+        .click();
+      assert.equal(await page.getByLabel("Text font", { exact: true }).inputValue(), "Georgia");
+      await page.getByLabel("Text font", { exact: true }).selectOption("monospace");
+      await page
+        .locator(".pro-header")
+        .getByRole("button", { name: "Dialogue", exact: true })
+        .click();
+      assert.equal(await page.getByLabel("Font family", { exact: true }).inputValue(), "monospace");
+    }
     if (width === 1440) {
       await page
         .getByRole("navigation", { name: "Pro panels", exact: true })

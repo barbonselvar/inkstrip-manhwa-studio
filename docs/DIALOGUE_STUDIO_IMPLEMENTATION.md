@@ -85,3 +85,6 @@ Tablet review at768px found the expanded studio switcher covering the title/pane
 
 
 Approval-state audit: a review can only be approved when the actual editable text layer matches the replacement and language. Changing review text invalidates approval; manual lettering edits synchronize the queue and return it to review. Re-preview updates the existing layer, retaining formatting and avoiding duplicate lettering. Actual browser correction/re-approval/native/Chapter/backup round-trips pass. Automated count:748.
+
+
+Legacy-text compatibility: basic Dialogue edits retain legacy Vector fonts/layout and do not install wrapping/fitting implicitly. Explicit enhanced settings inherit the existing face. Generic Vector font controls display and update the actual Dialogue font; text-on-path keeps its separate Vector Typography workflow. Desktop/768px/320px/390px browser checks include cross-editor font changes and long page names. Native imports reject more than64 assets before allocating embedded Blobs, matching the existing pool limit. Automated count:750, all passing.

@@ -1399,3 +1399,13 @@
     order: 2;
   }
 }
+
+.dialogue-chapter-entry > div .studio-button {
+  max-width: 100%;
+  height: auto;
+  min-height: 2.75rem;
+  padding-block: 0.75rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+}

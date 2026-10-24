@@ -141,6 +141,20 @@ export const DEFAULT_LETTERING: Lettering = {
   padding: 8,
   outlineFirst: true,
 };
+/** Compatible defaults for old Vector text; opting into a new property must not
+ * silently replace its face, introduce wrapping or shrink its existing text. */
+export function letteringSettings(l: Pick<Layer, "lettering" | "fontFamily">): Lettering {
+  return (
+    l.lettering ?? {
+      ...DEFAULT_LETTERING,
+      font: l.fontFamily,
+      wrap: false,
+      fit: false,
+      padding: 0,
+      outlineFirst: false,
+    }
+  );
+}
 const number = (v: unknown, min: number, max: number) =>
   typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
 const text = (v: unknown, max: number) =>

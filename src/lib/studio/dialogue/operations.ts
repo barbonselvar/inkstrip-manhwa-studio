@@ -4,6 +4,7 @@ import { applyMatrix, affine } from "../pro/transform.ts";
 import { bubbleContours } from "./bubbles.ts";
 import {
   DEFAULT_LETTERING,
+  letteringSettings,
   type BubbleSpec,
   type BubblePreset,
   type DialoguePreset,
@@ -221,11 +222,21 @@ export function updateLettering(
   const l = textFor(d, id);
   if (!l) throw Error("Select a text layer.");
   if (isLocked(d, l.id)) throw Error("Unlock the text in Layers before editing it.");
+  if (l.textPath && settings)
+    throw Error(
+      "Text on a path uses Vector Typography controls. Its existing curve and lettering were left unchanged.",
+    );
   const next = {
     ...d,
     layers: d.layers.map((v) =>
       v.id === l.id
-        ? { ...v, ...patch, lettering: { ...(v.lettering ?? DEFAULT_LETTERING), ...settings } }
+        ? {
+            ...v,
+            ...patch,
+            ...(v.lettering || settings
+              ? { lettering: { ...letteringSettings(v), ...settings } }
+              : {}),
+          }
         : v,
     ),
   };

@@ -393,3 +393,54 @@ test("review approval matches actual lettering and manual text edits return the 
   assert.equal(edited.dialogue!.regions[0]!.status, "corrected");
   assert.equal(canApproveRegion(edited, edited.dialogue!.regions[0]!), false);
 });
+
+test("legacy Vector text retains its face and layout when basic properties change in Dialogue", async () => {
+  const { updateLettering } = await import("../dialogue/operations.ts"),
+    { letteringSettings } = await import("../dialogue/types.ts");
+  const d = fromPanel({ id: "p", name: "Page", width: 640, height: 480 }),
+    l = layer("text", 200, 100);
+  l.fontFamily = "Georgia";
+  l.text = "Legacy\ntext";
+  d.layers.push(l);
+  const next = updateLettering(d, l.id, { opacity: 0.5 }),
+    actual = next.layers.find((v) => v.id === l.id)!;
+  assert.deepEqual(actual, { ...l, opacity: 0.5 });
+  assert.equal(actual.lettering, undefined);
+  assert.equal(letteringSettings(l).font, "Georgia");
+  assert.equal(letteringSettings(l).fit, false);
+  assert.equal(letteringSettings(l).wrap, false);
+  const enhanced = updateLettering(d, l.id, {}, { italic: true }).layers.find(
+    (v) => v.id === l.id,
+  )!;
+  assert.equal(enhanced.lettering!.font, "Georgia");
+  assert.equal(enhanced.lettering!.fit, false);
+  assert.equal(enhanced.lettering!.padding, 0);
+});
+
+test("native asset cardinality is rejected before allocating embedded Blob objects", async () => {
+  const document = fromPanel({ id: "p", name: "Page", width: 32, height: 32 }),
+    input = new Blob([
+      JSON.stringify({
+        format: "inkstrip-pro",
+        version: 7,
+        document,
+        assets: Object.fromEntries(
+          Array.from({ length: 65 }, (_, i) => [String(i), { mime: "image/png", data: "" }]),
+        ),
+      }),
+    ]);
+  const original = globalThis.Blob;
+  let allocated = 0;
+  globalThis.Blob = class extends original {
+    constructor(...args: ConstructorParameters<typeof Blob>) {
+      super(...args);
+      allocated++;
+    }
+  };
+  try {
+    await assert.rejects(readNative(input, "p", "source"), /at most64/);
+    assert.equal(allocated, 0);
+  } finally {
+    globalThis.Blob = original;
+  }
+});

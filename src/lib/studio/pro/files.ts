@@ -126,6 +126,8 @@ export async function readNative(
     throw new Error(
       "Unsupported native document. This editor supports native versions 1–5 and Dialogue version 7. Unreleased AI version 6 must be opened in its AI Studio branch.",
     );
+  if (Object.keys(value.assets).length > 64)
+    throw Error("Native documents support at most64 embedded assets. Nothing was imported.");
   const assets: Record<string, Blob> = Object.create(null);
   let total = 0;
   for (const [id, entry] of Object.entries(value.assets)) {
