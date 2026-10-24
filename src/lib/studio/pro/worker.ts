@@ -28,10 +28,9 @@ self.onmessage = async ({ data }) => {
       self.postMessage({ id, type: "ready" });
       return;
     }
-    const doc: ProDocument =
-      data.mime === "image/jpeg" && data.document.background === "transparent"
-        ? { ...data.document, background: "#ffffff" }
-        : data.document;
+    // Composite on the editable background first. A JPEG matte must not become
+    // the backdrop of Screen/Overlay/etc., which can erase or recolor dialogue.
+    const doc: ProDocument = data.document;
     if (doc.width * doc.height > data.maxArea)
       throw new Error(
         "This document exceeds the device memory budget. Export the native document or use the existing chapter strip workflow. No resolution was reduced.",
@@ -52,7 +51,7 @@ self.onmessage = async ({ data }) => {
         "Invalid or oversized artboard export. Use 0.1–8× scale within the device budget.",
       );
     const frame =
-      type === "preview" && data.frame
+      (type === "preview" || type === "dialogue-region") && data.frame
         ? data.frame
         : board
           ? { ...board, background: board.background }
@@ -64,6 +63,19 @@ self.onmessage = async ({ data }) => {
           : board
             ? data.exportScale
             : 1;
+    if (
+      type === "dialogue-region" &&
+      (!frame ||
+        ![frame.x, frame.y, frame.width, frame.height].every(Number.isInteger) ||
+        frame.x < 0 ||
+        frame.y < 0 ||
+        frame.x + frame.width > doc.width ||
+        frame.y + frame.height > doc.height ||
+        frame.width * frame.height > 4_000_000)
+    )
+      throw Error(
+        "OCR/cleaning requires a native document region up to4MP within the image bounds.",
+      );
     if (type === "repair" && data.request.stroke.clone) {
       const source = data.request.stroke.clone;
       dimensions.set(source.assetId, { width: source.width, height: source.height });
@@ -214,6 +226,28 @@ self.onmessage = async ({ data }) => {
         }
       }
       self.postMessage({ id, type: "thumbnails", thumbnails });
+      return;
+    }
+    if (type === "dialogue-region") {
+      const padding = effectPadding(doc, 1);
+      if ((frame!.width + padding * 2) * (frame!.height + padding * 2) > data.maxArea * 3)
+        throw Error("Region effects exceed the rendering budget.");
+      const rendered = await composite(
+        doc,
+        1,
+        get,
+        () => latest !== id,
+        () => {},
+        frame,
+      );
+      try {
+        // composite already removes its internal effect padding.
+        const blob = await rendered.convertToBlob({ type: "image/png" });
+        if (latest !== id) throw new DOMException("Region cancelled.", "AbortError");
+        self.postMessage({ id, type: "dialogue-region", blob });
+      } finally {
+        rendered.width = rendered.height = 1;
+      }
       return;
     }
     if (type === "merge") {
@@ -390,11 +424,12 @@ self.onmessage = async ({ data }) => {
       const bitmap = output.transferToImageBitmap();
       self.postMessage({ id, type: "preview", bitmap }, [bitmap]);
     } else {
-      if (board && data.mime === "image/jpeg") {
+      if ((board || data.fullCanvas) && data.mime === "image/jpeg") {
         const ctx = output.getContext("2d")!;
         ctx.globalCompositeOperation = "destination-over";
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, output.width, output.height);
+        ctx.globalCompositeOperation = "source-over";
       }
       if (!data.fullCanvas && !board)
         output = renderOutput(output, doc, data.maxArea, data.mime === "image/jpeg");

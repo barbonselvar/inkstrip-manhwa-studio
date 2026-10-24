@@ -451,3 +451,26 @@ backup, stats, navigation, Chapter and editors remain intact. No native schema c
 Validation and release evidence: `CINEMATIC_HOMEPAGE_RELEASE.md`. Physical Android
 remains unverified. Dialogue Studio is a separate Release2 and must wait for
 verified homepage production delivery; no OCR/translation/inpainting is claimed here.
+
+
+## Dialogue Studio release candidate (separate from F1 AI Studio)
+
+| Capability | State | Evidence / boundary |
+| --- | --- | --- |
+| Chapter Text & Bubbles, Quick/Full, Raster/Vector handoff | Implemented | Existing shared Pro document/canvas/controller; native coordinates, history and autosave |
+| Sixteen vector bubble presets, custom cubic anchors, multiple tails | Implemented | Real editable curves, numeric controls and touch/keyboard tip handles |
+| Lettering, wrapping/fitting, outlines, opacity, shadows | Implemented | Shared native Canvas render and SVG comparison tests |
+| English, Arabic RTL, Korean, Japanese | Implemented with font limits | Installed system fonts/fallbacks; manual language selection |
+| Japanese vertical | Supported subset | Upright CJK/rotated Latin and vertical punctuation; advanced font-specific shaping/ruby not claimed |
+| Local OCR and human review queue | Implemented | Actual Tesseract7 + pinned verified language data, including separate jpn_vert test; uncertain output requires correction |
+| Manual translation/replacement | Implemented | Side-by-side original/corrected/replacement fields; no fabricated machine translation |
+| Cleanup | Implemented for opaque flat backgrounds | Real sampled median/inlier check; source selection clipping and approval. Textured backgrounds rejected; Raster Clone/Healing remains available |
+| Optional remote generative restoration | Unavailable | No backend/model configured or image upload. Extension boundary documented; no operational remote tool is advertised |
+| Native and shared project presets | Implemented | Basic design dimensions, dashes, opacity, effects and typography retained; advanced multi-appearance preset saving explicitly rejected |
+| Native v7 / binary backup v2 / recovery | Implemented | Editable layers/assets, native1–5 compatibility, reserved F1 v6 guard, atomic project restore journal, revision/token conflicts |
+| PNG/JPEG/WebP, clean view, layered ZIP, Chapter ranges | Implemented | Actual raster/ZIP/native round-trips and original-byte preservation |
+| SVG | Compatible vector export | Editable curves/text; matching fonts required. Unsupported effects/projective/clipping stacks and rich Dialogue reimport are explicitly rejected |
+| Large documents | Guarded | Existing48-layer/48MB asset/16384px limits;4MP touch/16.8MP desktop and bounded sequential exports; no universal device guarantee |
+| Physical Android | Not verified | Chromium desktop and320px/390px touch emulation only |
+
+This candidate does not merge or activate F1, paid APIs, machine translation or generative restoration. Production release requires the final recorded gates and live verification.

@@ -76,7 +76,7 @@ async function setup(context, mobile = false) {
 async function records(page) {
   return page.evaluate(async () => {
     const db = await new Promise((resolve) => {
-      const r = indexedDB.open("inkstrip", 1);
+      const r = indexedDB.open("inkstrip");
       r.onsuccess = () => resolve(r.result);
     });
     const panels = await new Promise((resolve) => {
@@ -91,7 +91,7 @@ async function decoded(page, id, recipe) {
   return page.evaluate(
     async ({ id, recipe }) => {
       const db = await new Promise((resolve) => {
-        const r = indexedDB.open("inkstrip", 1);
+        const r = indexedDB.open("inkstrip");
         r.onsuccess = () => resolve(r.result);
       });
       const blob = await new Promise((resolve) => {

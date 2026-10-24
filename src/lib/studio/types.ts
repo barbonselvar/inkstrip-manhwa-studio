@@ -1,3 +1,4 @@
+import type { DialoguePreset } from "./dialogue/types";
 import type { EditingPreset } from "./workflow";
 import type { CharacterProfile } from "./characters/types";
 import type { EditRecipe } from "./editor/geometry";
@@ -22,6 +23,7 @@ export type Strip = {
 };
 
 export type Project = {
+  dialoguePresets?: DialoguePreset[];
   presets?: EditingPreset[];
   characters?: CharacterProfile[];
   id: string;

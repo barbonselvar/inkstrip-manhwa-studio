@@ -1,3 +1,5 @@
+import { loadSession } from "./pro/storage";
+import { validateNativeImages } from "./pro/native-images";
 import { openDb } from "./db";
 import { useStudio } from "./store";
 import {
@@ -63,13 +65,55 @@ export async function readProjectData(projectId: string): Promise<ProjectData> {
     if (blob) blobs.set(id, blob);
   }
   await done;
-  return { project, chapters, panels, blobs };
+  const sessions = [];
+  for (const panel of panels) {
+    const session = await loadSession(panel.id);
+    if (session) sessions.push(session);
+  }
+  // Double-collect native revisions plus Chapter metadata to reject a changing
+  // cross-database snapshot, including a newly created native session.
+  const snapshots = new Map(sessions.map((s) => [s.document.panelId, s]));
+  for (const panel of panels) {
+    const latest = await loadSession(panel.id),
+      previous = snapshots.get(panel.id);
+    if (latest?.revision !== previous?.revision || latest?.document.id !== previous?.document.id)
+      throw Error("An editor changed during backup. Save/close it and retry.");
+  }
+  const verify = db.transaction(["projects", "chapters", "panels"], "readonly"),
+    verified = transactionDone(verify);
+  const liveProject = await request(verify.objectStore("projects").get(projectId));
+  const liveChapters = await request<Chapter[]>(
+    verify.objectStore("chapters").index("by_project").getAll(projectId),
+  );
+  const livePanels = (
+    await Promise.all(
+      liveChapters.map((c) =>
+        request<Panel[]>(verify.objectStore("panels").index("by_chapter").getAll(c.id)),
+      ),
+    )
+  ).flat();
+  await verified;
+  if (
+    JSON.stringify([project, chapters, panels]) !==
+    JSON.stringify([liveProject, liveChapters, livePanels])
+  )
+    throw Error("Chapter data changed during backup. Close its editors and retry.");
+  return { project, chapters, panels, blobs, sessions };
 }
 
 /** Restore a decoded backup atomically. Refuses to overwrite a project that already exists. */
 export async function writeProjectData(data: ProjectData) {
+  for (const panel of data.panels)
+    if (await loadSession(panel.id))
+      throw Error(
+        "An existing native draft has the same page ID. Preserve it before restoring this backup.",
+      );
+  for (const session of data.sessions ?? []) await validateNativeImages(session, 16_777_216);
   const db = await openDb();
-  const tx = db.transaction(["projects", "chapters", "panels", "blobs"], "readwrite");
+  const tx = db.transaction(
+    ["projects", "chapters", "panels", "blobs", "nativeRestores"],
+    "readwrite",
+  );
   const done = transactionDone(tx);
   try {
     if (await request(tx.objectStore("projects").getKey(data.project.id)))
@@ -77,7 +121,19 @@ export async function writeProjectData(data: ProjectData) {
     for (const chapter of data.chapters)
       if (await request(tx.objectStore("chapters").getKey(chapter.id)))
         throw new Error("Part of this backup is already on this device.");
-    for (const [id, blob] of data.blobs) tx.objectStore("blobs").put(blob, id);
+    for (const panel of data.panels)
+      if (await request(tx.objectStore("panels").getKey(panel.id)))
+        throw Error("A page in this backup already exists.");
+    for (const [id, blob] of data.blobs) {
+      if (await request(tx.objectStore("blobs").getKey(id)))
+        throw Error("A backup asset ID already exists; no artwork was overwritten.");
+      tx.objectStore("blobs").add(blob, id);
+    }
+    for (const session of data.sessions ?? [])
+      tx.objectStore("nativeRestores").add({
+        id: session.document.panelId,
+        session: { ...session, revision: 0, recoveryId: crypto.randomUUID() },
+      });
     tx.objectStore("projects").put(data.project);
     for (const chapter of data.chapters) tx.objectStore("chapters").put(chapter);
     for (const panel of data.panels) tx.objectStore("panels").put(panel);

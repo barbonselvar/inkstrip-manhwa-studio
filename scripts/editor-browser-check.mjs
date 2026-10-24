@@ -50,7 +50,7 @@ async function setup(context) {
 async function records(page) {
   return page.evaluate(async () => {
     const db = await new Promise((resolve) => {
-      const req = indexedDB.open("inkstrip", 1);
+      const req = indexedDB.open("inkstrip");
       req.onsuccess = () => resolve(req.result);
     });
     const read = (name) =>
@@ -66,7 +66,7 @@ async function records(page) {
 async function blobInfo(page, id) {
   return page.evaluate(async (blobId) => {
     const db = await new Promise((resolve) => {
-      const r = indexedDB.open("inkstrip", 1);
+      const r = indexedDB.open("inkstrip");
       r.onsuccess = () => resolve(r.result);
     });
     const blob = await new Promise((resolve) => {

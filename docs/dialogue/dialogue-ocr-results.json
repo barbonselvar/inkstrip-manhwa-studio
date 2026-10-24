@@ -1,0 +1,157 @@
+{
+  "results": [
+    {
+      "regions": [
+        {
+          "id": "5349ddb3-06c3-4259-a465-acdc01201858",
+          "x": 50,
+          "y": 119,
+          "width": 859,
+          "height": 51,
+          "sourceLanguage": "en",
+          "targetLanguage": "en",
+          "original": "A WORLD IN EVERY FRAME",
+          "corrected": "A WORLD IN EVERY FRAME",
+          "replacement": "",
+          "confidence": 93,
+          "status": "detected"
+        }
+      ],
+      "text": "A WORLD IN EVERY FRAME\n",
+      "elapsedMs": 1398.3999999910593,
+      "engine": "Tesseract.js7.0.0 / tessdata_fast",
+      "language": "eng",
+      "dimensions": [
+        1100,
+        280
+      ],
+      "expected": "A WORLD IN EVERY FRAME",
+      "characterCoverage": 1
+    },
+    {
+      "regions": [
+        {
+          "id": "0b60e8dc-14eb-40c5-8850-36c8ac7d6b45",
+          "x": 53,
+          "y": 111,
+          "width": 736,
+          "height": 65,
+          "sourceLanguage": "ko",
+          "targetLanguage": "en",
+          "original": "새로운 이야기가 시작됩니다",
+          "corrected": "새로운 이야기가 시작됩니다",
+          "replacement": "",
+          "confidence": 92,
+          "status": "detected"
+        }
+      ],
+      "text": "새로운 이야기가 시작됩니다\n",
+      "elapsedMs": 1169.1000000089407,
+      "engine": "Tesseract.js7.0.0 / tessdata_fast",
+      "language": "kor",
+      "dimensions": [
+        1100,
+        280
+      ],
+      "expected": "새로운 이야기가 시작됩니다",
+      "characterCoverage": 1
+    },
+    {
+      "regions": [
+        {
+          "id": "9c8d02be-e5c4-4152-a1b7-ec1f5acd4f2a",
+          "x": 762,
+          "y": 118,
+          "width": 310,
+          "height": 77,
+          "sourceLanguage": "ar",
+          "targetLanguage": "en",
+          "original": "مرحبابالعالم",
+          "corrected": "مرحبابالعالم",
+          "replacement": "",
+          "confidence": 92,
+          "status": "detected"
+        }
+      ],
+      "text": " مرحبابالعالم\n",
+      "elapsedMs": 587.6000000089407,
+      "engine": "Tesseract.js7.0.0 / tessdata_fast",
+      "language": "ara",
+      "dimensions": [
+        1100,
+        280
+      ],
+      "expected": "مرحبا بالعالم",
+      "characterCoverage": 1
+    },
+    {
+      "regions": [
+        {
+          "id": "911191a4-fd88-492a-8081-dde2b240b015",
+          "x": 53,
+          "y": 110,
+          "width": 439,
+          "height": 66,
+          "sourceLanguage": "ja",
+          "targetLanguage": "en",
+          "original": "次の駅で会おう",
+          "corrected": "次の駅で会おう",
+          "replacement": "",
+          "confidence": 95,
+          "status": "detected"
+        }
+      ],
+      "text": "次の駅で会おう\n",
+      "elapsedMs": 1203.2999999970198,
+      "engine": "Tesseract.js7.0.0 / tessdata_fast",
+      "language": "jpn",
+      "dimensions": [
+        1100,
+        280
+      ],
+      "expected": "次の駅で会おう",
+      "characterCoverage": 1
+    },
+    {
+      "regions": [
+        {
+          "id": "35397fce-3532-4ac7-a3bf-6d22576180a2",
+          "x": 110,
+          "y": 70,
+          "width": 66,
+          "height": 544,
+          "sourceLanguage": "ja",
+          "targetLanguage": "en",
+          "original": "次の駅で会おう",
+          "corrected": "次の駅で会おう",
+          "replacement": "",
+          "confidence": 95,
+          "status": "detected"
+        }
+      ],
+      "text": "次の駅で会おう\n",
+      "elapsedMs": 1689,
+      "engine": "Tesseract.js7.0.0 / tessdata_fast",
+      "language": "jpn_vert",
+      "dimensions": [
+        260,
+        900
+      ],
+      "expected": "次の駅で会おう",
+      "characterCoverage": 1
+    }
+  ],
+  "cancelled": true,
+  "cachedInference": {
+    "text": "CACHE WORKS\n",
+    "elapsedMs": 387.8999999910593
+  },
+  "unexpectedModelRequests": 0,
+  "corruption": {
+    "message": "OCR model download is incomplete; any corrupt cached copy was removed. Retry to download verified data.",
+    "removed": true
+  },
+  "errors": [],
+  "chromium": "156.0.8078.4",
+  "notes": "Character coverage is a diagnostic, not a character-error rate or proof of reliable OCR on real comics. Glyph fonts are system Noto in this QA host. No physical Android test."
+}

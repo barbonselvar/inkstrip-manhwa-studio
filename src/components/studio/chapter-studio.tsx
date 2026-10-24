@@ -1,3 +1,4 @@
+import { DialogueChapterExport } from "./dialogue-chapter-export";
 import { AppearanceButton } from "./design/preferences";
 import { ToolSection } from "./design/tool-section";
 import { BatchEditDialog } from "./batch-edit-dialog";
@@ -30,6 +31,7 @@ import {
   SlidersHorizontal,
   Paintbrush,
   PenTool,
+  MessageCircle,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 
@@ -62,6 +64,9 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const [batchTargets, setBatchTargets] = useState<Panel[] | null>(null);
   const [faceTargets, setFaceTargets] = useState<Panel[] | null>(null);
   const [proPanel, setProPanel] = useState<Panel | null>(null);
+  const [dialogueMode, setDialogueMode] = useState(false);
+  const [dialogueQuick, setDialogueQuick] = useState(true);
+  const [workspaceTab, setWorkspaceTab] = useState<"images" | "dialogue">("images");
   const [studioMode, setStudioMode] = useState<"raster" | "vector">("raster");
   const [editorPanel, setEditorPanel] = useState<Panel | null>(null);
   const [enhancePanels, setEnhancePanels] = useState<Panel[] | null>(null);
@@ -158,7 +163,15 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
       className="editor-shell min-h-dvh"
       onDragEnter={() => setDragOver(true)}
     >
-      <header className="editor-topbar relative z-20 flex h-14 items-center gap-3 border-b border-border bg-bg px-3 sm:px-5">
+      <header
+        onClickCapture={(e) => {
+          if (proPanel && (e.target as Element).closest("a")) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        className="editor-topbar relative z-20 flex h-14 items-center gap-3 border-b border-border bg-bg px-3 sm:px-5"
+      >
         <div className="editor-wordmark">
           <Wordmark />
         </div>
@@ -167,6 +180,10 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
           params={{ projectId }}
           className="press focus-ring inline-flex size-11 shrink-0 items-center justify-center rounded-sm text-muted hover:text-fg"
           aria-label={`Back to ${project.title}`}
+          aria-disabled={!!proPanel}
+          onClick={(e) => {
+            if (proPanel) e.preventDefault();
+          }}
         >
           <ChevronLeft className="size-5" />
         </Link>
@@ -181,6 +198,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
         <select
           className="field chapter-jump"
           aria-label="Navigate chapters"
+          disabled={!!proPanel}
           value={chapterId}
           onChange={(e) =>
             void navigate({
@@ -206,515 +224,575 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
         </span>
       </header>
 
-      <div
-        data-pane={pane}
-        aria-label="Chapter views"
-        className="editor-tabs sticky top-0 z-10 grid grid-cols-2 gap-1 border-b border-border bg-bg p-2 md:hidden"
-      >
-        <button
-          type="button"
-          className={cn(
-            "press focus-ring flex h-11 items-center justify-center gap-2 rounded-sm text-sm",
-            pane === "panels" ? "bg-bg-subtle text-fg" : "text-muted",
-          )}
-          aria-pressed={pane === "panels"}
-          onClick={() => setPane("panels")}
+      <nav className="chapter-workflow-tabs" aria-label="Chapter workspace tools">
+        <Button
+          variant={workspaceTab === "images" ? "secondary" : "ghost"}
+          disabled={!!proPanel}
+          onClick={() => setWorkspaceTab("images")}
         >
-          <Layers3 className="size-4" /> Panels
-        </button>
-        <button
-          type="button"
-          className={cn(
-            "press focus-ring flex h-11 items-center justify-center gap-2 rounded-sm text-sm",
-            pane === "page" ? "bg-bg-subtle text-fg" : "text-muted",
-          )}
-          aria-pressed={pane === "page"}
-          onClick={() => setPane("page")}
+          <Layers3 /> Images
+        </Button>
+        <Button
+          variant={workspaceTab === "dialogue" ? "secondary" : "ghost"}
+          disabled={!!proPanel}
+          onClick={() => setWorkspaceTab("dialogue")}
         >
-          <ScanLine className="size-4" /> Display
-        </button>
-      </div>
-
-      <div className="md:flex">
-        <aside
-          className={cn(
-            "studio-aside border-border md:border-r",
-            pane === "panels" ? "block" : "hidden md:block",
-            dragOver && "bg-bg-elevated",
-          )}
-          onDragOver={(event) => {
-            event.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(event) => {
-            event.preventDefault();
-            setDragOver(false);
-            if (event.dataTransfer.files.length > 0) takeFiles(event.dataTransfer.files);
-          }}
-        >
-          <div className="flex flex-col gap-4 p-4">
-            <div className="flex items-center justify-between">
-              <p className="eyebrow">Chapter workspace</p>
-              <span className="status-pill">Local storage</span>
-            </div>
-            <label
-              className={buttonClass({
-                className: "upload-action w-full",
-                variant: busy ? "secondary" : "primary",
-              })}
-            >
-              <ImagePlus className="size-4" />
-              Add images
-              <input
-                ref={inputRef}
-                type="file"
-                accept={IMAGE_ACCEPT}
-                multiple
-                disabled={busy}
-                className="sr-only"
-                onChange={(event) => {
-                  takeFiles(event.target.files);
-                  event.target.value = "";
-                }}
-              />
-            </label>
-            <p className="upload-hint text-sm text-muted">
-              Your panels, at their original quality. Drop, paste, or choose files.
-              <span className="sr-only">{FORMAT_HINT}</span>
-            </p>
-            <div className="studio-launch-grid" aria-label="Open selected image in an editor">
+          <MessageCircle /> Text &amp; Bubbles
+        </Button>
+      </nav>
+      {workspaceTab === "dialogue" && !proPanel && (
+        <section className="dialogue-chapter-entry" aria-label="Text and Bubbles pages">
+          <h2>Text &amp; Bubbles</h2>
+          <DialogueChapterExport panels={list} title={`${project.title}-${chapter.title}`} />
+          <p>
+            Select a chapter image for editable dialogue. Quick Edit and the full editor share the
+            same layered native document.
+          </p>
+          {!list.length && <p>Add images in the Images tab first.</p>}
+          <div>
+            {list.map((panel) => (
               <Button
+                key={panel.id}
                 variant="secondary"
-                disabled={busy || !checked.length}
                 onClick={() => {
-                  setStudioMode("raster");
-                  setProPanel(list.find((p) => checkedSet.has(p.id)) ?? null);
-                }}
-              >
-                <Paintbrush className="size-4" /> Open in Raster Studio
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={busy || !checked.length}
-                onClick={() => {
+                  setDialogueMode(true);
+                  setDialogueQuick(true);
                   setStudioMode("vector");
-                  setProPanel(list.find((p) => checkedSet.has(p.id)) ?? null);
+                  setProPanel(panel);
                 }}
               >
-                <PenTool className="size-4" /> Open in Vector Studio
+                <MessageCircle /> Edit dialogue · {panel.name}
               </Button>
-            </div>
-            <div className="chapter-tool-grid">
-              <Button
-                intent="ai"
-                variant="secondary"
-                disabled={busy || checked.length === 0}
-                onClick={() => setEnhancePanels(list.filter((panel) => checkedSet.has(panel.id)))}
-              >
-                <Sparkles className="size-4 text-accent" />
-                AI Enhance{checked.length ? ` · ${checked.length} selected` : ""}
-              </Button>
-              <Button
-                intent="ai"
-                aria-label="AI Face Fix · review selected targets"
-                variant="secondary"
-                disabled={busy || !checked.length}
-                onClick={() => setFaceTargets(list.filter((p) => checkedSet.has(p.id)))}
-              >
-                <ScanFace className="size-4" />
-                AI Face Fix
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={busy || !checked.length}
-                onClick={() => setBatchTargets(list.filter((p) => checkedSet.has(p.id)))}
-              >
-                <SlidersHorizontal className="size-4" />
-                Batch edit selected
-              </Button>
-            </div>
-            <p className="cloud-mode-note">
-              Enhance on-device. Face Fix requires optional cloud AI.
-            </p>
-            <ToolSection title="Export images">
-              <Button
-                variant="ghost"
-                disabled={busy || !checked.length}
-                onClick={() =>
-                  void exportPanels(
-                    list.filter((p) => checkedSet.has(p.id)),
-                    false,
-                  )
-                }
-              >
-                Export accepted images · native
-              </Button>
-              <Button
-                variant="ghost"
-                disabled={busy || !checked.length}
-                onClick={() =>
-                  void exportPanels(
-                    list.filter((p) => checkedSet.has(p.id)),
-                    true,
-                  )
-                }
-              >
-                Export original images · native
-              </Button>
-            </ToolSection>
-            <ToolSection title="Chapter settings">
-              <Segment
-                label="Page width"
-                value={chapter.width}
-                options={PAGE_WIDTHS.map((width) => ({ value: width, label: String(width) }))}
-                onChange={(width) => void setChapterOptions(chapter.id, { width })}
-              />
-              <Segment
-                label="Seam"
-                value={chapter.seam}
-                options={SEAMS.map((seam) => ({ value: seam.value, label: seam.label }))}
-                onChange={(seam) => void setChapterOptions(chapter.id, { seam })}
-              />
-              <label className="editor-field-label">
-                Custom chapter width
-                <input
-                  className="field"
-                  aria-label="Custom chapter width"
-                  type="number"
-                  min="320"
-                  max="4096"
-                  value={chapter.width}
-                  onChange={(e) => {
-                    const width = +e.target.value;
-                    if (Number.isInteger(width) && width >= 320 && width <= 4096)
-                      void setChapterOptions(chapter.id, { width });
-                  }}
-                />
-              </label>
-              <label className="editor-field-label">
-                Custom image spacing
-                <input
-                  className="field"
-                  aria-label="Custom image spacing"
-                  type="number"
-                  min="0"
-                  max="512"
-                  value={chapter.seam}
-                  onChange={(e) => {
-                    const seam = +e.target.value;
-                    if (Number.isInteger(seam) && seam >= 0 && seam <= 512)
-                      void setChapterOptions(chapter.id, { seam });
-                  }}
-                />
-              </label>
-              <Segment
-                label="File"
-                value={chapter.format}
-                options={[
-                  { value: "image/jpeg" as StripFormat, label: "JPG" },
-                  { value: "image/png" as StripFormat, label: "PNG" },
-                ]}
-                onChange={(format) => void setChapterOptions(chapter.id, { format })}
-              />
-            </ToolSection>
-            <div className="order-summary">
-              <span className="eyebrow">READING ORDER</span>
-              <Button
-                variant="ghost"
-                disabled={busy || orderBusy || !chapter.orderHistory?.length}
-                onClick={() => void undoReorder(chapter.id)}
-              >
-                Undo reorder
-              </Button>
-            </div>
-            <p className="reorder-hint text-xs text-muted" aria-live="polite">
-              {orderBusy
-                ? "Saving order…"
-                : "Drag the grip to reorder; image long-press opens editing. Arrows work with a keyboard."}
-            </p>
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <p className="text-muted tabular-nums">
-                {checked.length} of {list.length} checked
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="focus-ring rounded-sm text-fg"
-                  onClick={() => selectAll(chapter.id)}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  className="focus-ring rounded-sm text-muted"
-                  onClick={() => selectNone(chapter.id)}
-                >
-                  None
-                </button>
-              </div>
-            </div>
+            ))}
+          </div>
+        </section>
+      )}
+      {workspaceTab === "images" && (
+        <>
+          <div
+            data-pane={pane}
+            aria-label="Chapter views"
+            className="editor-tabs sticky top-0 z-10 grid grid-cols-2 gap-1 border-b border-border bg-bg p-2 md:hidden"
+          >
+            <button
+              type="button"
+              className={cn(
+                "press focus-ring flex h-11 items-center justify-center gap-2 rounded-sm text-sm",
+                pane === "panels" ? "bg-bg-subtle text-fg" : "text-muted",
+              )}
+              aria-pressed={pane === "panels"}
+              onClick={() => setPane("panels")}
+            >
+              <Layers3 className="size-4" /> Panels
+            </button>
+            <button
+              type="button"
+              className={cn(
+                "press focus-ring flex h-11 items-center justify-center gap-2 rounded-sm text-sm",
+                pane === "page" ? "bg-bg-subtle text-fg" : "text-muted",
+              )}
+              aria-pressed={pane === "page"}
+              onClick={() => setPane("page")}
+            >
+              <ScanLine className="size-4" /> Display
+            </button>
           </div>
 
-          {list.length === 0 ? (
-            <div
+          <div className="md:flex">
+            <aside
               className={cn(
-                "mx-4 mb-4 rounded-xl border border-dashed border-border px-4 py-10 text-center",
-                dragOver && "border-fg",
+                "studio-aside border-border md:border-r",
+                pane === "panels" ? "block" : "hidden md:block",
+                dragOver && "bg-bg-elevated",
               )}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDragOver(false);
+                if (event.dataTransfer.files.length > 0) takeFiles(event.dataTransfer.files);
+              }}
             >
-              <p className="font-display text-2xl text-fg">Drop panels here</p>
-              <p className="mt-2 text-sm text-muted">Top to bottom becomes the reading order.</p>
-            </div>
-          ) : (
-            <ul className="flex flex-col gap-2 px-4 pb-4">
-              {list.map((panel, index) => {
-                const on = checkedSet.has(panel.id);
-                return (
-                  <li
-                    key={panel.id}
-                    data-order-panel={panel.id}
-                    data-selected={on}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg border border-border bg-bg p-2",
-                      on && "bg-bg-subtle",
-                      dragPosition?.from === panel.id && "opacity-50",
-                      dragPosition?.to === panel.id &&
-                        (dragPosition.after ? "drop-after" : "drop-before"),
-                    )}
-                  >
-                    <ReorderHandle
-                      id={panel.id}
-                      name={panel.name}
-                      ids={list.map((p) => p.id)}
-                      disabled={busy || orderBusy}
-                      onPosition={setDragPosition}
-                      onCommit={(ids) => void reorderPanels(chapter.id, ids)}
-                    />
-                    <button
-                      type="button"
-                      aria-pressed={on}
-                      aria-label={on ? `Uncheck ${panel.name}` : `Check ${panel.name}`}
-                      onClick={() => toggleSelected(chapter.id, panel.id)}
-                      className={cn(
-                        "focus-ring grid size-11 shrink-0 place-items-center rounded-sm border text-sm tabular-nums",
-                        on ? "border-accent bg-accent text-accent-fg" : "border-border text-muted",
-                      )}
-                    >
-                      {String(index + 1).padStart(2, "0")}
-                    </button>
-                    <PanelImageActions
-                      panel={panel}
-                      thumb={thumbs[panel.id]}
-                      disabled={busy}
-                      onToggle={() => toggleSelected(chapter.id, panel.id)}
-                      onEdit={() => setEditorPanel(panel)}
-                      onStudio={(mode) => {
-                        setStudioMode(mode);
-                        setProPanel(panel);
-                      }}
-                      onEnhance={() => setEnhancePanels([panel])}
-                    />
-                    <div className="panel-order-actions flex shrink-0 flex-col">
-                      <button
-                        type="button"
-                        className="focus-ring grid size-11 place-items-center text-muted disabled:opacity-30"
-                        aria-label="Move up"
-                        disabled={index === 0 || busy || orderBusy}
-                        onClick={() => void movePanel(panel.id, -1)}
-                      >
-                        <ChevronUp className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="focus-ring grid size-11 place-items-center text-muted disabled:opacity-30"
-                        aria-label="Move down"
-                        disabled={index === list.length - 1 || busy || orderBusy}
-                        onClick={() => void movePanel(panel.id, 1)}
-                      >
-                        <ChevronDown className="size-4" />
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      className="panel-remove focus-ring grid size-11 place-items-center text-subtle hover:text-danger"
-                      aria-label={`Remove ${panel.name}`}
-                      disabled={busy}
-                      onClick={() => void removePanel(panel.id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          <div className="chapter-display-action safe-b sticky bottom-0 border-t border-border bg-bg p-3">
-            {busy ? (
-              <div>
-                <p className="text-sm text-fg" aria-live="polite">
-                  {job?.label}
+              <div className="flex flex-col gap-4 p-4">
+                <div className="flex items-center justify-between">
+                  <p className="eyebrow">Chapter workspace</p>
+                  <span className="status-pill">Local storage</span>
+                </div>
+                <label
+                  className={buttonClass({
+                    className: "upload-action w-full",
+                    variant: busy ? "secondary" : "primary",
+                  })}
+                >
+                  <ImagePlus className="size-4" />
+                  Add images
+                  <input
+                    ref={inputRef}
+                    type="file"
+                    accept={IMAGE_ACCEPT}
+                    multiple
+                    disabled={busy}
+                    className="sr-only"
+                    onChange={(event) => {
+                      takeFiles(event.target.files);
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+                <p className="upload-hint text-sm text-muted">
+                  Your panels, at their original quality. Drop, paste, or choose files.
+                  <span className="sr-only">{FORMAT_HINT}</span>
                 </p>
-                <div className="mt-2 h-1 overflow-hidden rounded-full bg-bg-subtle">
-                  <div className="h-full bg-accent" style={{ width: `${progress}%` }} />
+                <div className="studio-launch-grid" aria-label="Open selected image in an editor">
+                  <Button
+                    variant="secondary"
+                    disabled={busy || !checked.length}
+                    onClick={() => {
+                      setStudioMode("raster");
+                      setDialogueMode(false);
+                      setProPanel(list.find((p) => checkedSet.has(p.id)) ?? null);
+                    }}
+                  >
+                    <Paintbrush className="size-4" /> Open in Raster Studio
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={busy || !checked.length}
+                    onClick={() => {
+                      setStudioMode("vector");
+                      setDialogueMode(false);
+                      setProPanel(list.find((p) => checkedSet.has(p.id)) ?? null);
+                    }}
+                  >
+                    <PenTool className="size-4" /> Open in Vector Studio
+                  </Button>
+                </div>
+                <div className="chapter-tool-grid">
+                  <Button
+                    intent="ai"
+                    variant="secondary"
+                    disabled={busy || checked.length === 0}
+                    onClick={() =>
+                      setEnhancePanels(list.filter((panel) => checkedSet.has(panel.id)))
+                    }
+                  >
+                    <Sparkles className="size-4 text-accent" />
+                    AI Enhance{checked.length ? ` · ${checked.length} selected` : ""}
+                  </Button>
+                  <Button
+                    intent="ai"
+                    aria-label="AI Face Fix · review selected targets"
+                    variant="secondary"
+                    disabled={busy || !checked.length}
+                    onClick={() => setFaceTargets(list.filter((p) => checkedSet.has(p.id)))}
+                  >
+                    <ScanFace className="size-4" />
+                    AI Face Fix
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={busy || !checked.length}
+                    onClick={() => setBatchTargets(list.filter((p) => checkedSet.has(p.id)))}
+                  >
+                    <SlidersHorizontal className="size-4" />
+                    Batch edit selected
+                  </Button>
+                </div>
+                <p className="cloud-mode-note">
+                  Enhance on-device. Face Fix requires optional cloud AI.
+                </p>
+                <ToolSection title="Export images">
+                  <Button
+                    variant="ghost"
+                    disabled={busy || !checked.length}
+                    onClick={() =>
+                      void exportPanels(
+                        list.filter((p) => checkedSet.has(p.id)),
+                        false,
+                      )
+                    }
+                  >
+                    Export accepted images · native
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    disabled={busy || !checked.length}
+                    onClick={() =>
+                      void exportPanels(
+                        list.filter((p) => checkedSet.has(p.id)),
+                        true,
+                      )
+                    }
+                  >
+                    Export original images · native
+                  </Button>
+                </ToolSection>
+                <ToolSection title="Chapter settings">
+                  <Segment
+                    label="Page width"
+                    value={chapter.width}
+                    options={PAGE_WIDTHS.map((width) => ({ value: width, label: String(width) }))}
+                    onChange={(width) => void setChapterOptions(chapter.id, { width })}
+                  />
+                  <Segment
+                    label="Seam"
+                    value={chapter.seam}
+                    options={SEAMS.map((seam) => ({ value: seam.value, label: seam.label }))}
+                    onChange={(seam) => void setChapterOptions(chapter.id, { seam })}
+                  />
+                  <label className="editor-field-label">
+                    Custom chapter width
+                    <input
+                      className="field"
+                      aria-label="Custom chapter width"
+                      type="number"
+                      min="320"
+                      max="4096"
+                      value={chapter.width}
+                      onChange={(e) => {
+                        const width = +e.target.value;
+                        if (Number.isInteger(width) && width >= 320 && width <= 4096)
+                          void setChapterOptions(chapter.id, { width });
+                      }}
+                    />
+                  </label>
+                  <label className="editor-field-label">
+                    Custom image spacing
+                    <input
+                      className="field"
+                      aria-label="Custom image spacing"
+                      type="number"
+                      min="0"
+                      max="512"
+                      value={chapter.seam}
+                      onChange={(e) => {
+                        const seam = +e.target.value;
+                        if (Number.isInteger(seam) && seam >= 0 && seam <= 512)
+                          void setChapterOptions(chapter.id, { seam });
+                      }}
+                    />
+                  </label>
+                  <Segment
+                    label="File"
+                    value={chapter.format}
+                    options={[
+                      { value: "image/jpeg" as StripFormat, label: "JPG" },
+                      { value: "image/png" as StripFormat, label: "PNG" },
+                    ]}
+                    onChange={(format) => void setChapterOptions(chapter.id, { format })}
+                  />
+                </ToolSection>
+                <div className="order-summary">
+                  <span className="eyebrow">READING ORDER</span>
+                  <Button
+                    variant="ghost"
+                    disabled={busy || orderBusy || !chapter.orderHistory?.length}
+                    onClick={() => void undoReorder(chapter.id)}
+                  >
+                    Undo reorder
+                  </Button>
+                </div>
+                <p className="reorder-hint text-xs text-muted" aria-live="polite">
+                  {orderBusy
+                    ? "Saving order…"
+                    : "Drag the grip to reorder; image long-press opens editing. Arrows work with a keyboard."}
+                </p>
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <p className="text-muted tabular-nums">
+                    {checked.length} of {list.length} checked
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="focus-ring rounded-sm text-fg"
+                      onClick={() => selectAll(chapter.id)}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      className="focus-ring rounded-sm text-muted"
+                      onClick={() => selectNone(chapter.id)}
+                    >
+                      None
+                    </button>
+                  </div>
                 </div>
               </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <Button
-                  intent="create"
-                  disabled={checked.length < 2}
-                  onClick={() => void runDisplay("replace")}
+
+              {list.length === 0 ? (
+                <div
+                  className={cn(
+                    "mx-4 mb-4 rounded-xl border border-dashed border-border px-4 py-10 text-center",
+                    dragOver && "border-fg",
+                  )}
                 >
-                  <Layers3 className="size-4" />
-                  Display{checked.length >= 2 ? ` ${checked.length}` : ""}
-                </Button>
-                {chapter.strip && extras.length > 0 ? (
-                  <Button variant="secondary" onClick={() => void runDisplay("append")}>
-                    Add {extras.length} below
+                  <p className="font-display text-2xl text-fg">Drop panels here</p>
+                  <p className="mt-2 text-sm text-muted">
+                    Top to bottom becomes the reading order.
+                  </p>
+                </div>
+              ) : (
+                <ul className="flex flex-col gap-2 px-4 pb-4">
+                  {list.map((panel, index) => {
+                    const on = checkedSet.has(panel.id);
+                    return (
+                      <li
+                        key={panel.id}
+                        data-order-panel={panel.id}
+                        data-selected={on}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg border border-border bg-bg p-2",
+                          on && "bg-bg-subtle",
+                          dragPosition?.from === panel.id && "opacity-50",
+                          dragPosition?.to === panel.id &&
+                            (dragPosition.after ? "drop-after" : "drop-before"),
+                        )}
+                      >
+                        <ReorderHandle
+                          id={panel.id}
+                          name={panel.name}
+                          ids={list.map((p) => p.id)}
+                          disabled={busy || orderBusy}
+                          onPosition={setDragPosition}
+                          onCommit={(ids) => void reorderPanels(chapter.id, ids)}
+                        />
+                        <button
+                          type="button"
+                          aria-pressed={on}
+                          aria-label={on ? `Uncheck ${panel.name}` : `Check ${panel.name}`}
+                          onClick={() => toggleSelected(chapter.id, panel.id)}
+                          className={cn(
+                            "focus-ring grid size-11 shrink-0 place-items-center rounded-sm border text-sm tabular-nums",
+                            on
+                              ? "border-accent bg-accent text-accent-fg"
+                              : "border-border text-muted",
+                          )}
+                        >
+                          {String(index + 1).padStart(2, "0")}
+                        </button>
+                        <PanelImageActions
+                          panel={panel}
+                          thumb={thumbs[panel.id]}
+                          disabled={busy}
+                          onToggle={() => toggleSelected(chapter.id, panel.id)}
+                          onEdit={() => setEditorPanel(panel)}
+                          onStudio={(mode) => {
+                            setStudioMode(mode);
+                            setDialogueMode(false);
+                            setProPanel(panel);
+                          }}
+                          onEnhance={() => setEnhancePanels([panel])}
+                        />
+                        <div className="panel-order-actions flex shrink-0 flex-col">
+                          <button
+                            type="button"
+                            className="focus-ring grid size-11 place-items-center text-muted disabled:opacity-30"
+                            aria-label="Move up"
+                            disabled={index === 0 || busy || orderBusy}
+                            onClick={() => void movePanel(panel.id, -1)}
+                          >
+                            <ChevronUp className="size-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className="focus-ring grid size-11 place-items-center text-muted disabled:opacity-30"
+                            aria-label="Move down"
+                            disabled={index === list.length - 1 || busy || orderBusy}
+                            onClick={() => void movePanel(panel.id, 1)}
+                          >
+                            <ChevronDown className="size-4" />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          className="panel-remove focus-ring grid size-11 place-items-center text-subtle hover:text-danger"
+                          aria-label={`Remove ${panel.name}`}
+                          disabled={busy}
+                          onClick={() => void removePanel(panel.id)}
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+
+              <div className="chapter-display-action safe-b sticky bottom-0 border-t border-border bg-bg p-3">
+                {busy ? (
+                  <div>
+                    <p className="text-sm text-fg" aria-live="polite">
+                      {job?.label}
+                    </p>
+                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-bg-subtle">
+                      <div className="h-full bg-accent" style={{ width: `${progress}%` }} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      intent="create"
+                      disabled={checked.length < 2}
+                      onClick={() => void runDisplay("replace")}
+                    >
+                      <Layers3 className="size-4" />
+                      Display{checked.length >= 2 ? ` ${checked.length}` : ""}
+                    </Button>
+                    {chapter.strip && extras.length > 0 ? (
+                      <Button variant="secondary" onClick={() => void runDisplay("append")}>
+                        Add {extras.length} below
+                      </Button>
+                    ) : null}
+                    <p className="text-xs text-subtle">
+                      Display rebuilds the page from the checked photos, in this order. Add below
+                      keeps the current page and stitches newly checked photos underneath.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-4 pb-6">
+                <ConfirmButton
+                  title={`Delete ${chapter.title}?`}
+                  description="Photos in this chapter are removed from this device."
+                  confirmLabel="Delete chapter"
+                  onConfirm={() => {
+                    void deleteChapter(chapter.id).then(() =>
+                      navigate({ to: "/p/$projectId", params: { projectId } }),
+                    );
+                  }}
+                  className="press focus-ring text-sm text-subtle hover:text-danger"
+                >
+                  Delete chapter
+                </ConfirmButton>
+              </div>
+            </aside>
+
+            <section
+              ref={pageRef}
+              className={cn(
+                "display-workspace min-w-0 flex-1",
+                pane === "page" ? "block" : "hidden md:block",
+              )}
+            >
+              <div className="flex flex-wrap items-center gap-3 px-4 py-4 sm:px-8">
+                <div className="min-w-0 flex-1">
+                  <p className="eyebrow mb-1">Live chapter preview</p>
+                  <h2 className="font-display text-2xl text-fg">Display</h2>
+                  {chapter.strip ? (
+                    <p className="mt-1 text-sm text-muted tabular-nums">
+                      {chapter.strip.width} × {chapter.strip.totalHeight.toLocaleString()} ·{" "}
+                      {countLabel(chapter.strip.panelIds.length, "photo")}
+                      {chapter.strip.parts.length > 1
+                        ? ` · ${chapter.strip.parts.length} parts`
+                        : ""}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm text-muted">The stitched chapter shows up here.</p>
+                  )}
+                </div>
+                {chapter.strip && stripUrls.length > 0 ? (
+                  <Button
+                    intent="export"
+                    variant="secondary"
+                    disabled={freshness === "stale" || !!job}
+                    title={
+                      freshness === "stale"
+                        ? "Press Display to include your latest accepted edits before saving."
+                        : "Download chapter"
+                    }
+                    onClick={() =>
+                      downloadStrip(project.title, chapter.title, chapter.strip!.format, stripUrls)
+                    }
+                  >
+                    <Download className="size-4" />
+                    Save
                   </Button>
                 ) : null}
-                <p className="text-xs text-subtle">
-                  Display rebuilds the page from the checked photos, in this order. Add below keeps
-                  the current page and stitches newly checked photos underneath.
-                </p>
               </div>
-            )}
-          </div>
 
-          <div className="px-4 pb-6">
-            <ConfirmButton
-              title={`Delete ${chapter.title}?`}
-              description="Photos in this chapter are removed from this device."
-              confirmLabel="Delete chapter"
-              onConfirm={() => {
-                void deleteChapter(chapter.id).then(() =>
-                  navigate({ to: "/p/$projectId", params: { projectId } }),
-                );
-              }}
-              className="press focus-ring text-sm text-subtle hover:text-danger"
-            >
-              Delete chapter
-            </ConfirmButton>
-          </div>
-        </aside>
-
-        <section
-          ref={pageRef}
-          className={cn(
-            "display-workspace min-w-0 flex-1",
-            pane === "page" ? "block" : "hidden md:block",
-          )}
-        >
-          <div className="flex flex-wrap items-center gap-3 px-4 py-4 sm:px-8">
-            <div className="min-w-0 flex-1">
-              <p className="eyebrow mb-1">Live chapter preview</p>
-              <h2 className="font-display text-2xl text-fg">Display</h2>
-              {chapter.strip ? (
-                <p className="mt-1 text-sm text-muted tabular-nums">
-                  {chapter.strip.width} × {chapter.strip.totalHeight.toLocaleString()} ·{" "}
-                  {countLabel(chapter.strip.panelIds.length, "photo")}
-                  {chapter.strip.parts.length > 1 ? ` · ${chapter.strip.parts.length} parts` : ""}
+              {freshness === "stale" ? (
+                <p className="px-4 pb-4 text-sm text-muted sm:px-8">
+                  Images, order, or settings changed. Display again to update the page.
                 </p>
-              ) : (
-                <p className="mt-1 text-sm text-muted">The stitched chapter shows up here.</p>
-              )}
-            </div>
-            {chapter.strip && stripUrls.length > 0 ? (
-              <Button
-                intent="export"
-                variant="secondary"
-                disabled={freshness === "stale" || !!job}
-                title={
-                  freshness === "stale"
-                    ? "Press Display to include your latest accepted edits before saving."
-                    : "Download chapter"
-                }
-                onClick={() =>
-                  downloadStrip(project.title, chapter.title, chapter.strip!.format, stripUrls)
-                }
-              >
-                <Download className="size-4" />
-                Save
-              </Button>
-            ) : null}
-          </div>
+              ) : null}
 
-          {freshness === "stale" ? (
-            <p className="px-4 pb-4 text-sm text-muted sm:px-8">
-              Images, order, or settings changed. Display again to update the page.
-            </p>
-          ) : null}
-
-          {chapter.strip && stripUrls.length > 0 ? (
-            <div className="bg-bg px-0 pb-16 md:px-8 md:pb-20">
-              <article className="reader-sheet mx-auto w-full max-w-md md:sheet-shadow">
-                <ReaderHeader chapter={chapter.title} project={project.title} />
-                {stripUrls.map((url, index) => (
-                  <img
-                    key={chapter.strip?.parts[index]?.blobId ?? url}
-                    src={url}
-                    alt={`${chapter.title}, part ${index + 1} of ${stripUrls.length}`}
-                    width={chapter.strip?.width}
-                    height={chapter.strip?.parts[index]?.height}
-                    className="manhwa-image block h-auto w-full"
-                  />
-                ))}
-              </article>
-              <div className="mx-auto mt-4 flex w-full max-w-md justify-end px-4 md:px-0">
-                <button
-                  type="button"
-                  className="focus-ring text-sm text-subtle hover:text-fg"
-                  onClick={() => void clearStrip(chapter.id)}
-                >
-                  Clear page
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="px-4 pb-16 sm:px-8">
-              <div className="empty-display mx-auto flex min-h-80 w-full max-w-md flex-col justify-end rounded-xl border border-dashed border-border px-5 py-8 text-fg">
-                <div className="empty-page-mark" aria-hidden="true">
-                  <ScanLine className="size-8" />
+              {chapter.strip && stripUrls.length > 0 ? (
+                <div className="bg-bg px-0 pb-16 md:px-8 md:pb-20">
+                  <article className="reader-sheet mx-auto w-full max-w-md md:sheet-shadow">
+                    <ReaderHeader chapter={chapter.title} project={project.title} />
+                    {stripUrls.map((url, index) => (
+                      <img
+                        key={chapter.strip?.parts[index]?.blobId ?? url}
+                        src={url}
+                        alt={`${chapter.title}, part ${index + 1} of ${stripUrls.length}`}
+                        width={chapter.strip?.width}
+                        height={chapter.strip?.parts[index]?.height}
+                        className="manhwa-image block h-auto w-full"
+                      />
+                    ))}
+                  </article>
+                  <div className="mx-auto mt-4 flex w-full max-w-md justify-end px-4 md:px-0">
+                    <button
+                      type="button"
+                      className="focus-ring text-sm text-subtle hover:text-fg"
+                      onClick={() => void clearStrip(chapter.id)}
+                    >
+                      Clear page
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs tracking-widest uppercase text-subtle">YOUR CHAPTER CANVAS</p>
-                <h3 className="mt-3 font-display text-3xl">Nothing stitched yet.</h3>
-                <p className="mt-3 max-w-xs text-sm text-muted">
-                  Check at least two photos, then press Display. Add more later and stitch them into
-                  the same chapter.
-                </p>
-              </div>
+              ) : (
+                <div className="px-4 pb-16 sm:px-8">
+                  <div className="empty-display mx-auto flex min-h-80 w-full max-w-md flex-col justify-end rounded-xl border border-dashed border-border px-5 py-8 text-fg">
+                    <div className="empty-page-mark" aria-hidden="true">
+                      <ScanLine className="size-8" />
+                    </div>
+                    <p className="text-xs tracking-widest uppercase text-subtle">
+                      YOUR CHAPTER CANVAS
+                    </p>
+                    <h3 className="mt-3 font-display text-3xl">Nothing stitched yet.</h3>
+                    <p className="mt-3 max-w-xs text-sm text-muted">
+                      Check at least two photos, then press Display. Add more later and stitch them
+                      into the same chapter.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </section>
+          </div>
+          {dragPosition ? (
+            <div
+              className="reorder-preview"
+              aria-live="polite"
+              style={{
+                left: Math.min(dragPosition.x + 12, window.innerWidth - 200),
+                top: Math.max(12, dragPosition.y - 50),
+              }}
+            >
+              {list.find((p) => p.id === dragPosition.from)?.name} · release to move
             </div>
-          )}
-        </section>
-      </div>
-      {dragPosition ? (
-        <div
-          className="reorder-preview"
-          aria-live="polite"
-          style={{
-            left: Math.min(dragPosition.x + 12, window.innerWidth - 200),
-            top: Math.max(12, dragPosition.y - 50),
-          }}
-        >
-          {list.find((p) => p.id === dragPosition.from)?.name} · release to move
-        </div>
-      ) : null}
-      {batchTargets ? (
-        <BatchEditDialog
-          panels={batchTargets}
-          projectId={projectId}
-          onClose={() => setBatchTargets(null)}
-        />
-      ) : null}
-      {faceTargets ? (
-        <FaceQueue
-          panels={faceTargets}
-          projectId={projectId}
-          onClose={() => setFaceTargets(null)}
-        />
-      ) : null}
+          ) : null}
+          {batchTargets ? (
+            <BatchEditDialog
+              panels={batchTargets}
+              projectId={projectId}
+              onClose={() => setBatchTargets(null)}
+            />
+          ) : null}
+          {faceTargets ? (
+            <FaceQueue
+              panels={faceTargets}
+              projectId={projectId}
+              onClose={() => setFaceTargets(null)}
+            />
+          ) : null}
+        </>
+      )}
       {proPanel ? (
         <Suspense
           fallback={
@@ -727,8 +805,24 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
             panel={proPanel}
             projectId={projectId}
             mode={studioMode}
-            onModeChange={setStudioMode}
-            onClose={() => setProPanel(null)}
+            dialogue={dialogueMode}
+            quick={dialogueMode && dialogueQuick}
+            onDialogue={() => {
+              setDialogueMode(true);
+              setWorkspaceTab("dialogue");
+              setDialogueQuick(false);
+              setStudioMode("vector");
+            }}
+            onPresentation={() => setDialogueQuick((v) => !v)}
+            onModeChange={(mode) => {
+              setStudioMode(mode);
+              setDialogueMode(false);
+              setWorkspaceTab("images");
+            }}
+            onClose={() => {
+              setProPanel(null);
+              if (!dialogueMode) setWorkspaceTab("images");
+            }}
             onContinue={(mode) => {
               const current = useStudio.getState().panels.find((p) => p.id === proPanel.id);
               setProPanel(null);

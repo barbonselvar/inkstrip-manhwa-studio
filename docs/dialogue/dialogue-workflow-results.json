@@ -1,0 +1,32 @@
+{
+  "recognized": "EVERY FRAME",
+  "realOcr": true,
+  "previewCancellation": true,
+  "approval": true,
+  "undoRedo": true,
+  "originalUnchanged": true,
+  "chapterApplicationOriginalRetained": true,
+  "native": 7,
+  "rasterFormats": [
+    "png",
+    "jpeg",
+    "webp"
+  ],
+  "layered": [
+    "project.inkstrip",
+    "document.json",
+    "assets/0001.png",
+    "layers/0001-Imported artwork.png",
+    "layers/0002-Approved flat background cleanup.png",
+    "layers/0003-Independent dialogue text.png",
+    "vectors.svg",
+    "manifest.json"
+  ],
+  "chapter": [
+    "0001-ocr-fixture.png.png",
+    "0002-second-page.png.png",
+    "manifest.json"
+  ],
+  "backupFreshProfile": true,
+  "errors": []
+}

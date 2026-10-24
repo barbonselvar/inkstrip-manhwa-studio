@@ -1,3 +1,5 @@
+import { escapeXml } from "./xml.ts";
+export { escapeXml } from "./xml.ts";
 import { appearanceSvg } from "./vector-svg.ts";
 import type { Artboard } from "./artboards.ts";
 import {
@@ -55,43 +57,47 @@ export async function nativeFile(s: ProSession): Promise<Blob> {
     ]),
   ].some((s) => s?.frame?.matrix !== undefined);
   const version =
-    matrixSelection ||
-    s.document.brushSettings !== undefined ||
-    s.document.savedSelections !== undefined ||
-    s.document.layers.some(
-      (l) =>
-        (l.kind === "group" && !!l.mask) ||
-        l.mask?.placement !== undefined ||
-        l.mask?.linked !== undefined ||
-        l.mask?.width !== undefined ||
-        l.mask?.density !== undefined ||
-        l.mask?.feather !== undefined ||
-        l.strokes.some((s) => s.dynamics !== undefined) ||
-        l.mask?.strokes.some((s) => s.dynamics !== undefined),
-    )
-      ? 5
-      : s.document.layers.some(
+    s.document.dialogue || s.document.layers.some((l) => l.bubble || l.lettering || l.dialogueRole)
+      ? 7
+      : matrixSelection ||
+          s.document.brushSettings !== undefined ||
+          s.document.savedSelections !== undefined ||
+          s.document.layers.some(
             (l) =>
-              l.appearance !== undefined || l.textPath !== undefined || l.vectorClips !== undefined,
+              (l.kind === "group" && !!l.mask) ||
+              l.mask?.placement !== undefined ||
+              l.mask?.linked !== undefined ||
+              l.mask?.width !== undefined ||
+              l.mask?.density !== undefined ||
+              l.mask?.feather !== undefined ||
+              l.strokes.some((s) => s.dynamics !== undefined) ||
+              l.mask?.strokes.some((s) => s.dynamics !== undefined),
           )
-        ? 4
-        : s.document.artboards !== undefined || s.document.layout !== undefined
-          ? 3
-          : s.document.layers.some(
-                (l) =>
-                  l.subpaths?.length ||
-                  l.vectorOverflow ||
-                  l.fillRule === "evenodd" ||
-                  l.lineCap !== undefined ||
-                  l.lineJoin !== undefined ||
-                  l.miterLimit !== undefined ||
-                  l.dash !== undefined ||
-                  l.dashOffset !== undefined ||
-                  l.fillOpacity !== undefined ||
-                  l.strokeOpacity !== undefined,
-              )
-            ? 2
-            : 1;
+        ? 5
+        : s.document.layers.some(
+              (l) =>
+                l.appearance !== undefined ||
+                l.textPath !== undefined ||
+                l.vectorClips !== undefined,
+            )
+          ? 4
+          : s.document.artboards !== undefined || s.document.layout !== undefined
+            ? 3
+            : s.document.layers.some(
+                  (l) =>
+                    l.subpaths?.length ||
+                    l.vectorOverflow ||
+                    l.fillRule === "evenodd" ||
+                    l.lineCap !== undefined ||
+                    l.lineJoin !== undefined ||
+                    l.miterLimit !== undefined ||
+                    l.dash !== undefined ||
+                    l.dashOffset !== undefined ||
+                    l.fillOpacity !== undefined ||
+                    l.strokeOpacity !== undefined,
+                )
+              ? 2
+              : 1;
   const file = new Blob(
     [JSON.stringify({ format: "inkstrip-pro", version, document: s.document, assets })],
     { type: "application/json" },
@@ -112,14 +118,16 @@ export async function readNative(
   if (
     !value ||
     value.format !== "inkstrip-pro" ||
-    ![1, 2, 3, 4, 5].includes(value.version) ||
+    ![1, 2, 3, 4, 5, 7].includes(value.version) ||
     !value.assets ||
     typeof value.assets !== "object" ||
     Array.isArray(value.assets)
   )
     throw new Error(
-      "Unsupported native document. This editor supports Inkstrip Pro native versions 1 through 5.",
+      "Unsupported native document. This editor supports native versions 1–5 and Dialogue version 7. Unreleased AI version 6 must be opened in its AI Studio branch.",
     );
+  if (Object.keys(value.assets).length > 64)
+    throw Error("Native documents support at most64 embedded assets. Nothing was imported.");
   const assets: Record<string, Blob> = Object.create(null);
   let total = 0;
   for (const [id, entry] of Object.entries(value.assets)) {
@@ -146,11 +154,6 @@ export async function readNative(
   validateAssets(session);
   return session;
 }
-export const escapeXml = (s: string) =>
-  s.replace(
-    /[&<>"']/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]!,
-  );
 /** Explicit vector-only export. Reject unsupported vector effects instead of silently changing them. */
 export function vectorSvg(d: ProDocument, board?: Artboard): string {
   validateDocument(d);
@@ -197,7 +200,10 @@ export function vectorSvg(d: ProDocument, board?: Artboard): string {
       .map((l) =>
         l.kind === "group"
           ? `<g opacity="${l.opacity}">${branch(l.id)}</g>`
-          : l.appearance !== undefined || l.textPath || l.vectorClips?.some((c) => c.enabled)
+          : l.appearance !== undefined ||
+              l.textPath ||
+              l.lettering ||
+              l.vectorClips?.some((c) => c.enabled)
             ? appearanceSvg(l, definitions)
             : l.kind === "shape"
               ? `<path ${attrs(l)} d="${shapePath(l)}"/>`

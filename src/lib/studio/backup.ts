@@ -1,3 +1,5 @@
+import { validateDialogue } from "./dialogue/types.ts";
+import { validateAssets, type ProSession } from "./pro/model.ts";
 import type { Chapter, Panel, Project } from "./types.ts";
 import type { CharacterProfile } from "./characters/types.ts";
 import { mediaIds } from "./editor/references.ts";
@@ -17,6 +19,7 @@ export type ProjectData = {
   chapters: Chapter[];
   panels: Panel[];
   blobs: Map<string, Blob>;
+  sessions?: ProSession[];
 };
 
 type BlobEntry = { id: string; type: string; size: number };
@@ -24,7 +27,8 @@ type StoredReference = { id: string; angle: string; blobRef: string };
 type StoredCharacter = Omit<CharacterProfile, "references"> & { references: StoredReference[] };
 type Header = {
   format: "inkstrip-backup";
-  version: 1;
+  version: 1 | 2;
+  sessions?: (Omit<ProSession, "assets"> & { assets: Record<string, string> })[];
   exportedAt: number;
   project: Omit<Project, "characters"> & { characters?: StoredCharacter[] };
   chapters: Chapter[];
@@ -54,9 +58,14 @@ export function backupFileName(title: string, now = new Date()) {
 }
 
 export function encodeBackup(data: ProjectData, exportedAt = Date.now()): Blob {
+  if (data.project.dialoguePresets)
+    validateDialogue({ version: 1, regions: [], presets: data.project.dialoguePresets });
   const entries: BlobEntry[] = [];
   const parts: Blob[] = [];
+  const seen = new Set<string>();
   const add = (id: string, blob: Blob) => {
+    if (seen.has(id)) throw Error("Duplicate backup asset reference.");
+    seen.add(id);
     entries.push({ id, type: blob.type, size: blob.size });
     parts.push(blob);
   };
@@ -74,9 +83,27 @@ export function encodeBackup(data: ProjectData, exportedAt = Date.now()): Blob {
       return { id: reference.id, angle: reference.angle, blobRef };
     }),
   }));
+  const panelIds = new Set(data.panels.map((p) => p.id)),
+    sessionIds = new Set<string>();
+  const sessions = data.sessions?.map((session) => {
+    validateAssets(session);
+    const panelId = session.document.panelId;
+    if (!panelIds.has(panelId) || sessionIds.has(panelId))
+      throw Error("Invalid backup document association.");
+    sessionIds.add(panelId);
+    const assets = Object.fromEntries(
+      Object.entries(session.assets).map(([id, blob], i) => {
+        const ref = `native:${panelId}:${i}`;
+        add(ref, blob);
+        return [id, ref];
+      }),
+    );
+    return { ...session, assets };
+  });
   const header: Header = {
     format: "inkstrip-backup",
-    version: 1,
+    version: sessions?.length || data.project.dialoguePresets ? 2 : 1,
+    ...(sessions?.length ? { sessions } : {}),
     exportedAt,
     project: { ...projectFields, ...(characters ? { characters } : {}) },
     chapters: data.chapters,
@@ -84,6 +111,8 @@ export function encodeBackup(data: ProjectData, exportedAt = Date.now()): Blob {
     blobs: entries,
   };
   const json = new TextEncoder().encode(JSON.stringify(header));
+  if (json.length > MAX_HEADER)
+    throw Error("Backup metadata exceeds32MB. Save individual native documents instead.");
   const length = new Uint8Array(4);
   new DataView(length.buffer).setUint32(0, json.length);
   return new Blob([MAGIC, length, json, ...parts], { type: "application/octet-stream" });
@@ -113,8 +142,11 @@ export async function decodeBackup(file: Blob): Promise<ProjectData> {
     return fail();
   }
   if (header?.format !== "inkstrip-backup") fail();
-  if (header.version !== 1) throw new Error("This backup was made by a newer Inkstrip version.");
+  if (![1, 2].includes(header.version))
+    throw new Error("This backup was made by a newer Inkstrip version.");
   const { project, chapters, panels, blobs: entries } = header;
+  if (project?.dialoguePresets)
+    validateDialogue({ version: 1, regions: [], presets: project.dialoguePresets });
   if (!isString(project?.id) || !Array.isArray(chapters) || !Array.isArray(panels)) fail();
   if (!Array.isArray(entries)) fail();
 
@@ -141,6 +173,43 @@ export async function decodeBackup(file: Blob): Promise<ProjectData> {
   }
   for (const id of projectBlobIds(chapters, panels)) if (!blobs.has(id)) fail();
 
+  if (
+    header.sessions !== undefined &&
+    (!Array.isArray(header.sessions) || header.sessions.length > panels.length)
+  )
+    fail();
+  if (header.version === 1 && header.sessions?.length) fail();
+  const nativeRefs = new Set<string>(),
+    protectedRefs = new Set(projectBlobIds(chapters, panels));
+  const sessionIds = new Set<string>();
+  const sessions = header.sessions?.map((stored) => {
+    if (
+      !stored?.document ||
+      !panelIds.has(stored.document.panelId) ||
+      sessionIds.has(stored.document.panelId) ||
+      !stored.assets ||
+      typeof stored.assets !== "object"
+    )
+      fail();
+    sessionIds.add(stored.document.panelId);
+    const assets = Object.fromEntries(
+      Object.entries(stored.assets).map(([id, ref]) => {
+        if (typeof ref !== "string" || !ref.startsWith(`native:${stored.document.panelId}:`))
+          return fail();
+        if (nativeRefs.has(ref) || protectedRefs.has(ref)) return fail();
+        nativeRefs.add(ref);
+        const blob = blobs.get(ref);
+        if (!blob) return fail();
+        // Keep lazy Blob slices; a model's native validator checks references and budgets.
+        return [id, blob];
+      }),
+    );
+    const session = { ...stored, assets };
+    validateAssets(session);
+    return session;
+  });
+  for (const stored of header.sessions ?? [])
+    for (const ref of Object.values(stored.assets)) blobs.delete(ref);
   const characters = project.characters?.map((profile) => ({
     ...profile,
     references: profile.references.map(({ id, angle, blobRef }) => {
@@ -155,5 +224,6 @@ export async function decodeBackup(file: Blob): Promise<ProjectData> {
     chapters,
     panels,
     blobs,
+    ...(sessions?.length ? { sessions } : {}),
   };
 }

@@ -584,9 +584,15 @@ export function ProProperties({
                   <select
                     className="field"
                     aria-label="Text font"
-                    value={selected.fontFamily}
+                    value={selected.lettering?.font ?? selected.fontFamily}
                     onChange={(e) => onPatch({ fontFamily: e.target.value as Layer["fontFamily"] })}
                   >
+                    {selected.lettering &&
+                      !["Arial", "Georgia", "monospace"].includes(selected.lettering.font) && (
+                        <option disabled value={selected.lettering.font}>
+                          {selected.lettering.font} · Dialogue font
+                        </option>
+                      )}
                     {["Arial", "Georgia", "monospace"].map((f) => (
                       <option key={f}>{f}</option>
                     ))}

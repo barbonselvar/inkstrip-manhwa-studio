@@ -1,9 +1,10 @@
+import { hasLegacyAiDraft } from "./dialogue/storage-compat";
 import { mediaIds } from "./editor/references";
 import { validateRecipe } from "./editor/geometry";
 import type { Chapter, Panel, Project, Strip } from "@/lib/studio/types";
 
 const DB_NAME = "inkstrip";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export type StoreName = "projects" | "chapters" | "panels" | "blobs";
 
@@ -29,41 +30,64 @@ export function openDb() {
     return Promise.reject(new Error("This browser cannot store projects."));
   }
   if (!dbPromise) {
-    dbPromise = new Promise((resolve, reject) => {
-      const open = indexedDB.open(DB_NAME, DB_VERSION);
-      open.onupgradeneeded = () => {
-        const db = open.result;
-        if (!db.objectStoreNames.contains("projects")) {
-          db.createObjectStore("projects", { keyPath: "id" });
-        }
-        if (!db.objectStoreNames.contains("chapters")) {
-          const store = db.createObjectStore("chapters", { keyPath: "id" });
-          store.createIndex("by_project", "projectId");
-        }
-        if (!db.objectStoreNames.contains("panels")) {
-          const store = db.createObjectStore("panels", { keyPath: "id" });
-          store.createIndex("by_chapter", "chapterId");
-        }
-        if (!db.objectStoreNames.contains("blobs")) {
-          db.createObjectStore("blobs");
-        }
-      };
-      open.onsuccess = () => {
-        const db = open.result;
-        db.onclose = () => {
-          dbPromise = null;
-        };
-        db.onversionchange = () => {
-          db.close();
-          dbPromise = null;
-        };
-        resolve(db);
-      };
-      open.onerror = () => {
+    dbPromise = hasLegacyAiDraft()
+      .then(
+        (protectedAi) =>
+          new Promise<IDBDatabase>((resolve, reject) => {
+            // An old F1 tab opens Chapter DB v1 explicitly. Do not strand its data
+            // behind a newer version merely by visiting the homepage.
+            const open = protectedAi
+              ? indexedDB.open(DB_NAME)
+              : indexedDB.open(DB_NAME, DB_VERSION);
+            open.onupgradeneeded = () => {
+              const db = open.result;
+              if (!db.objectStoreNames.contains("projects")) {
+                db.createObjectStore("projects", { keyPath: "id" });
+              }
+              if (!db.objectStoreNames.contains("chapters")) {
+                const store = db.createObjectStore("chapters", { keyPath: "id" });
+                store.createIndex("by_project", "projectId");
+              }
+              if (!db.objectStoreNames.contains("panels")) {
+                const store = db.createObjectStore("panels", { keyPath: "id" });
+                store.createIndex("by_chapter", "chapterId");
+              }
+              if (!db.objectStoreNames.contains("nativeRestores")) {
+                db.createObjectStore("nativeRestores", { keyPath: "id" });
+              }
+              if (!db.objectStoreNames.contains("blobs")) {
+                db.createObjectStore("blobs");
+              }
+            };
+            open.onsuccess = () => {
+              const db = open.result;
+              db.onclose = () => {
+                dbPromise = null;
+              };
+              db.onversionchange = () => {
+                db.close();
+                dbPromise = null;
+              };
+              resolve(db);
+            };
+            open.onblocked = () => {
+              dbPromise = null;
+              reject(
+                new Error(
+                  "Close other Inkstrip tabs to upgrade project storage. Your existing data is unchanged.",
+                ),
+              );
+            };
+            open.onerror = () => {
+              dbPromise = null;
+              reject(open.error ?? new Error("Could not open storage."));
+            };
+          }),
+      )
+      .catch((error) => {
         dbPromise = null;
-        reject(open.error ?? new Error("Could not open storage."));
-      };
-    });
+        throw error;
+      });
   }
   return dbPromise;
 }

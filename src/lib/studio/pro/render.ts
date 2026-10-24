@@ -1,3 +1,4 @@
+import { letteringFont } from "../dialogue/lettering.ts";
 import { previewCoverage } from "./coverage-preview";
 import { maskLocal, maskWorld } from "./masks";
 import { brushDabs } from "./brush-dynamics";
@@ -282,7 +283,7 @@ export function clippedStroke(ctx: Ctx, s: Stroke, width: number, height: number
 /** Draw editable geometry directly into either a local or a document-resolution plane. */
 function vector(ctx: Ctx, l: Layer) {
   ctx.save();
-  if (l.appearance !== undefined || l.textPath) {
+  if (l.appearance !== undefined || l.textPath || l.lettering) {
     drawVectorAppearance(ctx, l);
     maskVectorClips(ctx, l);
     ctx.restore();
@@ -568,7 +569,12 @@ export async function composite(
     await Promise.all(
       d.layers
         .filter((l) => l.kind === "text" && l.visible)
-        .map((l) => fonts.load(`${l.fontWeight} ${l.fontSize}px ${l.fontFamily}`, l.text || " ")),
+        .map((l) =>
+          fonts.load(
+            l.lettering ? letteringFont(l) : `${l.fontWeight} ${l.fontSize}px ${l.fontFamily}`,
+            l.text || " ",
+          ),
+        ),
     );
     if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
   }

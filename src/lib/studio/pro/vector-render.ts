@@ -1,3 +1,4 @@
+import { paintLettering } from "../dialogue/lettering.ts";
 import { appearance, vectorPaint, type AppearanceItem } from "./vector-appearance.ts";
 import { shapePath } from "./paths.ts";
 import { layoutPathText } from "./text-path.ts";
@@ -6,6 +7,8 @@ import type { Layer } from "./model.ts";
 export function drawVectorAppearance(ctx: OffscreenCanvasRenderingContext2D, l: Layer) {
   const path = l.kind === "shape" ? new Path2D(shapePath(l)) : undefined;
   const items = appearance(l);
+  if (l.lettering?.outlineFirst && l.appearance === undefined)
+    items.sort((a, b) => Number(a.kind === "fill") - Number(b.kind === "fill"));
   if (l.kind === "text") {
     ctx.font = `${l.fontWeight} ${l.fontSize}px ${l.fontFamily}`;
     ctx.textBaseline = "alphabetic";
@@ -97,7 +100,9 @@ function textPaint(
   ctx.miterLimit = a.miterLimit;
   ctx.setLineDash(a.dash);
   ctx.lineDashOffset = a.dashOffset;
-  if (glyphs) {
+  if (l.lettering) {
+    paintLettering(ctx, l, a.kind);
+  } else if (glyphs) {
     ctx.textAlign = "center";
     for (const g of glyphs) {
       ctx.save();

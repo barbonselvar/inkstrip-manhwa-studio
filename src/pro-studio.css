@@ -1278,3 +1278,134 @@
   padding-block: 0.5rem;
   overflow-wrap: anywhere;
 }
+
+/* Dialogue uses the same native Pro canvas and responsive inspector. */
+.chapter-workflow-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+.dialogue-chapter-entry {
+  padding: 1.5rem;
+  max-width: 60rem;
+  margin: auto;
+}
+.dialogue-chapter-entry h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+}
+.dialogue-chapter-entry p {
+  color: var(--color-muted);
+  margin: 0.75rem 0;
+}
+.dialogue-chapter-entry > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pro-dialogue-quick {
+  position: relative;
+  inset: auto;
+  height: max(40rem, 80dvh);
+  z-index: 20;
+  border: 1px solid var(--color-border);
+}
+.dialogue-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.dialogue-presets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+.dialogue-presets button {
+  min-height: 2.75rem;
+}
+.dialogue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.dialogue-tail {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.pro-dialogue textarea {
+  resize: vertical;
+  min-height: 4rem;
+  width: 100%;
+}
+.pro-dialogue .pro-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.pro-dialogue :is(input, select, textarea) {
+  max-width: 100%;
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .pro-dialogue-quick {
+    height: 85dvh;
+    min-height: 36rem;
+  }
+  .pro-dialogue-quick .pro-header {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .pro-studio:has(.pro-dialogue) .pro-body {
+    grid-template-rows: 3.5rem minmax(280px, 50%) minmax(0, 1fr);
+  }
+  .pro-studio:has(.pro-dialogue).pro-dialogue-quick {
+    height: max(58rem, 95dvh);
+  }
+  .pro-dialogue .pro-check {
+    white-space: normal;
+  }
+}
+
+.pro-overlays [data-dialogue-tail] {
+  pointer-events: all;
+  touch-action: none;
+  cursor: crosshair;
+}
+.pro-overlays [data-dialogue-tail]:focus-visible {
+  stroke: var(--color-accent);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Keep the expanded studio switcher from covering the title or panel toggle on tablets. */
+@media (min-width: 641px) and (max-width: 1100px) {
+  .pro-header {
+    flex-wrap: wrap;
+  }
+  .pro-header .pro-brand {
+    flex: 1 1 12rem;
+    overflow: hidden;
+  }
+  .pro-header .pro-brand h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pro-header .pro-mode-switch {
+    order: 2;
+  }
+}
+
+.dialogue-chapter-entry > div .studio-button {
+  max-width: 100%;
+  height: auto;
+  min-height: 2.75rem;
+  padding-block: 0.75rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+}

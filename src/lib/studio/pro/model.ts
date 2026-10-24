@@ -1,3 +1,11 @@
+import {
+  validateDialogue,
+  validateBubble,
+  validateLettering,
+  type DialogueData,
+  type BubbleSpec,
+  type Lettering,
+} from "../dialogue/types.ts";
 import { validateDynamics, type DabDynamics } from "./brush-dynamics.ts";
 import { validateVectorClips, type VectorClip } from "./vector-clip.ts";
 import { validateAppearance, type AppearanceItem } from "./vector-appearance.ts";
@@ -120,6 +128,9 @@ export type Shape =
   | "shout"
   | "caption";
 export type Layer = {
+  bubble?: BubbleSpec;
+  lettering?: Lettering;
+  dialogueRole?: "bubble" | "text" | "cleanup" | "group";
   appearance?: AppearanceItem[];
   vectorClips?: VectorClip[];
   textPath?: TextPath;
@@ -182,6 +193,7 @@ export type Layer = {
 };
 export type SourceReference = { assetId: string; width: number; height: number };
 export type ProDocument = {
+  dialogue?: DialogueData;
   artboards?: Artboard[];
   layout?: Layout;
   /** Non-destructive output frame in full canvas coordinates. */
@@ -202,6 +214,7 @@ export type ProDocument = {
   layers: Layer[];
 };
 export type ProSession = {
+  recoveryId?: string;
   document: ProDocument;
   assets: Record<string, Blob>;
   revision: number;
@@ -467,6 +480,7 @@ export function validateDocument(d: ProDocument) {
       d.source.width * d.source.height > 16_777_216)
   )
     throw new Error("Invalid original source reference.");
+  if (d.dialogue !== undefined) validateDialogue(d.dialogue);
   validateGeometry(d);
   validateLayout(d);
   if (d.selection !== undefined) validateSelection(d.selection);
@@ -518,6 +532,21 @@ export function validateDocument(d: ProDocument) {
       l.width * l.height > 16_777_216
     )
       throw new Error("Invalid or oversized layer.");
+    if (l.bubble !== undefined) {
+      validateBubble(l.bubble);
+      if (l.kind !== "shape" || l.shape !== "path")
+        throw Error("Bubble geometry requires an editable vector path.");
+    }
+    if (l.lettering !== undefined) {
+      validateLettering(l.lettering);
+      if (l.kind !== "text" || l.textPath)
+        throw Error("Dialogue lettering requires a text box; detach text-on-path first.");
+    }
+    if (
+      l.dialogueRole !== undefined &&
+      !["bubble", "text", "cleanup", "group"].includes(l.dialogueRole)
+    )
+      throw Error("Invalid dialogue layer role.");
     validateVectorClips(l);
     validateAppearance(l);
     validateTextPath(l);
@@ -702,6 +731,10 @@ export function validateDocument(d: ProDocument) {
       "Document brush history is too large; export a composite or use fewer strokes.",
     );
   for (const l of d.layers) {
+    if (l.bubble?.textId && !d.layers.some((v) => v.id === l.bubble!.textId && v.kind === "text"))
+      throw Error("A speech bubble points to a missing text layer.");
+  }
+  for (const l of d.layers) {
     let parent = l.parentId,
       depth = 0;
     const seen = new Set([l.id]);
@@ -715,7 +748,16 @@ export function validateDocument(d: ProDocument) {
   }
 }
 export function validateAssets(session: ProSession) {
+  if (
+    session.recoveryId !== undefined &&
+    (typeof session.recoveryId !== "string" || !/^[a-zA-Z0-9-]{1,100}$/.test(session.recoveryId))
+  )
+    throw Error("Invalid recovery session identifier.");
   validateDocument(session.document);
+  if (session.document.layers.some((l) => "ai" in l || "aiReceipt" in l))
+    throw Error(
+      "This draft contains unreleased AI Studio provenance. Open it in its AI Studio branch; nothing has been overwritten.",
+    );
   let total = 0;
   if (Object.keys(session.assets).length > 64)
     throw new Error("A Pro document supports at most 64 raster assets.");

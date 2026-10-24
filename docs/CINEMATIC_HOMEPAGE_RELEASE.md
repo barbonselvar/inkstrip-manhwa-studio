@@ -89,3 +89,25 @@ PR: https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/11.
 Main remains unchanged pending final exact-HEAD CI and release checks. Production
 was verified as baseline578e683 before release. No F1 merge or deployment action,
 production environment change, paid API or Dialogue Studio work was performed.
+
+## Production release confirmation
+
+PR#11 merged normally as `2931fdb0ef688d3fc59ce14d1c2414977fb082f5`.
+Main's tree equals the tested candidate tree. Existing Vercel project deployment
+`H1LpP8oo2gNgYyj8E1jxdMNFnEd1` reports success and the Production domain reports
+that exact main SHA. Both post-merge GitHub Actions pass (build40044516189 and
+configuration40044515992).
+
+Live Chromium passed the full homepage suite at320/360/390/768/1440px and the
+production-style Chapter/Raster/Vector/Pathfinder/artboard/gradient/textPath/native/
+SVG/PNG workflow at1440/320/390px, plus genuine Swin2SR16×24→32×48 inference.
+No uncaught errors, failed critical assets or overflow. See the two production
+verification JSON files alongside this report. Physical Android remains unverified.
+
+The QA asset-hash client initially bypassed the browser network route; it now uses
+browser fetch and SubtleCrypto to validate the exact bytes delivered to the page.
+This is a test-only transport fix, with identical SHA-256 assertions. Production
+application code is unchanged. F1 PR#6 remains Draft/unmerged at1b71cb2.
+
+Release1 is complete. Release2 starts separately on `codex/dialogue-studio` from
+verified main2931fdb. No production settings, secrets or paid services were changed.

@@ -1,3 +1,5 @@
+import { bubbleFor, updateBubble } from "@/lib/studio/dialogue/operations";
+import { DEFAULT_LETTERING } from "@/lib/studio/dialogue/types";
 import { maskPaintPoint, maskWorld, maskLocal } from "@/lib/studio/pro/masks";
 import { clipPath } from "@/lib/studio/pro/vector-clip";
 import { gradientHandles, moveGradientHandle } from "@/lib/studio/pro/vector-appearance";
@@ -124,6 +126,7 @@ type Gesture = {
   selection: Selection;
 };
 export function ProCanvas({
+  dialogueOverlays = false,
   doc,
   viewportFrame,
   appearanceId,
@@ -172,6 +175,7 @@ export function ProCanvas({
   onCloneAdvance,
   onRepair,
 }: {
+  dialogueOverlays?: boolean;
   doc: ProDocument;
   viewportFrame: Frame;
   appearanceId: string;
@@ -261,6 +265,7 @@ export function ProCanvas({
       Math.max(1, size.height - 64) / viewportFrame.height,
     ),
     selected = doc.layers.find((l) => l.id === activeId),
+    dialogueBody = dialogueOverlays ? bubbleFor(doc, activeId) : undefined,
     transformTarget =
       selected && transformDraft?.frame ? { ...selected, ...transformDraft.frame } : selected;
   const focusFrame = useRef({ viewportFrame, fit, size });
@@ -600,6 +605,21 @@ export function ProCanvas({
     setCursor(p);
     if (tool === "hand" || space.current) {
       gesture.current = { ...base, type: "pan" };
+      return;
+    }
+    const tailHit = dialogueOverlays && (e.target as Element).closest("[data-dialogue-tail]");
+    if (
+      tailHit &&
+      dialogueBody?.bubble &&
+      !dialogueBody.transform.deform &&
+      !isLocked(doc, dialogueBody.id)
+    ) {
+      gesture.current = {
+        ...base,
+        type: "bubble-tail",
+        id: dialogueBody.id,
+        part: tailHit.getAttribute("data-dialogue-tail")!,
+      };
       return;
     }
     const guideHit = (e.target as Element).closest("[data-guide-id]");
@@ -980,6 +1000,7 @@ export function ProCanvas({
       if (!existing) {
         existing = layer("shape", doc.width, doc.height);
         existing.name = "Bézier path";
+        if (dialogueOverlays) existing.dialogueRole = "bubble";
         existing.shape = "path";
         existing.vectorOverflow = true;
         existing.fill = "transparent";
@@ -1004,6 +1025,10 @@ export function ProCanvas({
         Math.max(1, Math.min(280, doc.width * 0.6)),
         Math.max(1, Math.min(140, doc.height * 0.3)),
       );
+      if (dialogueOverlays) {
+        object.dialogueRole = tool === "text" ? "text" : "bubble";
+        if (tool === "text") object.lettering = { ...DEFAULT_LETTERING };
+      }
       object.name = tool === "text" ? "Text" : tool[0]!.toUpperCase() + tool.slice(1);
       object.shape = tool as Layer["shape"];
       if (tool === "text") {
@@ -1029,7 +1054,11 @@ export function ProCanvas({
       };
       return;
     }
-    const chosen = hit(p);
+    let chosen = hit(p);
+    if (chosen?.dialogueRole === "bubble" && chosen.parentId && !selectedIds.includes(chosen.id)) {
+      const group = doc.layers.find((l) => l.id === chosen!.parentId && l.dialogueRole === "group");
+      if (group) chosen = group;
+    }
     if (chosen) {
       let selectedAncestor = chosen.parentId;
       while (selectedAncestor && !selectedIds.includes(selectedAncestor))
@@ -1065,6 +1094,24 @@ export function ProCanvas({
     const g = gesture.current;
     if (!g) return null;
     const p = docPoint(screen);
+    if (g.type === "bubble-tail" && g.id && g.part) {
+      const body = g.doc.layers.find((l) => l.id === g.id)!;
+      try {
+        return updateBubble(
+          g.doc,
+          g.id,
+          {},
+          {
+            tails: body.bubble!.tails.map((t) =>
+              t.id === g.part ? { ...t, tip: localPoint(p, body) } : t,
+            ),
+          },
+        );
+      } catch (e) {
+        onError((e as Error).message);
+        return null;
+      }
+    }
     if (g.type === "pan") {
       setView({
         ...g.view,
@@ -1634,6 +1681,115 @@ export function ProCanvas({
               viewBox={`${viewportFrame.x} ${viewportFrame.y} ${viewportFrame.width} ${viewportFrame.height}`}
               aria-label="Pro selection overlays"
             >
+              {dialogueBody?.bubble &&
+                !dialogueBody.transform.deform &&
+                tool === "move" &&
+                !isLocked(doc, dialogueBody.id) &&
+                dialogueBody.bubble.tails.map((tail, i) => {
+                  const p = worldPoint(tail.tip, dialogueBody),
+                    unit = 1 / (fit * view.zoom);
+                  return (
+                    <g key={tail.id}>
+                      <circle
+                        cx={p.x}
+                        cy={p.y}
+                        r={22 * unit}
+                        fill="transparent"
+                        data-dialogue-tail={tail.id}
+                      />
+                      <circle
+                        cx={p.x}
+                        cy={p.y}
+                        r={5 * unit}
+                        fill="#a4efd6"
+                        stroke="#12221e"
+                        strokeWidth={unit}
+                        pointerEvents="none"
+                      />
+                      <circle
+                        tabIndex={0}
+                        role="slider"
+                        aria-label={`Tail ${i + 1} tip handle`}
+                        aria-valuetext={`${Math.round(tail.tip.x)}, ${Math.round(tail.tip.y)}`}
+                        aria-valuemin={-100000}
+                        aria-valuemax={100000}
+                        aria-valuenow={tail.tip.x}
+                        data-dialogue-tail={tail.id}
+                        cx={p.x}
+                        cy={p.y}
+                        r={12 * unit}
+                        fill="transparent"
+                        onKeyDown={(e) => {
+                          if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key))
+                            return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const n = e.shiftKey ? 10 : 1;
+                          try {
+                            onCommit(
+                              updateBubble(
+                                doc,
+                                dialogueBody.id,
+                                {},
+                                {
+                                  tails: dialogueBody.bubble!.tails.map((t) =>
+                                    t.id === tail.id
+                                      ? {
+                                          ...t,
+                                          tip: {
+                                            x:
+                                              t.tip.x +
+                                              (e.key === "ArrowRight"
+                                                ? n
+                                                : e.key === "ArrowLeft"
+                                                  ? -n
+                                                  : 0),
+                                            y:
+                                              t.tip.y +
+                                              (e.key === "ArrowDown"
+                                                ? n
+                                                : e.key === "ArrowUp"
+                                                  ? -n
+                                                  : 0),
+                                          },
+                                        }
+                                      : t,
+                                  ),
+                                },
+                              ),
+                              "Move bubble tail",
+                            );
+                          } catch (error) {
+                            onError((error as Error).message);
+                          }
+                        }}
+                      />
+                    </g>
+                  );
+                })}
+              {dialogueOverlays &&
+                doc.dialogue?.regions.map((r, i) => (
+                  <g key={r.id} className="dialogue-region-overlay" pointerEvents="none">
+                    <rect
+                      x={r.x}
+                      y={r.y}
+                      width={r.width}
+                      height={r.height}
+                      fill="none"
+                      stroke={r.status === "approved" ? "#a4efd6" : "#f7c773"}
+                      strokeWidth={1 / (fit * view.zoom)}
+                      strokeDasharray={`${5 / (fit * view.zoom)} ${3 / (fit * view.zoom)}`}
+                    />
+                    <text
+                      x={r.x}
+                      y={r.y - 4 / (fit * view.zoom)}
+                      fontSize={12 / (fit * view.zoom)}
+                      fill="#f7c773"
+                    >
+                      {i + 1} · {r.status}
+                    </text>
+                  </g>
+                ))}
               {layout(doc).boundaries &&
                 artboards(doc).map((b) => {
                   const selected = b.id === artboardId,

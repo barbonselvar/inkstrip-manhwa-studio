@@ -74,3 +74,12 @@ Previous milestones are retained: selection and advanced layers, traditional
 repair and pressure/smoothing, non-destructive crop/resampling, affine group and
 individual projective/warp transforms, seven per-layer color operators, Chapter
 integration, existing AI workflows and 3D homepage.
+
+
+## Dialogue Studio release candidate
+
+- Added connected Chapter Text & Bubbles and full Dialogue workflows using existing editable Pro documents.
+- Added cubic bubble/tail editing, multilingual lettering, local/project presets and human-approved local OCR/flat cleanup.
+- Added native7, binary backup2 recovery, layered/clean/Chapter exports and device-aware memory bounds.
+- Corrected JPEG white-matte ordering, protected same-origin unreleased F1 storage, respected inherited locks and prevented duplicate replacement lettering.
+- Preserved classic AI enhancement, Raster/Vector/Chapter workflows and the released cinematic homepage. No remote generative backend or paid provider is enabled.

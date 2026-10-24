@@ -103,6 +103,14 @@ export function duplicateLayers(d: ProDocument, ids: string[]) {
     .map((l) => ({
       ...structuredClone(l),
       id: mapping.get(l.id)!,
+      ...(l.bubble
+        ? {
+            bubble: {
+              ...structuredClone(l.bubble),
+              textId: l.bubble.textId ? mapping.get(l.bubble.textId) : undefined,
+            },
+          }
+        : {}),
       name: (l.name + " copy").slice(0, 100),
       parentId: l.parentId && mapping.has(l.parentId) ? mapping.get(l.parentId) : l.parentId,
       linkId: l.linkId ? links.get(l.linkId) : undefined,
