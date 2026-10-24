@@ -1,0 +1,148 @@
+{
+  "results": [
+    {
+      "regions": [
+        {
+          "id": "b6361e71-c070-4a90-8093-638c244a250b",
+          "x": 50,
+          "y": 119,
+          "width": 859,
+          "height": 51,
+          "sourceLanguage": "en",
+          "targetLanguage": "en",
+          "original": "A WORLD IN EVERY FRAME",
+          "corrected": "A WORLD IN EVERY FRAME",
+          "replacement": "",
+          "confidence": 93,
+          "status": "detected"
+        }
+      ],
+      "text": "A WORLD IN EVERY FRAME\n",
+      "elapsedMs": 1443.800000011921,
+      "engine": "Tesseract.js7.0.0 / tessdata_fast",
+      "language": "eng",
+      "dimensions": [
+        1100,
+        280
+      ],
+      "expected": "A WORLD IN EVERY FRAME",
+      "characterCoverage": 1
+    },
+    {
+      "regions": [
+        {
+          "id": "428f6d4c-3397-45ce-b64a-32c33cdb056b",
+          "x": 53,
+          "y": 111,
+          "width": 736,
+          "height": 65,
+          "sourceLanguage": "ko",
+          "targetLanguage": "en",
+          "original": "새로운 이야기가 시작됩니다",
+          "corrected": "새로운 이야기가 시작됩니다",
+          "replacement": "",
+          "confidence": 92,
+          "status": "detected"
+        }
+      ],
+      "text": "새로운 이야기가 시작됩니다\n",
+      "elapsedMs": 917.2000000029802,
+      "engine": "Tesseract.js7.0.0 / tessdata_fast",
+      "language": "kor",
+      "dimensions": [
+        1100,
+        280
+      ],
+      "expected": "새로운 이야기가 시작됩니다",
+      "characterCoverage": 1
+    },
+    {
+      "regions": [
+        {
+          "id": "fb3fd10f-e52a-4c0d-a78f-c0e6e71c2d94",
+          "x": 762,
+          "y": 118,
+          "width": 310,
+          "height": 77,
+          "sourceLanguage": "ar",
+          "targetLanguage": "en",
+          "original": "مرحبابالعالم",
+          "corrected": "مرحبابالعالم",
+          "replacement": "",
+          "confidence": 92,
+          "status": "detected"
+        }
+      ],
+      "text": " مرحبابالعالم\n",
+      "elapsedMs": 1228.8999999910593,
+      "engine": "Tesseract.js7.0.0 / tessdata_fast",
+      "language": "ara",
+      "dimensions": [
+        1100,
+        280
+      ],
+      "expected": "مرحبا بالعالم",
+      "characterCoverage": 1
+    },
+    {
+      "regions": [
+        {
+          "id": "2120cd30-5f70-40c5-9371-979d6737c84c",
+          "x": 53,
+          "y": 110,
+          "width": 439,
+          "height": 66,
+          "sourceLanguage": "ja",
+          "targetLanguage": "en",
+          "original": "次の駅で会おう",
+          "corrected": "次の駅で会おう",
+          "replacement": "",
+          "confidence": 95,
+          "status": "detected"
+        }
+      ],
+      "text": "次の駅で会おう\n",
+      "elapsedMs": 1564.0999999940395,
+      "engine": "Tesseract.js7.0.0 / tessdata_fast",
+      "language": "jpn",
+      "dimensions": [
+        1100,
+        280
+      ],
+      "expected": "次の駅で会おう",
+      "characterCoverage": 1
+    },
+    {
+      "regions": [
+        {
+          "id": "eac0caff-f9a8-4cb7-aa88-abe19cbd53da",
+          "x": 110,
+          "y": 70,
+          "width": 66,
+          "height": 544,
+          "sourceLanguage": "ja",
+          "targetLanguage": "en",
+          "original": "次の駅で会おう",
+          "corrected": "次の駅で会おう",
+          "replacement": "",
+          "confidence": 95,
+          "status": "detected"
+        }
+      ],
+      "text": "次の駅で会おう\n",
+      "elapsedMs": 1150.6000000089407,
+      "engine": "Tesseract.js7.0.0 / tessdata_fast",
+      "language": "jpn_vert",
+      "dimensions": [
+        260,
+        900
+      ],
+      "expected": "次の駅で会おう",
+      "characterCoverage": 1
+    }
+  ],
+  "cancelled": true,
+  "errors": [],
+  "chromium": "156.0.8078.4",
+  "notes": "Character coverage is a diagnostic, not a character-error rate or proof of reliable OCR on real comics. Glyph fonts are system Noto in this QA host. No physical Android test."
+}

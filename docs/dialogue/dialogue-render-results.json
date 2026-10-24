@@ -1,0 +1,54 @@
+{
+  "cases": [
+    {
+      "language": "en",
+      "text": "Every frame.\nA world.",
+      "font": "Arial",
+      "mean": 0.08495635986328125,
+      "fraction": 0.0000457763671875,
+      "ink": 4888
+    },
+    {
+      "language": "ko",
+      "text": "새로운 이야기가 시작됩니다",
+      "font": "Noto Sans CJK KR",
+      "mean": 0.1133453369140625,
+      "fraction": 0.00002899169921875,
+      "ink": 6687
+    },
+    {
+      "language": "ar",
+      "text": "مرحبا بالعالم",
+      "font": "Noto Sans Arabic",
+      "mean": 0.03933868408203125,
+      "fraction": 0.000018310546875,
+      "ink": 2336
+    },
+    {
+      "language": "ja",
+      "text": "次の駅で、会おう。",
+      "font": "Noto Sans CJK JP",
+      "mean": 0.0820037841796875,
+      "fraction": 0.0000335693359375,
+      "ink": 4638
+    },
+    {
+      "language": "ja",
+      "text": "「次の駅で会おう。」",
+      "font": "Noto Sans CJK JP",
+      "vertical": true,
+      "mean": 0.08821258544921876,
+      "fraction": 0.00003662109375,
+      "ink": 4951
+    }
+  ],
+  "region": {
+    "dimensions": [
+      90,
+      88
+    ],
+    "mismatch": 0,
+    "rejected": true,
+    "documentUnchanged": true
+  }
+}

@@ -1,3 +1,4 @@
+import { canvasLetteringLayout, svgWordSpacing } from "../dialogue/lettering.ts";
 import { appearance, gradientMatrix } from "./vector-appearance.ts";
 import { measureTextPath, trimmedTextContour } from "./text-path.ts";
 import { contourData, type Layer } from "./model.ts";
@@ -17,7 +18,10 @@ export function appearanceSvg(l: Layer, definitions: string[]) {
     textPath = id();
     definitions.push(`<path id="${textPath}" d="${contourData(trimmedTextContour(l))}"/>`);
   }
-  const output = appearance(l)
+  const items = appearance(l);
+  if (l.lettering?.outlineFirst && l.appearance === undefined)
+    items.sort((a, b) => Number(a.kind === "fill") - Number(b.kind === "fill"));
+  const output = items
     .map((a) => {
       let paint = a.paint.color === "transparent" ? "none" : a.paint.color;
       if (a.paint.gradient) {
@@ -49,6 +53,30 @@ export function appearanceSvg(l: Layer, definitions: string[]) {
       }
       const attrs = `data-inkstrip-item="${a.kind}" visibility="${a.visible ? "visible" : "hidden"}" opacity="${a.opacity}" fill="${a.kind === "fill" ? paint : "none"}" stroke="${a.kind === "stroke" ? paint : "none"}" fill-rule="${a.fillRule}" stroke-width="${a.width * (a.alignment === "center" ? 1 : 2)}" stroke-linecap="${a.cap}" stroke-linejoin="${a.join}" stroke-miterlimit="${a.miterLimit}" stroke-dasharray="${a.dash.length ? a.dash.join(" ") : "none"}" stroke-dashoffset="${a.dashOffset}" data-inkstrip-stroke-align="${a.alignment}" style="mix-blend-mode:${a.blend === "source-over" ? "normal" : a.blend}" ${clip}`;
       if (path !== undefined) return `<path ${attrs} d="${path}"/>`;
+      if (l.lettering) {
+        const ctx =
+          typeof OffscreenCanvas !== "undefined"
+            ? new OffscreenCanvas(1, 1).getContext("2d")!
+            : document.createElement("canvas").getContext("2d")!;
+        const layout = canvasLetteringLayout(ctx, l),
+          settings = l.lettering;
+        const runs = layout.runs
+          .map((run) => {
+            const anchor =
+              run.align === "center"
+                ? "middle"
+                : run.align === "right"
+                  ? settings.direction === "rtl"
+                    ? "start"
+                    : "end"
+                  : settings.direction === "rtl"
+                    ? "end"
+                    : "start";
+            return `<text ${attrs} xml:space="preserve" font-family="${xml(settings.font)}" font-size="${layout.fontSize}" font-weight="${l.fontWeight}" font-style="${settings.italic ? "italic" : "normal"}" letter-spacing="${l.letterSpacing}" word-spacing="${svgWordSpacing(l, run.text, layout.fontSize)}" text-anchor="${anchor}" direction="${settings.direction}" unicode-bidi="plaintext" transform="translate(${run.x} ${run.y}) rotate(${(run.rotation * 180) / Math.PI})">${xml(run.text)}</text>`;
+          })
+          .join("");
+        return runs;
+      }
       const font = `xml:space="preserve" font-family="${l.fontFamily}" font-size="${l.fontSize}" font-weight="${l.fontWeight}" letter-spacing="${l.letterSpacing}" font-kerning="${l.textPath || l.letterSpacing ? "none" : "auto"}" font-variant-ligatures="${l.textPath || l.letterSpacing ? "none" : "normal"}" text-anchor="${l.align === "left" ? "start" : l.align === "center" ? "middle" : "end"}"`;
       if (textPath) {
         const length = Math.max(0, measureTextPath(l).length - l.textPath!.start - l.textPath!.end),
@@ -75,5 +103,5 @@ export function appearanceSvg(l: Layer, definitions: string[]) {
       );
       clipped = `<g clip-path="url(#${key})">${clipped}</g>`;
     }
-  return `<g data-inkstrip-appearance="1" data-inkstrip-name="${xml(l.name)}" opacity="${l.opacity}" transform="matrix(${affine(l.transform).join(" ")})" style="isolation:isolate">${clipped}</g>`;
+  return `<g ${l.lettering ? 'data-inkstrip-dialogue="1"' : ""} data-inkstrip-appearance="1" data-inkstrip-name="${xml(l.name)}" opacity="${l.opacity}" transform="matrix(${affine(l.transform).join(" ")})" style="isolation:isolate">${clipped}</g>`;
 }

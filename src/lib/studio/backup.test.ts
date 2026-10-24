@@ -98,3 +98,59 @@ test("backup file names are safe on every platform", () => {
     "project-2026-10-23.inkstrip-project",
   );
 });
+
+test("project backup v2 preserves native dialogue documents and immutable assets as binary slices", async () => {
+  const { fromPanel } = await import("./pro/model.ts"),
+    { createBubble } = await import("./dialogue/operations.ts");
+  const data = sample(),
+    panel = data.panels[0]!;
+  const document = createBubble(fromPanel({ ...panel, name: "Dialogue page" }), "speech").document;
+  document.dialogue!.regions = [
+    {
+      id: "r1",
+      x: 1,
+      y: 2,
+      width: 4,
+      height: 5,
+      sourceLanguage: "ja",
+      targetLanguage: "ar",
+      original: "世界",
+      corrected: "世界",
+      replacement: "عالم",
+      status: "corrected",
+    },
+  ];
+  const source = data.blobs.get("b1")!;
+  data.sessions = [
+    { document, assets: { source }, revision: 8, acceptedBlobId: panel.blobId, updatedAt: 4 },
+  ];
+  const file = encodeBackup(data, 123),
+    restored = await decodeBackup(file);
+  assert.deepEqual(restored.sessions![0]!.document, JSON.parse(JSON.stringify(document)));
+  assert.equal(restored.sessions![0]!.revision, 8);
+  assert.deepEqual(await bytes(restored.sessions![0]!.assets.source!), await bytes(source));
+  assert.deepEqual([...restored.blobs.keys()], ["b1", "t1", "s1"]);
+  const twice = await decodeBackup(encodeBackup(restored, 123));
+  assert.deepEqual(twice.sessions![0]!.document, JSON.parse(JSON.stringify(document)));
+});
+
+test("project backup rejects duplicate or unrelated native page associations", async () => {
+  const { fromPanel } = await import("./pro/model.ts"),
+    data = sample();
+  const session = {
+    document: fromPanel({ ...data.panels[0]!, name: "Dialogue page" }),
+    assets: { source: data.blobs.get("b1")! },
+    revision: 0,
+    acceptedBlobId: "b1",
+    updatedAt: 0,
+  };
+  assert.throws(() => encodeBackup({ ...data, sessions: [session, session] }), /association/);
+  assert.throws(
+    () =>
+      encodeBackup({
+        ...data,
+        sessions: [{ ...session, document: { ...session.document, panelId: "other" } }],
+      }),
+    /association/,
+  );
+});

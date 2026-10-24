@@ -1,3 +1,9 @@
+import { saveProjectPresets } from "@/lib/studio/dialogue/presets";
+import { ProDialogueExport } from "./pro-dialogue-export";
+import { ProDialogue } from "./pro-dialogue";
+import { cleanView } from "@/lib/studio/dialogue/operations";
+import { reconcileDialogue } from "@/lib/studio/dialogue/operations";
+import { validateNativeImages } from "@/lib/studio/pro/native-images";
 import { previewDirtyRect } from "@/lib/studio/pro/preview-dirty";
 import { budgetHistory } from "@/lib/studio/pro/history-budget";
 import { copyLayerMask, maskFromSelection } from "@/lib/studio/pro/masks";
@@ -24,7 +30,7 @@ import { appendSelection } from "@/lib/studio/pro/selection";
 import { bucketStroke, hasActiveSelection, intersectRegion } from "@/lib/studio/pro/fill";
 import { selectionCanvas } from "@/lib/studio/pro/render";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Brush,
@@ -109,7 +115,15 @@ export default function ProWorkspace({
   onModeChange,
   onClose,
   onContinue,
+  dialogue = false,
+  quick = false,
+  onDialogue,
+  onPresentation,
 }: {
+  dialogue?: boolean;
+  quick?: boolean;
+  onDialogue?: () => void;
+  onPresentation?: () => void;
   panel: Panel;
   projectId: string;
   mode: "raster" | "vector";
@@ -118,6 +132,9 @@ export default function ProWorkspace({
   onContinue: (mode: "enhance" | "image" | "face") => void;
 }) {
   const [mode, setMode] = useState(initialMode);
+  const [dialoguePending, setDialoguePending] = useState(false);
+  const dialoguePendingRef = useRef(false);
+  dialoguePendingRef.current = dialoguePending;
   const [history, setHistory] = useState<History<Entry> | null>(null),
     historyRef = useRef<History<Entry> | null>(null),
     [transient, setTransient] = useState<ProDocument | null>(null),
@@ -125,7 +142,9 @@ export default function ProWorkspace({
     sessionRef = useRef<ProSession | null>(null),
     [selectedIds, setSelectedIds] = useState<string[]>([]),
     [anchorSelection, setAnchorSelection] = useState({ id: "", index: 0, contour: 0 }),
-    [tool, setTool] = useState<ProTool>(initialMode === "raster" ? "brush" : "pen"),
+    [tool, setTool] = useState<ProTool>(
+      dialogue ? "move" : initialMode === "raster" ? "brush" : "pen",
+    ),
     [transformDraft, setTransformDraft] = useState<TransformDraft | null>(null),
     transformRef = useRef<TransformDraft | null>(null),
     [cropDraft, setCropDraft] = useState<Crop | null>(null),
@@ -165,6 +184,7 @@ export default function ProWorkspace({
     [fitRequest, setFitRequest] = useState<{ frame: Frame; serial: number } | null>(null),
     [before, setBefore] = useState(false),
     [tab, setTab] = useState<
+      | "dialogue"
       | "refine"
       | "properties"
       | "transform"
@@ -179,7 +199,7 @@ export default function ProWorkspace({
       | "assets"
       | "ai"
       | "export"
-    >("layers"),
+    >(dialogue ? "dialogue" : "layers"),
     [panelOpen, setPanelOpen] = useState(true),
     [panelWidth, setPanelWidth] = useState(300),
     [error, setError] = useState(""),
@@ -237,11 +257,11 @@ export default function ProWorkspace({
   const viewportFrame = useMemo(() => {
     const d = history?.present.doc;
     if (!d) return undefined;
-    if (mode === "raster") return { x: 0, y: 0, width: d.width, height: d.height };
+    if (mode === "raster" || dialogue) return { x: 0, y: 0, width: d.width, height: d.height };
     const boards = artboards(d);
     if (viewScope === "all" && boards.length) return unionFrames(boards);
     return boards.find((b) => b.id === viewScope) ?? workspaceFrame(d);
-  }, [history?.present.doc, mode, viewScope]);
+  }, [history?.present.doc, mode, viewScope, dialogue]);
   const grid = !!doc && layout(doc).grid,
     snapping = !doc || layout(doc).snapping;
   const activeContour =
@@ -462,7 +482,7 @@ export default function ProWorkspace({
     return () => {
       clearTimeout(timer);
     };
-  }, [doc, ready, before, busy, maxArea, mode, viewportFrame]);
+  }, [doc, ready, before, busy, maxArea, mode, viewportFrame, quick]);
   useEffect(() => {
     const current = history?.present.doc;
     if (!current) return;
@@ -491,6 +511,8 @@ export default function ProWorkspace({
     (next: ProDocument, label: string, group?: string) => {
       if (busyRef.current || transformRef.current) return;
       try {
+        const previous = historyRef.current?.present.doc;
+        if (previous) next = reconcileDialogue(previous, next);
         validateDocument(next);
         documentSources(next, maxArea);
         if (
@@ -758,6 +780,7 @@ export default function ProWorkspace({
     }
   }, [persist, onClose]);
   const apply = async () => {
+    if (dialoguePendingRef.current) return false;
     const d = historyRef.current?.present.doc,
       s = sessionRef.current;
     if (!d || !s || busyRef.current || transformRef.current || !renderer.current) return false;
@@ -938,7 +961,7 @@ export default function ProWorkspace({
     }
   };
   const exportFile = async (kind: "raster" | "native" | "svg") => {
-    if (!doc || !sessionRef.current || busyRef.current) return;
+    if (!doc || !sessionRef.current || busyRef.current || dialoguePendingRef.current) return;
     setError("");
     try {
       if (cropDraft || transformRef.current)
@@ -1029,6 +1052,7 @@ export default function ProWorkspace({
       if (file.name.toLowerCase().endsWith(".inkstrip")) {
         setStatus("Importing editable native document…");
         const imported = await readNative(file, panel.id, sessionRef.current.acceptedBlobId);
+        await validateNativeImages(imported, maxArea);
         if (!alive.current || busyRef.current || closeInProgress.current || transformRef.current)
           return;
         const next = mergeNativeSession(sessionRef.current, imported);
@@ -1477,6 +1501,7 @@ export default function ProWorkspace({
   };
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
+      if (dialoguePendingRef.current) return;
       if (
         busyRef.current ||
         (e.target as HTMLElement).closest('[role="menu"],[role="alertdialog"]')
@@ -1520,18 +1545,34 @@ export default function ProWorkspace({
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, [mode, tool, activeBoard, commit]);
+  const Portal = quick ? Fragment : Dialog.Portal;
+  const dialogueTools = new Set<ProTool>([
+    "move",
+    "transform",
+    "hand",
+    "direct",
+    "pen",
+    "text",
+    "rectangle",
+    "ellipse",
+    "select-rect",
+    "select-ellipse",
+    "lasso",
+    "poly-lasso",
+  ]);
   const stale = !!session && livePanel?.blobId !== session.acceptedBlobId;
   return (
     <Dialog.Root
+      modal={!quick}
       open
       onOpenChange={(v) => {
         if (!v) void close();
       }}
     >
-      <Dialog.Portal>
-        <Dialog.Overlay className="image-editor-overlay" />
+      <Portal>
+        {!quick && <Dialog.Overlay className="image-editor-overlay" />}
         <Dialog.Content
-          className="pro-studio"
+          className={`pro-studio ${quick ? "pro-dialogue-quick" : ""}`}
           ref={root}
           style={{ "--pro-panel-width": `${panelWidth}px` } as React.CSSProperties}
           onEscapeKeyDown={(e) => {
@@ -1557,14 +1598,21 @@ export default function ProWorkspace({
               variant="ghost"
               size="icon"
               aria-label="Back to chapter from Pro Studio"
-              disabled={busy}
+              disabled={busy || dialoguePending}
               onClick={() => void close()}
             >
               <ArrowLeft />
             </Button>
             <div className="pro-brand">
               <Dialog.Title>
-                Inkstrip <span>{mode === "raster" ? "Raster Studio" : "Vector Studio"}</span>
+                Inkstrip{" "}
+                <span>
+                  {dialogue
+                    ? "Dialogue Studio"
+                    : mode === "raster"
+                      ? "Raster Studio"
+                      : "Vector Studio"}
+                </span>
               </Dialog.Title>
               <Dialog.Description>
                 {panel.name} · {mode === "raster" ? "raster and layered" : "vector and reference"} ·
@@ -1576,13 +1624,18 @@ export default function ProWorkspace({
                 type="button"
                 variant={mode === "raster" ? "secondary" : "ghost"}
                 aria-pressed={mode === "raster"}
-                disabled={busy || !!refinePreview}
+                disabled={busy || dialoguePending || !!refinePreview}
                 onClick={() => {
                   setMode("raster");
                   if (
-                    ["pathfinder", "artboards", "precision", "appearance", "typography"].includes(
-                      tab,
-                    )
+                    [
+                      "dialogue",
+                      "pathfinder",
+                      "artboards",
+                      "precision",
+                      "appearance",
+                      "typography",
+                    ].includes(tab)
                   )
                     setTab("layers");
                   onModeChange("raster");
@@ -1598,9 +1651,10 @@ export default function ProWorkspace({
                 type="button"
                 variant={mode === "vector" ? "secondary" : "ghost"}
                 aria-pressed={mode === "vector"}
-                disabled={busy}
+                disabled={busy || dialoguePending}
                 onClick={() => {
                   setMode("vector");
+                  if (tab === "dialogue") setTab("layers");
                   onModeChange("vector");
                   if (transformRef.current) cancelTransform();
                   setCropDraft(null);
@@ -1610,6 +1664,30 @@ export default function ProWorkspace({
               >
                 <PenTool /> Vector
               </Button>
+              {onDialogue && (
+                <Button
+                  variant={dialogue ? "secondary" : "ghost"}
+                  disabled={busy || dialoguePending || !!transient}
+                  onClick={() => {
+                    onDialogue();
+                    setMode("vector");
+                    setTab("dialogue");
+                    setTool("move");
+                  }}
+                >
+                  {" "}
+                  <MessageCircle /> Dialogue
+                </Button>
+              )}
+              {dialogue && onPresentation && (
+                <Button
+                  variant="ghost"
+                  disabled={busy || dialoguePending || !!transient}
+                  onClick={onPresentation}
+                >
+                  {quick ? "Full editor" : "Quick edit"}
+                </Button>
+              )}
             </div>
             <span className="pro-save-state" role="status">
               {busy
@@ -1625,7 +1703,7 @@ export default function ProWorkspace({
                 variant="ghost"
                 size="icon"
                 aria-label="Pro undo"
-                disabled={!history?.past.length || busy}
+                disabled={!history?.past.length || busy || dialoguePending}
                 onClick={() => actions.current.undo()}
               >
                 <Undo2 />
@@ -1634,7 +1712,7 @@ export default function ProWorkspace({
                 variant="ghost"
                 size="icon"
                 aria-label="Pro redo"
-                disabled={!history?.future.length || busy}
+                disabled={!history?.future.length || busy || dialoguePending}
                 onClick={() => actions.current.redo()}
               >
                 <Redo2 />
@@ -1643,7 +1721,7 @@ export default function ProWorkspace({
             <Button
               variant="secondary"
               className="pro-save-button"
-              disabled={!doc || busy || !!transformDraft}
+              disabled={!doc || busy || dialoguePending || !!transformDraft}
               onClick={() => void saveNow().catch((e) => setError(storageMessage(e)))}
             >
               <Save />
@@ -1651,11 +1729,19 @@ export default function ProWorkspace({
             </Button>
             <Button
               intent="save"
-              disabled={!doc || busy || stale || !ready || !!cropDraft || !!transformDraft}
+              disabled={
+                !doc ||
+                busy ||
+                dialoguePending ||
+                stale ||
+                !ready ||
+                !!cropDraft ||
+                !!transformDraft
+              }
               onClick={() => void apply()}
             >
               <Layers3 />
-              Apply to chapter
+              {dialogue ? "Save dialogue to chapter" : "Apply to chapter"}
             </Button>
             <Button
               variant="ghost"
@@ -1678,10 +1764,14 @@ export default function ProWorkspace({
           )}
           {stale && doc ? (
             <div className="pro-recovery-actions">
-              <Button variant="secondary" disabled={busy} onClick={() => void exportFile("native")}>
+              <Button
+                variant="secondary"
+                disabled={busy || dialoguePending}
+                onClick={() => void exportFile("native")}
+              >
                 Export existing layered document
               </Button>
-              <Button disabled={busy} onClick={() => void adoptLatestImage()}>
+              <Button disabled={busy || dialoguePending} onClick={() => void adoptLatestImage()}>
                 Use latest chapter image · keep layers
               </Button>
             </div>
@@ -1711,7 +1801,7 @@ export default function ProWorkspace({
           <div className="pro-context-bar">
             {transformDraft && (
               <div className="pro-crop-actions">
-                <Button disabled={busy} onClick={applyTransform}>
+                <Button disabled={busy || dialoguePending} onClick={applyTransform}>
                   Apply transform
                 </Button>
                 <Button variant="secondary" onClick={cancelTransform}>
@@ -1721,7 +1811,7 @@ export default function ProWorkspace({
             )}
             {cropDraft && (
               <div className="pro-crop-actions">
-                <Button onClick={applyCrop} disabled={busy}>
+                <Button onClick={applyCrop} disabled={busy || dialoguePending}>
                   Apply crop
                 </Button>
                 <Button variant="secondary" onClick={cancelCrop}>
@@ -1852,7 +1942,12 @@ export default function ProWorkspace({
           <div className={`pro-body ${panelOpen ? "" : "pro-panel-hidden"}`}>
             <nav className="pro-tool-palette" aria-label="Pro tools">
               {TOOLS.filter(({ id }) =>
-                (mode === "raster" ? RASTER_TOOL_IDS : VECTOR_TOOL_IDS).has(id),
+                (dialogue
+                  ? dialogueTools
+                  : mode === "raster"
+                    ? RASTER_TOOL_IDS
+                    : VECTOR_TOOL_IDS
+                ).has(id),
               ).map(({ id, name, key, Icon }) => (
                 <Button
                   key={id}
@@ -1877,6 +1972,7 @@ export default function ProWorkspace({
             </nav>
             {doc ? (
               <ProCanvas
+                dialogueOverlays={dialogue}
                 appearanceId={appearanceId}
                 viewportFrame={viewportFrame!}
                 onFitCanvas={() => setViewScope("")}
@@ -1924,7 +2020,7 @@ export default function ProWorkspace({
                   setBrush(next);
                   if (doc) commit({ ...doc, brushSettings: next }, "Sample brush color");
                 }}
-                disabled={busy}
+                disabled={busy || dialoguePending || (!!transient && tab === "dialogue")}
                 rendering={
                   rendering ||
                   !ready ||
@@ -1959,6 +2055,7 @@ export default function ProWorkspace({
                 <nav className="pro-panel-tabs" aria-label="Pro panels">
                   {(
                     [
+                      "dialogue",
                       "refine",
                       "properties",
                       "transform",
@@ -1977,13 +2074,25 @@ export default function ProWorkspace({
                   )
                     .filter(
                       (t) =>
-                        ![
+                        (t !== "dialogue" || dialogue) &&
+                        (!dialogue ||
+                          [
+                            "dialogue",
+                            "properties",
+                            "transform",
+                            "layers",
+                            "history",
+                            "assets",
+                            "export",
+                          ].includes(t)) &&
+                        (![
                           "pathfinder",
                           "artboards",
                           "precision",
                           "appearance",
                           "typography",
-                        ].includes(t) || mode === "vector",
+                        ].includes(t) ||
+                          mode === "vector"),
                     )
                     .map((t) => (
                       <button
@@ -1997,12 +2106,64 @@ export default function ProWorkspace({
                     ))}
                 </nav>
                 <div className="pro-panel-content">
+                  {tab === "dialogue" && history && (
+                    <ProDialogue
+                      document={history.present.doc}
+                      selectedId={selectedIds[0] ?? ""}
+                      onDocument={commit}
+                      onSelect={(id) => setSelectedIds([id])}
+                      onTool={chooseTool}
+                      onPreview={setTransient}
+                      onError={setError}
+                      disabled={busy || !!transformDraft}
+                      onPending={setDialoguePending}
+                      sharedPresets={project?.dialoguePresets ?? []}
+                      onSharedPresets={(update) => saveProjectPresets(projectId, update)}
+                      quick={quick}
+                      onPresentation={onPresentation}
+                      onRegion={async (source, frame, signal) => {
+                        const current = sessionRef.current;
+                        if (!current) throw Error("The document is not ready.");
+                        // A preview can supersede jobs on its worker. Isolate bounded region jobs
+                        // using the same renderer, immutable assets and compositing engine.
+                        const worker = new ProRenderer();
+                        const abort = () =>
+                          worker.dispose(
+                            new DOMException("Region processing cancelled", "AbortError"),
+                          );
+                        signal?.addEventListener("abort", abort, { once: true });
+                        try {
+                          signal?.throwIfAborted();
+                          await worker.init({ ...current, document: source }, maxArea);
+                          const result = await worker.region(
+                            cleanView(source, true),
+                            maxArea,
+                            frame,
+                          );
+                          signal?.throwIfAborted();
+                          if (!result.blob) throw Error("Region extraction failed.");
+                          const bitmap = await createImageBitmap(result.blob);
+                          try {
+                            const output = new OffscreenCanvas(bitmap.width, bitmap.height),
+                              ctx = output.getContext("2d")!;
+                            ctx.drawImage(bitmap, 0, 0);
+                            return ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+                          } finally {
+                            bitmap.close();
+                          }
+                        } finally {
+                          signal?.removeEventListener("abort", abort);
+                          worker.dispose();
+                        }
+                      }}
+                    />
+                  )}
                   {tab === "refine" && doc && (
                     <ProRefine
                       document={doc}
                       sample={refineSample}
                       onArmSample={armRefineSample}
-                      disabled={busy || !!transformDraft}
+                      disabled={busy || dialoguePending || !!transformDraft}
                       canMask={!!active && !isLocked(doc, active.id)}
                       onGenerate={async (options: RefineOptions) => {
                         if (!renderer.current || busyRef.current) return;
@@ -2049,7 +2210,11 @@ export default function ProWorkspace({
                         active
                           ? {
                               ...active,
-                              locked: isLocked(doc!, active.id) || busy || !!transformDraft,
+                              locked:
+                                isLocked(doc!, active.id) ||
+                                busy ||
+                                dialoguePending ||
+                                !!transformDraft,
                             }
                           : undefined
                       }
@@ -2067,7 +2232,11 @@ export default function ProWorkspace({
                         active
                           ? {
                               ...active,
-                              locked: isLocked(doc!, active.id) || busy || !!transformDraft,
+                              locked:
+                                isLocked(doc!, active.id) ||
+                                busy ||
+                                dialoguePending ||
+                                !!transformDraft,
                             }
                           : undefined
                       }
@@ -2090,7 +2259,7 @@ export default function ProWorkspace({
                       }}
                       moveArtwork={moveArtwork}
                       onMoveArtwork={setMoveArtwork}
-                      disabled={busy || !!transformDraft || !!cropDraft}
+                      disabled={busy || dialoguePending || !!transformDraft || !!cropDraft}
                       onExport={(boards, format, scale) => void exportBoards(boards, format, scale)}
                     />
                   )}
@@ -2101,14 +2270,14 @@ export default function ProWorkspace({
                       boardId={activeBoard?.id ?? ""}
                       onCommit={commit}
                       onError={setError}
-                      disabled={busy || !!transformDraft || !!cropDraft}
+                      disabled={busy || dialoguePending || !!transformDraft || !!cropDraft}
                     />
                   )}
                   {tab === "pathfinder" && mode === "vector" && doc && (
                     <ProPathfinder
                       doc={doc}
                       ids={selectedIds}
-                      disabled={busy || !!transformDraft}
+                      disabled={busy || dialoguePending || !!transformDraft}
                       onRun={(operation, options) => void runPathfinder(operation, options)}
                     />
                   )}
@@ -2296,7 +2465,7 @@ export default function ProWorkspace({
                           onCompound={compound}
                           onMerge={(mode) => void merge(mode)}
                           onAdd={add}
-                          disabled={busy || !!transformDraft}
+                          disabled={busy || dialoguePending || !!transformDraft}
                           maxArea={maxArea}
                         />
                       )}
@@ -2389,7 +2558,7 @@ export default function ProWorkspace({
                       onDraft={changeTransform}
                       onApply={applyTransform}
                       onCancel={cancelTransform}
-                      disabled={busy}
+                      disabled={busy || dialoguePending}
                     />
                   )}
                   {tab === "geometry" && doc && (
@@ -2411,7 +2580,7 @@ export default function ProWorkspace({
                       onCommit={commit}
                       canvasRef={canvas}
                       renderVersion={version}
-                      disabled={busy}
+                      disabled={busy || dialoguePending}
                     />
                   )}
                   {tab === "history" && history && (
@@ -2423,7 +2592,7 @@ export default function ProWorkspace({
                   )}
                   {tab === "assets" && (
                     <ProAssetsTab
-                      disabled={busy || !!transformDraft}
+                      disabled={busy || dialoguePending || !!transformDraft}
                       characters={project?.characters}
                       onImport={(file) => void importFile(file)}
                       onPlace={(blob, name) =>
@@ -2433,7 +2602,7 @@ export default function ProWorkspace({
                   )}
                   {tab === "ai" && (
                     <ProAiTab
-                      disabled={busy || stale || !!transformDraft}
+                      disabled={busy || dialoguePending || stale || !!transformDraft}
                       onContinue={(next) =>
                         void apply().then((ok) => {
                           if (ok) onContinue(next);
@@ -2441,11 +2610,23 @@ export default function ProWorkspace({
                       }
                     />
                   )}
+                  {tab === "export" && dialogue && doc && session && (
+                    <ProDialogueExport
+                      document={history!.present.doc}
+                      session={session}
+                      maxArea={maxArea}
+                      mime={mime}
+                      quality={quality}
+                      disabled={busy || !!transformDraft || !!cropDraft}
+                      onError={setError}
+                      onPending={setDialoguePending}
+                    />
+                  )}
                   {tab === "export" && doc && (
                     <ProExportTab
                       doc={doc}
                       cropPending={!!cropDraft}
-                      busy={busy}
+                      busy={busy || dialoguePending}
                       ready={!!ready}
                       mime={mime}
                       quality={quality}
@@ -2489,7 +2670,7 @@ export default function ProWorkspace({
             )}
           </footer>
         </Dialog.Content>
-      </Dialog.Portal>
+      </Portal>
     </Dialog.Root>
   );
 }

@@ -111,6 +111,9 @@ export class ProRenderer {
       quality,
     });
   }
+  region(document: ProDocument, maxArea: number, frame: Frame) {
+    return this.request("dialogue-region", { document, maxArea, frame });
+  }
   select(
     document: ProDocument,
     maxArea: number,

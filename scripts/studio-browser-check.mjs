@@ -94,7 +94,7 @@ try {
   await page.getByRole("dialog", { name: "Edit Image", exact: true }).waitFor({ state: "hidden" });
   const acceptedBeforeAI = await page.evaluate(async () => {
     const db = await new Promise((resolve) => {
-      const r = indexedDB.open("inkstrip", 1);
+      const r = indexedDB.open("inkstrip");
       r.onsuccess = () => resolve(r.result);
     });
     const panels = await new Promise((resolve) => {
@@ -147,7 +147,7 @@ try {
   await page.getByText(/0 image\(s\) applied/).waitFor();
   const failedSaveOriginal = await page.evaluate(async () => {
     const db = await new Promise((resolve) => {
-      const r = indexedDB.open("inkstrip", 1);
+      const r = indexedDB.open("inkstrip");
       r.onsuccess = () => resolve(r.result);
     });
     const panels = await new Promise((resolve) => {
@@ -167,7 +167,7 @@ try {
   await page.getByText(/Applied 1 image/).waitFor();
   const enhancedSize = await page.evaluate(async () => {
     const db = await new Promise((resolve) => {
-      const r = indexedDB.open("inkstrip", 1);
+      const r = indexedDB.open("inkstrip");
       r.onsuccess = () => resolve(r.result);
     });
     const panels = await new Promise((resolve) => {
@@ -193,7 +193,7 @@ try {
   // Single-image enhancement must not change any unrelated image or chapter.
   const saved = await page.evaluate(async () => {
     const db = await new Promise((resolve, reject) => {
-      const r = indexedDB.open("inkstrip", 1);
+      const r = indexedDB.open("inkstrip");
       r.onsuccess = () => resolve(r.result);
       r.onerror = () => reject(r.error);
     });

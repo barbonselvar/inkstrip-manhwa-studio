@@ -81,6 +81,11 @@ export function importSvg(text: string): {
   const warnings = new Set<string>();
   if (text.length > 1_000_000 || /<!DOCTYPE|<!ENTITY|<\?xml-stylesheet/i.test(text))
     throw new Error("SVG declarations or oversized input are not supported.");
+  const parsed = new DOMParser().parseFromString(text, "image/svg+xml");
+  if (parsed.querySelector('[data-inkstrip-dialogue="1"]'))
+    throw Error(
+      "Rich Dialogue SVG is an export format. Reopen the native .inkstrip document to preserve editable lettering layout.",
+    );
   const xml = new DOMParser().parseFromString(text, "image/svg+xml"),
     root = xml.documentElement,
     allowed = new Set([

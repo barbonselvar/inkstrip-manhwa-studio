@@ -1,26 +1,72 @@
+import { openDb } from "../db";
 import { validateAssets, type ProSession } from "./model";
 /** Independent, self-contained blobs: old chapter garbage collection cannot remove Pro assets. */
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const r = indexedDB.open("inkstrip-pro", 1);
-    r.onupgradeneeded = () => r.result.createObjectStore("sessions", { keyPath: "id" });
-    r.onsuccess = () => resolve(r.result);
-    r.onerror = () => reject(r.error);
+    let aiDraft = false;
+    const r = indexedDB.open("inkstrip-pro", 3);
+    r.onupgradeneeded = () => {
+      if (!r.result.objectStoreNames.contains("sessions"))
+        r.result.createObjectStore("sessions", { keyPath: "id" });
+      // A same-origin F1 draft must remain openable by its v2 reader until that
+      // independent branch is integrated. Abort the upgrade before changing data.
+      const cursor = r.transaction!.objectStore("sessions").openCursor();
+      cursor.onsuccess = () => {
+        const value = cursor.result;
+        if (!value) return;
+        const layers = value.value?.session?.document?.layers;
+        if (Array.isArray(layers) && layers.some((l) => l && ("ai" in l || "aiReceipt" in l))) {
+          aiDraft = true;
+          r.transaction?.abort();
+          return;
+        }
+        value.continue();
+      };
+    };
+    r.onsuccess = () => {
+      const db = r.result;
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
+    r.onerror = () =>
+      reject(
+        aiDraft
+          ? new Error(
+              "This origin contains an unreleased F1 AI draft. Its storage was left unchanged; use a separate Dialogue preview until the AI branch is integrated.",
+            )
+          : r.error,
+      );
     r.onblocked = () => reject(new Error("Close another Pro Studio tab to open document storage."));
   });
 }
 export async function loadSession(panelId: string): Promise<ProSession | undefined> {
+  // Project restore commits this recovery journal atomically with Chapter records.
+  // Once a normal Pro save succeeds it takes precedence; no cross-database partial import.
+  const main = await openDb();
+  const staged = await new Promise<ProSession | undefined>((resolve, reject) => {
+    const tx = main.transaction("nativeRestores"),
+      r = tx.objectStore("nativeRestores").get(panelId);
+    tx.oncomplete = () => resolve(r.result?.session);
+    tx.onerror = () => reject(tx.error);
+  });
   const db = await open();
   return new Promise((resolve, reject) => {
     const tx = db.transaction("sessions"),
       r = tx.objectStore("sessions").get(panelId);
-    let value: ProSession | undefined;
+    let value: ProSession | undefined,
+      collision = false;
     r.onsuccess = () => {
-      value = r.result?.session;
+      collision =
+        !!staged && !!r.result?.session && r.result.session.recoveryId !== staged.recoveryId;
+      value = r.result?.session ?? staged;
     };
     tx.oncomplete = () => {
       db.close();
       try {
+        if (collision)
+          throw Error(
+            "A restored page conflicts with another native draft. Both copies were retained; export the existing draft before recovery.",
+          );
         if (value) validateAssets(value);
         resolve(value);
       } catch (e) {
@@ -31,6 +77,19 @@ export async function loadSession(panelId: string): Promise<ProSession | undefin
       db.close();
       reject(tx.error);
     };
+  });
+}
+async function clearRecovery(panelId: string, recoveryId: string) {
+  const db = await openDb();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction("nativeRestores", "readwrite"),
+      store = tx.objectStore("nativeRestores"),
+      r = store.get(panelId);
+    r.onsuccess = () => {
+      if (r.result?.session.recoveryId === recoveryId) store.delete(panelId);
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = tx.onabort = () => reject(tx.error);
   });
 }
 export async function saveSession(
@@ -47,7 +106,10 @@ export async function saveSession(
     let failure: unknown;
     const next = { ...session, revision: expectedRevision + 1, updatedAt: Date.now() };
     r.onsuccess = () => {
-      if ((r.result?.session.revision ?? 0) !== expectedRevision) {
+      if (
+        (r.result?.session.revision ?? 0) !== expectedRevision ||
+        (r.result?.session && r.result.session.recoveryId !== session.recoveryId)
+      ) {
         conflict = true;
         tx.abort();
         return;
@@ -62,6 +124,10 @@ export async function saveSession(
     tx.oncomplete = () => {
       db.close();
       resolve(next);
+      if (next.recoveryId)
+        void clearRecovery(next.document.panelId, next.recoveryId).catch(() => {
+          /* Matching primary save remains authoritative; retry cleanup on next save. */
+        });
     };
     tx.onabort = tx.onerror = () => {
       db.close();

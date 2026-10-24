@@ -1,0 +1,47 @@
+{
+  "results": [
+    {
+      "width": 640,
+      "height": 480,
+      "bubbles": 12,
+      "layers": 37,
+      "initMs": 185.79999999701977,
+      "previewMs": 612.6000000089407,
+      "pngExportMs": 392.09999999403954,
+      "pngBytes": 194615,
+      "jsHeapObserved": 36580423
+    },
+    {
+      "width": 2048,
+      "height": 2048,
+      "bubbles": 8,
+      "layers": 25,
+      "initMs": 200.8999999910593,
+      "previewMs": 886.7000000029802,
+      "pngExportMs": 1781.7000000029802,
+      "pngBytes": 772864,
+      "jsHeapObserved": 36728572
+    },
+    {
+      "width": 1024,
+      "height": 8192,
+      "bubbles": 6,
+      "layers": 19,
+      "initMs": 127.29999999701977,
+      "previewMs": 188.59999999403954,
+      "pngExportMs": 1344.7000000029802,
+      "pngBytes": 436385,
+      "jsHeapObserved": 38091560
+    }
+  ],
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36",
+  "reportedLogicalCores": 3,
+  "deviceMemoryGB": 8,
+  "environment": {
+    "cpu": "AMD EPYC 9V74 80-Core Processor",
+    "availableParallelism": 2,
+    "architecture": "x64",
+    "browser": "156.0.8078.4"
+  },
+  "method": "One cold renderer per synthetic striped source with real cubic bubble/text layers. Timings include compositing and PNG encoding. JS heap samples are not peak/process/GPU memory; shared host results are not device promises."
+}

@@ -3,7 +3,7 @@ import { validateRecipe } from "./editor/geometry";
 import type { Chapter, Panel, Project, Strip } from "@/lib/studio/types";
 
 const DB_NAME = "inkstrip";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export type StoreName = "projects" | "chapters" | "panels" | "blobs";
 
@@ -44,6 +44,9 @@ export function openDb() {
           const store = db.createObjectStore("panels", { keyPath: "id" });
           store.createIndex("by_chapter", "chapterId");
         }
+        if (!db.objectStoreNames.contains("nativeRestores")) {
+          db.createObjectStore("nativeRestores", { keyPath: "id" });
+        }
         if (!db.objectStoreNames.contains("blobs")) {
           db.createObjectStore("blobs");
         }
@@ -58,6 +61,14 @@ export function openDb() {
           dbPromise = null;
         };
         resolve(db);
+      };
+      open.onblocked = () => {
+        dbPromise = null;
+        reject(
+          new Error(
+            "Close other Inkstrip tabs to upgrade project storage. Your existing data is unchanged.",
+          ),
+        );
       };
       open.onerror = () => {
         dbPromise = null;
