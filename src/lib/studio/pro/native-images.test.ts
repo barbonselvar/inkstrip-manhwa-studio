@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { rasterSize, validateNativeImages } from "./native-images.ts";
+import { rasterSize, validateNativeImages, validateRasterInput } from "./native-images.ts";
 import { fromPanel, type ProSession } from "./model.ts";
 const png = (width = 32, height = 24) => {
   const bytes = new Uint8Array(24),
@@ -17,6 +17,34 @@ const session = (blob: Blob): ProSession => ({
   revision: 1,
   acceptedBlobId: "accepted",
   updatedAt: 0,
+});
+test("standalone Raster preflight accepts supported header dimensions and the exact device boundary", async () => {
+  assert.deepEqual(await validateRasterInput(png(2048, 2048), 2048 * 2048), {
+    width: 2048,
+    height: 2048,
+  });
+  const jpeg = Uint8Array.from([255, 216, 255, 192, 0, 7, 8, 0, 24, 0, 32]);
+  assert.deepEqual(await validateRasterInput(new Blob([jpeg], { type: "image/jpeg" }), 32 * 24), {
+    width: 32,
+    height: 24,
+  });
+});
+test("standalone Raster preflight rejects oversized pixels, long sides and invalid budgets without decoding", async () => {
+  for (const blob of [png(65535, 65535), png(16385, 1), png(2049, 2048), png(0, 1)])
+    await assert.rejects(validateRasterInput(blob, 2048 * 2048), /pixel budget/);
+  for (const limit of [NaN, Infinity, 0, 16_777_217])
+    await assert.rejects(validateRasterInput(png(), limit), /pixel budget/);
+});
+test("standalone Raster preflight rejects corrupt, unsupported and excessive compressed files before reading headers", async () => {
+  for (const type of ["image/png", "image/jpeg", "image/webp", "image/svg+xml"])
+    await assert.rejects(validateRasterInput(new Blob(["bad"], { type }), 4e6), /header/);
+  // Avoid allocating48MB: the guard must reject size before reading any payload.
+  const oversized = new Blob([], { type: "image/png" });
+  Object.defineProperty(oversized, "size", { value: 48_000_001 });
+  oversized.slice = () => {
+    throw Error("must not read oversized bytes");
+  };
+  await assert.rejects(validateRasterInput(oversized, 4e6), /asset budget/);
 });
 test("native preflight rejects corrupt PNG, JPEG, WebP headers before image decoding", async () => {
   let decodes = 0;

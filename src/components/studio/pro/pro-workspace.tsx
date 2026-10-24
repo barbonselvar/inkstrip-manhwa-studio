@@ -4,7 +4,7 @@ import { ProDialogueExport } from "./pro-dialogue-export";
 import { ProDialogue } from "./pro-dialogue";
 import { cleanView } from "@/lib/studio/dialogue/operations";
 import { reconcileDialogue } from "@/lib/studio/dialogue/operations";
-import { validateNativeImages } from "@/lib/studio/pro/native-images";
+import { validateNativeImages, validateRasterInput } from "@/lib/studio/pro/native-images";
 import { previewDirtyRect } from "@/lib/studio/pro/preview-dirty";
 import { budgetHistory } from "@/lib/studio/pro/history-budget";
 import { copyLayerMask, maskFromSelection } from "@/lib/studio/pro/masks";
@@ -1008,6 +1008,7 @@ export default function ProWorkspace({
     let d = historyRef.current?.present.doc,
       s = sessionRef.current;
     if (!d || !s || busyRef.current || transformRef.current) return;
+    await validateRasterInput(blob, maxArea);
     const decoded = await decodeBlob(blob);
     try {
       if (!alive.current || busyRef.current || closeInProgress.current || transformRef.current)
