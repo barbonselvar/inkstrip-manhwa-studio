@@ -1,5 +1,6 @@
 import type { Point } from "./model.ts";
 import type { Frame } from "./artboards.ts";
+import { CROP_HANDLES, cropHandlePoint, type CropHandle } from "./geometry.ts";
 
 /** Presentation only. Never serialize this into layer/document geometry. */
 export type CanvasView = { zoom: number; x: number; y: number; rotation: number };
@@ -38,6 +39,25 @@ export function viewportToDocument(p: Point, frame: Frame, fit: number, view: Ca
   );
   return { x: frame.x + frame.width / 2 + q.x, y: frame.y + frame.height / 2 + q.y };
 }
+/** Actual CSS layout quantizes the two board dimensions independently. For the
+ * quarter-turn UI, recover both local axis lengths from the measured bounds,
+ * then undo rotation. This avoids low-zoom subpixel errors and rotated AABB mapping. */
+export function canvasPoint(
+  p: Point,
+  rect: { left: number; top: number; width: number; height: number },
+  frame: Frame,
+  rotation: number,
+): Point {
+  const quarter = Math.abs(viewAngle(rotation)) === 90;
+  const q = rotatePoint(
+    { x: p.x - rect.left - rect.width / 2, y: p.y - rect.top - rect.height / 2 },
+    -rotation,
+  );
+  return {
+    x: frame.x + frame.width / 2 + (q.x * frame.width) / (quarter ? rect.height : rect.width),
+    y: frame.y + frame.height / 2 + (q.y * frame.height) / (quarter ? rect.width : rect.height),
+  };
+}
 /** Rotate around the viewport center, retaining the source point under it. */
 export function rotateCanvasView(
   view: CanvasView,
@@ -49,4 +69,17 @@ export function rotateCanvasView(
   const ratio = viewFit(size, frame, rotation) / viewFit(size, frame, view.rotation);
   const pan = rotatePoint(view, rotation - view.rotation);
   return { ...view, rotation, x: pan.x * ratio, y: pan.y * ratio };
+}
+/** Touch hit boxes overlap at low zoom. Choose geometric proximity instead of
+ * SVG paint order, reserving the center for movement on very small boards. */
+export function frameHandleAt(frame: Frame, point: Point, pixelsPerUnit: number): CropHandle {
+  if (!Number.isFinite(pixelsPerUnit) || pixelsPerUnit <= 0) return "move";
+  const centerDistance =
+    Math.hypot(point.x - frame.x - frame.width / 2, point.y - frame.y - frame.height / 2) *
+    pixelsPerUnit;
+  const closest = CROP_HANDLES.map((handle) => {
+    const p = cropHandlePoint({ ...frame, rotation: 0 }, handle);
+    return { handle, distance: Math.hypot(point.x - p.x, point.y - p.y) * pixelsPerUnit };
+  }).sort((a, b) => a.distance - b.distance)[0]!;
+  return closest.distance <= 22 && closest.distance < centerDistance ? closest.handle : "move";
 }

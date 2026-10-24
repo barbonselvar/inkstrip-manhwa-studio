@@ -46,7 +46,8 @@ import {
   viewFit,
   rotatePoint,
   rotateCanvasView,
-  viewportToDocument,
+  canvasPoint,
+  frameHandleAt,
   type CanvasView,
 } from "@/lib/studio/pro/viewport";
 import { anchorCurve, cubicPoint, splitAnchorSegment } from "@/lib/studio/pro/bezier";
@@ -417,13 +418,7 @@ export function ProCanvas({
     };
   }, [polygon, selection, operation, onSelection, onTransient, onCommit, tool, changeRotation]);
   const docPoint = (p: Point): Point => {
-    const r = viewport.current!.getBoundingClientRect();
-    return viewportToDocument(
-      { x: p.x - r.left - r.width / 2, y: p.y - r.top - r.height / 2 },
-      viewportFrame,
-      fit,
-      view,
-    );
+    return canvasPoint(p, board.current!.getBoundingClientRect(), viewportFrame, view.rotation);
   };
   const zoomAt = (zoom: number, client?: Point) => {
     const r = viewport.current!.getBoundingClientRect(),
@@ -682,7 +677,9 @@ export function ProCanvas({
           ...base,
           type: "artboard",
           board: b,
-          corner: target?.getAttribute("data-board-handle") ?? "move",
+          corner: target?.hasAttribute("data-board-handle")
+            ? frameHandleAt(b, p, fit * view.zoom)
+            : "move",
           snap: buildSnapIndex(doc, [], b.id),
         };
       }
@@ -1749,6 +1746,7 @@ export function ProCanvas({
           {!before && (
             <svg
               className="pro-overlays"
+              preserveAspectRatio="none"
               viewBox={`${viewportFrame.x} ${viewportFrame.y} ${viewportFrame.width} ${viewportFrame.height}`}
               aria-label="Pro selection overlays"
             >
