@@ -15,6 +15,7 @@ try {
   await page.getByRole("button", { name: "New project", exact: true }).click();
   await page.getByPlaceholder("Night Market").fill("Retouch QA");
   await page.getByRole("button", { name: "Create chapter 1" }).click();
+  await page.getByText("Chapter workspace", { exact: true }).waitFor();
   const fixture = await page.evaluate(() => {
     const c = document.createElement("canvas");
     c.width = 128;

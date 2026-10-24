@@ -18,6 +18,7 @@ async function story(page) {
   await page.getByRole("button", { name: "New project", exact: true }).click();
   await page.getByPlaceholder("Night Market").fill("Pro editor QA");
   await page.getByRole("button", { name: "Create chapter 1", exact: true }).click();
+  await page.getByText("Chapter workspace", { exact: true }).waitFor();
   const data = await page.evaluate(() => {
     const c = document.createElement("canvas");
     c.width = 128;

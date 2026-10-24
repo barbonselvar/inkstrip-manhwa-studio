@@ -18,6 +18,7 @@ async function setup(context, mobile = false) {
   await page.getByRole("button", { name: "New project", exact: true }).click();
   await page.getByPlaceholder("Night Market").fill("Phase 3 QA");
   await page.getByRole("button", { name: "Create chapter 1" }).click();
+  await page.getByText("Chapter workspace", { exact: true }).waitFor();
   const files = await page.evaluate(
     (phone) =>
       (phone
