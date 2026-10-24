@@ -1381,3 +1381,21 @@
   stroke-width: 2px;
   vector-effect: non-scaling-stroke;
 }
+
+/* Keep the expanded studio switcher from covering the title or panel toggle on tablets. */
+@media (min-width: 641px) and (max-width: 1100px) {
+  .pro-header {
+    flex-wrap: wrap;
+  }
+  .pro-header .pro-brand {
+    flex: 1 1 12rem;
+    overflow: hidden;
+  }
+  .pro-header .pro-brand h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pro-header .pro-mode-switch {
+    order: 2;
+  }
+}

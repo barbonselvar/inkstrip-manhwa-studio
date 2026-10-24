@@ -79,3 +79,6 @@ Current unit total:744 (200 script +59 shared +49 Studio +436 Pro), all passing.
 Locked bubbles/text now respect own and inherited layer locks in the operations layer and UI. Replacing reviewed lettering edits its existing text layer rather than stacking duplicates. Explicit rasterization removes obsolete parametric controls while retaining dialogue classification. An isolated bubble PNG strips only its omitted text association from the temporary render view; the archived native document retains that association. Actual ZIP/PNG browser checks cover this case.
 
 Chapter and layered ZIP accumulation now share the editor's device limits:4MP raster /128MB archives for touch or low-memory devices,16.8MP /512MB on desktop. Native backups remain available without rendering oversized pages. No final artwork is silently reduced. Final automated count is747; the final production-build regression run and exact-HEAD CI are still required before merge.
+
+
+Tablet review at768px found the expanded studio switcher covering the title/panel toggle. A tablet-only wrapped header now preserves both controls. Browser checks assert every essential header control remains within the viewport at1440/768/320/390px; touch checks remain separate from physical Android validation.

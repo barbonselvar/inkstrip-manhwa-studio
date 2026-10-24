@@ -18,7 +18,9 @@ const browser = await chromium.launch({
 await mkdir("/workspace/screenshots", { recursive: true });
 const results = [];
 try {
-  for (const width of [1440, 320, 390]) {
+  for (const width of process.env.DIALOGUE_TEST_WIDTH
+    ? [Number(process.env.DIALOGUE_TEST_WIDTH)]
+    : [1440, 768, 320, 390]) {
     const context = await browser.newContext({
         viewport: { width, height: width === 1440 ? 1000 : 900 },
         hasTouch: width < 500,
@@ -101,6 +103,19 @@ try {
     await page.getByText("Reusable presets", { exact: true }).click();
     await page.getByLabel("Dialogue preset name", { exact: true }).fill("Inkstrip speech");
     await page.getByRole("button", { name: "Save selected bubble preset", exact: true }).click();
+    for (const name of [
+      "Full editor",
+      "Save draft",
+      "Save dialogue to chapter",
+      "Toggle Pro panels",
+      "Back to chapter from Pro Studio",
+    ]) {
+      const box = await page.getByRole("button", { name, exact: true }).boundingBox();
+      assert.ok(
+        box && box.x >= -1 && box.x + box.width <= width + 1,
+        `Essential header control is within viewport at ${width}px: ${name} ${JSON.stringify(box)}`,
+      );
+    }
     await page.getByRole("button", { name: "Full editor", exact: true }).click();
     assert.equal(await page.locator(".pro-dialogue-quick").count(), 0);
     await page.getByRole("button", { name: "Quick edit", exact: true }).click();
