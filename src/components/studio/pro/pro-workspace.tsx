@@ -104,6 +104,8 @@ import { ToolSection } from "../design/tool-section";
 import {
   browserBrushStorage,
   loadBrushPresets,
+  loadPressureGamma,
+  savePressureGamma,
   saveBrushPresets,
   upsertBrushPreset,
   type BrushPreset,
@@ -166,6 +168,7 @@ export default function ProWorkspace({
     [brushPresets, setBrushPresets] = useState<BrushPreset[]>(() =>
       loadBrushPresets(browserBrushStorage()),
     ),
+    [pressureGamma, setPressureGamma] = useState(() => loadPressureGamma(browserBrushStorage())),
     [cloneSource, setCloneSource] = useState<CloneSource | null>(null),
     [cloneSampleArmed, setCloneSampleArmed] = useState(false),
     [maskMode, setMaskMode] = useState(false),
@@ -2016,6 +2019,7 @@ export default function ProWorkspace({
                 onApplyCrop={applyCrop}
                 doc={previewDoc ?? doc}
                 documentBase={history?.present.doc ?? doc}
+                pressureGamma={pressureGamma}
                 activeId={selectedIds[0] ?? ""}
                 selectedIds={selectedIds}
                 activeAnchor={activeAnchor}
@@ -2403,15 +2407,16 @@ export default function ProWorkspace({
                           if (!saveBrushPresets(browserBrushStorage(), next))
                             throw new Error("Browser storage is unavailable.");
                           setBrushPresets(next);
+                          return true;
                         } catch (e) {
                           setError(storageMessage(e));
+                          return false;
                         }
                       }}
-                      onDeleteBrushPreset={(name) => {
-                        const defaults = new Set(["Ink · round", "Soft shade", "Pencil · square"]);
-                        if (defaults.has(name)) return;
-                        const next = brushPresets.filter((preset) => preset.name !== name);
-                        if (saveBrushPresets(browserBrushStorage(), next)) setBrushPresets(next);
+                      pressureGamma={pressureGamma}
+                      onPressureGamma={(gamma) => {
+                        setPressureGamma(gamma);
+                        savePressureGamma(browserBrushStorage(), gamma);
                       }}
                       maskMode={maskMode}
                       setMaskMode={setMaskMode}

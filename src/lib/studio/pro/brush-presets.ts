@@ -125,6 +125,60 @@ export function upsertBrushPreset(presets: BrushPreset[], preset: BrushPreset): 
   ];
 }
 
+const fixed = {
+  roundness: 1,
+  angle: 0,
+  scatter: 0,
+  sizeJitter: 0,
+  opacityJitter: 0,
+  velocity: 0,
+  followDirection: false,
+};
+/** R3 manga/manhwa inking and eraser recipes. Existing stroke fields only, so
+ * strokes painted with them open identically in earlier releases. */
+const INKING_PRESETS: BrushPreset[] = [
+  {
+    // Strong taper: tiny at light pressure, full width when pressed.
+    name: "G-Pen",
+    settings: {
+      size: 14,
+      hardness: 1,
+      opacity: 1,
+      flow: 1,
+      color: "#172420",
+      sizePressure: true,
+      smoothing: 0.35,
+      dynamics: { ...fixed, spacing: 0.06, opacityPressure: false, stabilization: 4 },
+    },
+  },
+  {
+    // Fine, even line weight; pressure deliberately ignored.
+    name: "Mapping Pen",
+    settings: {
+      size: 3,
+      hardness: 1,
+      opacity: 1,
+      flow: 1,
+      color: "#172420",
+      sizePressure: false,
+      smoothing: 0.25,
+      dynamics: { ...fixed, spacing: 0.08, opacityPressure: false },
+    },
+  },
+  {
+    name: "Soft Eraser",
+    tool: "eraser",
+    settings: {
+      size: 64,
+      hardness: 0.15,
+      opacity: 1,
+      flow: 0.35,
+      color: "#172420",
+      dynamics: { ...fixed, spacing: 0.08, opacityPressure: false },
+    },
+  },
+];
+
 /** Additional factory recipes use the same versioned dab renderer. The three
  * historical presets remain unchanged, including existing saved preferences. */
 export const PROFESSIONAL_BRUSH_PRESETS: BrushPreset[] = [
@@ -303,7 +357,50 @@ export const PROFESSIONAL_BRUSH_PRESETS: BrushPreset[] = [
       },
     },
   },
+  ...INKING_PRESETS,
 ];
+
+export const isFactoryPreset = (name: string) =>
+  DEFAULT_BRUSH_PRESETS.some((p) => p.name === name) ||
+  PROFESSIONAL_BRUSH_PRESETS.some((p) => p.name === name);
+/** Custom presets and saved overrides of factory names can be deleted; the three
+ * historical defaults stay, and deleting an override reveals the factory recipe. */
+export const canDeleteBrushPreset = (stored: BrushPreset[], name: string) =>
+  !DEFAULT_BRUSH_PRESETS.some((p) => p.name === name) && stored.some((p) => p.name === name);
+export function duplicateBrushPreset(stored: BrushPreset[], name: string) {
+  const original = availableBrushPresets(stored).find((p) => p.name === name);
+  if (!original) throw Error("Choose a preset to duplicate.");
+  const taken = new Set(availableBrushPresets(stored).map((p) => p.name)),
+    base = `${name.slice(0, 33)} copy`;
+  let next = base;
+  for (let n = 2; taken.has(next); n++) next = `${base} ${n}`;
+  return upsertBrushPreset(stored, { ...structuredClone(original), name: next });
+}
+export const resetBrushPresets = () =>
+  DEFAULT_BRUSH_PRESETS.map((p) => ({ ...p, settings: { ...p.settings } }));
+
+/** Pen pressure response is a property of the user's pen and hand, not the document. */
+const PRESSURE_KEY = "inkstrip-pro-pen-pressure-v1";
+export function loadPressureGamma(storage: Pick<Storage, "getItem"> | undefined) {
+  try {
+    const value: unknown = JSON.parse(storage?.getItem(PRESSURE_KEY) ?? "null");
+    const gamma = (value as { gamma?: unknown } | null)?.gamma;
+    if (typeof gamma === "number" && Number.isFinite(gamma) && gamma >= 0.25 && gamma <= 4)
+      return gamma;
+  } catch {
+    // Corrupt preference: use the linear response.
+  }
+  return 1;
+}
+export function savePressureGamma(storage: Pick<Storage, "setItem"> | undefined, gamma: number) {
+  if (!storage || !Number.isFinite(gamma) || gamma < 0.25 || gamma > 4) return false;
+  try {
+    storage.setItem(PRESSURE_KEY, JSON.stringify({ gamma }));
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export function renameBrushPreset(presets: BrushPreset[], name: string, nextName: string) {
   const preset = presets.find((p) => p.name === name);
