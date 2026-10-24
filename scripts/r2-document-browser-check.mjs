@@ -181,6 +181,26 @@ try {
     // Selection clear through the existing shortcut/control; transforms remain editable.
     await fx.tab(p, "Properties");
     await p.getByRole("button", { name: "Deselect", exact: true }).click();
+    // Navigator centering must honor the rotated view, not the unrotated axes.
+    await panel(p, false);
+    await p.getByRole("button", { name: "Pro zoom in", exact: true }).click();
+    const nav = await p.locator(".pro-navigator").boundingBox(),
+      scale = Math.min(nav.width / 128, nav.height / 96),
+      target = {
+        x: nav.x + (nav.width - 128 * scale) / 2 + 100 * scale,
+        y: nav.y + (nav.height - 96 * scale) / 2 + 20 * scale,
+      };
+    if (touch) await p.touchscreen.tap(target.x, target.y);
+    else await p.mouse.click(target.x, target.y);
+    const centered = await point(p, 100, 20),
+      viewportBox = await p.locator(".pro-viewport").boundingBox();
+    assert.ok(
+      Math.hypot(
+        centered.x - viewportBox.x - viewportBox.width / 2,
+        centered.y - viewportBox.y - viewportBox.height / 2,
+      ) < 3,
+      "rotated navigator click centers the chosen source point",
+    );
     await p.getByRole("button", { name: "Fit Pro canvas", exact: true }).click();
     assert.equal(await p.getByLabel("Canvas view angle", { exact: true }).textContent(), "90°");
     await p.getByRole("button", { name: "Free Transform tool", exact: true }).click();

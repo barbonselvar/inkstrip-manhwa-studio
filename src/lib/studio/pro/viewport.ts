@@ -39,6 +39,14 @@ export function viewportToDocument(p: Point, frame: Frame, fit: number, view: Ca
   );
   return { x: frame.x + frame.width / 2 + q.x, y: frame.y + frame.height / 2 + q.y };
 }
+/** Pan so a document point sits at the viewport center (navigator clicks). */
+export function centerViewOn(view: CanvasView, p: Point, frame: Frame, fit: number): CanvasView {
+  const q = rotatePoint(
+    { x: frame.x + frame.width / 2 - p.x, y: frame.y + frame.height / 2 - p.y },
+    view.rotation,
+  );
+  return { ...view, x: q.x * fit * view.zoom, y: q.y * fit * view.zoom };
+}
 /** Actual CSS layout quantizes the two board dimensions independently. For the
  * quarter-turn UI, recover both local axis lengths from the measured bounds,
  * then undo rotation. This avoids low-zoom subpixel errors and rotated AABB mapping. */

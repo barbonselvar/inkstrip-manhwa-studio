@@ -9,6 +9,7 @@ import {
   rotateCanvasView,
   frameHandleAt,
   canvasPoint,
+  centerViewOn,
   type CanvasView,
 } from "./viewport.ts";
 import { CROP_HANDLES, cropHandlePoint } from "./geometry.ts";
@@ -142,4 +143,20 @@ test("rotation and reset preserve the source point under viewport center at ever
     near(view.y, original.y);
     assert.deepEqual(original, { zoom, x: 63, y: -29, rotation: 0 });
   }
+});
+test("navigator centering places the chosen source point at the viewport center at every view angle", () => {
+  const fit = 0.37,
+    target = { x: frame.x + 900, y: frame.y + 150 };
+  for (const rotation of [0, 90, 180, -90, -180])
+    for (const zoom of [0.5, 1, 3.2]) {
+      const view = centerViewOn({ zoom, x: 41, y: -17, rotation }, target, frame, fit);
+      assert.equal(view.rotation, rotation);
+      assert.equal(view.zoom, zoom);
+      const center = documentToViewport(target, frame, fit, view);
+      near(center.x, 0);
+      near(center.y, 0);
+      const back = viewportToDocument({ x: 0, y: 0 }, frame, fit, view);
+      near(back.x, target.x);
+      near(back.y, target.y);
+    }
 });

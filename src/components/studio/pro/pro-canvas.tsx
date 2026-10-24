@@ -47,6 +47,7 @@ import {
   rotatePoint,
   rotateCanvasView,
   canvasPoint,
+  centerViewOn,
   frameHandleAt,
   type CanvasView,
 } from "@/lib/studio/pro/viewport";
@@ -2373,11 +2374,14 @@ export function ProCanvas({
               s = Math.min(r.width / viewportFrame.width, r.height / viewportFrame.height),
               x = (e.clientX - r.left - (r.width - viewportFrame.width * s) / 2) / s,
               y = (e.clientY - r.top - (r.height - viewportFrame.height * s) / 2) / s;
-            setView((v) => ({
-              ...v,
-              x: (viewportFrame.width / 2 - x) * fit * v.zoom,
-              y: (viewportFrame.height / 2 - y) * fit * v.zoom,
-            }));
+            setView((v) =>
+              centerViewOn(
+                v,
+                { x: viewportFrame.x + x, y: viewportFrame.y + y },
+                viewportFrame,
+                fit,
+              ),
+            );
           }}
         >
           <canvas ref={mini} width={160} height={110} />
