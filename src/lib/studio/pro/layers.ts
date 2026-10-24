@@ -306,10 +306,15 @@ export function reorderLayers(
   const index = list.indexOf(boundary) + (edge === "after" ? 1 : 0);
   list.splice(index, 0, ...roots);
   let n = 0;
-  return checked({
+  const next = checked({
     ...d,
     layers: d.layers.map((l) => (l.parentId === target.parentId ? list[n++]! : l)),
   });
+  if (roots.some((l) => l.clipped && !clipBase(next, l.id)))
+    throw Error(
+      "A clipped layer must remain above a base in the same group. Release clipping before moving it below every base.",
+    );
+  return next;
 }
 export function moveLayers(d: ProDocument, ids: string[], direction: -1 | 1) {
   const roots = withBaseClips(d, selectedRoots(d, ids));

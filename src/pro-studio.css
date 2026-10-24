@@ -139,10 +139,22 @@
   padding: 0.25rem 0.75rem;
   font-size: 0.6875rem;
   color: var(--color-muted);
+  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 .pro-viewport-bar > div {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+}
+.pro-zoom-controls,
+.pro-view-rotation {
+  display: flex;
+  align-items: center;
+}
+.pro-view-rotation button {
+  min-height: 44px;
+  min-width: 44px;
 }
 .pro-viewport-bar output {
   min-width: 3rem;
@@ -720,7 +732,8 @@
   }
   .pro-body {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 3.5rem minmax(180px, 40%) minmax(0, 1fr);
+    /* Leave drawing space below the wrapped, touch-sized view controls. */
+    grid-template-rows: 3.5rem minmax(256px, 40%) minmax(0, 1fr);
   }
   .pro-body.pro-panel-hidden {
     grid-template-columns: minmax(0, 1fr);
@@ -917,6 +930,33 @@
 }
 .pro-layer-details:empty {
   display: none;
+}
+.pro-layer-row[data-current="true"] {
+  box-shadow: inset 3px 0 var(--color-primary);
+}
+.pro-layer-mask-target {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 0.4rem;
+}
+.pro-layer-mask-target[aria-pressed="true"] {
+  border-color: var(--color-primary);
+}
+.pro-layer-mask-target .pro-mask-thumbnail {
+  width: 32px;
+  height: 28px;
+  display: block;
+}
+.pro-layer-rename {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.pro-layer-rename .field {
+  width: 100%;
 }
 .pro-layer-indicator {
   display: inline-flex;
