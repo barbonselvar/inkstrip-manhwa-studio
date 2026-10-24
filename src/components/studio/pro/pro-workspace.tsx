@@ -1,3 +1,6 @@
+import { previewTransform } from "@/lib/studio/pro/transform-session";
+import { maskFrame, nudgeDocument } from "@/lib/studio/pro/geometry-operations";
+import { selectionTransformTarget } from "@/lib/studio/pro/selection-transform";
 import { browserDialogueBudget } from "@/lib/studio/dialogue/budget";
 import { saveProjectPresets } from "@/lib/studio/dialogue/presets";
 import { ProDialogueExport } from "./pro-dialogue-export";
@@ -57,11 +60,7 @@ import { editAnchor } from "@/lib/studio/pro/anchor-edit";
 import { createCompound, releaseCompound } from "@/lib/studio/pro/compound";
 import { documentSources } from "@/lib/studio/pro/raster-budget";
 import { contourAt } from "@/lib/studio/pro/model";
-import {
-  transformDocument,
-  transformForest,
-  forestFrame,
-} from "@/lib/studio/pro/transform-transaction";
+import { forestFrame } from "@/lib/studio/pro/transform-transaction";
 import { ProTransform, type TransformDraft } from "./pro-transform";
 import { validateTransform, withPivot, bounds } from "@/lib/studio/pro/transform";
 import { ProGeometry } from "./pro-geometry";
@@ -148,6 +147,14 @@ export default function ProWorkspace({
     ),
     [transformDraft, setTransformDraft] = useState<TransformDraft | null>(null),
     transformRef = useRef<TransformDraft | null>(null),
+    pixelStage = useRef<{
+      origin: ProDocument;
+      document: ProDocument;
+      assets: Record<string, Blob>;
+      layerId: string;
+      previousIds: string[];
+    } | null>(null),
+    [nudgeStep, setNudgeStep] = useState(10),
     [cropDraft, setCropDraft] = useState<Crop | null>(null),
     [cropRatio, setCropRatio] = useState(0),
     [tolerance, setTolerance] = useState(32),
@@ -235,15 +242,8 @@ export default function ProWorkspace({
   const maxArea = browserDialogueBudget().maxArea;
   const doc = useMemo(() => {
       const current = history?.present.doc;
-      if (!current || !transformDraft) return current;
-      return transformDraft.ids
-        ? transformForest(current, transformDraft.ids, transformDraft.base, transformDraft.value)
-        : transformDocument(
-            current,
-            transformDraft.layerId,
-            transformDraft.value,
-            transformDraft.translation,
-          );
+      if (!current || !transformDraft || transformDraft.origin !== current) return current;
+      return previewTransform(current, transformDraft, pixelStage.current?.document);
     }, [history?.present.doc, transformDraft]),
     // Panels edit the committed revision; only the canvas consumes an ongoing
     // pointer preview. Otherwise a concurrent property edit can publish it.
@@ -403,7 +403,16 @@ export default function ProWorkspace({
       renderer.current?.dispose();
       renderer.current = worker;
       void worker
-        .init(sessionRef.current)
+        .init(
+          pixelStage.current
+            ? {
+                ...sessionRef.current,
+                document: pixelStage.current.document,
+                assets: { ...sessionRef.current.assets, ...pixelStage.current.assets },
+              }
+            : sessionRef.current,
+          maxArea,
+        )
         .then(() => {
           if (current) setReady((n) => n + 1);
         })
@@ -494,7 +503,7 @@ export default function ProWorkspace({
   }, [previewDoc, ready, before, busy, maxArea, mode, viewportFrame, quick]);
   useEffect(() => {
     const current = history?.present.doc;
-    if (!current) return;
+    if (!current || pixelStage.current) return;
     setSelectedIds((ids) => {
       const valid = ids.filter((id) => current.layers.some((l) => l.id === id));
       return valid.length ? valid : current.layers.length ? [current.layers.at(-1)!.id] : [];
@@ -518,7 +527,7 @@ export default function ProWorkspace({
   }, []);
   const commit = useCallback(
     (next: ProDocument, label: string, group?: string) => {
-      if (busyRef.current || transformRef.current) return;
+      if (busyRef.current || transformRef.current) return false;
       try {
         const previous = historyRef.current?.present.doc;
         if (previous) next = reconcileDialogue(previous, next);
@@ -535,8 +544,10 @@ export default function ProWorkspace({
         const h = historyRef.current;
         if (h) setHist(record(h, { doc: next, label }, group));
         setError("");
+        return true;
       } catch (e) {
         setError(storageMessage(e));
+        return false;
       }
     },
     [setHist, maxArea],
@@ -1028,6 +1039,10 @@ export default function ProWorkspace({
     pathfinderJob.current?.cancel();
     renderer.current?.dispose();
     setAssetEpoch((n) => n + 1);
+    busyRef.current = false;
+    setBusy(false);
+    setCancellable(false);
+    setProgress("");
     setStatus("Rendering cancelled. Document retained.");
   };
   const addAsset = async (blob: Blob, name: string) => {
@@ -1235,6 +1250,12 @@ export default function ProWorkspace({
     }
   };
   const cancelTransform = () => {
+    const stage = pixelStage.current;
+    pixelStage.current = null;
+    if (stage) {
+      setSelectedIds(stage.previousIds);
+      setAssetEpoch((n) => n + 1);
+    }
     transformRef.current = null;
     setTransformDraft(null);
     setTool("move");
@@ -1242,17 +1263,9 @@ export default function ProWorkspace({
   const changeTransform = (value: TransformDraft) => {
     try {
       validateTransform(value.value);
-      if (historyRef.current) {
-        if (value.ids)
-          transformForest(historyRef.current.present.doc, value.ids, value.base, value.value);
-        else
-          transformDocument(
-            historyRef.current.present.doc,
-            value.layerId,
-            value.value,
-            value.translation,
-          );
-      }
+      const current = historyRef.current?.present.doc;
+      if (!current) throw Error("The document is unavailable.");
+      previewTransform(current, value, pixelStage.current?.document);
       transformRef.current = value;
       setTransformDraft(value);
       setError("");
@@ -1267,15 +1280,111 @@ export default function ProWorkspace({
       current = historyRef.current?.present.doc;
     if (!draft || !current || busyRef.current) return;
     try {
-      const next = draft.ids
-        ? transformForest(current, draft.ids, draft.base, draft.value)
-        : transformDocument(current, draft.layerId, draft.value, draft.translation);
+      const next = previewTransform(current, draft, pixelStage.current?.document),
+        stage = pixelStage.current;
       validateDocument(next);
+      documentSources(next, maxArea);
+      const nextSession =
+        stage && sessionRef.current
+          ? {
+              ...sessionRef.current,
+              document: next,
+              assets: { ...sessionRef.current.assets, ...stage.assets },
+            }
+          : null;
+      if (nextSession) validateAssets(nextSession);
+      transformRef.current = null;
+      const accepted = commit(
+        next,
+        draft.target === "pixels"
+          ? "Transform selected pixels"
+          : draft.target === "mask"
+            ? "Apply mask transform"
+            : "Apply layer transform",
+      );
+      if (!accepted) {
+        transformRef.current = draft;
+        return;
+      }
       cancelTransform();
-      commit(next, "Apply layer transform");
+      if (nextSession) {
+        sessionRef.current = nextSession;
+        setSession(nextSession);
+      }
+      if (stage) setSelectedIds([stage.layerId]);
       setStatus("Transform applied. Source artwork, masks and editable objects retained.");
     } catch (e) {
       setError(storageMessage(e));
+    }
+  };
+  const startSelectedPixels = async () => {
+    const current = historyRef.current?.present.doc,
+      worker = renderer.current;
+    if (!current || !worker || busyRef.current || transformRef.current || selectedIds.length !== 1)
+      return;
+    const run = ++operationRun.current;
+    try {
+      selectionTransformTarget(current, selectedIds[0]!, maxArea);
+      busyRef.current = true;
+      setBusy(true);
+      setCancellable(true);
+      ++generation.current;
+      setProgress("Lifting selected pixels at native resolution…");
+      setError("");
+      const result = await worker.stageSelection(current, maxArea, selectedIds[0]!);
+      if (!alive.current || run !== operationRun.current) return;
+      if (historyRef.current?.present.doc !== current)
+        throw Error("The document changed during selection staging. Retry the transform.");
+      if (!result.document || !result.assets || !result.layerId || !sessionRef.current)
+        throw Error("No selected-pixel stage was returned.");
+      validateAssets({
+        ...sessionRef.current,
+        document: result.document,
+        assets: { ...sessionRef.current.assets, ...result.assets },
+      });
+      pixelStage.current = {
+        origin: current,
+        document: result.document,
+        assets: result.assets,
+        layerId: result.layerId,
+        previousIds: [...selectedIds],
+      };
+      const floating = result.document.layers.find((l) => l.id === result.layerId)!;
+      if (
+        !changeTransform({
+          origin: current,
+          target: "pixels",
+          layerId: floating.id,
+          value: withPivot(floating.transform, { x: floating.width / 2, y: floating.height / 2 }),
+          base: structuredClone(floating.transform),
+          mode: "affine",
+          lock: true,
+          translation: { x: 0, y: 0 },
+        })
+      ) {
+        cancelTransform();
+        return;
+      }
+      setSelectedIds([floating.id]);
+      setAssetEpoch((n) => n + 1);
+      setTool("transform");
+      setCropDraft(null);
+      setBefore(false);
+      setMaskMode(false);
+      setTab("transform");
+      setPanelOpen(true);
+      setStatus(
+        "Selected pixels staged. Apply commits one undo step; Cancel discards the lift. Original layer retained hidden after Apply.",
+      );
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") setError(storageMessage(e));
+    } finally {
+      if (run === operationRun.current) {
+        busyRef.current = false;
+        setBusy(false);
+        setCancellable(false);
+        setProgress("");
+      }
     }
   };
   const createPathText = () => {
@@ -1321,10 +1430,11 @@ export default function ProWorkspace({
         return;
       }
       const current = historyRef.current!.present.doc,
-        multiple = selectedIds.length > 1 || active.kind === "group";
+        multiple = !maskMode && (selectedIds.length > 1 || active.kind === "group");
       let frame: ReturnType<typeof forestFrame> | undefined;
       try {
-        if (multiple) frame = forestFrame(current, selectedIds);
+        if (maskMode) frame = maskFrame(current, active.id);
+        else if (multiple) frame = forestFrame(current, selectedIds);
       } catch (e) {
         setError(storageMessage(e));
         return;
@@ -1342,9 +1452,14 @@ export default function ProWorkspace({
       }
       if (
         !changeTransform({
+          origin: current,
+          target: maskMode ? "mask" : undefined,
           layerId: original.id,
           ...(frame
-            ? { ids: [...selectedIds], frame: { width: frame.width, height: frame.height } }
+            ? {
+                ...(multiple ? { ids: [...selectedIds] } : {}),
+                frame: { width: frame.width, height: frame.height },
+              }
             : {}),
           value,
           base: structuredClone(original.transform),
@@ -1489,6 +1604,7 @@ export default function ProWorkspace({
     redo: () => {},
     remove,
     selectTool: chooseTool,
+    nudge: (_key: string, _large: boolean) => {},
   });
   actions.current = {
     save: saveNow,
@@ -1523,6 +1639,35 @@ export default function ProWorkspace({
       } else remove();
     },
     selectTool: chooseTool,
+    nudge: (key: string, large: boolean) => {
+      if (tool !== "move" && tool !== "transform") return;
+      const step = large ? nudgeStep : 1,
+        delta = {
+          x: key === "ArrowLeft" ? -step : key === "ArrowRight" ? step : 0,
+          y: key === "ArrowUp" ? -step : key === "ArrowDown" ? step : 0,
+        },
+        draft = transformRef.current;
+      if (draft) {
+        changeTransform({
+          ...draft,
+          value: { ...draft.value, x: draft.value.x + delta.x, y: draft.value.y + delta.y },
+          translation: { x: draft.translation.x + delta.x, y: draft.translation.y + delta.y },
+        });
+        return;
+      }
+      const current = historyRef.current?.present.doc;
+      if (current && selectedIds.length) {
+        try {
+          commit(
+            nudgeDocument(current, selectedIds, delta, maskMode),
+            maskMode ? "Nudge mask" : "Nudge layers",
+            `nudge:${selectedIds.join(":")}:${maskMode}`,
+          );
+        } catch (e) {
+          setError(storageMessage(e));
+        }
+      }
+    },
   };
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -1532,13 +1677,26 @@ export default function ProWorkspace({
         (e.target as HTMLElement).closest('[role="menu"],[role="alertdialog"]')
       )
         return;
-      const input = (e.target as HTMLElement).closest("input,textarea,select");
+      const input = (e.target as HTMLElement).closest(
+        "input,textarea,select,[contenteditable=true],[role=textbox]",
+      );
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
         void actions.current.save().catch((err) => setError(storageMessage(err)));
         return;
       }
       if (input) return;
+      if (
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        /^Arrow(Left|Right|Up|Down)$/.test(e.key) &&
+        (tool === "move" || tool === "transform")
+      ) {
+        e.preventDefault();
+        actions.current.nudge(e.key, e.shiftKey);
+        return;
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
         if (e.shiftKey) actions.current.redo();
@@ -2593,6 +2751,9 @@ export default function ProWorkspace({
                           : active
                       }
                       draft={transformDraft}
+                      onSelectedPixels={() => void startSelectedPixels()}
+                      nudgeStep={nudgeStep}
+                      onNudgeStep={setNudgeStep}
                       onDraft={changeTransform}
                       onApply={applyTransform}
                       onCancel={cancelTransform}
@@ -2615,7 +2776,13 @@ export default function ProWorkspace({
                         if (transformRef.current) cancelTransform();
                         if (cropDraft) cancelCrop();
                       }}
-                      onCommit={commit}
+                      onCommit={(next, label) => {
+                        try {
+                          commit(typeof next === "function" ? next() : next, label);
+                        } catch (e) {
+                          setError(storageMessage(e));
+                        }
+                      }}
                       canvasRef={canvas}
                       renderVersion={version}
                       disabled={busy || dialoguePending}

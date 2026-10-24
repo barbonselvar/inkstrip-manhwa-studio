@@ -11,6 +11,7 @@ type RenderReply = {
   document?: ProDocument;
   assetId?: string;
   layerId?: string;
+  assets?: Record<string, Blob>;
   thumbnails?: { id: string; blob: Blob }[];
 };
 export class ProRenderer {
@@ -124,6 +125,9 @@ export class ProRenderer {
   }
   sample(document: ProDocument, maxArea: number, point: { x: number; y: number }) {
     return this.request("sample", { document, maxArea, point });
+  }
+  stageSelection(document: ProDocument, maxArea: number, layerId: string) {
+    return this.request("stage-selection", { document, maxArea, layerId });
   }
   applyMask(document: ProDocument, maxArea: number, layerId: string) {
     return this.request("apply-mask", { document, maxArea, layerId });

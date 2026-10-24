@@ -1,17 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { ProNumber } from "./pro-properties";
 import { bounds, MESH, QUAD, withPivot, type TransformMode } from "@/lib/studio/pro/transform";
-import type { Layer, Point, Transform } from "@/lib/studio/pro/model";
-export type TransformDraft = {
-  layerId: string;
-  ids?: string[];
-  frame?: { width: number; height: number };
-  value: Transform;
-  base: Transform;
-  mode: TransformMode;
-  lock: boolean;
-  translation: Point;
-};
+import type { Layer, Transform } from "@/lib/studio/pro/model";
+import { contentAngle } from "@/lib/studio/pro/geometry-operations";
+import type { TransformDraft } from "@/lib/studio/pro/transform-session";
+export type { TransformDraft } from "@/lib/studio/pro/transform-session";
 export function ProTransform({
   layer,
   draft,
@@ -19,6 +12,9 @@ export function ProTransform({
   onApply,
   onCancel,
   disabled,
+  onSelectedPixels,
+  nudgeStep,
+  onNudgeStep,
 }: {
   layer?: Layer;
   draft: TransformDraft | null;
@@ -26,10 +22,29 @@ export function ProTransform({
   onApply: () => void;
   onCancel: () => void;
   disabled: boolean;
+  onSelectedPixels: () => void;
+  nudgeStep: number;
+  onNudgeStep: (n: number) => void;
 }) {
   if (!draft || !layer)
     return (
-      <p className="pro-help">Select unlocked layers or a group and choose Free Transform (F).</p>
+      <div className="pro-geometry">
+        <p className="pro-help">Select unlocked layers or a group and choose Free Transform (F).</p>
+        <Button disabled={disabled} onClick={onSelectedPixels}>
+          Transform selected pixels
+        </Button>
+        <p className="pro-help">
+          An active pixel selection does not limit whole-layer transforms. Use Transform selected
+          pixels to lift its coverage.
+        </p>
+        <ProNumber
+          label="Large nudge step"
+          min={1}
+          max={1000}
+          value={nudgeStep}
+          onChange={onNudgeStep}
+        />
+      </div>
     );
   const t = draft.value,
     box = bounds(t, layer.width, layer.height),
@@ -46,9 +61,16 @@ export function ProTransform({
     <fieldset className="pro-geometry" disabled={disabled}>
       <h3>Free Transform</h3>
       <p className="pro-help">
-        Live preview · {draft.ids ? "Selected layers / group (affine)" : layer.name}. Apply records
-        one undo step; Cancel restores the saved geometry. Source artwork, editable objects and
-        masks are retained.
+        Live preview ·{" "}
+        {draft.target === "mask"
+          ? "Mask only (affine)"
+          : draft.target === "pixels"
+            ? "Selected pixels"
+            : draft.ids
+              ? "Selected layers / group (affine)"
+              : layer.name}
+        . Apply records one undo step; Cancel restores the saved geometry. Source artwork, editable
+        objects and masks are retained.
       </p>
       <label className="pro-field">
         Transform mode
@@ -77,8 +99,12 @@ export function ProTransform({
           }}
         >
           <option value="affine">Affine · move, scale, rotate, shear</option>
-          {!draft.ids && <option value="perspective">Perspective · four corners</option>}
-          {!draft.ids && <option value="warp">Warp · smooth 3 × 3 mesh</option>}
+          {!draft.ids && draft.target !== "mask" && (
+            <option value="perspective">Perspective · four corners</option>
+          )}
+          {!draft.ids && draft.target !== "mask" && (
+            <option value="warp">Warp · smooth 3 × 3 mesh</option>
+          )}
         </select>
       </label>
       <p className="pro-help">
@@ -95,7 +121,42 @@ export function ProTransform({
         />
         Lock transform aspect ratio
       </label>
+      <p className="pro-help">
+        Arrow keys move in document pixels; Shift uses the large step. Content rotation is
+        independent of view rotation.
+      </p>
+      <ProNumber
+        label="Large nudge step"
+        min={1}
+        max={1000}
+        value={nudgeStep}
+        onChange={onNudgeStep}
+      />
       <div className="pro-field-grid">
+        <ProNumber
+          label="Transform width percent"
+          min={1}
+          max={10000}
+          value={t.scaleX * 100}
+          onChange={(n) =>
+            update({
+              scaleX: n / 100,
+              ...(draft.lock ? { scaleY: (t.scaleY * n) / (t.scaleX * 100) } : {}),
+            })
+          }
+        />
+        <ProNumber
+          label="Transform height percent"
+          min={1}
+          max={10000}
+          value={t.scaleY * 100}
+          onChange={(n) =>
+            update({
+              scaleY: n / 100,
+              ...(draft.lock ? { scaleX: (t.scaleX * n) / (t.scaleY * 100) } : {}),
+            })
+          }
+        />
         <ProNumber label="Transform X" value={t.x} onChange={(x) => update({ x })} />
         <ProNumber label="Transform Y" value={t.y} onChange={(y) => update({ y })} />
         <ProNumber
@@ -162,6 +223,17 @@ export function ProTransform({
         >
           Flip vertical
         </Button>
+      </div>
+      <div className="pro-actions">
+        {[-90, 90, 180].map((angle) => (
+          <Button
+            key={angle}
+            variant="secondary"
+            onClick={() => update({ rotation: contentAngle(t.rotation + angle) })}
+          >
+            Rotate {angle}°
+          </Button>
+        ))}
       </div>
       <div className="pro-field-grid">
         <ProNumber

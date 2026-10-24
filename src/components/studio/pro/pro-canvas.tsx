@@ -1,3 +1,5 @@
+import { cloneTransformDraft } from "@/lib/studio/pro/transform-session";
+import { maskFrame, nudgeDocument } from "@/lib/studio/pro/geometry-operations";
 import { bubbleFor, updateBubble } from "@/lib/studio/dialogue/operations";
 import { DEFAULT_LETTERING } from "@/lib/studio/dialogue/types";
 import { maskPaintPoint, maskWorld, maskLocal } from "@/lib/studio/pro/masks";
@@ -72,7 +74,7 @@ import {
   type Region,
   type CloneSource,
 } from "@/lib/studio/pro/model";
-import { translateLayers, translationIds, visibleLayerIds } from "@/lib/studio/pro/layers";
+import { translationIds, visibleLayerIds } from "@/lib/studio/pro/layers";
 import { isLocked } from "@/lib/studio/pro/operations";
 import { selectionCanvas } from "@/lib/studio/pro/render";
 import { shapePath } from "@/lib/studio/pro/paths";
@@ -756,7 +758,7 @@ export function ProCanvas({
         ...base,
         type: "free-transform",
         snap: buildSnapIndex(doc, transformDraft.ids ?? [selected.id]),
-        transform: structuredClone(transformDraft),
+        transform: cloneTransformDraft(transformDraft),
         transformHandle: handle,
         id: selected.id,
       };
@@ -1105,6 +1107,21 @@ export function ProCanvas({
       onTransient(next);
       return;
     }
+    if (tool === "move" && maskMode && selected?.mask) {
+      try {
+        const frame = maskFrame(doc, selected.id);
+        gesture.current = {
+          ...base,
+          type: "move",
+          id: selected.id,
+          ids: [selected.id],
+          moveFrame: bounds(frame.transform, frame.width, frame.height),
+        };
+      } catch (e) {
+        onError((e as Error).message);
+      }
+      return;
+    }
     if (corner && selected && !isLocked(doc, selected.id)) {
       gesture.current = {
         ...base,
@@ -1383,10 +1400,15 @@ export function ProCanvas({
       x += delta.x;
       y += delta.y;
       try {
-        return translateLayers(g.doc, g.ids ?? [l.id], {
-          x: x - l.transform.x,
-          y: y - l.transform.y,
-        });
+        return nudgeDocument(
+          g.doc,
+          g.ids ?? [l.id],
+          {
+            x: x - l.transform.x,
+            y: y - l.transform.y,
+          },
+          g.maskMode,
+        );
       } catch (e) {
         onError((e as Error).message);
         return null;

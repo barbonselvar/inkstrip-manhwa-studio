@@ -54,7 +54,9 @@
     "test:chapter-import:browser": "node scripts/chapter-import-safety-browser-check.mjs",
     "test:r2:browser": "node --experimental-strip-types scripts/r2-document-browser-check.mjs",
     "bench:r2:thumbnails": "node --experimental-strip-types scripts/r2-thumbnail-benchmark.mjs",
-    "test:r2:gesture:browser": "node --experimental-strip-types scripts/r2-gesture-browser-check.mjs"
+    "test:r2:gesture:browser": "node --experimental-strip-types scripts/r2-gesture-browser-check.mjs",
+    "test:r5:browser": "node --experimental-strip-types scripts/r5-browser-check.mjs",
+    "bench:r5": "node scripts/r5-benchmark.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

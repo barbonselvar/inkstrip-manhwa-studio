@@ -1,3 +1,4 @@
+import { renderSelectionTransform } from "./selection-transform-worker";
 import { NEUTRAL } from "../editor/adjustments";
 import { preflightImage, imagePolicy } from "../image-policy";
 import { thumbnailDocument, thumbnailScale } from "./thumbnails";
@@ -148,6 +149,19 @@ self.onmessage = async ({ data }) => {
       }
       return cache.get(key)!;
     };
+    if (type === "stage-selection") {
+      if (Object.keys(assets).length > 62)
+        throw Error("The immutable asset pool has no room for selected pixels.");
+      const result = await renderSelectionTransform(
+        doc,
+        data.layerId,
+        data.maxArea,
+        get,
+        () => latest !== id,
+      );
+      self.postMessage({ id, type, ...result });
+      return;
+    }
     if (type === "apply-mask") {
       const layer = doc.layers.find((l) => l.id === data.layerId);
       if (

@@ -4,6 +4,11 @@ import { ToolSection } from "../design/tool-section";
 import { ProNumber } from "./pro-properties";
 import { outputMatrix, outputSize, type Crop, type Resampling } from "@/lib/studio/pro/geometry";
 import type { ProDocument } from "@/lib/studio/pro/model";
+import {
+  CANVAS_ANCHORS,
+  resizeCanvas,
+  type CanvasAnchor,
+} from "@/lib/studio/pro/geometry-operations";
 export function ProGeometry({
   doc,
   draft,
@@ -28,7 +33,7 @@ export function ProGeometry({
   onApply: () => void;
   onCancel: () => void;
   onReset: () => void;
-  onCommit: (d: ProDocument, label: string) => void;
+  onCommit: (d: ProDocument | (() => ProDocument), label: string) => void;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   renderVersion: number;
   disabled: boolean;
@@ -39,6 +44,8 @@ export function ProGeometry({
     [canvasHeight, setCanvasHeight] = useState(doc.height),
     [width, setWidth] = useState(size.width),
     [height, setHeight] = useState(size.height),
+    [anchor, setAnchor] = useState<CanvasAnchor>("nw"),
+    [percent, setPercent] = useState(false),
     [lock, setLock] = useState(true),
     [method, setMethod] = useState<Resampling>(doc.imageSize?.resampling ?? "bicubic");
   useEffect(() => {
@@ -157,27 +164,38 @@ export function ProGeometry({
           editable at full canvas resolution. Undo or reset restores the original output grid.
         </p>
         <label className="pro-check">
+          <input
+            type="checkbox"
+            aria-label="Image size in percent"
+            checked={percent}
+            onChange={(e) => setPercent(e.target.checked)}
+          />
+          Size in percent
+        </label>
+        <label className="pro-check">
           <input type="checkbox" checked={lock} onChange={(e) => setLock(e.target.checked)} />
           Lock image aspect ratio
         </label>
         <div className="pro-field-grid">
           <ProNumber
-            label="Image width"
-            value={width}
-            min={1}
-            max={16384}
+            label={percent ? "Image width percent" : "Image width"}
+            value={percent ? (width * 100) / size.width : width}
+            min={percent ? 0.1 : 1}
+            max={percent ? 10000 : 16384}
             onChange={(n) => {
-              setWidth(Math.round(n));
+              n = percent ? (n * size.width) / 100 : n;
+              setWidth(Math.max(1, Math.round(n)));
               if (lock) setHeight(Math.max(1, Math.round((n * size.height) / size.width)));
             }}
           />
           <ProNumber
-            label="Image height"
-            value={height}
-            min={1}
-            max={16384}
+            label={percent ? "Image height percent" : "Image height"}
+            value={percent ? (height * 100) / size.height : height}
+            min={percent ? 0.1 : 1}
+            max={percent ? 10000 : 16384}
             onChange={(n) => {
-              setHeight(Math.round(n));
+              n = percent ? (n * size.height) / 100 : n;
+              setHeight(Math.max(1, Math.round(n)));
               if (lock) setWidth(Math.max(1, Math.round((n * size.width) / size.height)));
             }}
           />
@@ -196,6 +214,20 @@ export function ProGeometry({
             <option value="lanczos">Lanczos 3</option>
           </select>
         </label>
+        <p className="pro-help">
+          Pending output · {width} × {height} px · {method}. Current output · {size.width} ×{" "}
+          {size.height} px.
+        </p>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setWidth(size.width);
+            setHeight(size.height);
+            setMethod(doc.imageSize?.resampling ?? "bicubic");
+          }}
+        >
+          Cancel pending image size
+        </Button>
         <Button
           disabled={!!draft}
           onClick={() =>
@@ -217,9 +249,36 @@ export function ProGeometry({
       </ToolSection>
       <ToolSection title="Canvas size · no resampling">
         <p className="pro-help">
-          Extend or trim the canvas from its top-left origin. Artwork outside its boundaries is
+          Extend or trim the canvas around the selected anchor. Artwork outside its boundaries is
           retained in the layers. Existing crop boundaries and output size remain independent.
         </p>
+        <label className="pro-field">
+          Canvas anchor
+          <select
+            className="field"
+            aria-label="Canvas anchor"
+            value={anchor}
+            onChange={(e) => setAnchor(e.target.value as CanvasAnchor)}
+          >
+            {CANVAS_ANCHORS.map((a) => (
+              <option key={a} value={a}>
+                {
+                  {
+                    nw: "Top left",
+                    n: "Top center",
+                    ne: "Top right",
+                    w: "Middle left",
+                    center: "Center",
+                    e: "Middle right",
+                    sw: "Bottom left",
+                    s: "Bottom center",
+                    se: "Bottom right",
+                  }[a]
+                }
+              </option>
+            ))}
+          </select>
+        </label>
         <ProNumber
           label="Document width"
           value={canvasWidth}
@@ -238,7 +297,7 @@ export function ProGeometry({
           variant="secondary"
           disabled={!!draft}
           onClick={() =>
-            onCommit({ ...doc, width: canvasWidth, height: canvasHeight }, "Resize canvas")
+            onCommit(() => resizeCanvas(doc, canvasWidth, canvasHeight, anchor), "Resize canvas")
           }
         >
           Resize canvas
