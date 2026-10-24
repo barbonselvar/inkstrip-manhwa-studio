@@ -1,4 +1,2 @@
-
 > typecheck
 > tsc --noEmit && tsc --project tsconfig.config.json
-

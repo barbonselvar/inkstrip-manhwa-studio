@@ -111,7 +111,7 @@ No confirmed Critical issue was found in the inspected R1 paths. A green audit s
 
 ## E. Reproducible validation and baseline evidence
 
-See `EVIDENCE.json` and `baseline/*` for exact commands, exit codes, suite timings, initial failed attempts and final results. Before H01 changes:750 tests passed, typecheck/lint/build/config/auth passed; `npm audit --json` reported0advisories across506dependency entries. After H01: **753 tests passed** (200 script+59 shared+49 Studio+445 Pro), zero failures/skips/cancellations. No test was removed/weakened.
+See `EVIDENCE.json` and `baseline/*` for exact commands, exit codes, suite timings, initial failed attempts and final results. Captured logs remove ANSI terminal decoration and trailing whitespace only; assertion text, failures and results remain. The initial raw build log triggered whitespace warnings during documentation staging; normalized copies and refreshed SHA-256 manifests resolve them without changing tests. Before H01 changes:750 tests passed, typecheck/lint/build/config/auth passed; `npm audit --json` reported0advisories across506dependency entries. After H01: **753 tests passed** (200 script+59 shared+49 Studio+445 Pro), zero failures/skips/cancellations. No test was removed/weakened.
 
 ```sh
 git fetch origin --prune
