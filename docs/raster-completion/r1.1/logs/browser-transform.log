@@ -1,0 +1,10 @@
+Affine numeric scale/rotate/shear/flips, independent Canvas reference, Apply/Cancel, history and mode-switch safety passed.
+Mouse corners/edges, nonuniform scale, rotation handle, pivot relocation and Escape passed.
+True homography pixels, corner drags, analytic perspective, smooth mesh deformation, history/native and PNG/JPEG/WebP passed.
+Non-affine mask/clipping alpha, selection-aware painting, inverse hit coordinates and clone snapshot/native fidelity passed.
+Editable shape/text deformation and perspective-aware Spot Healing passed.
+Warp plus crop/resampling reads 2000px native source data beyond the preview cap.
+Local reopen, Raster/Vector switching and original-preserving Chapter application passed.
+Chromium 320px: touch scale/perspective/warp, pinch/pan, Apply/Cancel visibility, history/export and no scroll/overflow passed.
+Chromium 390px: touch scale/perspective/warp, pinch/pan, Apply/Cancel visibility, history/export and no scroll/overflow passed.
+{"ok":true,"checks":["affine matrices and independent Canvas reference","numeric controls and pointer handles","pivot and aspect modifiers","homography raster output","smooth Bézier warp pixels","masks/clipping/selections/clone/repair","editable shape/text","native/history/Chapter fidelity","320/390px native touch"],"physicalAndroid":false}

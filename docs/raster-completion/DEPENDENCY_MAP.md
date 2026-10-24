@@ -110,9 +110,13 @@ Raster does not show the Vector Gradient, Text-on-Path or Artboard tools. Their 
 - `lib/studio/pro/render.ts`: one compositor for preview, merge/selection/repair sampling and export; `worker.ts` schedules bounded operations and owns decoded bitmap LRU.
 - `lib/studio/pro/{transform, transform-pixels, transform-transaction, masks}.ts`: source/document mapping, homographies/warp and mask plane ownership.
 - `lib/studio/pro/{files, native-images, storage}.ts`: portable envelope parsing, immutable asset remapping, image preflight and revision-checked local persistence.
-- `lib/studio/{store, db, backup}.ts` plus `dialogue/storage-compat.ts`: Chapter metadata/media transactions, original bytes and project recovery journal. Chapter/general-format image imports use a separate decode path; see H02 in the audit.
+- `lib/studio/{store, db, backup}.ts` plus `dialogue/storage-compat.ts`: Chapter metadata/media transactions, original bytes and project recovery journal. R1.1 guards the Chapter/general-format decode path through image-policy/image-decode, stages batches and uses commitChapterImages/commitPanelMedia for atomic publication. Backup-store validates every media role and embedded character/native asset before restore. See R1_1_REPORT.md.
 - `lib/studio/editor/{history, adjustments}.ts`: reused history and deterministic RGB operations; no new history or filter engine.
 - `lib/studio/enhance/*` and existing model/ONNX workers: existing real Swin2SR, not unreleased F1.
 - `lib/studio/pro/{svg-import, vector-render, vector-svg, appearance, compound, pathfinder,...}`: shared Vector behavior, retained and regression-tested. No dependency on F1 branch is introduced.
 
 See `CAPABILITY_MATRIX.md` for feature states and evidence limits, and `R1_AUDIT.md` for findings, baseline commands, performance and proposed R2–R10 sequence.
+
+### R1.1 resource boundary
+
+`image-policy.ts` → bounded Blob slices + pinned browser-only `image-size@2.0.4` (MIT, zero runtime dependencies) → signature/container/dimension/pixel/memory checks. `image-decode.ts` → native bitmap timeout/cancel/late-close + per-context busy guard; `images.ts` → validated bitmap/Image fallback + main-window lease. `store.ts` → all-file preflight → sequential decode/thumbnail → one revision-checked Chapter transaction. `getImageBlob` and `useImageUrl` guard stored thumbnail/reference `<img>` consumers; raw `getBlob` remains for byte-exact download/recovery. Editor, enhancement, face, retouch, reference and Pro worker boundaries also validate untrusted sources. Generated compositor outputs already have geometry budgets and are not reclassified as user uploads.

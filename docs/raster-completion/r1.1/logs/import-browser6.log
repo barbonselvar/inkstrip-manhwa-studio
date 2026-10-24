@@ -1,0 +1,75 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "rejectedDecodeCalls": 0,
+      "mixedOrder": true,
+      "pickerDropPaste": true,
+      "cancellationAndLateClose": true,
+      "atomicQuotaRollback": true,
+      "staleChapter": true,
+      "replacementProtection": true,
+      "replacementQuotaAndCancellation": true,
+      "actualDecoderFailure": true,
+      "recoveryProtection": true,
+      "originalBytes": true,
+      "crossTab": true,
+      "retries": true,
+      "studioEntries": true
+    },
+    {
+      "width": 320,
+      "rejectedDecodeCalls": 0,
+      "mixedOrder": true,
+      "pickerDropPaste": true,
+      "cancellationAndLateClose": true,
+      "atomicQuotaRollback": true,
+      "staleChapter": true,
+      "replacementProtection": true,
+      "replacementQuotaAndCancellation": true,
+      "actualDecoderFailure": true,
+      "recoveryProtection": true,
+      "originalBytes": true,
+      "crossTab": false,
+      "retries": true,
+      "studioEntries": true
+    },
+    {
+      "width": 390,
+      "rejectedDecodeCalls": 0,
+      "mixedOrder": true,
+      "pickerDropPaste": true,
+      "cancellationAndLateClose": true,
+      "atomicQuotaRollback": true,
+      "staleChapter": true,
+      "replacementProtection": true,
+      "replacementQuotaAndCancellation": true,
+      "actualDecoderFailure": true,
+      "recoveryProtection": true,
+      "originalBytes": true,
+      "crossTab": false,
+      "retries": true,
+      "studioEntries": true
+    },
+    {
+      "actualBrowserFormats": [
+        "png",
+        "jpg",
+        "webp",
+        "gif",
+        "bmp",
+        "ico",
+        "avif",
+        "safe svg"
+      ],
+      "originalBytes": true
+    }
+  ],
+  "errors": [],
+  "physicalAndroid": false,
+  "injectedBoundaryTests": [
+    "decoder delay",
+    "quota"
+  ],
+  "actualInference": "not part of this targeted suite; existing regressions run separately"
+}

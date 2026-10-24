@@ -1,0 +1,5 @@
+
+> check:build
+> node scripts/check-build.mjs
+
+Vercel server, browser/AI runtime assets, PWA icon, and tslib bundling verified.

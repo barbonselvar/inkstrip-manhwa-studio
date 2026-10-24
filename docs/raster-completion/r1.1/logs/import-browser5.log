@@ -1,0 +1,329 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+... Skipped lines
+
+  {
+    chapters: [
+      {
+        createdAt: 1792850372975,
+        format: 'image/jpeg',
+...
+        title: 'Chapter 1',
++       updatedAt: 1792850373369,
+-       updatedAt: 1792850373216,
+        width: 800
+      }
+    ],
+    keys: [
+      '0eaf475f-1af6-4fb9-af00-038136faf582',
+...
+      '54824617-7448-4537-b4b9-628c3b28a30b',
++     '560bdaaa-0af1-448e-a251-c2fc150ea87e',
+      '5c287f74-f29b-4997-b466-c3dbc0d8ecc3',
+      '6cf5abbc-5d6e-485f-b091-1e7acb97b25f',
+      '77056283-fd84-4ef1-bd5b-28a126ca74f9',
+      '7a5a7dd4-65bd-4f4d-9699-6105f32afe8e',
+      'be76e84b-b8a4-4fb7-88e0-f39108ef3699',
++     'be7d41d9-4627-45b0-ad8b-a19512d0c8b8',
+      'cc5f9757-2a7a-434c-a8e0-8274e8463969',
+      'fd67dbd8-611f-41a5-a61e-28be58be2839'
+    ],
+    panels: [
+      {
+...
+      {
++       blobId: '560bdaaa-0af1-448e-a251-c2fc150ea87e',
++       chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
++       createdAt: 1792850373368,
++       height: 24,
++       id: '31c104b6-20f7-41dc-ad63-dc2d23a4b4d8',
++       mime: 'image/png',
++       name: 'corrupt-pixels.png',
++       order: 6,
++       thumbId: 'be7d41d9-4627-45b0-ad8b-a19512d0c8b8',
++       width: 32
++     },
++     {
+        blobId: '7a5a7dd4-65bd-4f4d-9699-6105f32afe8e',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        createdAt: 1792850372052,
+        height: 96,
+        id: '3e63b12b-f15e-4b03-9df2-a40901554028',
+...
+        title: 'Transform QA',
++       updatedAt: 1792850373369
+-       updatedAt: 1792850373216
+      }
+    ]
+  }
+
+    at file:///workspace/inkstrip-manhwa-studio/scripts/chapter-import-safety-browser-check.mjs:150:39 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: {
+    projects: [
+      {
+        id: '994eecd2-0982-429c-ade7-d8775a1ae15b',
+        title: 'Transform QA',
+        createdAt: 1792850371643,
+        updatedAt: 1792850373369
+      }
+    ],
+    chapters: [
+      {
+        id: '0e364062-0834-40f4-adb8-aa3637bf9973',
+        projectId: '994eecd2-0982-429c-ade7-d8775a1ae15b',
+        title: 'Chapter 2',
+        createdAt: 1792850372975,
+        updatedAt: 1792850372975,
+        width: 800,
+        seam: 0,
+        format: 'image/jpeg',
+        strip: null
+      },
+      {
+        id: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        projectId: '994eecd2-0982-429c-ade7-d8775a1ae15b',
+        title: 'Chapter 1',
+        createdAt: 1792850371643,
+        updatedAt: 1792850373369,
+        width: 800,
+        seam: 0,
+        format: 'image/jpeg',
+        strip: null
+      }
+    ],
+    panels: [
+      {
+        id: '070337aa-2e12-4977-9a2d-7dc1f1d2a544',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        name: 'valid-jpeg.jpg',
+        mime: 'image/jpeg',
+        width: 32,
+        height: 24,
+        blobId: '3ad2749b-7627-4e55-a1b7-1def9e1898a4',
+        thumbId: '54824617-7448-4537-b4b9-628c3b28a30b',
+        order: 2,
+        createdAt: 1792850372517
+      },
+      {
+        id: '19c89193-d79c-483b-86cf-862ea42da43d',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        name: 'pasted.png',
+        mime: 'image/png',
+        width: 32,
+        height: 24,
+        blobId: 'cc5f9757-2a7a-434c-a8e0-8274e8463969',
+        thumbId: '77056283-fd84-4ef1-bd5b-28a126ca74f9',
+        order: 4,
+        createdAt: 1792850372684
+      },
+      {
+        id: '2f9b01cd-5f02-4ac7-a938-26b0b2febf52',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        name: 'retry.png',
+        mime: 'image/png',
+        width: 32,
+        height: 24,
+        blobId: '0eaf475f-1af6-4fb9-af00-038136faf582',
+        thumbId: 'be76e84b-b8a4-4fb7-88e0-f39108ef3699',
+        order: 5,
+        createdAt: 1792850373215
+      },
+      {
+        id: '31c104b6-20f7-41dc-ad63-dc2d23a4b4d8',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        name: 'corrupt-pixels.png',
+        mime: 'image/png',
+        width: 32,
+        height: 24,
+        blobId: '560bdaaa-0af1-448e-a251-c2fc150ea87e',
+        thumbId: 'be7d41d9-4627-45b0-ad8b-a19512d0c8b8',
+        order: 6,
+        createdAt: 1792850373368
+      },
+      {
+        id: '3e63b12b-f15e-4b03-9df2-a40901554028',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        name: 'geometry.png',
+        mime: 'image/png',
+        width: 128,
+        height: 96,
+        blobId: '7a5a7dd4-65bd-4f4d-9699-6105f32afe8e',
+        thumbId: '5c287f74-f29b-4997-b466-c3dbc0d8ecc3',
+        order: 0,
+        createdAt: 1792850372052
+      },
+      {
+        id: '710a4572-30ae-49fc-ad24-f35bc7036191',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        name: 'dropped.png',
+        mime: 'image/png',
+        width: 32,
+        height: 24,
+        blobId: '3ba77793-11b9-48c2-bb80-22c99b269e79',
+        thumbId: '22b34eef-8c3e-4207-97b1-07fd614b4976',
+        order: 3,
+        createdAt: 1792850372622
+      },
+      {
+        id: 'bd75546d-f503-4885-bd8c-48d9a620cdbd',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        name: 'valid-as-text.dat',
+        mime: 'image/png',
+        width: 32,
+        height: 24,
+        blobId: '6cf5abbc-5d6e-485f-b091-1e7acb97b25f',
+        thumbId: 'fd67dbd8-611f-41a5-a61e-28be58be2839',
+        order: 1,
+        createdAt: 1792850372484
+      }
+    ],
+    keys: [
+      '0eaf475f-1af6-4fb9-af00-038136faf582',
+      '22b34eef-8c3e-4207-97b1-07fd614b4976',
+      '3ad2749b-7627-4e55-a1b7-1def9e1898a4',
+      '3ba77793-11b9-48c2-bb80-22c99b269e79',
+      '54824617-7448-4537-b4b9-628c3b28a30b',
+      '560bdaaa-0af1-448e-a251-c2fc150ea87e',
+      '5c287f74-f29b-4997-b466-c3dbc0d8ecc3',
+      '6cf5abbc-5d6e-485f-b091-1e7acb97b25f',
+      '77056283-fd84-4ef1-bd5b-28a126ca74f9',
+      '7a5a7dd4-65bd-4f4d-9699-6105f32afe8e',
+      'be76e84b-b8a4-4fb7-88e0-f39108ef3699',
+      'be7d41d9-4627-45b0-ad8b-a19512d0c8b8',
+      'cc5f9757-2a7a-434c-a8e0-8274e8463969',
+      'fd67dbd8-611f-41a5-a61e-28be58be2839'
+    ]
+  },
+  expected: {
+    projects: [
+      {
+        id: '994eecd2-0982-429c-ade7-d8775a1ae15b',
+        title: 'Transform QA',
+        createdAt: 1792850371643,
+        updatedAt: 1792850373216
+      }
+    ],
+    chapters: [
+      {
+        id: '0e364062-0834-40f4-adb8-aa3637bf9973',
+        projectId: '994eecd2-0982-429c-ade7-d8775a1ae15b',
+        title: 'Chapter 2',
+        createdAt: 1792850372975,
+        updatedAt: 1792850372975,
+        width: 800,
+        seam: 0,
+        format: 'image/jpeg',
+        strip: null
+      },
+      {
+        id: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        projectId: '994eecd2-0982-429c-ade7-d8775a1ae15b',
+        title: 'Chapter 1',
+        createdAt: 1792850371643,
+        updatedAt: 1792850373216,
+        width: 800,
+        seam: 0,
+        format: 'image/jpeg',
+        strip: null
+      }
+    ],
+    panels: [
+      {
+        id: '070337aa-2e12-4977-9a2d-7dc1f1d2a544',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        name: 'valid-jpeg.jpg',
+        mime: 'image/jpeg',
+        width: 32,
+        height: 24,
+        blobId: '3ad2749b-7627-4e55-a1b7-1def9e1898a4',
+        thumbId: '54824617-7448-4537-b4b9-628c3b28a30b',
+        order: 2,
+        createdAt: 1792850372517
+      },
+      {
+        id: '19c89193-d79c-483b-86cf-862ea42da43d',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        name: 'pasted.png',
+        mime: 'image/png',
+        width: 32,
+        height: 24,
+        blobId: 'cc5f9757-2a7a-434c-a8e0-8274e8463969',
+        thumbId: '77056283-fd84-4ef1-bd5b-28a126ca74f9',
+        order: 4,
+        createdAt: 1792850372684
+      },
+      {
+        id: '2f9b01cd-5f02-4ac7-a938-26b0b2febf52',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        name: 'retry.png',
+        mime: 'image/png',
+        width: 32,
+        height: 24,
+        blobId: '0eaf475f-1af6-4fb9-af00-038136faf582',
+        thumbId: 'be76e84b-b8a4-4fb7-88e0-f39108ef3699',
+        order: 5,
+        createdAt: 1792850373215
+      },
+      {
+        id: '3e63b12b-f15e-4b03-9df2-a40901554028',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        name: 'geometry.png',
+        mime: 'image/png',
+        width: 128,
+        height: 96,
+        blobId: '7a5a7dd4-65bd-4f4d-9699-6105f32afe8e',
+        thumbId: '5c287f74-f29b-4997-b466-c3dbc0d8ecc3',
+        order: 0,
+        createdAt: 1792850372052
+      },
+      {
+        id: '710a4572-30ae-49fc-ad24-f35bc7036191',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        name: 'dropped.png',
+        mime: 'image/png',
+        width: 32,
+        height: 24,
+        blobId: '3ba77793-11b9-48c2-bb80-22c99b269e79',
+        thumbId: '22b34eef-8c3e-4207-97b1-07fd614b4976',
+        order: 3,
+        createdAt: 1792850372622
+      },
+      {
+        id: 'bd75546d-f503-4885-bd8c-48d9a620cdbd',
+        chapterId: 'a85107c2-ef82-4438-bb23-adac877703b4',
+        name: 'valid-as-text.dat',
+        mime: 'image/png',
+        width: 32,
+        height: 24,
+        blobId: '6cf5abbc-5d6e-485f-b091-1e7acb97b25f',
+        thumbId: 'fd67dbd8-611f-41a5-a61e-28be58be2839',
+        order: 1,
+        createdAt: 1792850372484
+      }
+    ],
+    keys: [
+      '0eaf475f-1af6-4fb9-af00-038136faf582',
+      '22b34eef-8c3e-4207-97b1-07fd614b4976',
+      '3ad2749b-7627-4e55-a1b7-1def9e1898a4',
+      '3ba77793-11b9-48c2-bb80-22c99b269e79',
+      '54824617-7448-4537-b4b9-628c3b28a30b',
+      '5c287f74-f29b-4997-b466-c3dbc0d8ecc3',
+      '6cf5abbc-5d6e-485f-b091-1e7acb97b25f',
+      '77056283-fd84-4ef1-bd5b-28a126ca74f9',
+      '7a5a7dd4-65bd-4f4d-9699-6105f32afe8e',
+      'be76e84b-b8a4-4fb7-88e0-f39108ef3699',
+      'cc5f9757-2a7a-434c-a8e0-8274e8463969',
+      'fd67dbd8-611f-41a5-a61e-28be58be2839'
+    ]
+  },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

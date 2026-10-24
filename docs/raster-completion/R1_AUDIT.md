@@ -10,7 +10,7 @@ The merged Raster editor already has substantial working pixel, geometry, layer,
 
 R1 includes one narrow High resource-safety correction: standalone Assets imports now reject oversized raster headers/bytes **before image decoding**, reusing native-import checks. Real-UI reproduction first recorded one decoder invocation for an oversized header; the corrected path records zero, with identical document/asset state. Three regression tests plus the actual UI audit were added. It does not add a new tool or change native geometry.
 
-An additional general Chapter-image decoding resource boundary remains a High follow-up: the multi-format Chapter pipeline decodes before size planning. Its wider format/long-chapter policy needs an agreed supported-size decision; the existing Chapter workflow was not silently restricted in R1. Other material limitations include preview resolution, bounded memory/history, non-semantic matting, limited brush/filter families, native-v6 branch separation, and lack of physical-device validation. **The overall Raster completion program still needs work; R1 is not a professional-parity or production-release certification.**
+Historical R1 finding (superseded by R1.1 below): an additional general Chapter-image decoding resource boundary remained a High follow-up: the multi-format Chapter pipeline decodes before size planning. Its wider format/long-chapter policy needs an agreed supported-size decision; the existing Chapter workflow was not silently restricted in R1. Other material limitations include preview resolution, bounded memory/history, non-semantic matting, limited brush/filter families, native-v6 branch separation, and lack of physical-device validation. **The overall Raster completion program still needs work; R1 is not a professional-parity or production-release certification.**
 
 ## A. Verified Git, integration and deployment baseline
 
@@ -75,7 +75,9 @@ Small correction: `validateRasterInput` reuses `rasterSize` and existing 48 MB /
 
 Files: `src/components/studio/pro/pro-workspace.tsx`, `src/lib/studio/pro/native-images.ts`, its test, and `scripts/raster-import-audit.mjs`. Fix commit9ac5464. No schema/dependency/graphics change. Remaining decoder risk is bounded by browser implementation and general Chapter path H02.
 
-### H02 — High — general Chapter import predecode resource policy — unresolved, reported
+### H02 — High — general Chapter import predecode resource policy — resolved by R1.1
+
+**R1.1 update:** the approved Chapter import safety release adds bounded multi-format preflight, device/batch/recovery budgets, validated decode boundaries and atomic/cancellable publication. See [R1.1 report](R1_1_REPORT.md) for exact policy, current validation and limitations. The original R1 evidence and disposition below are preserved as history. This closes H02, not the broader Raster completion program.
 
 Evidence: `src/lib/studio/store.ts` image-add loop invokes `decodeBlob(file)` before thumbnail creation or Chapter sizing; `src/lib/studio/images.ts:decodeBlob` has no compressed-byte/container-size preflight. Chapter accepts formats beyond Pro's PNG/JPEG/WebP (including formats with different/unsupported browser decoders) and intentionally supports long source images before export strip planning. H01's supported-format guard cannot safely be imposed on this whole path without selecting a compatible large-image/format policy.
 
@@ -187,3 +189,7 @@ Color/fidelity limits: 8-bit browser Canvas/sRGB, encoded-RGB adjustments/resamp
 R1 changes consist of the audit artifacts, reproducible source catalog, the narrow H01 guard and its regressions. No new editor tools, schema migration, paid dependency, credential, F1 integration or production change was introduced. R1 must remain a Draft PR. The program is **NEEDS ADDITIONAL WORK**; H02 and documented capability/device gaps prevent claiming full Raster readiness.
 
 Phase complete. Awaiting explicit user approval before proceeding to the next phase, merging into main, or deploying to production.
+
+## R1.1 — Chapter import safety follow-up
+
+The user separately authorized this narrow correction on the same Draft PR #13. See [R1.1 report](R1_1_REPORT.md) and [evidence](r1.1/EVIDENCE.json). R1 baseline logs, benchmark measurements and archived audit remain unchanged. R1.1 does not start R2, merge F1, change the document schema, merge main or deploy production. The original R1 end-of-audit disposition above is historical; H02 is superseded by this follow-up.
