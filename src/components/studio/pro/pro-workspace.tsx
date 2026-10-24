@@ -234,7 +234,7 @@ export default function ProWorkspace({
     livePanel = useStudio((s) => s.panels.find((p) => p.id === panel.id));
   const maxArea = browserDialogueBudget().maxArea;
   const doc = useMemo(() => {
-      const current = transient ?? history?.present.doc;
+      const current = history?.present.doc;
       if (!current || !transformDraft) return current;
       return transformDraft.ids
         ? transformForest(current, transformDraft.ids, transformDraft.base, transformDraft.value)
@@ -244,7 +244,10 @@ export default function ProWorkspace({
             transformDraft.value,
             transformDraft.translation,
           );
-    }, [transient, history?.present.doc, transformDraft]),
+    }, [history?.present.doc, transformDraft]),
+    // Panels edit the committed revision; only the canvas consumes an ongoing
+    // pointer preview. Otherwise a concurrent property edit can publish it.
+    previewDoc = transient ?? doc,
     selection = doc?.selection ?? EMPTY_SELECTION,
     active = doc?.layers.find((l) => l.id === selectedIds[0]);
   useEffect(() => {
@@ -416,23 +419,23 @@ export default function ProWorkspace({
     }
   }, [assetEpoch, maxArea]);
   useEffect(() => {
-    if (!doc || !ready || busy || !renderer.current) return;
+    if (!previewDoc || !ready || busy || !renderer.current) return;
     const id = ++generation.current;
     setRendering(true);
-    const original = sourceReference(doc);
+    const original = sourceReference(previewDoc);
     const raw = original ? layer("raster", original.width, original.height) : undefined;
     if (raw && original) {
       raw.assetId = original.assetId;
-      const fit = Math.min(doc.width / original.width, doc.height / original.height);
+      const fit = Math.min(previewDoc.width / original.width, previewDoc.height / original.height);
       raw.transform = {
-        x: (doc.width - original.width * fit) / 2,
-        y: (doc.height - original.height * fit) / 2,
+        x: (previewDoc.width - original.width * fit) / 2,
+        y: (previewDoc.height - original.height * fit) / 2,
         scaleX: fit,
         scaleY: fit,
         rotation: 0,
       };
     }
-    const document = before ? { ...doc, layers: raw ? [raw] : [] } : doc;
+    const document = before ? { ...previewDoc, layers: raw ? [raw] : [] } : previewDoc;
     const timer = setTimeout(() => {
       void renderer.current
         ?.render(document, maxArea, mode === "vector" ? viewportFrame : undefined)
@@ -450,7 +453,12 @@ export default function ProWorkspace({
               !displayedBefore.current &&
               c.width === r.bitmap.width &&
               c.height === r.bitmap.height
-                ? previewDirtyRect(displayedDocument.current, doc, r.bitmap.width, r.bitmap.height)
+                ? previewDirtyRect(
+                    displayedDocument.current,
+                    previewDoc,
+                    r.bitmap.width,
+                    r.bitmap.height,
+                  )
                 : null;
             const ctx = c.getContext("2d")!;
             if (dirty) {
@@ -462,7 +470,7 @@ export default function ProWorkspace({
               c.height = r.bitmap.height;
               ctx.drawImage(r.bitmap, 0, 0);
             }
-            displayedDocument.current = doc;
+            displayedDocument.current = previewDoc;
             displayedBefore.current = before;
             setVersion((v) => v + 1);
           }
@@ -483,7 +491,7 @@ export default function ProWorkspace({
     return () => {
       clearTimeout(timer);
     };
-  }, [doc, ready, before, busy, maxArea, mode, viewportFrame, quick]);
+  }, [previewDoc, ready, before, busy, maxArea, mode, viewportFrame, quick]);
   useEffect(() => {
     const current = history?.present.doc;
     if (!current) return;
@@ -533,12 +541,25 @@ export default function ProWorkspace({
     },
     [setHist, maxArea],
   );
-  const setSelection = useCallback(
-    (selection: Selection) => {
-      const current = historyRef.current?.present.doc;
-      if (current) commit({ ...current, selection }, "Change selection");
+  const commitCanvas = useCallback(
+    (next: ProDocument, label: string, expected?: ProDocument) => {
+      // Check the live history ref as well as the canvas effect. A key/pointer
+      // interleaving can otherwise commit before React flushes cancellation.
+      if (expected && historyRef.current?.present.doc !== expected) {
+        setTransient(null);
+        setStatus("Pending canvas edit canceled because the document changed.");
+        return;
+      }
+      commit(next, label);
     },
     [commit],
+  );
+  const setSelection = useCallback(
+    (selection: Selection, expected?: ProDocument) => {
+      const current = historyRef.current?.present.doc;
+      if (current) commitCanvas({ ...current, selection }, "Change selection", expected);
+    },
+    [commitCanvas],
   );
   const armRefineSample = useCallback((key: "foreground" | "background" | null) => {
     setRefineSampleKey(key);
@@ -1993,7 +2014,8 @@ export default function ProWorkspace({
                 onCropDraft={setCropDraft}
                 onCancelCrop={cancelCrop}
                 onApplyCrop={applyCrop}
-                doc={doc}
+                doc={previewDoc ?? doc}
+                documentBase={history?.present.doc ?? doc}
                 activeId={selectedIds[0] ?? ""}
                 selectedIds={selectedIds}
                 activeAnchor={activeAnchor}
@@ -2013,7 +2035,7 @@ export default function ProWorkspace({
                 canvasRef={canvas}
                 renderVersion={version}
                 onTransient={setTransient}
-                onCommit={commit}
+                onCommit={commitCanvas}
                 onSelect={(id) => {
                   if (transformRef.current) return;
                   setSelectedIds(id ? [id] : []);

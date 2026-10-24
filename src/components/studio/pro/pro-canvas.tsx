@@ -107,6 +107,8 @@ export type ProTool =
   | "poly-lasso";
 type View = CanvasView;
 type Gesture = {
+  origin: ProDocument;
+  maskMode: boolean;
   appearanceIndex?: number;
   snap?: SnapIndex;
   moveFrame?: Frame;
@@ -136,6 +138,7 @@ type Gesture = {
 export function ProCanvas({
   dialogueOverlays = false,
   doc,
+  documentBase,
   viewportFrame,
   appearanceId,
   onFitCanvas,
@@ -185,6 +188,7 @@ export function ProCanvas({
 }: {
   dialogueOverlays?: boolean;
   doc: ProDocument;
+  documentBase: ProDocument;
   viewportFrame: Frame;
   appearanceId: string;
   onFitCanvas: () => void;
@@ -210,7 +214,7 @@ export function ProCanvas({
   tool: ProTool;
   selection: Selection;
   selectionView?: "overlay" | "mask" | "ants";
-  onSelection: (s: Selection) => void;
+  onSelection: (s: Selection, expected?: ProDocument) => void;
   brush: Omit<Stroke, "points" | "erase">;
   operation: Region["operation"];
   maskMode: boolean;
@@ -220,7 +224,7 @@ export function ProCanvas({
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   renderVersion: number;
   onTransient: (d: ProDocument | null) => void;
-  onCommit: (d: ProDocument, label: string) => void;
+  onCommit: (d: ProDocument, label: string, expected?: ProDocument) => void;
   onSelect: (id: string) => void;
   onColor: (c: string) => void;
   disabled: boolean;
@@ -329,6 +333,19 @@ export function ProCanvas({
         )
       : null;
   useEffect(() => {
+    // A gesture owns one immutable history revision. Undo, import or another
+    // edit invalidates it; transient previews must never become the new base.
+    if (gesture.current && gesture.current.origin !== documentBase) {
+      gesture.current = null;
+      pointers.current.clear();
+      pinch.current = null;
+      setSelectionDraft(null);
+      setSnapGuides([]);
+      setPatchPreview(null);
+      onTransient(null);
+    }
+  }, [documentBase, onTransient]);
+  useEffect(() => {
     pathId.current = "";
     setSnapGuides([]);
     gesture.current = null;
@@ -377,7 +394,7 @@ export function ProCanvas({
         space.current = true;
       }
       if (e.key === "Enter" && tool === "artboard" && gesture.current?.preview) {
-        onCommit(gesture.current.preview, "Edit artboard / guide");
+        onCommit(gesture.current.preview, "Edit artboard / guide", gesture.current.origin);
         gesture.current = null;
         onTransient(null);
         setSnapGuides([]);
@@ -630,7 +647,16 @@ export function ProCanvas({
     }
     setSnapGuides([]);
     const p = docPoint(screen),
-      base: Gesture = { type: tool, start: p, screen, doc, view, selection };
+      base: Gesture = {
+        type: tool,
+        start: p,
+        screen,
+        doc,
+        origin: documentBase,
+        maskMode,
+        view,
+        selection,
+      };
     // Legacy Direct Select never snapped. Enabling precision settings (or adding
     // an artboard) explicitly opts the document into anchor/grid acquisition.
     if (tool === "direct" && doc.layout) base.snap = buildSnapIndex(doc, [activeId]);
@@ -1126,7 +1152,8 @@ export function ProCanvas({
     },
   ): ProDocument | null => {
     const g = gesture.current;
-    if (!g) return null;
+    if (!g || g.origin !== documentBase) return null;
+    const maskMode = g.maskMode;
     const p = docPoint(screen);
     if (g.type === "bubble-tail" && g.id && g.part) {
       const body = g.doc.layers.find((l) => l.id === g.id)!;
@@ -1518,7 +1545,7 @@ export function ProCanvas({
     if (!g) return;
     if (cancel && g.transform) onTransformDraft(g.transform);
     if (cancel && g.crop) onCropDraft(g.crop);
-    if (!cancel) {
+    if (!cancel && g.origin === documentBase) {
       const next = update(
         { x: e.clientX, y: e.clientY },
         {
@@ -1579,7 +1606,7 @@ export function ProCanvas({
         onCommit(
           next,
           g.type === "paint"
-            ? maskMode
+            ? g.maskMode
               ? "Paint mask"
               : g.stroke?.clone
                 ? g.stroke.clone.mode === "heal"
@@ -1591,6 +1618,7 @@ export function ProCanvas({
             : g.type === "pen"
               ? "Add Bézier anchor"
               : `Edit ${g.type}`,
+          g.origin,
         );
       if (g.type === "paint" && g.stroke?.clone && cloneSource?.aligned) {
         const layer = g.doc.layers.find((l) => l.id === g.id);
@@ -1600,7 +1628,8 @@ export function ProCanvas({
           onCloneAdvance({ x: last.x - first.x, y: last.y - first.y });
         }
       }
-      if (g.type === "selection" && g.region) onSelection(appendSelection(g.selection, g.region));
+      if (g.type === "selection" && g.region)
+        onSelection(appendSelection(g.selection, g.region), g.origin);
     }
     setSelectionDraft(null);
     setSnapGuides([]);
