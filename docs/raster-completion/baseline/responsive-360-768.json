@@ -1,0 +1,29 @@
+{
+  "results": [
+    {
+      "width": 360,
+      "refinement": "staged and committed",
+      "maskDensityFeather": "pixel verified",
+      "maskLinkage": "world-stable",
+      "groupMask": "isolated alpha",
+      "native": "v5 round trip",
+      "brush": "deterministic",
+      "bake": "same pixels and undo/redo",
+      "exports": "PNG/JPEG/WebP",
+      "touch": "cancel/draw/undo"
+    },
+    {
+      "width": 768,
+      "refinement": "staged and committed",
+      "maskDensityFeather": "pixel verified",
+      "maskLinkage": "world-stable",
+      "groupMask": "isolated alpha",
+      "native": "v5 round trip",
+      "brush": "deterministic",
+      "bake": "same pixels and undo/redo",
+      "exports": "PNG/JPEG/WebP",
+      "touch": "cancel/draw/undo"
+    }
+  ],
+  "errors": []
+}

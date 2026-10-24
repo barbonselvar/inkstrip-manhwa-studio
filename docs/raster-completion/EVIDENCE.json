@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "phase": "R1 only",
+  "date": "2026-10-24",
+  "baseSha": "a90c656c8b68cb2016a7a1cd09e720ef3ed145ab",
+  "branch": "codex/raster-studio-completion",
+  "codeFixSha": "9ac54645643ae01b297ad1de00c4d28b590b07e5",
+  "testedSrcTree": "a7257624d80cc42756e16c9d13a76cdab508b72f",
+  "draftPr": "https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/13",
+  "unitTestsBefore": 750,
+  "unitTestsAfter": 753,
+  "unitFailures": 0,
+  "unitSkipped": 0,
+  "browserSuitesPassed": 25,
+  "builtSuites": 22,
+  "devSourceSuites": 3,
+  "supplementalViewports": [
+    360,
+    768
+  ],
+  "physicalAndroid": "not available",
+  "stylusHardware": "not available",
+  "otherBrowserEngines": "not run",
+  "sourceInventory": {
+    "jsxDefinitions": 259,
+    "sharedSurfaces": 11,
+    "perControlCartesianCoverage": false
+  },
+  "environment": {
+    "cpu": "AMD EPYC 9V74 80-Core Processor",
+    "availableParallelism": 2,
+    "osLogicalCpus": 3,
+    "platform": "linux x64",
+    "node": "24.19.0",
+    "npm": "11.9.0",
+    "chromium": "156.0.8078.4",
+    "systemMemoryMiB": 9968,
+    "sharedHardware": true
+  },
+  "findings": {
+    "critical": 0,
+    "highFixed": [
+      "H01"
+    ],
+    "highUnresolved": [
+      "H02"
+    ],
+    "medium": [
+      "M01",
+      "M02",
+      "M03",
+      "M04",
+      "M05"
+    ],
+    "low": [
+      "L01"
+    ]
+  },
+  "nativeReadVersions": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    7
+  ],
+  "native6": "explicitly rejected: unmerged F1; safe provenance guard, not supported compatibility",
+  "actualInference": "Existing real Swin2SR (including batch) and local Tesseract; not mocked generative editing",
+  "baselineBuildNote": "Local full browser run used the hardened source tree before the code commit was named; embedded release metadata still named the base. No source changes followed9ac5464. Exact final-HEAD build/smoke/import/CI receipts are recorded in the PR body; source tree equality makes the code evidence explicit.",
+  "knownInitialFailures": [
+    "3 source-only Dialogue suites failed against built target (/src dynamic import); all assertions passed on dev in the final run",
+    "Initial import probe wrong error selector: inconclusive; corrected pre-fix probe failed decoder-call assertion as expected",
+    "External supplemental viewport copy could not resolve Playwright; explicit installed module path resolved it and unchanged assertions passed"
+  ],
+  "approval": "No R2, no main mutation, no merge, no production deployment; keep PR Draft",
+  "programRecommendation": "NEEDS ADDITIONAL WORK; R1 audit and narrow fix complete, H02 remains open"
+}

@@ -1,0 +1,19 @@
+{"decodes":1,"message":"decode\n×","documentUnchanged":true,"sourceUnchanged":true,"errors":[]}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Oversized assets must be rejected before createImageBitmap
+
+1 !== 0
+
+    at file:///workspace/inkstrip-manhwa-studio/scripts/raster-import-audit.mjs:42:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

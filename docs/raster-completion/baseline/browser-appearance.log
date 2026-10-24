@@ -1,0 +1,6 @@
+Editable linear/radial gradients, color/opacity stops, controls, native/history and PNG/JPEG/WebP passed.
+All seven effects, ordering, live properties, padding beyond source/document edges, native/history and exports passed.
+Independent adjustment backdrop/opacity/mask/clip/group semantics, merge fidelity, local reopen and Chapter handoff passed.
+Chromium 320px: touch layer creation, radial controls, editable styles, adjustments and native reopen passed.
+Chromium 390px: touch layer creation, radial controls, editable styles, adjustments and native reopen passed.
+{"ok":true,"physicalAndroid":false}

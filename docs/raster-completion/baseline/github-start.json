@@ -1,0 +1,88 @@
+{
+  "repository": "barbonselvar/inkstrip-manhwa-studio",
+  "observedAt": "2026-10-24",
+  "main": "a90c656c8b68cb2016a7a1cd09e720ef3ed145ab",
+  "openPullRequests": [
+    {
+      "number": 6,
+      "head": "1b71cb20bb46703c3fe812ec8e13792814d89bd3",
+      "branch": "codex/phase-f-ai-studio",
+      "draft": true
+    }
+  ],
+  "f1": {
+    "head": "1b71cb20bb46703c3fe812ec8e13792814d89bd3",
+    "draft": true,
+    "merged": false,
+    "mergeable": false,
+    "mergeableState": "dirty"
+  },
+  "historical": [
+    {
+      "path": "pulls/4",
+      "title": "Phase E: Raster selection refinement, brush dynamics and mask fidelity",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "head": "17ba1134ec011cc50b4455b60ae410b41e2742aa",
+      "merge": "ced5907f5e0bfc49e72588fe76d3cbf652d39b7f"
+    },
+    {
+      "path": "pulls/9",
+      "title": "Raster Studio completion: R1 audit, R2 compositor & blend modes, R3 Paint Bucket",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "head": "42d5a98e29591fb06118d5b41a6f4373dfe5bc1b",
+      "merge": "363b0daa7ea45dc9963461cd94013bea4a0f6657"
+    },
+    {
+      "path": "pulls/10",
+      "title": "refactor(pro): extract tool table and inspector tabs (supersedes #8)",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "head": "af941d679d84173669ceaa3308d2abd0a3e7c2dc",
+      "merge": "578e6839390c9350be260b72a1d7de15856850b3"
+    },
+    {
+      "path": "pulls/11",
+      "title": "Cinematic homepage: original nine-artwork gallery and Aurora Flow",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "head": "4731fedc3fca2e434b5ea3dc1ad37c481db92239",
+      "merge": "2931fdb0ef688d3fc59ce14d1c2414977fb082f5"
+    },
+    {
+      "path": "pulls/12",
+      "title": "Dialogue Studio: professional lettering, local OCR and native project recovery",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "head": "0b82267f0ed11c0a7571cd947c8ed9e657c8d19d",
+      "merge": "a90c656c8b68cb2016a7a1cd09e720ef3ed145ab"
+    },
+    {
+      "path": "commits/a90c656c8b68cb2016a7a1cd09e720ef3ed145ab/status",
+      "state": "success",
+      "statuses": [
+        {
+          "context": "Vercel",
+          "state": "success",
+          "url": "https://vercel.com/ss-ac00/inkstrip-manhwa-studio/CUawgQh3B71AqqG4hrPmEcYEcugh"
+        }
+      ]
+    }
+  ],
+  "r1": {
+    "number": 13,
+    "url": "https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/13",
+    "draft": true,
+    "fixCommit": "9ac54645643ae01b297ad1de00c4d28b590b07e5",
+    "initialChecks": [
+      40094129351,
+      40094129345
+    ]
+  }
+}

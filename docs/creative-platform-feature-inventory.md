@@ -1,5 +1,10 @@
 # Creative editor feature inventory and clean-room implementation brief
 
+Current Raster evidence: [R1 re-audit and baseline](raster-completion/R1_AUDIT.md),
+[capability matrix](raster-completion/CAPABILITY_MATRIX.md), and
+[control/dependency map](raster-completion/DEPENDENCY_MAP.md). These supersede
+historical current-state claims below; they do not authorize R2, merge or deployment.
+
 Research date: 2026-10-20. This document records observable, documented
 Photoshop and Illustrator workflows for planning original Inkstrip functionality.
 It does not use Adobe source code, private APIs, assets, icons, branding, or

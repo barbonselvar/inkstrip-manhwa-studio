@@ -1,0 +1,3335 @@
+{
+  "schema": 1,
+  "baseSha": "a90c656c8b68cb2016a7a1cd09e720ef3ed145ab",
+  "sourceSha": "9ac54645643ae01b297ad1de00c4d28b590b07e5",
+  "scope": "JSX definitions on Raster-accessible shared surfaces. Map-generated controls are templates; mode/selection gates still apply. View controls need no document mutation. Empty local handlers can belong to Radix triggers/actions; inspect enclosing components. This is source evidence, not per-control interaction coverage.",
+  "controls": [
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1596,
+      "tag": "Button",
+      "label": "\"Back to chapter from Pro Studio\"",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => void close()}"
+      },
+      "disabled": "{busy || dialoguePending}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1622,
+      "tag": "Button",
+      "label": "Raster",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { setMode(\"raster\"); if ( [ \"dialogue\", \"pathfinder\", \"artboards\", \"precision\", \"appearance\", \"typography\", ].includes(tab) ) setTab(\"layers\"); onModeChange(\"raster\"); if (transformRef.current) cancelTransform(); setCropDraft(null); setTool(\"brush\"); setBefore(false); }}"
+      },
+      "disabled": "{busy || dialoguePending || !!refinePreview}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1649,
+      "tag": "Button",
+      "label": "Vector",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { setMode(\"vector\"); if (tab === \"dialogue\") setTab(\"layers\"); onModeChange(\"vector\"); if (transformRef.current) cancelTransform(); setCropDraft(null); setTool(\"pen\"); setBefore(false); }}"
+      },
+      "disabled": "{busy || dialoguePending}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1667,
+      "tag": "Button",
+      "label": "Dialogue",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { onDialogue(); setMode(\"vector\"); setTab(\"dialogue\"); setTool(\"move\"); }}"
+      },
+      "disabled": "{busy || dialoguePending || !!transient}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1682,
+      "tag": "Button",
+      "label": "dynamic/structural; inspect source",
+      "sections": [],
+      "handlers": {
+        "onClick": "{onPresentation}"
+      },
+      "disabled": "{busy || dialoguePending || !!transient}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1701,
+      "tag": "Button",
+      "label": "\"Pro undo\"",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => actions.current.undo()}"
+      },
+      "disabled": "{!history?.past.length || busy || dialoguePending}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1710,
+      "tag": "Button",
+      "label": "\"Pro redo\"",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => actions.current.redo()}"
+      },
+      "disabled": "{!history?.future.length || busy || dialoguePending}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1720,
+      "tag": "Button",
+      "label": "Save draft",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => void saveNow().catch((e) => setError(storageMessage(e)))}"
+      },
+      "disabled": "{!doc || busy || dialoguePending || !!transformDraft}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1729,
+      "tag": "Button",
+      "label": "dynamic/structural; inspect source",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => void apply()}"
+      },
+      "disabled": "{ !doc || busy || dialoguePending || stale || !ready || !!cropDraft || !!transformDraft }",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1745,
+      "tag": "Button",
+      "label": "\"Toggle Pro panels\"",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => setPanelOpen((v) => !v)}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1759,
+      "tag": "button",
+      "label": "\"Dismiss Pro error\"",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => setError(\"\")}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1766,
+      "tag": "Button",
+      "label": "Export existing layered document",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => void exportFile(\"native\")}"
+      },
+      "disabled": "{busy || dialoguePending}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1773,
+      "tag": "Button",
+      "label": "Use latest chapter image · keep layers",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => void adoptLatestImage()}"
+      },
+      "disabled": "{busy || dialoguePending}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1780,
+      "tag": "Button",
+      "label": "Export recovery document",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => void exportFile(\"native\")}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1783,
+      "tag": "Button",
+      "label": "Leave without saving",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { if ( window.confirm( \"Leave without saving this Pro draft? Export a native recovery document first if you need these unsaved changes. Your chapter and the last saved draft remain unchanged.\", ) ) { closeInProgress.current = true; onClose(); } }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1803,
+      "tag": "Button",
+      "label": "Apply transform",
+      "sections": [],
+      "handlers": {
+        "onClick": "{applyTransform}"
+      },
+      "disabled": "{busy || dialoguePending}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1806,
+      "tag": "Button",
+      "label": "Cancel transform",
+      "sections": [],
+      "handlers": {
+        "onClick": "{cancelTransform}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1813,
+      "tag": "Button",
+      "label": "Apply crop",
+      "sections": [],
+      "handlers": {
+        "onClick": "{applyCrop}"
+      },
+      "disabled": "{busy || dialoguePending}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1816,
+      "tag": "Button",
+      "label": "Cancel crop",
+      "sections": [],
+      "handlers": {
+        "onClick": "{cancelCrop}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1823,
+      "tag": "input",
+      "label": "dynamic/structural; inspect source",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => doc && commit( { ...doc, layout: { ...layout(doc), grid: e.target.checked } }, \"Show grid\", ) }"
+      },
+      "disabled": null,
+      "value": "{grid}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1837,
+      "tag": "input",
+      "label": "dynamic/structural; inspect source",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => doc && commit( { ...doc, layout: { ...layout(doc), snapping: e.target.checked } }, \"Toggle snapping\", ) }"
+      },
+      "disabled": null,
+      "value": "{snapping}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1851,
+      "tag": "input",
+      "label": "\"Compare imported source\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => setBefore(e.target.checked)}"
+      },
+      "disabled": "{!doc || !sourceReference(doc)}",
+      "value": "{before}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1860,
+      "tag": "select",
+      "label": "\"Selection operation\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => setOperation(e.target.value as typeof operation)}"
+      },
+      "disabled": null,
+      "value": "{operation}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1872,
+      "tag": "ProNumber",
+      "label": "\"Color tolerance\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{setTolerance}"
+      },
+      "disabled": null,
+      "value": "{tolerance}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1881,
+      "tag": "input",
+      "label": "dynamic/structural; inspect source",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => setContiguous(e.target.checked)}"
+      },
+      "disabled": null,
+      "value": "{contiguous}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1890,
+      "tag": "input",
+      "label": "dynamic/structural; inspect source",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => setAntiAlias(e.target.checked)}"
+      },
+      "disabled": null,
+      "value": "{antiAlias}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1902,
+      "tag": "Button",
+      "label": "Select all",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { if (doc) setSelection({ regions: [ { kind: \"rectangle\", operation: \"add\", points: [ { x: 0, y: 0 }, { x: doc.width, y: doc.height }, ], }, ], inverted: false, feather: 0, }); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1924,
+      "tag": "Button",
+      "label": "\"Fullscreen Pro workspace\"",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { void ( document.fullscreenElement ? document.exitFullscreen() : root.current?.requestFullscreen() )?.catch(() => setError(\"Fullscreen is unavailable in this browser. The editor remains usable.\"), ); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 1951,
+      "tag": "Button",
+      "label": "{`${name} tool`}",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { chooseTool(id); }}"
+      },
+      "disabled": "{ busy || (id === \"text-path\" && (active?.kind !== \"shape\" || isLocked(doc!, active.id))) || (id === \"gradient\" && !active?.appearance?.some((a) => a.paint.gradient)) }",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 2049,
+      "tag": "Button",
+      "label": "Return to chapter",
+      "sections": [],
+      "handlers": {
+        "onClick": "{onClose}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 2097,
+      "tag": "button",
+      "label": "dynamic/structural; inspect source",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => setTab(t)}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 2477,
+      "tag": "Button",
+      "label": "dynamic/structural; inspect source",
+      "sections": [
+        "\"Editable speech bubbles\""
+      ],
+      "handlers": {
+        "onClick": "{() => add(\"shape\", shape)}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 2489,
+      "tag": "Button",
+      "label": "Left",
+      "sections": [
+        "\"Align selected object\""
+      ],
+      "handlers": {
+        "onClick": "{() => active && patch({ transform: { ...active.transform, x: active.transform.x - bounds(active.transform, active.width, active.height).x, }, }) }"
+      },
+      "disabled": "{!active || active.kind === \"group\"}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 2506,
+      "tag": "Button",
+      "label": "Center",
+      "sections": [
+        "\"Align selected object\""
+      ],
+      "handlers": {
+        "onClick": "{() => active && patch({ transform: { ...active.transform, x: active.transform.x + (doc.width - bounds(active.transform, active.width, active.height).width) / 2 - bounds(active.transform, active.width, active.height).x, }, }) }"
+      },
+      "disabled": "{!active || active.kind === \"group\"}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 2526,
+      "tag": "Button",
+      "label": "Right",
+      "sections": [
+        "\"Align selected object\""
+      ],
+      "handlers": {
+        "onClick": "{() => active && patch({ transform: { ...active.transform, x: active.transform.x + doc.width - bounds(active.transform, active.width, active.height).width - bounds(active.transform, active.width, active.height).x, }, }) }"
+      },
+      "disabled": "{!active || active.kind === \"group\"}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 2648,
+      "tag": "input",
+      "label": "\"Pro panel width\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => setPanelWidth(+e.target.value)}"
+      },
+      "disabled": null,
+      "value": "{panelWidth}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-workspace.tsx",
+      "line": 2664,
+      "tag": "Button",
+      "label": "Cancel rendering",
+      "sections": [],
+      "handlers": {
+        "onClick": "{cancel}"
+      },
+      "disabled": "{!cancellable}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-canvas.tsx",
+      "line": 1581,
+      "tag": "Button",
+      "label": "\"Pro zoom out\"",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => zoomAt(view.zoom / 1.25)}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-canvas.tsx",
+      "line": 1590,
+      "tag": "Button",
+      "label": "\"Pro zoom in\"",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => zoomAt(view.zoom * 1.25)}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-canvas.tsx",
+      "line": 1598,
+      "tag": "Button",
+      "label": "\"Fit Pro canvas\"",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { onFitCanvas(); setView({ zoom: 1, x: 0, y: 0 }); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-canvas.tsx",
+      "line": 2268,
+      "tag": "button",
+      "label": "\"Navigator: click to center canvas\"",
+      "sections": [],
+      "handlers": {
+        "onPointerDown": "{(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(), s = Math.min(r.width / viewportFrame.width, r.height / viewportFrame.height), x = (e.clientX - r.left - (r.width - viewportFrame.width * s) / 2) / s, y = (e.clientY - r.top - (r.height - viewportFrame.height * s) / 2) / s; setView((v) => ({ ...v, x: (viewportFrame.width / 2 - x) * fit * v.zoom, y: (viewportFrame.height / 2 - y) * fit * v.zoom, })); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-canvas.tsx",
+      "line": 2289,
+      "tag": "Button",
+      "label": "Finish polygon selection",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { if (polygon.length >= 3) { onSelection({ ...selection, regions: [...selection.regions, { kind: \"lasso\", operation, points: polygon }], }); setPolygon([]); } }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-canvas.tsx",
+      "line": 2306,
+      "tag": "Button",
+      "label": "Fit canvas",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { onFitCanvas(); setView({ zoom: 1, x: 0, y: 0 }); setContext(false); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-canvas.tsx",
+      "line": 2315,
+      "tag": "Button",
+      "label": "Deselect",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { onSelection({ regions: [], inverted: false, feather: 0 }); setContext(false); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-canvas.tsx",
+      "line": 2324,
+      "tag": "Button",
+      "label": "Close menu",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => setContext(false)}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 39,
+      "tag": "input",
+      "label": "{label}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => { if (e.target.value === \"\") return; const n = Number(e.target.value); if (Number.isFinite(n) && n >= min && n <= max) onChange(n); }}"
+      },
+      "disabled": "{disabled}",
+      "value": "{Math.round(value * 1000) / 1000}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 119,
+      "tag": "Button",
+      "label": "dynamic/structural; inspect source",
+      "sections": [
+        "\"Brush & selection\"",
+        "\"Clone & Healing source\""
+      ],
+      "handlers": {
+        "onClick": "{onArmCloneSample}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 128,
+      "tag": "input",
+      "label": "\"Aligned Clone Stamp\"",
+      "sections": [
+        "\"Brush & selection\"",
+        "\"Clone & Healing source\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onCloneAlignment(e.target.checked)}"
+      },
+      "disabled": "{!cloneSource}",
+      "value": "{cloneSource?.aligned ?? true}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 149,
+      "tag": "input",
+      "label": "\"Pen pressure size\"",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onBrush({ sizePressure: e.target.checked })}"
+      },
+      "disabled": null,
+      "value": "{brush.sizePressure ?? false}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 157,
+      "tag": "ProNumber",
+      "label": "\"Stroke smoothing\"",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onBrush({ smoothing: n / 100 })}"
+      },
+      "disabled": null,
+      "value": "{(brush.smoothing ?? 0) * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 169,
+      "tag": "ProNumber",
+      "label": "\"Brush stabilization\"",
+      "sections": [
+        "\"Brush & selection\"",
+        "\"Brush dynamics\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onBrush({ dynamics: { ...DAB_DEFAULTS, ...brush.dynamics, stabilization: n } }) }"
+      },
+      "disabled": null,
+      "value": "{brush.dynamics?.stabilization ?? 0}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 190,
+      "tag": "ProNumber",
+      "label": "{label}",
+      "sections": [
+        "\"Brush & selection\"",
+        "\"Brush dynamics\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onBrush({ dynamics: { ...DAB_DEFAULTS, ...brush.dynamics, [key]: n } }) }"
+      },
+      "disabled": null,
+      "value": "{(brush.dynamics ?? DAB_DEFAULTS)[key]}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 210,
+      "tag": "input",
+      "label": "{label}",
+      "sections": [
+        "\"Brush & selection\"",
+        "\"Brush dynamics\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onBrush({ dynamics: { ...DAB_DEFAULTS, ...brush.dynamics, [key]: e.target.checked }, }) }"
+      },
+      "disabled": null,
+      "value": "{brush.dynamics?.[key] ?? false}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 223,
+      "tag": "Button",
+      "label": "Reset brush dynamics",
+      "sections": [
+        "\"Brush & selection\"",
+        "\"Brush dynamics\""
+      ],
+      "handlers": {
+        "onClick": "{() => onBrush({ dynamics: { ...DAB_DEFAULTS } })}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 229,
+      "tag": "select",
+      "label": "\"Brush preset\"",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => { const preset = presets.find((item) => item.name === e.target.value); if (preset) onApplyBrushPreset( { ...preset.settings, dynamics: preset.settings.dynamics, tip: preset.settings.tip ?? \"round\", sizePressure: preset.settings.sizePressure ?? false, smoothing: preset.settings.smoothing ?? 0, }, preset.tool ?? \"brush\", ); }}"
+      },
+      "disabled": null,
+      "value": "\"\""
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 259,
+      "tag": "Button",
+      "label": "Save current preset",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onClick": "{() => { const name = window.prompt(\"Name this brush preset\"); if (name?.trim()) onSaveBrushPreset(name.trim()); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 268,
+      "tag": "Button",
+      "label": "Rename custom preset",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onClick": "{() => { const name = window.prompt(\"Custom preset to rename\"), next = name ? window.prompt(\"New preset name\") : null; if (name && next) { try { onPresets(renameBrushPreset(brushPresets, name.trim(), next.trim())); } catch (e) { window.alert((e as Error).message); } } }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 284,
+      "tag": "Button",
+      "label": "Duplicate preset",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onClick": "{() => { const name = window.prompt(\"Preset to duplicate\"), next = name ? window.prompt(\"Name of duplicate\") : null; const original = presets.find((p) => p.name === name?.trim()); if ( original && next?.trim() && !brushPresets.some((p) => p.name === next.trim()) && brushPresets.length < 24 ) onPresets([ ...brushPresets, { name: next.trim().slice(0, 40), settings: structuredClone(original.settings), ...(original.tool ? { tool: original.tool } : {}), }, ]); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 308,
+      "tag": "Button",
+      "label": "Delete custom preset",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onClick": "{() => { const name = window.prompt(\"Enter the exact name of the custom preset to delete\"); if (name?.trim()) onDeleteBrushPreset(name.trim()); }}"
+      },
+      "disabled": "{brushPresets.length <= DEFAULT_BRUSH_PRESETS.length}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 320,
+      "tag": "ProNumber",
+      "label": "\"Brush size\"",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onBrush({ size: n })}"
+      },
+      "disabled": null,
+      "value": "{brush.size}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 327,
+      "tag": "ProNumber",
+      "label": "\"Brush hardness\"",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onBrush({ hardness: n / 100 })}"
+      },
+      "disabled": null,
+      "value": "{brush.hardness * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 334,
+      "tag": "ProNumber",
+      "label": "\"Brush opacity\"",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onBrush({ opacity: n / 100 })}"
+      },
+      "disabled": null,
+      "value": "{brush.opacity * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 341,
+      "tag": "ProNumber",
+      "label": "\"Brush flow\"",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onBrush({ flow: n / 100 })}"
+      },
+      "disabled": null,
+      "value": "{brush.flow * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 351,
+      "tag": "input",
+      "label": "\"Brush color\"",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onBrush({ color: e.target.value })}"
+      },
+      "disabled": null,
+      "value": "{brush.color === \"transparent\" ? \"#a4efd6\" : brush.color}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 358,
+      "tag": "ProNumber",
+      "label": "\"Selection feather\"",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onSelection({ ...selection, feather: n })}"
+      },
+      "disabled": null,
+      "value": "{selection.feather}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 366,
+      "tag": "Button",
+      "label": "Invert selection",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onClick": "{() => onSelection({ ...selection, inverted: !selection.inverted })}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 372,
+      "tag": "Button",
+      "label": "Deselect",
+      "sections": [
+        "\"Brush & selection\""
+      ],
+      "handlers": {
+        "onClick": "{() => onSelection({ regions: [], inverted: false, feather: 0 })}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 394,
+      "tag": "input",
+      "label": "\"Pro layer name\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => onPatch({ name: e.target.value }, \"name\")}"
+      },
+      "disabled": null,
+      "value": "{selected.name}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 404,
+      "tag": "input",
+      "label": "\"Layer opacity\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => onPatch({ opacity: +e.target.value / 100 }, \"opacity\")}"
+      },
+      "disabled": null,
+      "value": "{Math.round(selected.opacity * 100)}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 415,
+      "tag": "select",
+      "label": "\"Layer blend mode\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => onPatch({ blend: e.target.value as Layer[\"blend\"] })}"
+      },
+      "disabled": null,
+      "value": "{selected.blend}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 436,
+      "tag": "ProNumber",
+      "label": "{`Object ${key}`}",
+      "sections": [
+        "\"Transform & alignment\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch( { transform: { ...selected.transform, [key]: n } }, `transform-${key}`, ) }"
+      },
+      "disabled": null,
+      "value": "{selected.transform[key]}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 450,
+      "tag": "ProNumber",
+      "label": "\"Object width\"",
+      "sections": [
+        "\"Transform & alignment\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch( { transform: { ...selected.transform, scaleX: n / selected.width } }, \"width\", ) }"
+      },
+      "disabled": null,
+      "value": "{selected.width * selected.transform.scaleX}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 462,
+      "tag": "ProNumber",
+      "label": "\"Object height\"",
+      "sections": [
+        "\"Transform & alignment\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch( { transform: { ...selected.transform, scaleY: n / selected.height } }, \"height\", ) }"
+      },
+      "disabled": null,
+      "value": "{selected.height * selected.transform.scaleY}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 475,
+      "tag": "Button",
+      "label": "Reset transform",
+      "sections": [
+        "\"Transform & alignment\""
+      ],
+      "handlers": {
+        "onClick": "{() => onPatch({ transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } }) }"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 496,
+      "tag": "input",
+      "label": "\"Object fill\"",
+      "sections": [
+        "\"Vector appearance\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onPatch({ fill: e.target.value }, \"fill\")}"
+      },
+      "disabled": null,
+      "value": "{selected.fill === \"transparent\" ? \"#f3efe6\" : selected.fill}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 504,
+      "tag": "input",
+      "label": "dynamic/structural; inspect source",
+      "sections": [
+        "\"Vector appearance\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onPatch({ fill: e.target.checked ? \"transparent\" : \"#f3efe6\" }) }"
+      },
+      "disabled": null,
+      "value": "{selected.fill === \"transparent\"}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 515,
+      "tag": "input",
+      "label": "\"Object stroke\"",
+      "sections": [
+        "\"Vector appearance\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onPatch({ stroke: e.target.value }, \"stroke\")}"
+      },
+      "disabled": null,
+      "value": "{selected.stroke === \"transparent\" ? \"#172420\" : selected.stroke}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 522,
+      "tag": "ProNumber",
+      "label": "\"Stroke width\"",
+      "sections": [
+        "\"Vector appearance\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch({ strokeWidth: n }, \"stroke\")}"
+      },
+      "disabled": null,
+      "value": "{selected.strokeWidth}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 534,
+      "tag": "select",
+      "label": "\"Path fill rule\"",
+      "sections": [
+        "\"Vector appearance\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onPatch({ fillRule: e.target.value as Layer[\"fillRule\"] })}"
+      },
+      "disabled": "{selected.appearance !== undefined}",
+      "value": "{selected.fillRule ?? \"nonzero\"}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 550,
+      "tag": "ProNumber",
+      "label": "\"Bubble tail X\"",
+      "sections": [
+        "\"Vector appearance\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch({ tail: { ...selected.tail, x: n } }, \"tail\")}"
+      },
+      "disabled": null,
+      "value": "{selected.tail.x}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 557,
+      "tag": "ProNumber",
+      "label": "\"Bubble tail Y\"",
+      "sections": [
+        "\"Vector appearance\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch({ tail: { ...selected.tail, y: n } }, \"tail\")}"
+      },
+      "disabled": null,
+      "value": "{selected.tail.y}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 573,
+      "tag": "textarea",
+      "label": "\"Pro text content\"",
+      "sections": [
+        "\"Editable typography\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onPatch({ text: e.target.value }, \"text\")}"
+      },
+      "disabled": null,
+      "value": "{selected.text}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 584,
+      "tag": "select",
+      "label": "\"Text font\"",
+      "sections": [
+        "\"Editable typography\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onPatch({ fontFamily: e.target.value as Layer[\"fontFamily\"] })}"
+      },
+      "disabled": null,
+      "value": "{selected.lettering?.font ?? selected.fontFamily}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 602,
+      "tag": "ProNumber",
+      "label": "\"Text font size\"",
+      "sections": [
+        "\"Editable typography\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch({ fontSize: n }, \"font\")}"
+      },
+      "disabled": null,
+      "value": "{selected.fontSize}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 609,
+      "tag": "ProNumber",
+      "label": "\"Text weight\"",
+      "sections": [
+        "\"Editable typography\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch({ fontWeight: n }, \"weight\")}"
+      },
+      "disabled": null,
+      "value": "{selected.fontWeight}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 617,
+      "tag": "ProNumber",
+      "label": "\"Text line height\"",
+      "sections": [
+        "\"Editable typography\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch({ lineHeight: n }, \"line\")}"
+      },
+      "disabled": "{!!selected.textPath}",
+      "value": "{selected.lineHeight}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 626,
+      "tag": "ProNumber",
+      "label": "\"Text letter spacing\"",
+      "sections": [
+        "\"Editable typography\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch({ letterSpacing: n }, \"spacing\")}"
+      },
+      "disabled": null,
+      "value": "{selected.letterSpacing}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 637,
+      "tag": "select",
+      "label": "\"Text alignment\"",
+      "sections": [
+        "\"Editable typography\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onPatch({ align: e.target.value as Layer[\"align\"] })}"
+      },
+      "disabled": null,
+      "value": "{selected.align}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 655,
+      "tag": "input",
+      "label": "\"Text fill\"",
+      "sections": [
+        "\"Editable typography\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onPatch({ fill: e.target.value }, \"fill\")}"
+      },
+      "disabled": "{selected.appearance !== undefined}",
+      "value": "{selected.fill === \"transparent\" ? \"#172420\" : selected.fill}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 674,
+      "tag": "input",
+      "label": "{`Pro ${f.label}`}",
+      "sections": [
+        "\"Non-destructive adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onPatch( { adjustments: { ...selected.adjustments, [f.key]: +e.target.value } }, `adjust-${f.key}`, ) }"
+      },
+      "disabled": null,
+      "value": "{selected.adjustments[f.key]}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 690,
+      "tag": "ProNumber",
+      "label": "\"Hue rotation\"",
+      "sections": [
+        "\"Non-destructive adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch({ hue: n }, \"hue\")}"
+      },
+      "disabled": null,
+      "value": "{selected.hue}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 698,
+      "tag": "ProNumber",
+      "label": "\"Levels black\"",
+      "sections": [
+        "\"Non-destructive adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch({ black: n }, \"black\")}"
+      },
+      "disabled": null,
+      "value": "{selected.black}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 705,
+      "tag": "ProNumber",
+      "label": "\"Levels white\"",
+      "sections": [
+        "\"Non-destructive adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch({ white: n }, \"white\")}"
+      },
+      "disabled": null,
+      "value": "{selected.white}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 712,
+      "tag": "ProNumber",
+      "label": "\"Levels gamma\"",
+      "sections": [
+        "\"Non-destructive adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch({ gamma: n }, \"gamma\")}"
+      },
+      "disabled": null,
+      "value": "{selected.gamma}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 726,
+      "tag": "ProNumber",
+      "label": "{`Curve point ${i + 1}`}",
+      "sections": [
+        "\"Non-destructive adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(v) => onPatch( { curve: selected.curve.map((p, k) => (k === i ? v : p)) }, `curve-${i}`, ) }"
+      },
+      "disabled": null,
+      "value": "{n}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 741,
+      "tag": "Button",
+      "label": "Black & white",
+      "sections": [
+        "\"Non-destructive adjustments\""
+      ],
+      "handlers": {
+        "onClick": "{() => onPatch({ adjustments: { ...selected.adjustments, saturation: -100 } }) }"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 765,
+      "tag": "Button",
+      "label": "Mask from selection",
+      "sections": [
+        "\"Layer mask\""
+      ],
+      "handlers": {
+        "onClick": "{onMask}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 768,
+      "tag": "Button",
+      "label": "Paste mask in canvas position",
+      "sections": [
+        "\"Layer mask\""
+      ],
+      "handlers": {
+        "onClick": "{onPasteMask}"
+      },
+      "disabled": "{!maskClipboard}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 775,
+      "tag": "Button",
+      "label": "Copy mask",
+      "sections": [
+        "\"Layer mask\""
+      ],
+      "handlers": {
+        "onClick": "{onCopyMask}"
+      },
+      "disabled": "{!!selected.transform.deform}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 782,
+      "tag": "Button",
+      "label": "dynamic/structural; inspect source",
+      "sections": [
+        "\"Layer mask\""
+      ],
+      "handlers": {
+        "onClick": "{() => onPatch({ mask: setMaskLinked(selected, selected.mask!.linked === false) }) }"
+      },
+      "disabled": "{!!selected.transform.deform}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 793,
+      "tag": "Button",
+      "label": "Bake layer and mask (destructive)",
+      "sections": [
+        "\"Layer mask\""
+      ],
+      "handlers": {
+        "onClick": "{onApplyMask}"
+      },
+      "disabled": "{ !selected.mask.enabled || ![\"raster\", \"paint\"].includes(selected.kind) }",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 804,
+      "tag": "ProNumber",
+      "label": "\"Mask density\"",
+      "sections": [
+        "\"Layer mask\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch({ mask: { ...selected.mask!, density: n / 100 } }, \"mask-density\") }"
+      },
+      "disabled": null,
+      "value": "{(selected.mask.density ?? 1) * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 813,
+      "tag": "ProNumber",
+      "label": "\"Mask feather\"",
+      "sections": [
+        "\"Layer mask\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => onPatch({ mask: { ...selected.mask!, feather: n } }, \"mask-feather\") }"
+      },
+      "disabled": null,
+      "value": "{selected.mask.feather ?? 0}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 824,
+      "tag": "input",
+      "label": "\"Enable layer mask\"",
+      "sections": [
+        "\"Layer mask\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onPatch({ mask: { ...selected.mask!, enabled: e.target.checked } }) }"
+      },
+      "disabled": null,
+      "value": "{selected.mask.enabled}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 835,
+      "tag": "input",
+      "label": "\"Paint layer mask\"",
+      "sections": [
+        "\"Layer mask\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => setMaskMode(e.target.checked)}"
+      },
+      "disabled": null,
+      "value": "{maskMode}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 843,
+      "tag": "Button",
+      "label": "Invert mask",
+      "sections": [
+        "\"Layer mask\""
+      ],
+      "handlers": {
+        "onClick": "{() => onPatch({ mask: { ...selected.mask!, inverted: !selected.mask!.inverted, }, }) }"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-properties.tsx",
+      "line": 856,
+      "tag": "Button",
+      "label": "Remove mask",
+      "sections": [
+        "\"Layer mask\""
+      ],
+      "handlers": {
+        "onClick": "{() => { onPatch({ mask: undefined }); setMaskMode(false); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 263,
+      "tag": "input",
+      "label": "{`Select layer ${l.name}`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{() => choose(l.id, true)}"
+      },
+      "disabled": "{disabled}",
+      "value": "{selectedIds.includes(l.id)}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 271,
+      "tag": "button",
+      "label": "dynamic/structural; inspect source",
+      "sections": [],
+      "handlers": {
+        "onClick": "{(e) => choose(l.id, e.ctrlKey || e.metaKey, e.shiftKey)}"
+      },
+      "disabled": "{disabled}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 292,
+      "tag": "button",
+      "label": "{`${l.visible ? \"Hide\" : \"Show\"} layer ${l.name}`}",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => run( () => ({ ...doc, layers: doc.layers.map((x) => x.id === l.id ? { ...x, visible: !x.visible } : x, ), }), \"Toggle visibility\", ) }"
+      },
+      "disabled": "{disabled || (l.parentId ? isLocked(doc, l.parentId) : false)}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 318,
+      "tag": "button",
+      "label": "{`Layer actions ${l.name}`}",
+      "sections": [],
+      "handlers": {},
+      "disabled": "{disabled}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 369,
+      "tag": "button",
+      "label": "{`${collapsed.has(l.id) ? \"Expand\" : \"Collapse\"} group ${l.name}`}",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => setCollapsed((old) => { const n = new Set(old); if (n.has(l.id)) n.delete(l.id); else n.add(l.id); return n; }) }"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 404,
+      "tag": "button",
+      "label": "{`${l.locked ? \"Unlock\" : \"Lock\"} layer ${l.name}`}",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => run( () => ({ ...doc, layers: doc.layers.map((x) => x.id === l.id ? { ...x, locked: !x.locked } : x, ), }), \"Toggle layer lock\", ) }"
+      },
+      "disabled": "{disabled || (l.parentId ? isLocked(doc, l.parentId) : false)}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 422,
+      "tag": "button",
+      "label": "{`Drag layer ${l.name}`}",
+      "sections": [],
+      "handlers": {
+        "onDragStart": "{(e) => { dragging.current = selectedIds.includes(l.id) ? selectedIds : [l.id]; dragPoint.current = { x: e.clientX, y: e.clientY }; startScroll(); e.dataTransfer.setData(\"text/plain\", l.id); e.dataTransfer.effectAllowed = \"move\"; }}",
+        "onDragEnd": "{() => { stopScroll(); dragging.current = []; setDrop(null); dropRef.current = null; }}",
+        "onPointerDown": "{(e) => { if (e.pointerType === \"mouse\") return; e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); dragging.current = selectedIds.includes(l.id) ? selectedIds : [l.id]; touch.current = { pointer: e.pointerId, y: e.clientY, moved: false }; dragPoint.current = { x: e.clientX, y: e.clientY }; startScroll(); }}",
+        "onPointerMove": "{(e) => { if (!touch.current || touch.current.pointer !== e.pointerId) return; if (Math.abs(e.clientY - touch.current.y) > 6) touch.current.moved = true; dragPoint.current = { x: e.clientX, y: e.clientY }; if (touch.current.moved) markDrop(e.clientX, e.clientY); }}",
+        "onPointerUp": "{(e) => { if (touch.current?.pointer !== e.pointerId) return; if (touch.current.moved) finishDrop(); else { stopScroll(); touch.current = null; dragging.current = []; } }}",
+        "onPointerCancel": "{() => { stopScroll(); touch.current = null; dragging.current = []; dropRef.current = null; setDrop(null); }}"
+      },
+      "disabled": "{disabled || isLocked(doc, l.id)}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 499,
+      "tag": "Button",
+      "label": "Multi-select",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => setMulti(!multi)}"
+      },
+      "disabled": "{disabled}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 519,
+      "tag": "Button",
+      "label": "Create compound path",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onCompound(\"create\")}"
+      },
+      "disabled": "{disabled || selectedIds.length < 2}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 526,
+      "tag": "Button",
+      "label": "Release compound path",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onCompound(\"release\")}"
+      },
+      "disabled": "{disabled || !active?.subpaths?.length}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 539,
+      "tag": "Button",
+      "label": "Paint layer",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onAdd(\"paint\")}"
+      },
+      "disabled": "{disabled}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 542,
+      "tag": "Button",
+      "label": "Text layer",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onAdd(\"text\")}"
+      },
+      "disabled": "{disabled}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 545,
+      "tag": "Button",
+      "label": "Gradient layer",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onAdd(\"gradient\")}"
+      },
+      "disabled": "{disabled}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 548,
+      "tag": "Button",
+      "label": "Adjustment layer",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onAdd(\"adjustment\")}"
+      },
+      "disabled": "{disabled}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 551,
+      "tag": "Button",
+      "label": "\"Bring layer forward\"",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => run(() => moveLayers(doc, selectedIds, 1), \"Bring forward\")}"
+      },
+      "disabled": "{disabled || !active}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 559,
+      "tag": "Button",
+      "label": "\"Send layer backward\"",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => run(() => moveLayers(doc, selectedIds, -1), \"Send backward\")}"
+      },
+      "disabled": "{disabled || !active}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 567,
+      "tag": "Button",
+      "label": "Duplicate",
+      "sections": [],
+      "handlers": {
+        "onClick": "{onDuplicate}"
+      },
+      "disabled": "{disabled || !active}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 571,
+      "tag": "Button",
+      "label": "Delete",
+      "sections": [],
+      "handlers": {
+        "onClick": "{onDelete}"
+      },
+      "disabled": "{disabled || !active}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 575,
+      "tag": "Button",
+      "label": "Group selected",
+      "sections": [],
+      "handlers": {
+        "onClick": "{onGroup}"
+      },
+      "disabled": "{disabled || selectedIds.length < 2}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 578,
+      "tag": "Button",
+      "label": "Ungroup",
+      "sections": [],
+      "handlers": {
+        "onClick": "{onUngroup}"
+      },
+      "disabled": "{disabled || active?.kind !== \"group\"}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 585,
+      "tag": "Button",
+      "label": "dynamic/structural; inspect source",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => run( () => setClipping(doc, selectedIds, !active?.clipped), active?.clipped ? \"Release clipping mask\" : \"Create clipping mask\", ) }"
+      },
+      "disabled": "{disabled || !active}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 597,
+      "tag": "Button",
+      "label": "Link layers",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => run(() => linkLayers(doc, selectedIds), \"Link layers\")}"
+      },
+      "disabled": "{disabled || selectedIds.length < 2}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 605,
+      "tag": "Button",
+      "label": "Unlink layers",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => run(() => unlinkLayers(doc, selectedIds), \"Unlink layers\")}"
+      },
+      "disabled": "{disabled || !active?.linkId}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 615,
+      "tag": "select",
+      "label": "\"Move selected to group\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => { if (e.target.value) run( () => reparentLayers( doc, selectedIds, e.target.value === \"root\" ? undefined : e.target.value, ), \"Move layers to group\", ); }}"
+      },
+      "disabled": "{disabled || !active}",
+      "value": "\"\""
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 645,
+      "tag": "Button",
+      "label": "Merge selected",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onMerge(\"selected\")}"
+      },
+      "disabled": "{disabled || !active}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 652,
+      "tag": "Button",
+      "label": "Merge visible",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onMerge(\"visible\")}"
+      },
+      "disabled": "{disabled || !doc.layers.length}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 659,
+      "tag": "Button",
+      "label": "Flatten image…",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => setFlatten(true)}"
+      },
+      "disabled": "{disabled || !doc.layers.length}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 685,
+      "tag": "Button",
+      "label": "Keep layers",
+      "sections": [],
+      "handlers": {},
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-layers.tsx",
+      "line": 688,
+      "tag": "Button",
+      "label": "Flatten now",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onMerge(\"flatten\")}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 95,
+      "tag": "ProNumber",
+      "label": "\"Clean islands smaller than pixels\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(n) => change({ cleanup: Math.round(n) })}"
+      },
+      "disabled": null,
+      "value": "{options.cleanup ?? 0}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 103,
+      "tag": "input",
+      "label": "dynamic/structural; inspect source",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => change({ fillHoles: e.target.checked })}"
+      },
+      "disabled": null,
+      "value": "{options.fillHoles ?? false}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 120,
+      "tag": "ProNumber",
+      "label": "{label}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(n) => change({ [key]: n })}"
+      },
+      "disabled": null,
+      "value": "{options[key]}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 132,
+      "tag": "input",
+      "label": "\"Edge-aware color refinement\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => change({ edgeAware: e.target.checked })}"
+      },
+      "disabled": null,
+      "value": "{options.edgeAware}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 142,
+      "tag": "Button",
+      "label": "Sample from canvas",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { cancel(); onArmSample(key); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 152,
+      "tag": "input",
+      "label": "{`Use ${key} color sample`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => change({ [key]: e.target.checked ? key === \"foreground\" ? [0, 0, 0] : [255, 255, 255] : undefined, }) }"
+      },
+      "disabled": null,
+      "value": "{!!options[key]}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 171,
+      "tag": "input",
+      "label": "{`${key} reference color`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => change({ [key]: [1, 3, 5].map((i) => parseInt(e.target.value.slice(i, i + 2), 16)), }) }"
+      },
+      "disabled": null,
+      "value": "{`#${options[key]!.map((n) => Math.round(n).toString(16).padStart(2, \"0\")).join(\"\")}`}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 187,
+      "tag": "select",
+      "label": "\"Selection preview\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => onView(e.target.value as SelectionView)}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 198,
+      "tag": "input",
+      "label": "dynamic/structural; inspect source",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => setLive(e.target.checked)}"
+      },
+      "disabled": null,
+      "value": "{live}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 202,
+      "tag": "Button",
+      "label": "Preview refinement",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { void generate.current(); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 210,
+      "tag": "Button",
+      "label": "Reset refinement",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { cancel(); setOptions(REFINE_DEFAULTS); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 221,
+      "tag": "input",
+      "label": "\"Output refinement to mask\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => setOutputMask(e.target.checked)}"
+      },
+      "disabled": "{!canMask}",
+      "value": "{outputMask}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 231,
+      "tag": "Button",
+      "label": "Apply refinement",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { if (draft) onApply(draft, outputMask); cancel(); }}"
+      },
+      "disabled": "{!draft || (outputMask && !canMask)}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 240,
+      "tag": "Button",
+      "label": "Cancel refinement",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => cancel()}"
+      },
+      "disabled": "{!draft}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 247,
+      "tag": "input",
+      "label": "\"Selection name\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => setName(e.target.value)}"
+      },
+      "disabled": null,
+      "value": "{name}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 255,
+      "tag": "Button",
+      "label": "Save selection",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onDocument( { ...document, savedSelections: [ ...(document.savedSelections ?? []).filter((s) => s.name !== name.trim()), { name: name.trim(), selection: structuredClone( document.selection ?? { regions: [], inverted: false, feather: 0 }, ), }, ], }, \"Save selection\", ) }"
+      },
+      "disabled": "{ !name.trim() || ((document.savedSelections?.length ?? 0) >= 16 && !document.savedSelections?.some((s) => s.name === name.trim())) }",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 284,
+      "tag": "Button",
+      "label": "Load",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onApply(structuredClone(s.selection), false)}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-refine.tsx",
+      "line": 290,
+      "tag": "Button",
+      "label": "{`Delete selection ${s.name}`}",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onDocument( { ...document, savedSelections: document.savedSelections!.filter((v) => v.name !== s.name), }, \"Delete saved selection\", ) }"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 55,
+      "tag": "select",
+      "label": "\"Transform mode\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => { const mode = e.target.value as TransformMode; onDraft({ ...draft, mode, value: mode === \"affine\" || t.deform?.kind === mode ? t : { ...t, deform: { kind: mode, width: layer.width, height: layer.height, points: (mode === \"warp\" ? MESH : QUAD).map((p) => ({ ...p })), }, }, }); }}"
+      },
+      "disabled": null,
+      "value": "{draft.mode}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 90,
+      "tag": "input",
+      "label": "\"Transform aspect lock\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => onDraft({ ...draft, lock: e.target.checked })}"
+      },
+      "disabled": null,
+      "value": "{draft.lock}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 99,
+      "tag": "ProNumber",
+      "label": "\"Transform X\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(x) => update({ x })}"
+      },
+      "disabled": null,
+      "value": "{t.x}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 100,
+      "tag": "ProNumber",
+      "label": "\"Transform Y\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(y) => update({ y })}"
+      },
+      "disabled": null,
+      "value": "{t.y}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 101,
+      "tag": "ProNumber",
+      "label": "\"Transform width\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(n) => update({ scaleX: n / layer.width, ...(draft.lock ? { scaleY: (t.scaleY * n) / (layer.width * t.scaleX) } : {}), }) }"
+      },
+      "disabled": null,
+      "value": "{layer.width * t.scaleX}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 113,
+      "tag": "ProNumber",
+      "label": "\"Transform height\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(n) => update({ scaleY: n / layer.height, ...(draft.lock ? { scaleX: (t.scaleX * n) / (layer.height * t.scaleY) } : {}), }) }"
+      },
+      "disabled": null,
+      "value": "{layer.height * t.scaleY}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 125,
+      "tag": "ProNumber",
+      "label": "\"Transform rotation\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(rotation) => update({ rotation })}"
+      },
+      "disabled": null,
+      "value": "{t.rotation}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 133,
+      "tag": "ProNumber",
+      "label": "\"Horizontal shear\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(shearX) => update({ shearX })}"
+      },
+      "disabled": null,
+      "value": "{t.shearX ?? 0}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 141,
+      "tag": "ProNumber",
+      "label": "\"Vertical shear\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(shearY) => update({ shearY })}"
+      },
+      "disabled": null,
+      "value": "{t.shearY ?? 0}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 151,
+      "tag": "Button",
+      "label": "Flip horizontal",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => update({ flipX: !t.flipX })}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 158,
+      "tag": "Button",
+      "label": "Flip vertical",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => update({ flipY: !t.flipY })}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 167,
+      "tag": "ProNumber",
+      "label": "\"Pivot X\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(x) => onDraft({ ...draft, value: withPivot(t, { x, y: t.pivot?.y ?? 0 }) })}"
+      },
+      "disabled": null,
+      "value": "{t.pivot?.x ?? 0}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 172,
+      "tag": "ProNumber",
+      "label": "\"Pivot Y\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(y) => onDraft({ ...draft, value: withPivot(t, { x: t.pivot?.x ?? 0, y }) })}"
+      },
+      "disabled": null,
+      "value": "{t.pivot?.y ?? 0}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 178,
+      "tag": "Button",
+      "label": "Center pivot",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onDraft({ ...draft, value: withPivot(t, { x: layer.width / 2, y: layer.height / 2 }) }) }"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 196,
+      "tag": "ProNumber",
+      "label": "{`Control ${i + 1} X`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(x) => { const d = t.deform!; update({ deform: { ...d, points: d.points.map((q, j) => (j === i ? { ...q, x: x / d.width } : q)), }, }); }}"
+      },
+      "disabled": null,
+      "value": "{p.x * t.deform!.width}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 210,
+      "tag": "ProNumber",
+      "label": "{`Control ${i + 1} Y`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(y) => { const d = t.deform!; update({ deform: { ...d, points: d.points.map((q, j) => (j === i ? { ...q, y: y / d.height } : q)), }, }); }}"
+      },
+      "disabled": null,
+      "value": "{p.y * t.deform!.height}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 234,
+      "tag": "Button",
+      "label": "Apply transform",
+      "sections": [],
+      "handlers": {
+        "onClick": "{onApply}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 235,
+      "tag": "Button",
+      "label": "Cancel transform",
+      "sections": [],
+      "handlers": {
+        "onClick": "{onCancel}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 240,
+      "tag": "Button",
+      "label": "Restore initial transform",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onDraft({ ...draft, value: structuredClone(draft.base), translation: { x: 0, y: 0 }, mode: draft.base.deform?.kind ?? \"affine\", }) }"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 253,
+      "tag": "Button",
+      "label": "Reset affine transform",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onDraft({ ...draft, translation: { x: 0, y: 0 }, value: { ...t, x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0, shearX: 0, shearY: 0, flipX: false, flipY: false, pivot: { x: 0, y: 0 }, }, }) }"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-transform.tsx",
+      "line": 277,
+      "tag": "Button",
+      "label": "Reset deformation",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onDraft({ ...draft, value: { ...t, deform: undefined }, mode: \"affine\" })}"
+      },
+      "disabled": "{!t.deform}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 81,
+      "tag": "Button",
+      "label": "Edit crop boundaries",
+      "sections": [
+        "\"Non-destructive crop\""
+      ],
+      "handlers": {
+        "onClick": "{onStart}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 86,
+      "tag": "select",
+      "label": "\"Crop aspect ratio\"",
+      "sections": [
+        "\"Non-destructive crop\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => { const r = Number(e.target.value); onRatio(r); if (r) onDraft({ ...draft, height: Math.max(1, Math.round(draft.width / r)) }); }}"
+      },
+      "disabled": null,
+      "value": "{ratio}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 106,
+      "tag": "ProNumber",
+      "label": "\"Crop X\"",
+      "sections": [
+        "\"Non-destructive crop\""
+      ],
+      "handlers": {
+        "onChange": "{(x) => changeCrop({ x })}"
+      },
+      "disabled": null,
+      "value": "{draft.x}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 107,
+      "tag": "ProNumber",
+      "label": "\"Crop Y\"",
+      "sections": [
+        "\"Non-destructive crop\""
+      ],
+      "handlers": {
+        "onChange": "{(y) => changeCrop({ y })}"
+      },
+      "disabled": null,
+      "value": "{draft.y}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 108,
+      "tag": "ProNumber",
+      "label": "\"Crop width\"",
+      "sections": [
+        "\"Non-destructive crop\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => changeCrop({ width: Math.round(n) })}"
+      },
+      "disabled": null,
+      "value": "{draft.width}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 115,
+      "tag": "ProNumber",
+      "label": "\"Crop height\"",
+      "sections": [
+        "\"Non-destructive crop\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => changeCrop({ height: Math.round(n) })}"
+      },
+      "disabled": null,
+      "value": "{draft.height}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 123,
+      "tag": "ProNumber",
+      "label": "\"Straighten angle\"",
+      "sections": [
+        "\"Non-destructive crop\""
+      ],
+      "handlers": {
+        "onChange": "{(rotation) => changeCrop({ rotation })}"
+      },
+      "disabled": null,
+      "value": "{draft.rotation}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 136,
+      "tag": "Button",
+      "label": "Apply crop",
+      "sections": [
+        "\"Non-destructive crop\""
+      ],
+      "handlers": {
+        "onClick": "{onApply}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 137,
+      "tag": "Button",
+      "label": "Cancel crop",
+      "sections": [
+        "\"Non-destructive crop\""
+      ],
+      "handlers": {
+        "onClick": "{onCancel}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 143,
+      "tag": "Button",
+      "label": "Reset crop",
+      "sections": [
+        "\"Non-destructive crop\""
+      ],
+      "handlers": {
+        "onClick": "{onReset}"
+      },
+      "disabled": "{!doc.crop}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 160,
+      "tag": "input",
+      "label": "dynamic/structural; inspect source",
+      "sections": [
+        "\"Image size · resample\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => setLock(e.target.checked)}"
+      },
+      "disabled": null,
+      "value": "{lock}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 164,
+      "tag": "ProNumber",
+      "label": "\"Image width\"",
+      "sections": [
+        "\"Image size · resample\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => { setWidth(Math.round(n)); if (lock) setHeight(Math.max(1, Math.round((n * size.height) / size.width))); }}"
+      },
+      "disabled": null,
+      "value": "{width}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 174,
+      "tag": "ProNumber",
+      "label": "\"Image height\"",
+      "sections": [
+        "\"Image size · resample\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => { setHeight(Math.round(n)); if (lock) setWidth(Math.max(1, Math.round((n * size.width) / size.height))); }}"
+      },
+      "disabled": null,
+      "value": "{height}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 187,
+      "tag": "select",
+      "label": "\"Image resampling\"",
+      "sections": [
+        "\"Image size · resample\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => setMethod(e.target.value as Resampling)}"
+      },
+      "disabled": null,
+      "value": "{method}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 199,
+      "tag": "Button",
+      "label": "Apply image size",
+      "sections": [
+        "\"Image size · resample\""
+      ],
+      "handlers": {
+        "onClick": "{() => onCommit( { ...doc, imageSize: { width, height, resampling: method } }, \"Resize output image\", ) }"
+      },
+      "disabled": "{!!draft}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 210,
+      "tag": "Button",
+      "label": "Reset image size",
+      "sections": [
+        "\"Image size · resample\""
+      ],
+      "handlers": {
+        "onClick": "{() => onCommit({ ...doc, imageSize: undefined }, \"Reset output image size\")}"
+      },
+      "disabled": "{!doc.imageSize || !!draft}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 223,
+      "tag": "ProNumber",
+      "label": "\"Document width\"",
+      "sections": [
+        "\"Canvas size · no resampling\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => setCanvasWidth(Math.round(n))}"
+      },
+      "disabled": null,
+      "value": "{canvasWidth}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 230,
+      "tag": "ProNumber",
+      "label": "\"Document height\"",
+      "sections": [
+        "\"Canvas size · no resampling\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => setCanvasHeight(Math.round(n))}"
+      },
+      "disabled": null,
+      "value": "{canvasHeight}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-geometry.tsx",
+      "line": 237,
+      "tag": "Button",
+      "label": "Resize canvas",
+      "sections": [
+        "\"Canvas size · no resampling\""
+      ],
+      "handlers": {
+        "onClick": "{() => onCommit({ ...doc, width: canvasWidth, height: canvasHeight }, \"Resize canvas\") }"
+      },
+      "disabled": "{!!draft}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 39,
+      "tag": "select",
+      "label": "\"Gradient preset\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => onChange(structuredClone(GRADIENT_PRESETS[e.target.value]!))}"
+      },
+      "disabled": null,
+      "value": "\"custom\""
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 57,
+      "tag": "input",
+      "label": "{`Gradient stop ${i + 1} color`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => patch(i, { color: e.target.value })}"
+      },
+      "disabled": null,
+      "value": "{s.color}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 66,
+      "tag": "ProNumber",
+      "label": "{`Gradient stop ${i + 1} position`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(n) => { if (i && i < stops.length - 1) patch(i, { position: n / 100 }); }}"
+      },
+      "disabled": null,
+      "value": "{s.position * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 79,
+      "tag": "ProNumber",
+      "label": "{`Gradient stop ${i + 1} opacity`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(n) => patch(i, { opacity: n / 100 })}"
+      },
+      "disabled": null,
+      "value": "{s.opacity * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 88,
+      "tag": "Button",
+      "label": "Remove stop",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onChange(stops.filter((_, j) => j !== i))}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 94,
+      "tag": "Button",
+      "label": "Add gradient stop",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { let index = 0; for (let i = 1; i < stops.length - 1; i++) if ( stops[i + 1]!.position - stops[i]!.position > stops[index + 1]!.position - stops[index]!.position ) index = i; const next = [...stops]; next.splice(index + 1, 0, { position: (stops[index]!.position + stops[index + 1]!.position) / 2, color: stops[index]!.color, opacity: stops[index]!.opacity, }); onChange(next); }}"
+      },
+      "disabled": "{stops.length >= 16}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 144,
+      "tag": "input",
+      "label": "{`Enable ${title}`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => set( key, e.target.checked ? structuredClone(DEFAULTS[key]) : undefined, `${key}-enable`, ) }"
+      },
+      "disabled": null,
+      "value": "{a[key] !== undefined}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 159,
+      "tag": "Button",
+      "label": "Reset",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => set(key, structuredClone(DEFAULTS[key]), `${key}-reset`)}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 180,
+      "tag": "input",
+      "label": "\"Limit color to selection\"",
+      "sections": [
+        "\"Professional color adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onPatch({ colorSelection: e.target.checked ? toLocalSelection(selection, layer, documentSize) : undefined, }) }"
+      },
+      "disabled": "{!layer.colorSelection && !selection.regions.length && !selection.inverted}",
+      "value": "{!!layer.colorSelection}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 204,
+      "tag": "ProNumber",
+      "label": "{`${range} ${name}`}",
+      "sections": [
+        "\"Professional color adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => set( \"balance\", { ...a.balance!, [range]: a.balance![range].map((v, j) => (j === c ? n : v)) as RGB, }, `balance-${range}-${c}`, ) }"
+      },
+      "disabled": null,
+      "value": "{a.balance![range][c]!}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 226,
+      "tag": "input",
+      "label": "\"Preserve balance luminance\"",
+      "sections": [
+        "\"Professional color adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => set(\"balance\", { ...a.balance!, preserveLuminance: e.target.checked }) }"
+      },
+      "disabled": null,
+      "value": "{a.balance.preserveLuminance}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 240,
+      "tag": "ProNumber",
+      "label": "\"Vibrance amount\"",
+      "sections": [
+        "\"Professional color adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => set(\"vibrance\", n)}"
+      },
+      "disabled": null,
+      "value": "{a.vibrance}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 255,
+      "tag": "ProNumber",
+      "label": "{`Mixer ${row} ${col}`}",
+      "sections": [
+        "\"Professional color adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => set( \"mixer\", { ...a.mixer!, [row]: a.mixer![row].map((v, j) => (j === c ? n : v)) }, `mixer-${row}-${c}`, ) }"
+      },
+      "disabled": null,
+      "value": "{a.mixer![row][c]!}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 276,
+      "tag": "ProNumber",
+      "label": "\"Shadow lift\"",
+      "sections": [
+        "\"Professional color adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => set(\"shadowsHighlights\", { ...a.shadowsHighlights!, shadows: n }, \"shadow\") }"
+      },
+      "disabled": null,
+      "value": "{a.shadowsHighlights.shadows}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 285,
+      "tag": "ProNumber",
+      "label": "\"Highlight recovery\"",
+      "sections": [
+        "\"Professional color adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => set(\"shadowsHighlights\", { ...a.shadowsHighlights!, highlights: n }, \"highlight\") }"
+      },
+      "disabled": null,
+      "value": "{a.shadowsHighlights.highlights}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 294,
+      "tag": "ProNumber",
+      "label": "\"Tonal width\"",
+      "sections": [
+        "\"Professional color adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => set(\"shadowsHighlights\", { ...a.shadowsHighlights!, width: n / 100 }, \"tonal-width\") }"
+      },
+      "disabled": null,
+      "value": "{a.shadowsHighlights.width * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 308,
+      "tag": "ProNumber",
+      "label": "\"Gradient map amount\"",
+      "sections": [
+        "\"Professional color adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => set(\"gradientMap\", { ...a.gradientMap!, amount: n / 100 }, \"map-amount\") }"
+      },
+      "disabled": null,
+      "value": "{a.gradientMap.amount * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 325,
+      "tag": "ProNumber",
+      "label": "\"Threshold level\"",
+      "sections": [
+        "\"Professional color adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => set(\"threshold\", n)}"
+      },
+      "disabled": null,
+      "value": "{a.threshold}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 335,
+      "tag": "ProNumber",
+      "label": "\"Posterize levels\"",
+      "sections": [
+        "\"Professional color adjustments\""
+      ],
+      "handlers": {
+        "onChange": "{(n) => set(\"posterize\", Math.round(n))}"
+      },
+      "disabled": null,
+      "value": "{a.posterize}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-color.tsx",
+      "line": 343,
+      "tag": "Button",
+      "label": "Reset professional color",
+      "sections": [
+        "\"Professional color adjustments\""
+      ],
+      "handlers": {
+        "onClick": "{() => onPatch({ color: undefined, colorSelection: undefined })}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 21,
+      "tag": "select",
+      "label": "{`${prefix} type`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => onChange({ ...value, kind: e.target.value as Gradient[\"kind\"] })}"
+      },
+      "disabled": null,
+      "value": "{value.kind}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 32,
+      "tag": "ProNumber",
+      "label": "{`${prefix} angle`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(angle) => onChange({ ...value, angle })}"
+      },
+      "disabled": null,
+      "value": "{value.angle}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 39,
+      "tag": "ProNumber",
+      "label": "{`${prefix} scale`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(scale) => onChange({ ...value, scale: scale / 100 })}"
+      },
+      "disabled": null,
+      "value": "{value.scale * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 46,
+      "tag": "ProNumber",
+      "label": "{`${prefix} center X`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(x) => onChange({ ...value, center: { ...value.center, x: x / 100 } })}"
+      },
+      "disabled": null,
+      "value": "{value.center.x * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 53,
+      "tag": "ProNumber",
+      "label": "{`${prefix} center Y`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(y) => onChange({ ...value, center: { ...value.center, y: y / 100 } })}"
+      },
+      "disabled": null,
+      "value": "{value.center.y * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 90,
+      "tag": "Button",
+      "label": "Reset gradient layer",
+      "sections": [
+        "\"Editable gradient layer\""
+      ],
+      "handlers": {
+        "onClick": "{() => onPatch({ gradient: defaultGradient() })}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 111,
+      "tag": "input",
+      "label": "{`Enable ${EFFECT_NAMES[kind]}`}",
+      "sections": [
+        "\"Editable layer effects\""
+      ],
+      "handlers": {
+        "onChange": "{(event) => onPatch({ effects: effects.some((e) => e.kind === kind) ? effects.map((e) => e.kind === kind ? { ...e, enabled: event.target.checked } : e, ) : [...effects, defaultEffect(kind)], }) }"
+      },
+      "disabled": null,
+      "value": "{!!effects.find((e) => e.kind === kind)?.enabled}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 133,
+      "tag": "ProNumber",
+      "label": "{`${EFFECT_NAMES[e.kind]} opacity`}",
+      "sections": [
+        "\"Editable layer effects\""
+      ],
+      "handlers": {
+        "onChange": "{(opacity) => set(e.kind, { opacity: opacity / 100 })}"
+      },
+      "disabled": null,
+      "value": "{e.opacity * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 143,
+      "tag": "input",
+      "label": "{`${EFFECT_NAMES[e.kind]} color`}",
+      "sections": [
+        "\"Editable layer effects\""
+      ],
+      "handlers": {
+        "onChange": "{(v) => set(e.kind, { color: v.target.value })}"
+      },
+      "disabled": null,
+      "value": "{e.color}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 152,
+      "tag": "ProNumber",
+      "label": "{`${EFFECT_NAMES[e.kind]} radius`}",
+      "sections": [
+        "\"Editable layer effects\""
+      ],
+      "handlers": {
+        "onChange": "{(radius) => set(e.kind, { radius })}"
+      },
+      "disabled": null,
+      "value": "{e.radius}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 162,
+      "tag": "ProNumber",
+      "label": "{`${EFFECT_NAMES[e.kind]} distance`}",
+      "sections": [
+        "\"Editable layer effects\""
+      ],
+      "handlers": {
+        "onChange": "{(distance) => set(e.kind, { distance })}"
+      },
+      "disabled": null,
+      "value": "{e.distance}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 169,
+      "tag": "ProNumber",
+      "label": "{`${EFFECT_NAMES[e.kind]} angle`}",
+      "sections": [
+        "\"Editable layer effects\""
+      ],
+      "handlers": {
+        "onChange": "{(angle) => set(e.kind, { angle })}"
+      },
+      "disabled": null,
+      "value": "{e.angle}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 180,
+      "tag": "ProNumber",
+      "label": "\"Stroke effect size\"",
+      "sections": [
+        "\"Editable layer effects\""
+      ],
+      "handlers": {
+        "onChange": "{(size) => set(e.kind, { size })}"
+      },
+      "disabled": null,
+      "value": "{e.size}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 189,
+      "tag": "select",
+      "label": "\"Stroke effect position\"",
+      "sections": [
+        "\"Editable layer effects\""
+      ],
+      "handlers": {
+        "onChange": "{(v) => set(e.kind, { position: v.target.value as Effect[\"position\"] }) }"
+      },
+      "disabled": null,
+      "value": "{e.position}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 213,
+      "tag": "Button",
+      "label": "·",
+      "sections": [
+        "\"Editable layer effects\""
+      ],
+      "handlers": {
+        "onClick": "{() => { const next = [...effects], i = next.indexOf(e); [next[i], next[i + direction]] = [next[i + direction]!, next[i]!]; onPatch({ effects: next }); }}"
+      },
+      "disabled": "{ effects.indexOf(e) + direction < 0 || effects.indexOf(e) + direction >= effects.length }",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 231,
+      "tag": "Button",
+      "label": "Reset",
+      "sections": [
+        "\"Editable layer effects\""
+      ],
+      "handlers": {
+        "onClick": "{() => onPatch({ effects: effects.map((v) => v.kind === e.kind ? defaultEffect(e.kind) : v, ), }) }"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-appearance.tsx",
+      "line": 246,
+      "tag": "Button",
+      "label": "Remove all layer effects",
+      "sections": [
+        "\"Editable layer effects\""
+      ],
+      "handlers": {
+        "onClick": "{() => onPatch({ effects: undefined })}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 79,
+      "tag": "Button",
+      "label": "Convert SVG path to editable contours",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { if (run(() => convertPath(doc, layer.id), \"Convert SVG path to native contours\")) onSelectContour(0); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 93,
+      "tag": "select",
+      "label": "\"Selected subpath\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => onSelectContour(+e.target.value)}"
+      },
+      "disabled": null,
+      "value": "{contour}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 120,
+      "tag": "input",
+      "label": "\"Close Bézier path\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => run( () => ({ ...doc, layers: doc.layers.map((l) => l.id === layer.id ? withContour(l, contour, { anchors: layer.anchors, closed: e.target.checked }) : l, ), }), \"Change subpath closure\", ) }"
+      },
+      "disabled": null,
+      "value": "{layer.closed}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 145,
+      "tag": "ProNumber",
+      "label": "\"Selected anchor\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(n) => onSelect(Math.round(n) - 1)}"
+      },
+      "disabled": null,
+      "value": "{index + 1}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 154,
+      "tag": "ProNumber",
+      "label": "{`Anchor ${axis.toUpperCase()}`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(n) => edit( { kind: \"move\", point: { x: a.x, y: a.y, [axis]: n } }, \"Move Bézier anchor\", `point-${axis}`, ) }"
+      },
+      "disabled": null,
+      "value": "{a[axis]}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 171,
+      "tag": "select",
+      "label": "\"Anchor handle mode\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => edit( { kind: \"mode\", mode: e.target.value as NonNullable<Anchor[\"mode\"]> }, \"Change anchor handle mode\", ) }"
+      },
+      "disabled": null,
+      "value": "{a.mode ?? \"corner\"}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 190,
+      "tag": "ProNumber",
+      "label": "{`${part === \"incoming\" ? \"Incoming\" : \"Outgoing\"} handle ${axis.toUpperCase()}`}",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(n) => edit( { kind: \"handle\", part, point: { x: (a[part] ?? a).x, y: (a[part] ?? a).y, [axis]: n }, }, \"Edit Bézier handle\", `${part}-${axis}`, ) }"
+      },
+      "disabled": null,
+      "value": "{(a[part] ?? a)[axis]}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 211,
+      "tag": "Button",
+      "label": "Fit vector frame to content",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => run(() => fitVectorFrame(doc, layer.id), \"Fit vector source frame\")}"
+      },
+      "disabled": "{layer.kind !== \"shape\"}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 218,
+      "tag": "Button",
+      "label": "Remove handles",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => edit({ kind: \"clear\" }, \"Remove Bézier handles\")}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 221,
+      "tag": "Button",
+      "label": "Delete anchor",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { if ( run( () => editAnchor(doc, layer.id, index, { kind: \"delete\" }, contour), \"Delete Bézier anchor\", ) ) onSelect(Math.max(0, index - 1)); }}"
+      },
+      "disabled": "{layer.anchors.length <= (layer.closed ? 3 : 2)}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 243,
+      "tag": "select",
+      "label": "\"Anchor insertion measurement\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => setMeasure(e.target.value)}"
+      },
+      "disabled": null,
+      "value": "{measure}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 253,
+      "tag": "ProNumber",
+      "label": "{ measure === \"parameter\" ? \"Segment insertion parameter %\" : \"Segment insertion distance %\" }",
+      "sections": [],
+      "handlers": {
+        "onChange": "{setParameter}"
+      },
+      "disabled": null,
+      "value": "{parameter}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 269,
+      "tag": "Button",
+      "label": "Insert anchor without changing curve",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { const changed = run(() => { if (measure === \"distance\" && !metric) throw new Error(\"This segment exceeds the arc-length precision budget.\"); const t = measure === \"distance\" && metric ? parameterAtLength(metric.curve, (metric.length * parameter) / 100) : parameter / 100; if (t <= 0 || t >= 1) throw new Error(\"Choose an interior position on a nonzero-length segment.\"); return splitAnchorSegment(doc, layer.id, segment, t, contour); }, \"Insert Bézier anchor\"); if (changed) onSelect(segment + 1); }}"
+      },
+      "disabled": "{ segment < 0 || contours(sourceLayer).reduce((n, c) => n + c.anchors.length, 0) >= 1000 }",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-anchors.tsx",
+      "line": 291,
+      "tag": "Button",
+      "label": "Reverse path direction",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => { const changed = run( () => reverseAnchors(doc, layer.id, contour), \"Reverse Bézier path\", ); if (changed) onSelect( layer.closed ? (layer.anchors.length - index) % layer.anchors.length : layer.anchors.length - 1 - index, ); }}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 29,
+      "tag": "Button",
+      "label": "Undo",
+      "sections": [],
+      "handlers": {
+        "onClick": "{onUndo}"
+      },
+      "disabled": "{!history.past.length}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 33,
+      "tag": "Button",
+      "label": "Redo",
+      "sections": [],
+      "handlers": {
+        "onClick": "{onRedo}"
+      },
+      "disabled": "{!history.future.length}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 70,
+      "tag": "Button",
+      "label": "Place reference",
+      "sections": [],
+      "handlers": {
+        "onClick": "{onPlace}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 99,
+      "tag": "input",
+      "label": "\"Import Pro asset\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => { onImport(e.target.files?.[0]); e.target.value = \"\"; }}"
+      },
+      "disabled": "{disabled}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 159,
+      "tag": "Button",
+      "label": "Apply + Swin2SR Enhance",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onContinue(\"enhance\")}"
+      },
+      "disabled": "{disabled}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 165,
+      "tag": "Button",
+      "label": "Apply + Image tools",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onContinue(\"image\")}"
+      },
+      "disabled": "{disabled}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 173,
+      "tag": "Button",
+      "label": "Apply + AI Face Fix",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onContinue(\"face\")}"
+      },
+      "disabled": "{disabled}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 222,
+      "tag": "Button",
+      "label": "Export editable .inkstrip",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onExport(\"native\")}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 226,
+      "tag": "Button",
+      "label": "Export SVG · vectors only",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onExport(\"svg\")}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 231,
+      "tag": "select",
+      "label": "\"Pro export format\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(e) => onMime(e.target.value)}"
+      },
+      "disabled": null,
+      "value": "{mime}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 245,
+      "tag": "ProNumber",
+      "label": "\"Export quality\"",
+      "sections": [],
+      "handlers": {
+        "onChange": "{(n) => onQuality(n / 100)}"
+      },
+      "disabled": null,
+      "value": "{quality * 100}"
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 253,
+      "tag": "Button",
+      "label": "Export composite · ×",
+      "sections": [],
+      "handlers": {
+        "onClick": "{() => onExport(\"raster\")}"
+      },
+      "disabled": "{busy || !ready}",
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 257,
+      "tag": "Button",
+      "label": "Crop, canvas & image size",
+      "sections": [],
+      "handlers": {
+        "onClick": "{onOpenGeometry}"
+      },
+      "disabled": null,
+      "value": null
+    },
+    {
+      "path": "src/components/studio/pro/pro-inspector-tabs.tsx",
+      "line": 263,
+      "tag": "select",
+      "label": "\"Document background\"",
+      "sections": [
+        "\"Document background\""
+      ],
+      "handlers": {
+        "onChange": "{(e) => onBackground(e.target.value)}"
+      },
+      "disabled": null,
+      "value": "{doc.background}"
+    }
+  ]
+}
