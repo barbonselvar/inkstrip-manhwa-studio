@@ -137,15 +137,16 @@ async function png(h: Header) {
   let at = 33,
     frames = 1,
     imageData = false,
-    animationFrames = 0;
+    animationFrames = 0,
+    inflated = 0;
   for (let n = 0; n < 4096; n++) {
     const c = await h.read(at, 8),
       size = view(c).getUint32(0),
       kind = ascii(c, 4, 4);
     if (size > h.blob.size - at - 12) fail("Truncated PNG chunk.");
     if (kind === "IHDR") fail("Duplicate PNG dimensions.");
-    if (["iCCP", "zTXt"].includes(kind))
-      fail("Compressed PNG profile/text metadata requires a trusted PNG conversion before import.");
+    if (kind === "iCCP" || kind === "zTXt")
+      inflated += await pngMetadata(h, at + 8, size, inflated);
     if (kind === "iTXt") {
       const text = await h.read(at + 8, Math.min(size, 82)),
         separator = text.indexOf(0);
@@ -182,6 +183,35 @@ async function png(h: Header) {
     }
   }
   return fail("Too many PNG chunks.");
+}
+/** Colour profiles (iCCP) are common in screenshots and editor exports, and
+ * already-stored Chapter art may contain them. Inflate them here under the
+ * header budget so a decompression bomb is refused before any decoder sees it. */
+async function pngMetadata(h: Header, start: number, size: number, used: number) {
+  const b = await h.read(start, size),
+    separator = b.indexOf(0);
+  if (separator < 1 || separator > 79 || b[separator + 1] !== 0)
+    fail("Compressed PNG metadata is malformed.");
+  const budget = h.policy.maxHeaderBytes - used,
+    reader = h.blob
+      .slice(start + separator + 2, start + size)
+      .stream()
+      .pipeThrough(new DecompressionStream("deflate"))
+      .getReader();
+  let total = 0;
+  try {
+    for (;;) {
+      h.signal?.throwIfAborted();
+      const { done, value } = await reader.read();
+      if (done) return total;
+      total += value.length;
+      if (total > budget) fail("Compressed PNG metadata exceeds the bounded expansion budget.");
+    }
+  } catch (error) {
+    void reader.cancel().catch(() => {});
+    if ((error as Error).message?.includes("Compressed PNG") || h.signal?.aborted) throw error;
+    return fail("Compressed PNG metadata is corrupt or truncated.");
+  }
 }
 function frameBudget(width: number, height: number, frames: number, policy: ImagePolicy) {
   const pixels = imageDimensions(width, height, policy);
@@ -326,12 +356,29 @@ async function jpeg(h: Header, width: number, height: number) {
     if (code === 0xda) {
       if (!frame) fail("JPEG scan precedes its frame.");
       const end = await h.read(h.blob.size - 2, 2);
-      if (end[0] !== 255 || end[1] !== 217) fail("Truncated JPEG termination.");
+      if ((end[0] !== 255 || end[1] !== 217) && !(await jpegEnd(h, at + 2 + length)))
+        fail("Truncated JPEG termination.");
       return;
     }
     at += 2 + length;
   }
   fail("Excessive JPEG header segments.");
+}
+/** Phones append motion-photo video or vendor trailers after EOI, and decoders
+ * stop there. Entropy data stuffs every 0xFF, so the first FF D9 after the scan
+ * header is the real EOI. Scanned in bounded chunks; maxBytes caps the file. */
+async function jpegEnd(h: Header, from: number) {
+  const chunk = MiB;
+  let previous = 0;
+  for (let at = from; at < h.blob.size; at += chunk) {
+    h.signal?.throwIfAborted();
+    const bytes = new Uint8Array(await h.blob.slice(at, at + chunk).arrayBuffer());
+    if (previous === 255 && bytes[0] === 217) return true;
+    for (let i = bytes.indexOf(255); i >= 0 && i < bytes.length - 1; i = bytes.indexOf(255, i + 1))
+      if (bytes[i + 1] === 217) return true;
+    previous = bytes[bytes.length - 1] ?? 0;
+  }
+  return false;
 }
 async function tiff(h: Header) {
   const b = await h.read(0, 8),

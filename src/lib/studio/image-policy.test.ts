@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { deflateSync } from "node:zlib";
 import {
   imagePolicy,
   imageDimensions,
@@ -103,6 +104,54 @@ test("PNG compressed ancillary metadata is rejected instead of expanding unbound
     /Compressed PNG/,
   );
 });
+const withChunks = async (...chunks: [string, Uint8Array][]) => {
+  const bytes = new Uint8Array(await (await fixture()).arrayBuffer()),
+    parts = chunks.map(([kind, data]) => {
+      const chunk = new Uint8Array(data.length + 12);
+      new DataView(chunk.buffer).setUint32(0, data.length);
+      chunk.set(new TextEncoder().encode(kind), 4);
+      chunk.set(data, 8);
+      return chunk;
+    });
+  return new Blob([bytes.subarray(0, 33), ...parts, bytes.subarray(33)]);
+};
+const compressed = (keyword: string, payload: Uint8Array, method = 0) =>
+  Uint8Array.from([...new TextEncoder().encode(keyword), 0, method, ...deflateSync(payload)]);
+test("PNG colour profiles stay importable, including art stored before R1.1", async () => {
+  const info = await preflightImage(await fixture("iccp.png"), imagePolicy(true));
+  assert.deepEqual([info.width, info.height, info.mime], [64, 48, "image/png"]);
+  const text = compressed("Comment", new TextEncoder().encode("drawn in Inkstrip"));
+  assert.equal((await preflightImage(await withChunks(["zTXt", text]))).mime, "image/png");
+});
+test("PNG profile/text decompression bombs, corrupt streams and unknown methods are refused", async () => {
+  const policy = imagePolicy(true),
+    bomb = compressed("ICC", new Uint8Array(policy.maxHeaderBytes + 1));
+  assert.ok(bomb.length < 8192, "a few KiB must not be allowed to expand past the budget");
+  await assert.rejects(preflightImage(await withChunks(["iCCP", bomb]), policy), /expansion/);
+  // Two chunks that each fit cannot jointly exceed the per-file budget.
+  const half = compressed("ICC", new Uint8Array(policy.maxHeaderBytes / 2 + 1));
+  await assert.rejects(
+    preflightImage(await withChunks(["iCCP", half], ["zTXt", half]), policy),
+    /expansion/,
+  );
+  const corrupt = compressed("ICC", new Uint8Array(64));
+  corrupt.fill(0x5a, 8);
+  await assert.rejects(preflightImage(await withChunks(["iCCP", corrupt])), /corrupt/);
+  const truncated = compressed("ICC", new Uint8Array(4096).fill(7));
+  await assert.rejects(
+    preflightImage(await withChunks(["iCCP", truncated.subarray(0, truncated.length - 6)])),
+    /corrupt/,
+  );
+  await assert.rejects(
+    preflightImage(await withChunks(["iCCP", compressed("ICC", new Uint8Array(8), 1)])),
+    /malformed/,
+  );
+  const controller = new AbortController();
+  controller.abort(new DOMException("stop", "AbortError"));
+  await assert.rejects(preflightImage(await fixture("iccp.png"), policy, controller.signal), {
+    name: "AbortError",
+  });
+});
 test("JPEG malformed markers/dimensions and missing EOI are refused", async () => {
   const blob = await fixture("original.jpg");
   await assert.rejects(preflightImage(blob.slice(0, blob.size - 2)), /JPEG/);
@@ -118,6 +167,33 @@ test("JPEG malformed markers/dimensions and missing EOI are refused", async () =
       }),
     ),
     /dimensions|megapixel/,
+  );
+});
+test("JPEG trailers after EOI (motion photos, vendor data) are accepted; missing EOI is not", async () => {
+  const jpeg = new Uint8Array(await (await fixture("original.jpg")).arrayBuffer()),
+    trailer = new Uint8Array(3 * 1024 * 1024 + 7).fill(0x41);
+  trailer.set(new TextEncoder().encode("\0\0\0\x18ftypmp42"), 0);
+  trailer.set(new TextEncoder().encode("SEFT"), trailer.length - 4);
+  const info = await preflightImage(new Blob([jpeg, trailer]));
+  assert.deepEqual([info.width, info.height, info.mime], [32, 24, "image/jpeg"]);
+  // EOI split across the 1 MiB scan boundary is still found: FF ends one chunk,
+  // D9 starts the next (scanning begins after the SOS header).
+  const scan = jpeg.findIndex((b, i) => b === 255 && jpeg[i + 1] === 0xda),
+    from = scan + 2 + ((jpeg[scan + 2]! << 8) | jpeg[scan + 3]!),
+    body = jpeg.subarray(0, jpeg.length - 2),
+    pad = new Uint8Array(from + 1024 * 1024 - 1 - body.length).fill(0x11);
+  assert.equal(body.length + pad.length, from + 1024 * 1024 - 1);
+  assert.ok(
+    await preflightImage(new Blob([body, pad, Uint8Array.of(255, 217), trailer])),
+    "boundary-split EOI",
+  );
+  // Without any EOI, a trailer is still a truncated scan.
+  await assert.rejects(preflightImage(new Blob([body, trailer])), /Truncated JPEG/);
+  // An FF D9 inside metadata before the scan cannot stand in for the real EOI.
+  const app = Uint8Array.of(255, 0xe1, 0, 6, 255, 217, 0, 0);
+  await assert.rejects(
+    preflightImage(new Blob([jpeg.subarray(0, 2), app, body.subarray(2), trailer])),
+    /Truncated JPEG/,
   );
 });
 test("WebP container truncation, malformed signature and forged sizes are refused", async () => {

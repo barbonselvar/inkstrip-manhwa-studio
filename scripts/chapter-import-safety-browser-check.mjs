@@ -256,6 +256,32 @@ try {
     // Repeated imports continue working after all failures/cancellations.
     await input(p, [await file("retry.png")]);
     assert.equal((await snapshot(p)).panels.length, 6);
+    // Colour-profiled PNGs (screenshots, editor exports) remain importable and
+    // stitchable; their profile is inflated under the bounded metadata budget.
+    await input(p, [await file("profiled.png", "iccp.png")]);
+    const profiled = (await snapshot(p)).panels.find((x) => x.name === "profiled.png");
+    assert.ok(profiled, "sRGB-profiled PNG imports");
+    assert.deepEqual([profiled.width, profiled.height, profiled.mime], [64, 48, "image/png"]);
+    await p.evaluate(async (id) => {
+      const { getBlob } = await import("/src/lib/studio/db.ts"),
+        { stitchChapter } = await import("/src/lib/studio/images.ts"),
+        blob = await getBlob(id);
+      await stitchChapter([{ id, sw: 64, sh: 48, blob }], { width: 64, gap: 0, format: "png" });
+    }, profiled.blobId);
+    await p.evaluate(async (id) => window.__r11Store.getState().removePanel(id), profiled.id);
+    // Phone JPEGs with data after EOI (motion-photo video, vendor trailers) decode normally.
+    const motion = await file("motion.jpg", "original.jpg", "image/jpeg");
+    motion.buffer = Buffer.concat([
+      motion.buffer,
+      Buffer.from("\0\0\0\x18ftypmp42"),
+      Buffer.alloc(4096, 65),
+    ]);
+    await input(p, [motion]);
+    const trailing = (await snapshot(p)).panels.find((x) => x.name === "motion.jpg");
+    assert.ok(trailing, "JPEG with a trailer after EOI imports");
+    assert.deepEqual([trailing.width, trailing.height], [32, 24]);
+    await p.evaluate(async (id) => window.__r11Store.getState().removePanel(id), trailing.id);
+    assert.equal((await snapshot(p)).panels.length, 6);
     // Invalid replacement never enters a decoder or mutates the current page/references.
     let beforeReplace = await snapshot(p);
     const counts = await counters(p);
