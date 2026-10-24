@@ -1,0 +1,20 @@
+Desktop: object movement, off-center Free Transform resizing and direct anchor acquisition match exact native guide coordinates.
+Desktop: CRUD/order/history, independent/negative bounds, PNG/JPEG/WebP/SVG, 2× alpha, range downloads, geometric alignment, guides/native source retention passed.
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+128 !== 144
+
+    at file:///workspace/inkstrip-manhwa-studio/scripts/artboards-browser-check.mjs:457:12 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 128,
+  expected: 144,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

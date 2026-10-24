@@ -1,0 +1,7 @@
+Spot Healing Brush: real defect repair, history, native reopen/import, PNG/JPEG/WebP and chapter isolation PASS
+Patch Repair: real defect repair, history, native reopen/import, PNG/JPEG/WebP and chapter isolation PASS
+Healing Brush: real defect repair, history, native reopen/import, PNG/JPEG/WebP and chapter isolation PASS
+Selection-aware repairs/mask strokes, invalid-source rollback, patch cancellation and pen pressure/smoothing PASS
+320px: visible Chapter Raster/Vector entries, correct source, touch repair/apply and original retention PASS
+390px: visible Chapter Raster/Vector entries, correct source, touch repair/apply and original retention PASS
+{"ok":true,"checks":["automatic donor selection","spatial healing","patch regions","pen pressure/smoothing","selection/mask clips","undo/redo","native/export fidelity","mobile Chapter entry/apply"]}

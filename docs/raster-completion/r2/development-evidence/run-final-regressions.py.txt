@@ -1,0 +1,13 @@
+import concurrent.futures,subprocess,time,json,pathlib
+root='/workspace/inkstrip-manhwa-studio'; out=pathlib.Path('/workspace/r2-evidence')
+jobs=[('artboards','artboards-browser-check.mjs',8081),('studio','studio-browser-check.mjs',8081),('editor','editor-browser-check.mjs',8081),('adjustments','adjustments-browser-check.mjs',8081),('retouch','retouch-browser-check.mjs',8081),('workflow','workflow-browser-check.mjs',8081),('ui','ui-redesign-browser-check.mjs',8081),('pro','pro-browser-check.mjs',8081),('layers','layers-browser-check.mjs',8081),('repair','repair-browser-check.mjs',8081),('geometry','geometry-browser-check.mjs',8081),('transform','transform-browser-check.mjs',8081),('color','color-browser-check.mjs',8081),('appearance','appearance-browser-check.mjs',8081),('vector','vector-browser-check.mjs',8081),('compound','compound-browser-check.mjs',8081),('pathfinder','pathfinder-browser-check.mjs',8081),('vector-final','vector-final-browser-check.mjs',8081),('raster-refinement','raster-refinement-browser-check.mjs',8081),('homepage','homepage-browser-check.mjs',8081),('dialogue','dialogue-browser-check.mjs',8081),('dialogue-workflow','dialogue-workflow-browser-check.mjs',8081),('dialogue-render','dialogue-render-browser-check.mjs',8080),('dialogue-security','dialogue-security-browser-check.mjs',8080),('dialogue-ocr','dialogue-ocr-browser-check.mjs',8080),('chapter-import','chapter-import-safety-browser-check.mjs',8080),('r2-document','r2-document-browser-check.mjs',8081),('r2-gesture','r2-gesture-browser-check.mjs',8081)]
+def run(job):
+ name,script,port=job; start=time.time(); command=['node','--experimental-strip-types','scripts/'+script,'http://127.0.0.1:'+str(port)]
+ with open(out/('browser-'+name+'.log'),'w') as log:
+  try: result=subprocess.run(command,cwd=root,stdout=log,stderr=subprocess.STDOUT,timeout=900); code=result.returncode
+  except subprocess.TimeoutExpired: code=124
+ record=dict(name=name,command=command,returncode=code,seconds=round(time.time()-start,2),target=port)
+ print(json.dumps(record),flush=True);return record
+with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool: results=list(pool.map(run,jobs))
+(out/'browser-ledger.json').write_text(json.dumps(results,indent=2))
+raise SystemExit(int(any(r['returncode'] for r in results)))

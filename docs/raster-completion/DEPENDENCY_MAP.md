@@ -120,3 +120,13 @@ See `CAPABILITY_MATRIX.md` for feature states and evidence limits, and `R1_AUDIT
 ### R1.1 resource boundary
 
 `image-policy.ts` → bounded Blob slices + pinned browser-only `image-size@2.0.4` (MIT, zero runtime dependencies) → signature/container/dimension/pixel/memory checks. `image-decode.ts` → native bitmap timeout/cancel/late-close + per-context busy guard; `images.ts` → validated bitmap/Image fallback + main-window lease. `store.ts` → all-file preflight → sequential decode/thumbnail → one revision-checked Chapter transaction. `getImageBlob` and `useImageUrl` guard stored thumbnail/reference `<img>` consumers; raw `getBlob` remains for byte-exact download/recovery. Editor, enhancement, face, retouch, reference and Pro worker boundaries also validate untrusted sources. Generated compositor outputs already have geometry budgets and are not reclassified as user uploads.
+
+### R2 view and layer-panel additions
+
+`pro/viewport.ts` maps document/frame coordinates through fit, pan, scale and view rotation and provides the exact inverse. `ProCanvas` rotates the existing board and all child overlays with CSS; rotation changes local presentation state only, without a worker request or native/history mutation. Pinch/pan/handles use the same mapping.
+
+`ProLayers` reuses existing `commit`, blend definitions, group construction and mask renderer for active-layer controls and mask targeting. `ProWorkspace` disarms mask-edit mode when Undo/import removes its target. `layers.reorderLayers` refuses a newly orphaned clipping root before publication.
+
+`pro/thumbnails.ts` shares isolated-document construction with the existing worker and derives bounded exact keys; the worker accepts validated subsets of dirty layer IDs. Panel cache entries own/revoke small PNG URLs; large keys miss rather than being retained. Independent mask-frame dimensions participate in preview scaling. No new source decoder, compositor, schema or asset pool is introduced.
+
+R2 canvas transactions: ProCanvas snapshots the committed history origin and paint plane; ProWorkspace checks that origin again before recording. Committed panel data is separate from the existing transient canvas preview. Quarter-turn pointer mapping calibrates actual CSS axes, and artboard touch acquisition uses nearest geometric handles when touch targets overlap at low zoom. Native formats and the original compositor remain unchanged.

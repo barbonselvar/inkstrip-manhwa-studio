@@ -1,0 +1,85 @@
+/** Real pointer + keyboard interleaving, native downloads and pixels. No document hooks/mocked rendering. */
+import assert from "node:assert/strict";
+import { chromium } from "/workspace/inkstrip-manhwa-studio/node_modules/playwright/index.mjs";
+import { fromPanel, layer } from "/workspace/inkstrip-manhwa-studio/src/lib/studio/pro/model.ts";
+import { proBrowserFixtures } from "/workspace/inkstrip-manhwa-studio/scripts/pro-browser-fixtures.mjs";
+const base = process.argv[2] ?? "http://127.0.0.1:8081";
+assert.ok(["localhost", "127.0.0.1"].includes(new URL(base).hostname));
+const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] }),
+  errors = [];
+const f = (masked = false) => {
+  const d = fromPanel({ id: "gesture", name: "Gesture transactions", width: 128, height: 96 }),
+    l = layer("paint", 128, 96, "paint");
+  l.name = "Transaction paint";
+  if (masked) {
+    l.mask = { enabled: true, selection: { regions: [], inverted: true, feather: 0 }, strokes: [] };
+    l.strokes = [
+      {
+        points: [{ x: 64, y: 48 }],
+        size: 24,
+        hardness: 1,
+        opacity: 1,
+        flow: 1,
+        color: "#ff0000",
+        erase: false,
+      },
+    ];
+  }
+  d.layers = [l];
+  return d;
+};
+async function at(p, x, y) {
+  return p.locator(".pro-artboard").evaluate(
+    (el, { x, y }) => {
+      const r = el.getBoundingClientRect();
+      return { x: r.x + (x / 128) * r.width, y: r.y + (y / 96) * r.height };
+    },
+    { x, y },
+  );
+}
+async function begin(p, fx, a, b) {
+  await fx.artboardBounds(p);
+  const start = await at(p, ...a),
+    end = await at(p, ...b);
+  await p.mouse.move(start.x, start.y);
+  await p.mouse.down();
+  await p.mouse.move(end.x, end.y, { steps: 6 });
+}
+try {
+  const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } }),
+    fx = proBrowserFixtures(base, errors),
+    source = await fx.start(p);
+  await fx.open(p);
+  await fx.load(p, f(), source);
+  await p.getByRole("button", { name: "Brush tool", exact: true }).click();
+  await begin(p, fx, [30, 30], [70, 30]);
+  await p.mouse.up();
+  await fx.preview(p);
+  let n = (await fx.native(p)).value;
+  assert.equal(n.document.layers[0].strokes.length, 1);
+  await p.getByRole("button", { name: "Brush tool", exact: true }).click();
+  await begin(p, fx, [30, 50], [70, 50]);
+  await p.keyboard.press("Control+z");
+  await p.mouse.up();
+  await fx.preview(p);
+  n = (await fx.native(p)).value;
+  assert.equal(
+    n.document.layers[0].strokes.length,
+    0,
+    "pending stroke must not overwrite a newer Undo result",
+  );
+  console.log(
+    "History interleaving: Undo cancels the pending stale stroke without restoring old document data.",
+  );
+  await fx.tab(p, "Layers");
+  await p.getByRole("button", { name: "Brush tool", exact: true }).click();
+  await begin(p, fx, [20, 20], [60, 40]);
+  await p.getByLabel("Layer panel opacity", { exact: true }).fill("65");
+  await p.getByLabel("Layer panel opacity", { exact: true }).press("Tab");
+  await p.mouse.up();
+  await fx.preview(p);
+  n = (await fx.native(p)).value;
+  assert.equal(n.document.layers[0].opacity, .65);
+  assert.equal(n.document.layers[0].strokes.length, 0, "separate layer property edit must not implicitly commit pending stroke");
+  console.log("concurrent property edit preserves current committed document");
+} finally { await browser.close(); }

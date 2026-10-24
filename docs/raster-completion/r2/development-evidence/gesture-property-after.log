@@ -1,0 +1,2 @@
+History interleaving: Undo cancels the pending stale stroke without restoring old document data.
+concurrent property edit preserves current committed document

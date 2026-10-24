@@ -1,0 +1,18 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: pending stroke must not overwrite a newer Undo result
+
+2 !== 0
+
+    at file:///workspace/inkstrip-manhwa-studio/scripts/r2-gesture-browser-check.mjs:66:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 2,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

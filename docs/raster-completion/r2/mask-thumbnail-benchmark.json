@@ -1,0 +1,243 @@
+{
+  "measurements": [
+    {
+      "run": 0,
+      "mode": "prior-layer-only-scale",
+      "scale": 1,
+      "wallMs": 46.69999998807907,
+      "largestRequestedSurfacePixels": 16777216,
+      "pixel": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "allocations": [
+        [
+          4096,
+          4096
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "run": 0,
+      "mode": "bounded-mask-plane-scale",
+      "scale": 0.017578125,
+      "wallMs": 0.5999999940395355,
+      "largestRequestedSurfacePixels": 5184,
+      "pixel": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "allocations": [
+        [
+          72,
+          72
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "run": 1,
+      "mode": "prior-layer-only-scale",
+      "scale": 1,
+      "wallMs": 47,
+      "largestRequestedSurfacePixels": 16777216,
+      "pixel": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "allocations": [
+        [
+          4096,
+          4096
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "run": 1,
+      "mode": "bounded-mask-plane-scale",
+      "scale": 0.017578125,
+      "wallMs": 0.29999999701976776,
+      "largestRequestedSurfacePixels": 5184,
+      "pixel": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "allocations": [
+        [
+          72,
+          72
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "run": 2,
+      "mode": "prior-layer-only-scale",
+      "scale": 1,
+      "wallMs": 35.29999999701977,
+      "largestRequestedSurfacePixels": 16777216,
+      "pixel": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "allocations": [
+        [
+          4096,
+          4096
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "run": 2,
+      "mode": "bounded-mask-plane-scale",
+      "scale": 0.017578125,
+      "wallMs": 0.30000001192092896,
+      "largestRequestedSurfacePixels": 5184,
+      "pixel": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "allocations": [
+        [
+          72,
+          72
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "run": 3,
+      "mode": "prior-layer-only-scale",
+      "scale": 1,
+      "wallMs": 35.5,
+      "largestRequestedSurfacePixels": 16777216,
+      "pixel": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "allocations": [
+        [
+          4096,
+          4096
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "run": 3,
+      "mode": "bounded-mask-plane-scale",
+      "scale": 0.017578125,
+      "wallMs": 0.20000000298023224,
+      "largestRequestedSurfacePixels": 5184,
+      "pixel": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "allocations": [
+        [
+          72,
+          72
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "run": 4,
+      "mode": "prior-layer-only-scale",
+      "scale": 1,
+      "wallMs": 35.79999999701977,
+      "largestRequestedSurfacePixels": 16777216,
+      "pixel": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "allocations": [
+        [
+          4096,
+          4096
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "run": 4,
+      "mode": "bounded-mask-plane-scale",
+      "scale": 0.017578125,
+      "wallMs": 0.4000000059604645,
+      "largestRequestedSurfacePixels": 5184,
+      "pixel": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "allocations": [
+        [
+          72,
+          72
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    }
+  ],
+  "method": "Five interleaved runs of the same current mask compositor, comparing the exact prior scale formula with R2. First iteration cold; imports excluded. Requested surface capacity is not measured peak RAM/GPU allocation.",
+  "environment": {
+    "cpu": "AMD EPYC 9V74 80-Core Processor",
+    "availableCPUs": 2,
+    "node": "v24.19.0",
+    "chromium": "156.0.8078.4",
+    "sharedLinux": true
+  },
+  "peakMemory": "not measured"
+}

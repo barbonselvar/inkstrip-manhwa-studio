@@ -193,3 +193,7 @@ Phase complete. Awaiting explicit user approval before proceeding to the next ph
 ## R1.1 — Chapter import safety follow-up
 
 The user separately authorized this narrow correction on the same Draft PR #13. See [R1.1 report](R1_1_REPORT.md) and [evidence](r1.1/EVIDENCE.json). R1 baseline logs, benchmark measurements and archived audit remain unchanged. R1.1 does not start R2, merge F1, change the document schema, merge main or deploy production. The original R1 end-of-audit disposition above is historical; H02 is superseded by this follow-up.
+
+## R2 — separately authorized layer/document follow-up
+
+R1 and R1.1 remain preserved historical baselines. The newly authorized R2 work is described in [R2 initial scope](R2_SCOPE.md) and [R2 layer/document report](R2_LAYER_DOCUMENT_ENGINE.md). It reuses the existing tree, 16 blend modes, masks, transforms and persistence; adds view-only rotation, layer-panel workflows, clipping/Undo/gesture transaction safety fixes and bounded thumbnail invalidation. No R1.1 admission limits were weakened. Draft PR #13 remains the review vehicle; no merge/deploy/R3/F2 authorization is inferred from completing R2.

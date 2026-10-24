@@ -1,0 +1,5 @@
+Desktop: object movement, off-center Free Transform resizing and direct anchor acquisition match exact native guide coordinates.
+Desktop: CRUD/order/history, independent/negative bounds, PNG/JPEG/WebP/SVG, 2× alpha, range downloads, geometric alignment, guides/native source retention passed.
+320px touch: board resize/move/cancel, optional artwork movement, smart guide acquisition/cleanup, precision settings, native reopen/export and overflow passed.
+390px touch: board resize/move/cancel, optional artwork movement, smart guide acquisition/cleanup, precision settings, native reopen/export and overflow passed.
+Artboard/precision Chromium suite passed; no browser errors. Touch emulation only, no physical Android claim.

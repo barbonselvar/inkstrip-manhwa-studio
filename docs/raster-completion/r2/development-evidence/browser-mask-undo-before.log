@@ -1,0 +1,18 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: undoing mask creation must disarm mask-edit mode
+
+true !== false
+
+    at file:///workspace/inkstrip-manhwa-studio/scripts/r2-document-browser-check.mjs:92:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: true,
+  expected: false,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0
