@@ -1,4 +1,5 @@
 import { NEUTRAL } from "../editor/adjustments";
+import { preflightImage, imagePolicy } from "../image-policy";
 /// <reference lib="webworker" />
 import { refineTiled, coverageRegion } from "./refine-selection";
 import { artboards } from "./artboards";
@@ -116,6 +117,11 @@ self.onmessage = async ({ data }) => {
       if (!size || !assets[assetId]) throw new Error("A raster asset is missing.");
       const key = `${assetId}:${size.width}x${size.height}:${s}`;
       if (!cache.has(key)) {
+        await preflightImage(assets[assetId]!, {
+          ...imagePolicy(data.maxArea <= 4_000_000),
+          maxPixels: data.maxArea,
+          maxSide: 16384,
+        });
         const bitmap = await createImageBitmap(assets[assetId]!, {
           resizeWidth: Math.max(1, Math.round(size.width * s)),
           resizeHeight: Math.max(1, Math.round(size.height * s)),

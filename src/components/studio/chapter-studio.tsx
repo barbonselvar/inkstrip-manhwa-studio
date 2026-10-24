@@ -47,6 +47,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const stripUrls = useStudio((state) => state.stripUrls[chapterId] ?? emptyUrls);
   const selectedMap = useStudio((state) => state.selected);
   const job = useStudio((state) => state.job);
+  const cancelImport = useStudio((state) => state.cancelImport);
   const loadMedia = useStudio((state) => state.loadMedia);
   const addImages = useStudio((state) => state.addImages);
   const renameChapter = useStudio((state) => state.renameChapter);
@@ -99,6 +100,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   useEffect(() => {
     void loadMedia(chapterId);
   }, [loadMedia, chapterId, panelKey, stripKey]);
+  useEffect(() => () => cancelImport(chapterId), [chapterId, cancelImport]);
 
   useEffect(() => {
     const block = (event: DragEvent) => event.preventDefault();
@@ -628,6 +630,11 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                     <p className="text-sm text-fg" aria-live="polite">
                       {job?.label}
                     </p>
+                    {job?.kind === "import" && (
+                      <Button variant="secondary" onClick={() => cancelImport(chapterId)}>
+                        Cancel image import
+                      </Button>
+                    )}
                     <div className="mt-2 h-1 overflow-hidden rounded-full bg-bg-subtle">
                       <div className="h-full bg-accent" style={{ width: `${progress}%` }} />
                     </div>

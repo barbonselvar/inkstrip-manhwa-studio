@@ -1,5 +1,7 @@
 import { planStrip, type CanvasLimits, type PlannedPart } from "@/lib/studio/plan";
 import { PAPER, type StripFormat } from "@/lib/studio/types";
+import { browserImagePolicy, preflightImage, type ImagePolicy } from "./image-policy";
+import { boundedBitmap, imageLease, matchingDimensions } from "./image-decode";
 
 const EXTENSIONS = [
   "jpg",
@@ -25,7 +27,8 @@ const EXTENSIONS = [
 
 export const IMAGE_ACCEPT = ["image/*", ...EXTENSIONS.map((ext) => `.${ext}`)].join(",");
 
-export const FORMAT_HINT = "JPG, JPEG, PNG, WEBP, GIF, AVIF, BMP, TIFF, HEIC, HEIF, and SVG";
+export const FORMAT_HINT =
+  "JPG, PNG, WebP, GIF, BMP, ICO, still AVIF/HEIF, classic TIFF and safe SVG. Browser codec support and resource limits apply.";
 
 export function isImageFile(file: File) {
   if (file.type.startsWith("image/")) return true;
@@ -46,42 +49,111 @@ export function deviceLimits(): CanvasLimits {
   return { maxSide: 16384, maxArea: 32_000_000 };
 }
 
-export async function decodeBlob(blob: Blob): Promise<Decoded> {
-  if (typeof createImageBitmap === "function") {
-    try {
-      const bitmap = await createImageBitmap(blob, { imageOrientation: "from-image" });
-      if (bitmap.width > 0 && bitmap.height > 0) {
-        return {
-          width: bitmap.width,
-          height: bitmap.height,
-          source: bitmap,
-          close: () => bitmap.close(),
-        };
+export async function decodeBlob(
+  blob: Blob,
+  options: { signal?: AbortSignal; policy?: ImagePolicy } = {},
+): Promise<Decoded> {
+  const info = await preflightImage(blob, options.policy ?? browserImagePolicy(), options.signal);
+  const release = await imageLease(options.signal);
+  let transferred = false;
+  const close = (fn: () => void) => {
+    let closed = false;
+    transferred = true;
+    return () => {
+      if (!closed) {
+        closed = true;
+        try {
+          fn();
+        } finally {
+          release();
+        }
       }
-      bitmap.close();
-    } catch {
-      /* Try the image element path for formats bitmap cannot read. */
-    }
-  }
-
-  const url = URL.createObjectURL(blob);
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image();
-      el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error("decode"));
-      el.src = url;
-    });
-    if (!img.naturalWidth || !img.naturalHeight) throw new Error("decode");
-    return {
-      width: img.naturalWidth,
-      height: img.naturalHeight,
-      source: img,
-      close: () => URL.revokeObjectURL(url),
     };
-  } catch (error) {
-    URL.revokeObjectURL(url);
-    throw error;
+  };
+  try {
+    if (typeof createImageBitmap === "function") {
+      try {
+        const bitmap = await boundedBitmap(blob, info, options.signal);
+        if (bitmap.width > 0 && bitmap.height > 0) {
+          return {
+            width: bitmap.width,
+            height: bitmap.height,
+            source: bitmap,
+            close: close(() => bitmap.close()),
+          };
+        }
+        bitmap.close();
+      } catch (error) {
+        if (
+          (error as Error).name === "AbortError" ||
+          (error as Error).name === "TimeoutError" ||
+          (error as Error).name === "DecodeBusyError" ||
+          (error as Error).message.includes("dimensions disagree") ||
+          options.signal?.aborted
+        )
+          throw error;
+        /* Try the image element path for formats bitmap cannot read. */
+      }
+    }
+
+    const url = URL.createObjectURL(
+      blob.type === info.mime ? blob : blob.slice(0, blob.size, info.mime),
+    );
+    let image: HTMLImageElement | undefined;
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        image = el;
+        const clean = () => {
+          clearTimeout(timer);
+          options.signal?.removeEventListener("abort", abort);
+          el.onload = el.onerror = null;
+        };
+        const fail = (error: Error) => {
+          clean();
+          el.removeAttribute("src");
+          reject(error);
+        };
+        const abort = () => fail(new DOMException("Image loading cancelled", "AbortError"));
+        const timer = setTimeout(
+          () => fail(new DOMException("Image decoding timed out", "TimeoutError")),
+          15_000,
+        );
+        el.onload = () => {
+          clean();
+          resolve(el);
+        };
+        el.onerror = () =>
+          fail(
+            new Error(
+              "This browser could not decode the validated image. Export a PNG/JPEG/WebP copy.",
+            ),
+          );
+        options.signal?.addEventListener("abort", abort, { once: true });
+        if (options.signal?.aborted) {
+          abort();
+          return;
+        }
+        el.src = url;
+      });
+      if (!matchingDimensions(img.naturalWidth, img.naturalHeight, info))
+        throw new Error("Decoded image dimensions disagree with its validated header.");
+      return {
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        source: img,
+        close: close(() => {
+          img.removeAttribute("src");
+          URL.revokeObjectURL(url);
+        }),
+      };
+    } catch (error) {
+      image?.removeAttribute("src");
+      URL.revokeObjectURL(url);
+      throw error;
+    }
+  } finally {
+    if (!transferred) release();
   }
 }
 
@@ -93,13 +165,14 @@ export async function makeThumb(source: CanvasImageSource, width: number, height
   canvas.height = Math.min(fullHeight, 360);
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Could not prepare a preview.");
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(source, 0, 0, thumbWidth, fullHeight);
-  const blob = await canvasToBlob(canvas, "image/jpeg", 0.82);
-  canvas.width = 0;
-  canvas.height = 0;
-  return blob;
+  try {
+    ctx.fillStyle = PAPER;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(source, 0, 0, thumbWidth, fullHeight);
+    return await canvasToBlob(canvas, "image/jpeg", 0.82);
+  } finally {
+    canvas.width = canvas.height = 0;
+  }
 }
 
 export async function stitchChapter(
@@ -158,37 +231,39 @@ async function renderPart(input: {
   canvas.height = Math.max(1, input.part.height);
   const ctx = canvas.getContext("2d", { alpha: false });
   if (!ctx) throw new Error("Could not draw the page.");
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
+  try {
+    ctx.fillStyle = PAPER;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
 
-  const gap = Math.max(0, Math.round(input.gap));
-  let y = 0;
-  for (let index = 0; index < input.part.panels.length; index++) {
-    const panel = input.part.panels[index]!,
-      frame = input.frames.get(panel.id);
-    if (!frame) throw new Error("A panel could not be drawn.");
-    const image = await decodeBlob(frame.blob);
-    try {
-      ctx.drawImage(image.source, panel.x, y, panel.drawW, panel.drawH);
-    } finally {
-      image.close();
+    const gap = Math.max(0, Math.round(input.gap));
+    let y = 0;
+    for (let index = 0; index < input.part.panels.length; index++) {
+      const panel = input.part.panels[index]!,
+        frame = input.frames.get(panel.id);
+      if (!frame) throw new Error("A panel could not be drawn.");
+      const image = await decodeBlob(frame.blob);
+      try {
+        ctx.drawImage(image.source, panel.x, y, panel.drawW, panel.drawH);
+      } finally {
+        image.close();
+      }
+      y += panel.drawH;
+      if (!(index === input.part.panels.length - 1 && input.isLastPart)) y += gap;
+      input.onImage();
+      await yieldToPaint();
     }
-    y += panel.drawH;
-    if (!(index === input.part.panels.length - 1 && input.isLastPart)) y += gap;
-    input.onImage();
-    await yieldToPaint();
-  }
 
-  const blob = await canvasToBlob(
-    canvas,
-    input.format,
-    input.format === "image/jpeg" ? 0.92 : undefined,
-  );
-  canvas.width = 0;
-  canvas.height = 0;
-  return blob;
+    const blob = await canvasToBlob(
+      canvas,
+      input.format,
+      input.format === "image/jpeg" ? 0.92 : undefined,
+    );
+    return blob;
+  } finally {
+    canvas.width = canvas.height = 0;
+  }
 }
 
 function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number | undefined) {

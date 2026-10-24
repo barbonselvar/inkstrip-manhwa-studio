@@ -1,5 +1,7 @@
 import { documentSources } from "./raster-budget.ts";
 import { MAX_ASSET_BYTES, type ProSession } from "./model.ts";
+import { safeBitmap } from "../image-decode.ts";
+import { imagePolicy } from "../image-policy.ts";
 
 /** Read bounded container headers before allocating decoded pixels from untrusted files. */
 export async function rasterSize(blob: Blob) {
@@ -80,14 +82,18 @@ export async function validateRasterInput(blob: Blob, maxArea: number) {
 export async function validateNativeImages(
   session: ProSession,
   maxArea: number,
-  decode: typeof createImageBitmap = createImageBitmap,
+  decode?: typeof createImageBitmap,
 ) {
   documentSources(session.document, maxArea);
   for (const blob of Object.values(session.assets)) {
     const size = await validateRasterInput(blob, maxArea);
     let image: ImageBitmap | undefined;
     try {
-      image = await decode(blob, { imageOrientation: "none" });
+      image = decode
+        ? await decode(blob, { imageOrientation: "none" })
+        : await safeBitmap(blob, {
+            policy: { ...imagePolicy(maxArea <= 4_000_000), maxPixels: maxArea, maxSide: 16384 },
+          });
       // Chromium honors EXIF even with imageOrientation:none. A quarter-turn
       // swaps JPEG axes but preserves the preflight pixel/side budgets.
       const orientedJpeg =

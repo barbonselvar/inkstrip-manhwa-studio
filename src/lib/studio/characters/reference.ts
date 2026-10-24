@@ -1,7 +1,9 @@
 import { selectionBox, type Selection } from "../retouch/selection";
+import { safeBitmap } from "../image-decode";
+import { imagePolicy } from "../image-policy";
 /** Store an independent, bounded PNG crop; never retain a panel blob through a dangling ID. */
 export async function makeReference(blob: Blob, strokes?: Selection[]) {
-  const source = await createImageBitmap(blob);
+  const source = await safeBitmap(blob, { policy: imagePolicy(true) });
   try {
     if (source.width * source.height > 16_000_000)
       throw new Error("Reference input exceeds 16 megapixels.");

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useImageUrl } from "@/lib/studio/use-image-url";
 import { Button } from "@/components/ui/button";
 import { useStudio } from "@/lib/studio/store";
 import { updateProject, storageMessage } from "@/lib/studio/db";
@@ -6,13 +7,15 @@ import { makeReference } from "@/lib/studio/characters/reference";
 import { validateCharacters, type CharacterProfile } from "@/lib/studio/characters/types";
 import type { Selection } from "@/lib/studio/retouch/selection";
 function Thumb({ blob }: { blob: Blob }) {
-  const [url, setUrl] = useState("");
-  useEffect(() => {
-    const u = URL.createObjectURL(blob);
-    setUrl(u);
-    return () => URL.revokeObjectURL(u);
-  }, [blob]);
-  return <img src={url} alt="Character reference face" className="character-thumb" />;
+  const { url, error } = useImageUrl(blob);
+  return (
+    <img
+      src={url || undefined}
+      title={error || undefined}
+      alt="Character reference face"
+      className="character-thumb"
+    />
+  );
 }
 export function CharacterControls({
   projectId,

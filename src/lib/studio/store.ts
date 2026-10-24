@@ -1,22 +1,30 @@
 import { create } from "zustand";
 import {
   commitPanelMedia,
+  commitChapterImages,
   commitPanelOrder,
   commitChapterStrip,
   getBlob,
+  getImageBlob,
   loadLibrary,
-  putBlobs,
   putRecords,
   removeRecords,
   storageMessage,
 } from "@/lib/studio/db";
-import { decodeBlob, isImageFile, makeThumb, stitchChapter } from "@/lib/studio/images";
+import { decodeBlob, makeThumb, stitchChapter } from "@/lib/studio/images";
+import {
+  preflightImage,
+  preflightImages,
+  browserImagePolicy,
+  thumbnailPolicy,
+} from "./image-policy";
+import { matchingDimensions } from "./image-decode";
 import { mediaIds, mediaReference, obsoleteMedia } from "./editor/references";
 import { validateRecipe } from "./editor/geometry";
 import type { Chapter, Panel, Project, Strip, StripFormat, PanelEdit } from "@/lib/studio/types";
 import { cleanTitle, uid } from "@/lib/utils";
 
-type Job = { chapterId: string; done: number; total: number; label: string };
+type Job = { chapterId: string; done: number; total: number; label: string; kind?: "import" };
 
 type Studio = {
   ready: boolean;
@@ -44,6 +52,7 @@ type Studio = {
     patch: Partial<Pick<Chapter, "width" | "seam" | "format">>,
   ) => Promise<void>;
   addImages: (chapterId: string, files: File[]) => Promise<void>;
+  cancelImport: (chapterId: string) => void;
   removePanel: (id: string) => Promise<void>;
   movePanel: (id: string, direction: -1 | 1) => Promise<void>;
   placePanel: (chapterId: string, fromId: string, toId: string) => Promise<void>;
@@ -55,7 +64,7 @@ type Studio = {
   replacePanelImage: (
     id: string,
     blob: Blob,
-    options?: { expectedBlobId?: string; edit?: PanelEdit },
+    options?: { expectedBlobId?: string; edit?: PanelEdit; signal?: AbortSignal },
   ) => Promise<void>;
   restorePanel: (id: string, expectedBlobId?: string) => Promise<void>;
   loadMedia: (chapterId: string) => Promise<void>;
@@ -85,6 +94,8 @@ function revokeBlobUrl(id: string) {
 }
 
 let hydratePromise: Promise<void> | null = null;
+let importing: { chapterId: string; controller: AbortController } | undefined;
+const replacements = new Map<string, AbortController>();
 
 function chapterPanels(panels: Panel[], chapterId: string) {
   return panels
@@ -220,12 +231,12 @@ export const useStudio = create<Studio>((set, get) => ({
   deleteProject: async (id) => {
     const chapters = get().chapters.filter((chapter) => chapter.projectId === id);
     const chapterIds = new Set(chapters.map((chapter) => chapter.id));
+    if (importing && chapterIds.has(importing.chapterId)) get().cancelImport(importing.chapterId);
     const panels = get().panels.filter((panel) => chapterIds.has(panel.chapterId));
     const blobs = [
       ...panels.flatMap(mediaIds),
       ...chapters.flatMap((chapter) => chapter.strip?.parts.map((part) => part.blobId) ?? []),
     ];
-    blobs.forEach(revokeBlobUrl);
     await removeRecords({
       projects: [id],
       chapters: chapters.map((chapter) => chapter.id),
@@ -237,6 +248,7 @@ export const useStudio = create<Studio>((set, get) => ({
       chapters: state.chapters.filter((chapter) => chapter.projectId !== id),
       panels: state.panels.filter((panel) => !chapterIds.has(panel.chapterId)),
     }));
+    blobs.forEach(revokeBlobUrl);
   },
 
   createChapter: async (projectId) => {
@@ -280,6 +292,7 @@ export const useStudio = create<Studio>((set, get) => ({
   },
 
   deleteChapter: async (id) => {
+    get().cancelImport(id);
     const chapter = get().chapters.find((item) => item.id === id);
     if (!chapter) return;
     const panels = get().panels.filter((panel) => panel.chapterId === id);
@@ -287,7 +300,6 @@ export const useStudio = create<Studio>((set, get) => ({
       ...panels.flatMap(mediaIds),
       ...(chapter.strip?.parts.map((part) => part.blobId) ?? []),
     ];
-    blobs.forEach(revokeBlobUrl);
     await removeRecords({
       chapters: [id],
       panels: panels.map((panel) => panel.id),
@@ -302,6 +314,7 @@ export const useStudio = create<Studio>((set, get) => ({
       panels: state.panels.filter((panel) => panel.chapterId !== id),
       selected: { ...state.selected, [id]: undefined },
     }));
+    blobs.forEach(revokeBlobUrl);
   },
 
   setChapterOptions: async (id, patch) => {
@@ -314,135 +327,158 @@ export const useStudio = create<Studio>((set, get) => ({
     }));
   },
 
+  cancelImport: (chapterId) => {
+    if (importing?.chapterId !== chapterId) return;
+    importing.controller.abort(new DOMException("Import cancelled", "AbortError"));
+    importing = undefined;
+    set({ job: null, banner: "Image import cancelled. Uncommitted images were not added." });
+  },
+
   addImages: async (chapterId, files) => {
     if (get().job) {
-      set({ banner: "Wait for the current stitch to finish." });
+      set({ banner: "Wait for the current operation to finish." });
       return;
     }
-    const chapter = get().chapters.find((item) => item.id === chapterId);
-    if (!chapter) return;
-    const images = files.filter(isImageFile);
-    const rejected = files.length - images.length;
-    if (images.length === 0) {
-      set({
-        banner:
-          rejected > 0
-            ? "Those files are not images. Choose JPG, PNG, WEBP, or another photo format."
-            : "Choose one or more photos.",
-      });
+    if (!get().chapters.some((c) => c.id === chapterId)) return;
+    if (!files.length) {
+      set({ banner: "Choose one or more images." });
       return;
     }
-
+    const run = { chapterId, controller: new AbortController() };
+    importing = run;
+    const signal = run.controller.signal,
+      policy = browserImagePolicy();
+    const expected = chapterPanels(get().panels, chapterId).map(({ id, blobId, order }) => ({
+      id,
+      blobId,
+      order,
+    }));
     set({
-      job: { chapterId, done: 0, total: images.length, label: "Adding photos" },
+      job: {
+        chapterId,
+        done: 0,
+        total: files.length,
+        label: "Checking image resources…",
+        kind: "import",
+      },
       banner: null,
     });
-    const failed: string[] = [];
-    const made: Panel[] = [];
-    const existing = chapterPanels(get().panels, chapterId);
-    let order = existing.reduce((max, panel) => Math.max(max, panel.order), -1) + 1;
-
+    const failed: string[] = [],
+      made: Panel[] = [],
+      staged: { id: string; blob: Blob }[] = [];
+    const thumbnails = new Map<string, Blob>();
     try {
-      for (let index = 0; index < images.length; index += 1) {
-        const file = images[index];
-        if (!file) continue;
+      // Validate the WHOLE batch before starting any decoder or storage write.
+      const checked = await preflightImages(files, policy, signal);
+      failed.push(...checked.rejected.map((f) => `${files[f.index]!.name}: ${f.reason}`));
+      if (typeof navigator !== "undefined" && navigator.storage?.estimate) {
+        const estimate = await navigator.storage.estimate().catch(() => undefined);
+        if (
+          estimate?.quota !== undefined &&
+          estimate.usage !== undefined &&
+          checked.bytes + checked.accepted.length * 500_000 + 2_000_000 >
+            estimate.quota - estimate.usage
+        )
+          throw Error(
+            "Not enough browser storage for this batch. Nothing was imported; choose fewer images.",
+          );
+      }
+      for (const { index, info } of checked.accepted) {
+        signal.throwIfAborted();
+        const file = files[index]!,
+          canonical = file.type === info.mime ? file : file.slice(0, file.size, info.mime);
         set({
           job: {
             chapterId,
             done: index,
-            total: images.length,
-            label: `Adding ${index + 1} of ${images.length}`,
+            total: files.length,
+            label: `Adding ${index + 1} of ${files.length}`,
+            kind: "import",
           },
         });
         try {
-          const decoded = await decodeBlob(file);
+          const decoded = await decodeBlob(canonical, { signal, policy });
           try {
             const thumb = await makeThumb(decoded.source, decoded.width, decoded.height);
-            const blobId = uid();
-            const thumbId = uid();
-            await putBlobs([
-              { id: blobId, blob: file },
-              { id: thumbId, blob: thumb },
-            ]);
+            signal.throwIfAborted();
+            const blobId = uid(),
+              thumbId = uid();
+            staged.push({ id: blobId, blob: canonical }, { id: thumbId, blob: thumb });
             made.push({
               id: uid(),
               chapterId,
               name: file.name || "Panel",
-              mime: file.type || "application/octet-stream",
+              mime: info.mime,
               width: decoded.width,
               height: decoded.height,
               blobId,
               thumbId,
-              order,
+              order: 0,
               createdAt: Date.now(),
             });
-            order += 1;
+            thumbnails.set(thumbId, thumb);
           } finally {
             decoded.close();
           }
-        } catch {
-          failed.push(file.name || "a photo");
+        } catch (error) {
+          signal.throwIfAborted();
+          failed.push(`${file.name}: ${storageMessage(error)}`);
         }
       }
-
-      if (made.length > 0) {
-        const touched = withTimestamps(
-          get().projects,
-          get().chapters,
-          chapter.projectId,
-          chapterId,
-        );
-        const nextChapter = touched.chapters.find((item) => item.id === chapterId);
-        const nextProject = touched.projects.find((item) => item.id === chapter.projectId);
-        await putRecords({
-          panels: made,
-          chapters: nextChapter ? [nextChapter] : [],
-          projects: nextProject ? [nextProject] : [],
-        });
+      signal.throwIfAborted();
+      if (made.length) {
+        const committed = await commitChapterImages(chapterId, expected, made, staged, signal);
         const thumbs = { ...get().thumbs };
-        for (const panel of made) {
-          const thumb = await getBlob(panel.thumbId);
-          if (thumb) thumbs[panel.id] = blobUrl(panel.thumbId, thumb);
+        for (const p of committed.panels) {
+          try {
+            thumbs[p.id] = blobUrl(p.thumbId, thumbnails.get(p.thumbId)!);
+          } catch {
+            failed.push(
+              `${p.name}: image saved; thumbnail display is unavailable. Reload to retry.`,
+            );
+          }
         }
-        set((state) => {
-          const explicit = state.selected[chapterId];
-          const selected = explicit ? [...explicit, ...made.map((panel) => panel.id)] : undefined;
-          return {
-            panels: [...state.panels, ...made],
-            chapters: nextChapter
-              ? state.chapters.map((item) => (item.id === chapterId ? nextChapter : item))
-              : state.chapters,
-            projects: nextProject
-              ? state.projects.map((item) => (item.id === nextProject.id ? nextProject : item))
-              : state.projects,
-            thumbs,
-            selected: { ...state.selected, [chapterId]: selected },
-          };
+        set((state) => ({
+          panels: [...state.panels, ...committed.panels],
+          chapters: state.chapters.map((c) => (c.id === chapterId ? committed.chapter : c)),
+          projects: state.projects.map((p) =>
+            p.id === committed.project.id ? committed.project : p,
+          ),
+          thumbs,
+          selected: {
+            ...state.selected,
+            [chapterId]: state.selected[chapterId]
+              ? [...state.selected[chapterId]!, ...committed.panels.map((p) => p.id)]
+              : undefined,
+          },
+        }));
+      }
+      if (importing === run)
+        set({
+          banner: [
+            made.length
+              ? `Added ${made.length} ${made.length === 1 ? "photo" : "photos"}.`
+              : "No images were imported.",
+            ...failed.slice(0, 3),
+            failed.length > 3 ? `${failed.length - 3} additional files were rejected.` : "",
+          ]
+            .filter(Boolean)
+            .join(" "),
         });
-      }
-
-      const notes: string[] = [];
-      if (made.length > 0)
-        notes.push(`Added ${made.length} ${made.length === 1 ? "photo" : "photos"}.`);
-      if (failed.length > 0) {
-        notes.push(
-          `Could not read ${failed.slice(0, 3).join(", ")}. Export HEIC or unusual files as JPG or PNG.`,
-        );
-      }
-      if (rejected > 0) notes.push("Skipped files that were not images.");
-      set({ banner: notes.join(" ") || null });
     } catch (error) {
-      set({ banner: storageMessage(error) });
+      if (importing === run && !signal.aborted) set({ banner: storageMessage(error) });
     } finally {
-      set({ job: null });
+      if (importing === run) {
+        importing = undefined;
+        set({ job: null });
+      }
     }
   },
 
   removePanel: async (id) => {
+    replacements.get(id)?.abort(new DOMException("Image deleted", "AbortError"));
     const panel = get().panels.filter((item) => item.id === id)[0];
     if (!panel) return;
-    revokeBlobUrl(panel.blobId);
-    revokeBlobUrl(panel.thumbId);
     await removeRecords({
       panels: [panel.id],
       blobs: mediaIds(panel),
@@ -486,6 +522,7 @@ export const useStudio = create<Studio>((set, get) => ({
         },
       };
     });
+    mediaIds(panel).forEach(revokeBlobUrl);
   },
 
   movePanel: async (id, direction) => {
@@ -659,7 +696,6 @@ export const useStudio = create<Studio>((set, get) => ({
         null,
         [],
       );
-      parts.forEach((part) => revokeBlobUrl(part.blobId));
       set((state) => ({
         chapters: state.chapters.map((item) => (item.id === chapterId ? committed.chapter : item)),
         projects: committed.project
@@ -669,6 +705,7 @@ export const useStudio = create<Studio>((set, get) => ({
           : state.projects,
         stripUrls: { ...state.stripUrls, [chapterId]: [] },
       }));
+      parts.forEach((part) => revokeBlobUrl(part.blobId));
     } catch (error) {
       set({ banner: storageMessage(error) });
     }
@@ -681,8 +718,17 @@ export const useStudio = create<Studio>((set, get) => ({
       throw new Error("This image changed. Reopen the editor to try again.");
     if (options?.edit)
       validateRecipe(options.edit.recipe, options.edit.source.width, options.edit.source.height);
-    const decoded = await decodeBlob(blob);
+    replacements.get(id)?.abort(new DOMException("Image replacement superseded", "AbortError"));
+    const controller = new AbortController();
+    replacements.set(id, controller);
+    const abort = () => controller.abort(options?.signal?.reason);
+    options?.signal?.addEventListener("abort", abort, { once: true });
+    let decoded: Awaited<ReturnType<typeof decodeBlob>> | undefined;
     try {
+      options?.signal?.throwIfAborted();
+      const info = await preflightImage(blob, undefined, controller.signal);
+      const canonical = blob.type === info.mime ? blob : blob.slice(0, blob.size, info.mime);
+      decoded = await decodeBlob(canonical, { signal: controller.signal });
       if (
         options?.edit &&
         (decoded.width !== options.edit.recipe.width ||
@@ -690,6 +736,7 @@ export const useStudio = create<Studio>((set, get) => ({
       )
         throw new Error("Rendered dimensions do not match the editing recipe.");
       const thumb = await makeThumb(decoded.source, decoded.width, decoded.height);
+      controller.signal.throwIfAborted();
       const next: Panel = {
         ...panel,
         original: panel.original ?? mediaReference(panel),
@@ -697,7 +744,7 @@ export const useStudio = create<Studio>((set, get) => ({
         edit: options?.edit,
         blobId: uid(),
         thumbId: uid(),
-        mime: blob.type,
+        mime: info.mime,
         width: decoded.width,
         height: decoded.height,
         mediaUpdatedAt: Date.now(),
@@ -707,10 +754,11 @@ export const useStudio = create<Studio>((set, get) => ({
         next,
         options?.expectedBlobId ?? panel.blobId,
         [
-          { id: next.blobId, blob },
+          { id: next.blobId, blob: canonical },
           { id: next.thumbId, blob: thumb },
         ],
         obsolete,
+        controller.signal,
       );
       set((state) => ({
         panels: state.panels.map((item) => (item.id === id ? committed.panel : item)),
@@ -726,7 +774,9 @@ export const useStudio = create<Studio>((set, get) => ({
       }));
       obsolete.forEach(revokeBlobUrl);
     } finally {
-      decoded.close();
+      decoded?.close();
+      options?.signal?.removeEventListener("abort", abort);
+      if (replacements.get(id) === controller) replacements.delete(id);
     }
   },
 
@@ -737,6 +787,14 @@ export const useStudio = create<Studio>((set, get) => ({
     const [blob, thumb] = await Promise.all([getBlob(original.blobId), getBlob(original.thumbId)]);
     if (!blob || !thumb)
       throw new Error("The original image is unavailable. Current image unchanged.");
+    const info = await preflightImage(blob);
+    if (!matchingDimensions(original.width, original.height, info))
+      throw Error(
+        "The original dimensions disagree with its image header. Current image unchanged.",
+      );
+    const thumbnail = await preflightImage(thumb, thumbnailPolicy());
+    const safeThumb =
+      thumb.type === thumbnail.mime ? thumb : thumb.slice(0, thumb.size, thumbnail.mime);
     const next = {
       ...panel,
       ...original,
@@ -757,7 +815,7 @@ export const useStudio = create<Studio>((set, get) => ({
             item.id === committed.project!.id ? committed.project! : item,
           )
         : state.projects,
-      thumbs: { ...state.thumbs, [id]: blobUrl(original.thumbId, thumb) },
+      thumbs: { ...state.thumbs, [id]: blobUrl(original.thumbId, safeThumb) },
     }));
     obsolete.forEach(revokeBlobUrl);
   },
@@ -767,14 +825,20 @@ export const useStudio = create<Studio>((set, get) => ({
     const thumbs = { ...get().thumbs };
     for (const panel of panels) {
       if (thumbs[panel.id]) continue;
-      const blob = await getBlob(panel.thumbId);
+      const blob = await getImageBlob(panel.thumbId, true).catch((error) => {
+        set({ banner: storageMessage(error) });
+        return undefined;
+      });
       if (blob) thumbs[panel.id] = blobUrl(panel.thumbId, blob);
     }
     const chapter = get().chapters.find((item) => item.id === chapterId);
     const stripUrls: string[] = [];
     if (chapter?.strip) {
       for (const part of chapter.strip.parts) {
-        const blob = await getBlob(part.blobId);
+        const blob = await getImageBlob(part.blobId).catch((error) => {
+          set({ banner: storageMessage(error) });
+          return undefined;
+        });
         if (blob) stripUrls.push(blobUrl(part.blobId, blob));
       }
     }
