@@ -51,7 +51,9 @@
     "test:dialogue:workflow": "node scripts/dialogue-workflow-browser-check.mjs",
     "test:dialogue:render": "node scripts/dialogue-render-browser-check.mjs",
     "test:dialogue:security": "node scripts/dialogue-security-browser-check.mjs",
-    "test:chapter-import:browser": "node scripts/chapter-import-safety-browser-check.mjs"
+    "test:chapter-import:browser": "node scripts/chapter-import-safety-browser-check.mjs",
+    "test:r2:browser": "node --experimental-strip-types scripts/r2-document-browser-check.mjs",
+    "bench:r2:thumbnails": "node --experimental-strip-types scripts/r2-thumbnail-benchmark.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

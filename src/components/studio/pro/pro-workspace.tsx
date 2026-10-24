@@ -247,6 +247,11 @@ export default function ProWorkspace({
     }, [transient, history?.present.doc, transformDraft]),
     selection = doc?.selection ?? EMPTY_SELECTION,
     active = doc?.layers.find((l) => l.id === selectedIds[0]);
+  useEffect(() => {
+    // Mask targeting is UI state, not part of document history. Undo/import can
+    // remove its target; never let the next brush silently recreate that mask.
+    if (!active?.mask) setMaskMode(false);
+  }, [active?.id, active?.mask]);
   const activeBoard = doc
     ? (artboards(doc).find((b) => b.id === activeBoardId) ?? artboards(doc)[0])
     : undefined;
@@ -2450,6 +2455,18 @@ export default function ProWorkspace({
                           doc={doc}
                           session={session}
                           selectedIds={selectedIds}
+                          maskMode={maskMode}
+                          onSelectMask={(id) => {
+                            if (
+                              transformRef.current ||
+                              !doc.layers.find((l) => l.id === id)?.mask ||
+                              isLocked(doc, id)
+                            )
+                              return;
+                            setSelectedIds([id]);
+                            setMaskMode(true);
+                            setTool("brush");
+                          }}
                           onSelect={(ids) => {
                             if (transformRef.current) return;
                             setSelectedIds(ids);
