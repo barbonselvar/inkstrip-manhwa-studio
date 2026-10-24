@@ -439,3 +439,15 @@ complex/contextual path text, embedded/custom fonts, non-linear SVG export,
 repeat/reflect/mesh gradients, unlimited-size documents, and exact Boolean curve
 preservation. See the audit for supported alternatives and rejection behavior.
 Remaining Raster/AI work is a separate phase; no future AI tools are advertised.
+
+## Cinematic homepage Release1 (2026-10-24)
+
+Implemented: original nine-genre gallery, four multilingual dialogue composites,
+three silent scenes, two action/SFX scenes, three-card CSS perspective,3s rotation,
+keyboard/mouse/touch browsing, explicit and contextual pauses, reduced/quiet motion,
+device-adaptive Aurora Flow and complete robot removal. Existing project library,
+backup, stats, navigation, Chapter and editors remain intact. No native schema changes.
+
+Validation and release evidence: `CINEMATIC_HOMEPAGE_RELEASE.md`. Physical Android
+remains unverified. Dialogue Studio is a separate Release2 and must wait for
+verified homepage production delivery; no OCR/translation/inpainting is claimed here.
