@@ -259,19 +259,6 @@ try {
       isMobile: width < 500,
       acceptDownloads: true,
     });
-    await context.addInitScript(() => {
-      const stats = { draws: 0 };
-      window.__inkstripReleaseQA = stats;
-      for (const name of ["WebGLRenderingContext", "WebGL2RenderingContext"])
-        if (window[name])
-          for (const method of ["drawArrays", "drawElements"]) {
-            const fn = window[name].prototype[method];
-            window[name].prototype[method] = function (...a) {
-              stats.draws++;
-              return fn.apply(this, a);
-            };
-          }
-    });
     const p = await context.newPage();
     p.setDefaultTimeout(30000);
     watch(p);
@@ -283,10 +270,20 @@ try {
       expected,
       "Live build matches merged main",
     );
-    await p.locator("canvas.robot-companion-canvas").waitFor();
-    await p.waitForFunction(() => window.__inkstripReleaseQA.draws > 0);
-    const before = await p.evaluate(() => window.__inkstripReleaseQA.draws);
-    await p.waitForFunction((n) => window.__inkstripReleaseQA.draws > n, before);
+    assert.equal(await p.locator(".robot-companion, canvas.robot-companion-canvas").count(), 0);
+    await p.locator('.gallery-card[data-position="front"] img').waitFor();
+    await p.waitForFunction(
+      () =>
+        [...document.querySelectorAll(".gallery-card img")].length === 9 &&
+        [...document.querySelectorAll(".gallery-card img")].every(
+          (i) => i.complete && i.naturalWidth > 0,
+        ),
+    );
+    assert.equal(await p.locator('.gallery-card:not([data-position="hidden"])').count(), 3);
+    assert.notEqual(
+      await p.locator(".gallery-stage").evaluate((el) => getComputedStyle(el).perspective),
+      "none",
+    );
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await p.screenshot({ path: `/workspace/screenshots/ee-release-home-${width}.png` });
     const source = await start(p),
@@ -404,7 +401,9 @@ try {
     results.push({
       width,
       release: expected,
-      homepage3D: true,
+      homepage3DGallery: true,
+      originalArtworks: 9,
+      robotRemoved: true,
       chapter: true,
       pathfinder: true,
       artboardExport: true,
@@ -434,6 +433,7 @@ try {
     await p.getByRole("button", { name: "New project", exact: true }).click();
     await p.getByPlaceholder("Night Market").fill("Release AI QA");
     await p.getByRole("button", { name: "Create chapter 1", exact: true }).click();
+    await p.getByText("Chapter workspace", { exact: true }).waitFor();
     const data = await p.evaluate(() => {
       const c = document.createElement("canvas");
       c.width = 16;

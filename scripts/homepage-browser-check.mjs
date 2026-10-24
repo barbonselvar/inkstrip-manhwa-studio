@@ -5,6 +5,13 @@ import { createHash } from "node:crypto";
 import { chromium } from "playwright";
 const base = process.argv[2] || "http://127.0.0.1:8080";
 const target = new URL(base);
+const expected = process.argv[3];
+if (target.hostname === "inkstrip-manhwa-studio.vercel.app")
+  assert.match(
+    expected ?? "",
+    /^[a-f0-9]{40}$/,
+    "Production verification requires the intended main SHA",
+  );
 assert.ok(
   ["127.0.0.1", "localhost", "inkstrip-manhwa-studio.vercel.app"].includes(target.hostname),
 );
@@ -17,6 +24,12 @@ const gallery = (page) => page.getByRole("region", { name: "Original Inkstrip ar
 const active = (page) => gallery(page).getAttribute("data-active");
 async function loaded(page) {
   await page.getByRole("heading", { name: "Every frame. A world." }).waitFor();
+  if (expected)
+    assert.equal(
+      await page.locator('meta[name="inkstrip-release"]').getAttribute("content"),
+      expected,
+      "Live release matches intended main",
+    );
   await page.waitForFunction(
     () =>
       [...document.querySelectorAll(".gallery-card img")].length === 9 &&
@@ -144,7 +157,6 @@ try {
   await page
     .getByRole("button", { name: "Resume automatic gallery rotation", exact: true })
     .click();
-  await page.evaluate(() => document.activeElement.blur());
   await page.mouse.move(0, 0);
   await page.waitForFunction(
     () => document.querySelector(".cinematic-gallery").dataset.rotating === "true",
@@ -194,8 +206,13 @@ try {
   await page.getByRole("button", { name: "Studio preferences", exact: true }).click();
   await page.getByLabel("Studio motion", { exact: true }).selectOption("system");
   await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.setViewportSize({ width: 1440, height: 500 });
   await page.locator('a.hero-secondary[href="#workflow"]').click();
   await page.locator("#workflow").waitFor();
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForFunction(
+    () => document.querySelector(".cinematic-gallery").getBoundingClientRect().bottom < 0,
+  );
   await page.waitForFunction(
     () => document.querySelector(".cinematic-gallery").dataset.rotating === "false",
   );

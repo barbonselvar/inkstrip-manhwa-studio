@@ -211,7 +211,10 @@ export function CinematicGallery() {
             paused ? "Resume automatic gallery rotation" : "Pause automatic gallery rotation"
           }
           aria-pressed={paused}
-          onClick={() => setPaused((value) => !value)}
+          onClick={() => {
+            if (paused) setFocused(false);
+            setPaused((value) => !value);
+          }}
         >
           {paused ? <Play className="size-3" /> : <Pause className="size-3" />}
         </button>
