@@ -6,11 +6,11 @@ taken as evidence.
 
 ## Findings
 
-| # | Severity | Area | Finding | Status |
-|---|----------|------|---------|--------|
-| 1 | P1 | R1.1 import policy | PNGs with an `iCCP` colour profile (macOS/iPhone screenshots, Photoshop exports) were always rejected. The same preflight gates **already-stored** Chapter art (export/stitch, editors, retouch, faces, AI enhance, Raster worker), so profiled PNGs that production `main` imported could no longer be exported or edited. Reproduced in Chromium: `main` decodes and stitches the fixture; the branch rejected both. | Fixed: bounded inflate (2 MiB/file) in the preflight; bombs/corrupt/truncated/non-zlib still rejected. |
-| 2 | P1 | R1.1 import policy | JPEGs with data after EOI (Pixel motion photos, Samsung trailers) were rejected as "truncated" because EOI had to be the last two bytes. Same stored-art impact. Reproduced in Chromium against `main`. | Fixed: first `FF D9` after the scan header, bounded 1 MiB-chunk scan; scans without EOI stay rejected (79 MiB worst case ≈ 143 ms). |
-| 3 | P2 | Canvas rotation | Navigator (minimap) click ignored view rotation and centred the wrong point at 90°/180°/270°. View-only; no document data affected. | Fixed: shared `centerViewOn`; unit + 5-viewport browser regression. |
+| #   | Severity | Area               | Finding                                                                                                                                                                                                                                                                                                                                                                                                                | Status                                                                                                                              |
+| --- | -------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | P1       | R1.1 import policy | PNGs with an `iCCP` colour profile (macOS/iPhone screenshots, Photoshop exports) were always rejected. The same preflight gates **already-stored** Chapter art (export/stitch, editors, retouch, faces, AI enhance, Raster worker), so profiled PNGs that production `main` imported could no longer be exported or edited. Reproduced in Chromium: `main` decodes and stitches the fixture; the branch rejected both. | Fixed: bounded inflate (2 MiB/file) in the preflight; bombs/corrupt/truncated/non-zlib still rejected.                              |
+| 2   | P1       | R1.1 import policy | JPEGs with data after EOI (Pixel motion photos, Samsung trailers) were rejected as "truncated" because EOI had to be the last two bytes. Same stored-art impact. Reproduced in Chromium against `main`.                                                                                                                                                                                                                | Fixed: first `FF D9` after the scan header, bounded 1 MiB-chunk scan; scans without EOI stay rejected (79 MiB worst case ≈ 143 ms). |
+| 3   | P2       | Canvas rotation    | Navigator (minimap) click ignored view rotation and centred the wrong point at 90°/180°/270°. View-only; no document data affected.                                                                                                                                                                                                                                                                                    | Fixed: shared `centerViewOn`; unit + 5-viewport browser regression.                                                                 |
 
 No P0 defects were found. Each fix has a regression test that fails on the audited head and passes
 after the fix (unit and Chromium).
@@ -52,7 +52,19 @@ after the fix (unit and Chromium).
 6. Drag a layer by its grip, then use the arrow buttons; edit a mask from its thumbnail.
 7. Save, close and reopen the native document; layers, masks and rotation-free geometry persist.
 
-## Validation
+## Validation (fix head, local sandbox, Node 22 / npm 11 lockfile install as in CI)
 
-See the PR #13 conversation for the exact commands, counts and GitHub Actions runs on the final
-head.
+- `npm test`: 813/813 (200 + 59 + 90 + 464); `typecheck`, `lint`, `build`, `check:build`,
+  `check:auth` (dev and build agree: sign-in off) pass.
+- Chromium suites, dev server, no edits in flight: chapter-import, r2 (1440/768/390/360/320,
+  touch below 800px), r2 gesture, homepage, dialogue, dialogue render/security/ocr, editor,
+  adjustments, retouch, workflow, ui, pro, layers, repair, geometry, transform, color,
+  appearance, vector, compound, pathfinder, artboards, vector-final, raster-refinement: pass.
+- `production-vector-check --raster` against the built output (`vite preview`) at the release
+  SHA: pass, no console errors or failed critical assets.
+- `test:dialogue:workflow` timed out once (180 s) waiting for the cold OCR model download from
+  `raw.githubusercontent.com`; it passed on rerun on this branch and on `main`.
+- `test:studio:browser` (real Swin2SR inference) cannot run here: `huggingface.co` is
+  unreachable from the sandbox browser (fails on `main` too). The branch run passed image
+  decode before the model download failed; AI unit tests pass.
+- GitHub Actions results for the final head are recorded on PR #13.
