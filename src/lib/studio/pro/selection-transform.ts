@@ -75,11 +75,22 @@ export function stageSelectionDocument(
   liftedAsset: string,
   ids: { group: string; remaining: string; floating: string },
   maxArea = 16_777_216,
+  frame = { x: 0, y: 0, width: doc.width, height: doc.height },
 ) {
+  if (
+    ![frame.x, frame.y, frame.width, frame.height].every(Number.isInteger) ||
+    frame.x < 0 ||
+    frame.y < 0 ||
+    frame.width < 1 ||
+    frame.height < 1 ||
+    frame.x + frame.width > doc.width ||
+    frame.y + frame.height > doc.height
+  )
+    throw Error("Invalid selected-pixel frame.");
   const target = selectionTransformTarget(doc, id, maxArea),
     group = {
       ...layer("group", doc.width, doc.height, ids.group),
-      name: `${target.name} · pixel transform`,
+      name: `${target.name.slice(0, 80)} · pixel transform`,
       parentId: target.parentId,
       opacity: target.opacity,
       blend: target.blend,
@@ -91,7 +102,8 @@ export function stageSelectionDocument(
       parentId: group.id,
     },
     floating = {
-      ...layer("raster", doc.width, doc.height, ids.floating),
+      ...layer("raster", frame.width, frame.height, ids.floating),
+      transform: { x: frame.x, y: frame.y, scaleX: 1, scaleY: 1, rotation: 0 },
       name: "Transformed pixels",
       assetId: liftedAsset,
       parentId: group.id,

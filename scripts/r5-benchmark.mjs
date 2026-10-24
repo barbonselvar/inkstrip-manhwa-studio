@@ -95,7 +95,31 @@ try {
           throw Error(
             `Reassembly changes appearance: alpha ${maxAlpha}, premultiplied ${maxPremultiplied}`,
           );
+        const transformed = {
+            ...staged.document,
+            imageSize: {
+              width: Math.max(1, Math.round(width / 2)),
+              height: Math.max(1, Math.round(height / 2)),
+              resampling: "lanczos",
+            },
+            layers: staged.document.layers.map((l) =>
+              l.id === staged.layerId
+                ? { ...l, transform: { ...l.transform, rotation: 13, scaleX: 1.1, scaleY: 1.1 } }
+                : l,
+            ),
+          },
+          exportStart = performance.now();
+        const resized = await worker.export(transformed, 4_000_000, "image/png", 1, () => {}),
+          transformAndLanczosExportMs = performance.now() - exportStart,
+          output = await createImageBitmap(resized.blob);
+        if (
+          output.width !== transformed.imageSize.width ||
+          output.height !== transformed.imageSize.height
+        )
+          throw Error("Resampled geometry export dimensions changed");
+        output.close();
         results.push({
+          transformAndLanczosExportMs,
           width,
           height,
           alpha,

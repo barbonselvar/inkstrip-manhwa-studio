@@ -1349,14 +1349,15 @@ export default function ProWorkspace({
         layerId: result.layerId,
         previousIds: [...selectedIds],
       };
-      const floating = result.document.layers.find((l) => l.id === result.layerId)!;
+      const floating = result.document.layers.find((l) => l.id === result.layerId)!,
+        initial = withPivot(floating.transform, { x: floating.width / 2, y: floating.height / 2 });
       if (
         !changeTransform({
           origin: current,
           target: "pixels",
           layerId: floating.id,
-          value: withPivot(floating.transform, { x: floating.width / 2, y: floating.height / 2 }),
-          base: structuredClone(floating.transform),
+          value: initial,
+          base: structuredClone(initial),
           mode: "affine",
           lock: true,
           translation: { x: 0, y: 0 },
@@ -1462,7 +1463,7 @@ export default function ProWorkspace({
               }
             : {}),
           value,
-          base: structuredClone(original.transform),
+          base: structuredClone(value),
           mode: value.deform?.kind ?? "affine",
           lock: true,
           translation: { x: 0, y: 0 },

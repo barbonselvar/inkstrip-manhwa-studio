@@ -1,3 +1,8 @@
 {
-  "installCommand": "npm install --no-audit --no-fund"
+  "installCommand": "npm install --no-audit --no-fund",
+  "git": {
+    "deploymentEnabled": {
+      "codex/r5-transform-geometry-engine": false
+    }
+  }
 }

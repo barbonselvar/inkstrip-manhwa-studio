@@ -60,11 +60,13 @@ test("empty selected content and invalid coverage reject", () => {
 test("selected-pixel stage retains editable original and exact stack/opacity/blend scope", () => {
   const d = doc(),
     original = d.layers[0]!;
+  original.name = "a".repeat(100);
   original.opacity = 0.6;
   original.blend = "multiply";
   const n = stage(d);
   assert.equal(d.layers.length, 1);
   assert.equal(n.document.layers.length, 4);
+  assert.ok(n.document.layers[0]!.name.length <= 100);
   assert.equal(n.document.layers[0]!.blend, "multiply");
   assert.equal(n.document.layers[0]!.opacity, 0.6);
   assert.deepEqual(n.document.layers[1], { ...original, visible: false, parentId: "group" });
@@ -160,4 +162,34 @@ test("quantized premultiplied residual color recombines translucent feather edge
           Math.round((remaining[i * 4 + channel]! * r) / 255) * (1 - l / 255);
       assert.ok(Math.abs(expected - actual) <= 1.01);
     }
+});
+
+test("tight lifted frames place handles and default pivot around selected pixels", () => {
+  const d = doc(),
+    frame = { x: 40, y: 20, width: 16, height: 12 },
+    staged = stageSelectionDocument(
+      d,
+      d.layers[0]!.id,
+      "rest",
+      "lift",
+      { group: "group", remaining: "rest", floating: "floating" },
+      16_777_216,
+      frame,
+    ),
+    floating = staged.document.layers.at(-1)!;
+  assert.equal(floating.width, 16);
+  assert.equal(floating.height, 12);
+  assert.equal(floating.transform.x, 40);
+  assert.equal(floating.transform.y, 20);
+  assert.throws(() =>
+    stageSelectionDocument(
+      d,
+      d.layers[0]!.id,
+      "r",
+      "l",
+      { group: "g", remaining: "r", floating: "l" },
+      16_777_216,
+      { ...frame, x: -1 },
+    ),
+  );
 });

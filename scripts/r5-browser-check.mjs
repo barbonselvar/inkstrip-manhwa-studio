@@ -123,7 +123,9 @@ try {
       Number(await p.getByLabel("Transform width percent", { exact: true }).inputValue()) < 100,
     );
     await p.getByRole("button", { name: "Restore initial transform", exact: true }).click();
-    await number(p, "Transform X", 8);
+    assert.equal(await p.getByLabel("Transform width", { exact: true }).inputValue(), "16");
+    assert.equal(await p.getByLabel("Pivot X", { exact: true }).inputValue(), "8");
+    await number(p, "Transform X", 48);
     await p.getByRole("button", { name: "Apply transform", exact: true }).first().click();
     const moved = await fx.preview(p);
     assert.equal(pixel(moved, 42, 22)[3], 0);

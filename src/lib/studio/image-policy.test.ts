@@ -408,7 +408,7 @@ test("cancelled header/batch validation never proceeds to later assets", async (
 
 test("many bounded PNG IDAT chunks charge header bytes rather than compressed pixel read-ahead", async () => {
   const original = new Uint8Array(await (await fixture()).arrayBuffer()),
-    chunks: Uint8Array[] = [original.slice(0, 33)];
+    chunks: Uint8Array<ArrayBuffer>[] = [original.slice(0, 33)];
   for (let i = 0; i < 600; i++) {
     const chunk = new Uint8Array(8192 + 12);
     new DataView(chunk.buffer).setUint32(0, 8192);
