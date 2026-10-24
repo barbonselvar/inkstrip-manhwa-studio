@@ -360,3 +360,36 @@ test("explicit rasterization retains dialogue classification but removes obsolet
   assert.equal(next.layers.find((l) => l.id === body.id)!.bubble, undefined);
   assert.equal(next.layers.find((l) => l.id === body.id)!.dialogueRole, "bubble");
 });
+
+test("review approval matches actual lettering and manual text edits return the region to review", async () => {
+  const { createText, canApproveRegion, reconcileDialogue } =
+    await import("../dialogue/operations.ts");
+  const result = createText(
+      fromPanel({ id: "p", name: "Page", width: 640, height: 480 }),
+      "Approved text",
+    ),
+    r = {
+      id: "region",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 50,
+      sourceLanguage: "en" as const,
+      targetLanguage: "en" as const,
+      original: "Source",
+      corrected: "Source",
+      replacement: "Approved text",
+      status: "lettered" as const,
+      layerId: result.id,
+    };
+  const d = { ...result.document, dialogue: { version: 1 as const, regions: [r], presets: [] } };
+  assert.equal(canApproveRegion(d, r), true);
+  assert.equal(canApproveRegion(d, { ...r, replacement: "Not applied" }), false);
+  const edited = reconcileDialogue(d, {
+    ...d,
+    layers: d.layers.map((l) => (l.id === result.id ? { ...l, text: "Manual edit" } : l)),
+  });
+  assert.equal(edited.dialogue!.regions[0]!.replacement, "Manual edit");
+  assert.equal(edited.dialogue!.regions[0]!.status, "corrected");
+  assert.equal(canApproveRegion(edited, edited.dialogue!.regions[0]!), false);
+});

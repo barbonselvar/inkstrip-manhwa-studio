@@ -18,6 +18,7 @@ import {
 } from "@/lib/studio/dialogue/types";
 import {
   bubbleFor,
+  canApproveRegion,
   textFor,
   createBubble,
   createText,
@@ -1006,7 +1007,7 @@ export function ProDialogue({
                     value={region[k]}
                     min={k === "width" || k === "height" ? 1 : 0}
                     max={k === "x" || k === "width" ? d.width : d.height}
-                    onChange={(n) => patchRegion({ [k]: Math.round(n) })}
+                    onChange={(n) => patchRegion({ [k]: Math.round(n), status: "corrected" })}
                   />
                 ))}
               </div>
@@ -1015,7 +1016,10 @@ export function ProDialogue({
                 value={region.sourceLanguage}
                 values={LANGUAGES}
                 onChange={(v) =>
-                  patchRegion({ sourceLanguage: v as DialogueRegion["sourceLanguage"] })
+                  patchRegion({
+                    sourceLanguage: v as DialogueRegion["sourceLanguage"],
+                    status: "corrected",
+                  })
                 }
               />
               <label className="pro-field">
@@ -1046,7 +1050,10 @@ export function ProDialogue({
                 value={region.targetLanguage}
                 values={LANGUAGES}
                 onChange={(v) =>
-                  patchRegion({ targetLanguage: v as DialogueRegion["targetLanguage"] })
+                  patchRegion({
+                    targetLanguage: v as DialogueRegion["targetLanguage"],
+                    status: "corrected",
+                  })
                 }
               />
               <label className="pro-field">
@@ -1057,7 +1064,9 @@ export function ProDialogue({
                   dir={region.targetLanguage === "ar" ? "rtl" : "auto"}
                   value={region.replacement}
                   maxLength={5000}
-                  onChange={(e) => patchRegion({ replacement: e.target.value })}
+                  onChange={(e) =>
+                    patchRegion({ replacement: e.target.value, status: "corrected" })
+                  }
                 />
               </label>
               <Button disabled={region.status === "detected"} onClick={() => void clean()}>
@@ -1080,6 +1089,11 @@ export function ProDialogue({
                         {
                           language: region.targetLanguage,
                           direction: region.targetLanguage === "ar" ? "rtl" : "ltr",
+                          writing:
+                            region.targetLanguage === "ja"
+                              ? (d.layers.find((l) => l.id === region.layerId)?.lettering
+                                  ?.writing ?? "horizontal")
+                              : "horizontal",
                         },
                       );
                       preview(
@@ -1137,7 +1151,7 @@ export function ProDialogue({
               </Button>
               <Button
                 variant="secondary"
-                disabled={!region.layerId}
+                disabled={!canApproveRegion(d, region)}
                 onClick={() => patchRegion({ status: "approved" })}
               >
                 Approve reviewed region

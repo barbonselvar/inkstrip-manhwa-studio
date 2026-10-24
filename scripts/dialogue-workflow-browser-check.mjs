@@ -136,7 +136,11 @@ try {
   await page.getByRole("button", { name: "Approve dialogue preview", exact: true }).click();
   await page.getByRole("button", { name: "Approve reviewed region", exact: true }).click();
   await saved(page);
-  await page.getByLabel("Replacement text", { exact: true }).fill("A NEW WORLD");
+  await page.getByLabel("Replacement text", { exact: true }).fill("A NEW WORLD!");
+  assert.equal(
+    await page.getByRole("button", { name: "Approve reviewed region", exact: true }).isDisabled(),
+    true,
+  );
   await page.getByRole("button", { name: "Preview replacement lettering", exact: true }).click();
   await page.getByRole("button", { name: "Approve dialogue preview", exact: true }).click();
   await page.getByRole("button", { name: "Approve reviewed region", exact: true }).click();
@@ -159,7 +163,7 @@ try {
   const native = await download(page, "Export editable .inkstrip", "dialogue-workflow.inkstrip");
   const file = JSON.parse(await readFile(native, "utf8"));
   assert.equal(file.version, 7);
-  assert.equal(file.document.dialogue.regions[0].replacement, "A NEW WORLD");
+  assert.equal(file.document.dialogue.regions[0].replacement, "A NEW WORLD!");
   assert.equal(file.assets.source.data, source, "original PNG bytes unchanged");
   for (const mime of ["image/png", "image/jpeg", "image/webp"]) {
     await page.getByLabel("Pro export format", { exact: true }).selectOption(mime);

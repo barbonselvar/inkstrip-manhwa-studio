@@ -7,6 +7,7 @@ import {
   type BubbleSpec,
   type BubblePreset,
   type DialoguePreset,
+  type DialogueRegion,
   type Lettering,
 } from "./types.ts";
 export function dialogueData(d: ProDocument) {
@@ -257,6 +258,24 @@ export function reconcileDialogue(previous: ProDocument, next: ProDocument): Pro
       ...dialogueData(next),
       regions: dialogueData(next).regions.map((r) => ({
         ...r,
+        ...(() => {
+          const current = layers.find((l) => l.id === r.layerId),
+            old = previous.layers.find((l) => l.id === r.layerId);
+          if (
+            current?.kind === "text" &&
+            old?.kind === "text" &&
+            (current.text !== old.text ||
+              current.lettering?.language !== old.lettering?.language) &&
+            (r.replacement !== current.text ||
+              (current.lettering && r.targetLanguage !== current.lettering.language))
+          )
+            return {
+              replacement: current.text,
+              targetLanguage: current.lettering?.language ?? r.targetLanguage,
+              status: "corrected" as const,
+            };
+          return {};
+        })(),
         ...(r.layerId && !ids.has(r.layerId)
           ? { layerId: undefined, status: "corrected" as const }
           : {}),
@@ -266,6 +285,16 @@ export function reconcileDialogue(previous: ProDocument, next: ProDocument): Pro
       })),
     },
   };
+}
+export function canApproveRegion(d: ProDocument, r: DialogueRegion) {
+  const l = d.layers.find((l) => l.id === r.layerId);
+  return (
+    r.status === "lettered" &&
+    !!l &&
+    l.kind === "text" &&
+    l.text === r.replacement &&
+    (l.lettering?.language ?? r.targetLanguage) === r.targetLanguage
+  );
 }
 export function cleanView(d: ProDocument, includeCleanup = true) {
   return {

@@ -82,3 +82,6 @@ Chapter and layered ZIP accumulation now share the editor's device limits:4MP ra
 
 
 Tablet review at768px found the expanded studio switcher covering the title/panel toggle. A tablet-only wrapped header now preserves both controls. Browser checks assert every essential header control remains within the viewport at1440/768/320/390px; touch checks remain separate from physical Android validation.
+
+
+Approval-state audit: a review can only be approved when the actual editable text layer matches the replacement and language. Changing review text invalidates approval; manual lettering edits synchronize the queue and return it to review. Re-preview updates the existing layer, retaining formatting and avoiding duplicate lettering. Actual browser correction/re-approval/native/Chapter/backup round-trips pass. Automated count:748.
