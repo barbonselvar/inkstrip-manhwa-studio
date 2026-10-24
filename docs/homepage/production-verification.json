@@ -1,0 +1,65 @@
+{
+  "base": "https://inkstrip-manhwa-studio.vercel.app",
+  "expected": "2931fdb0ef688d3fc59ce14d1c2414977fb082f5",
+  "chromium": "156.0.8078.4",
+  "results": [
+    {
+      "width": 1440,
+      "release": "2931fdb0ef688d3fc59ce14d1c2414977fb082f5",
+      "homepage3DGallery": true,
+      "originalArtworks": 9,
+      "robotRemoved": true,
+      "chapter": true,
+      "pathfinder": true,
+      "artboardExport": true,
+      "gradient": true,
+      "textPath": true,
+      "svg": true,
+      "nativeReopen": true,
+      "raster": true,
+      "aiControls": true,
+      "sourcePreserved": true
+    },
+    {
+      "width": 320,
+      "release": "2931fdb0ef688d3fc59ce14d1c2414977fb082f5",
+      "homepage3DGallery": true,
+      "originalArtworks": 9,
+      "robotRemoved": true,
+      "chapter": true,
+      "pathfinder": true,
+      "artboardExport": true,
+      "gradient": true,
+      "textPath": true,
+      "svg": true,
+      "nativeReopen": true,
+      "raster": true,
+      "aiControls": true,
+      "sourcePreserved": true
+    },
+    {
+      "width": 390,
+      "release": "2931fdb0ef688d3fc59ce14d1c2414977fb082f5",
+      "homepage3DGallery": true,
+      "originalArtworks": 9,
+      "robotRemoved": true,
+      "chapter": true,
+      "pathfinder": true,
+      "artboardExport": true,
+      "gradient": true,
+      "textPath": true,
+      "svg": true,
+      "nativeReopen": true,
+      "raster": true,
+      "aiControls": true,
+      "sourcePreserved": true
+    },
+    {
+      "realSwin2SRInference": true,
+      "input": [16, 24],
+      "output": [32, 48]
+    }
+  ],
+  "errors": [],
+  "failedCriticalAssets": []
+}

@@ -1,7 +1,6 @@
 /** Real browser coverage for the isolated homepage; no artwork/project fixtures are seeded. */
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
-import { createHash } from "node:crypto";
 import { chromium } from "playwright";
 const base = process.argv[2] || "http://127.0.0.1:8080";
 const target = new URL(base);
@@ -100,18 +99,24 @@ try {
   );
   assert.equal(await page.locator(".gallery-dialogue").count(), 4);
   assert.equal(await page.locator(".gallery-sfx").count(), 2);
-  const provenance = await (await page.request.get(`${base}/gallery/provenance.json`)).json();
+  // Browser fetch uses the same TLS/proxy/asset path as the rendered page.
+  const provenance = await page.evaluate(async () => {
+    const response = await fetch("/gallery/provenance.json", { credentials: "omit" });
+    if (!response.ok) throw Error(`Gallery provenance HTTP ${response.status}`);
+    return response.json();
+  });
   assert.equal(provenance.artworks.length, 9);
   for (const artwork of provenance.artworks)
     for (const variant of artwork.variants) {
-      const response = await page.request.get(`${base}/gallery/${variant.file}`);
-      assert.equal(response.status(), 200);
-      assert.equal(
-        createHash("sha256")
-          .update(await response.body())
-          .digest("hex"),
-        variant.sha256,
-      );
+      const actual = await page.evaluate(async (filename) => {
+        const response = await fetch(`/gallery/${filename}`, { credentials: "omit" });
+        if (!response.ok) throw Error(`Gallery asset HTTP ${response.status}`);
+        const digest = await crypto.subtle.digest("SHA-256", await response.arrayBuffer());
+        return [...new Uint8Array(digest)]
+          .map((value) => value.toString(16).padStart(2, "0"))
+          .join("");
+      }, variant.file);
+      assert.equal(actual, variant.sha256);
     }
   await page.evaluate(() => {
     window.__galleryChanges = [

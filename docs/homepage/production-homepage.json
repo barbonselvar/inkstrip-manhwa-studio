@@ -1,0 +1,83 @@
+{
+  "ok": true,
+  "base": "https://inkstrip-manhwa-studio.vercel.app",
+  "results": [
+    {
+      "test": "real three-second full nine-artwork rotation",
+      "changes": [
+        {
+          "index": 1,
+          "at": 5758.39999999851
+        },
+        {
+          "index": 2,
+          "at": 6680.19999999553
+        },
+        {
+          "index": 3,
+          "at": 9680.19999999553
+        },
+        {
+          "index": 4,
+          "at": 12680
+        },
+        {
+          "index": 5,
+          "at": 15680
+        },
+        {
+          "index": 6,
+          "at": 18680
+        },
+        {
+          "index": 7,
+          "at": 21680.10000000149
+        },
+        {
+          "index": 8,
+          "at": 24680.10000000149
+        },
+        {
+          "index": 0,
+          "at": 27680.10000000149
+        },
+        {
+          "index": 1,
+          "at": 30680
+        }
+      ]
+    },
+    {
+      "test": "hover, focus, buttons, keyboard, explicit pause, hidden tab, reduced/quiet motion, links, project creation, unmount cleanup",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "portraitAndLandscape": true,
+      "touchEmulation": true
+    },
+    {
+      "width": 360,
+      "portraitAndLandscape": true,
+      "touchEmulation": true
+    },
+    {
+      "width": 390,
+      "portraitAndLandscape": true,
+      "touchEmulation": true
+    },
+    {
+      "width": 768,
+      "portraitAndLandscape": true,
+      "touchEmulation": false
+    },
+    {
+      "width": 1440,
+      "portraitAndLandscape": true,
+      "touchEmulation": false
+    }
+  ],
+  "errors": [],
+  "failedAssets": [],
+  "physicalAndroid": false
+}
