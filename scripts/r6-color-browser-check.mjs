@@ -347,7 +347,7 @@ try {
       .waitFor({ state: "hidden" });
     const masked = await fx.preview(p);
     assert.notDeepEqual(pixel(masked, 50, 30), pixel(before, 50, 30));
-    assert.deepEqual(pixel(masked, 110, 85), pixel(before, 110, 85));
+    assert.deepEqual(pixel(masked, 8, 85), pixel(before, 8, 85));
     for (let i = 3; i < masked.pixels.length; i += 4)
       assert.equal(masked.pixels[i], before.pixels[i]);
     fx.same(await fx.raster(p), masked);
