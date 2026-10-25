@@ -1,5 +1,6 @@
 import {
   Bandage,
+  Blend,
   Brush,
   Circle,
   Crop as CropIcon,
@@ -41,6 +42,8 @@ export const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof
   { id: "eraser", name: "Eraser", key: "E", Icon: Eraser },
   { id: "eyedropper", name: "Eyedropper", key: "I", Icon: Pipette },
   { id: "fill", name: "Paint Bucket", key: "G", Icon: PaintBucket },
+  // Shift+G: the Paint Bucket keeps G in Raster Studio.
+  { id: "layer-gradient", name: "Gradient", key: "Shift+G", Icon: Blend },
   { id: "select-rect", name: "Rectangle selection", key: "M", Icon: ScanLine },
   { id: "select-ellipse", name: "Ellipse selection", key: "", Icon: Circle },
   { id: "wand", name: "Magic Wand", key: "W", Icon: Wand },
@@ -57,6 +60,7 @@ export const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof
 ];
 export const RASTER_TOOL_IDS = new Set<ProTool>([
   "fill",
+  "layer-gradient",
   "transform",
   "crop",
   "move",

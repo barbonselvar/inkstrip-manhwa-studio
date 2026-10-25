@@ -447,10 +447,7 @@ export function ProProperties({
                   </select>
                 </label>
                 {selected.appearance !== undefined && (
-                  <p className="pro-help">
-                    Edit this text object’s paints with the legacy Vector tools’ Appearance panel
-                    (Vector button above).
-                  </p>
+                  <p className="pro-help">Edit this text object’s paints in the Appearance tab.</p>
                 )}
                 <label className="pro-field">
                   Text fill

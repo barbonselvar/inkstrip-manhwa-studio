@@ -4,6 +4,7 @@ import { GradientStops } from "./pro-color";
 import { ToolSection } from "../design/tool-section";
 import type { Layer } from "@/lib/studio/pro/model";
 import { defaultGradient, type Gradient } from "@/lib/studio/pro/gradient";
+import { reverseStops } from "@/lib/studio/pro/raster-gradient";
 import { EFFECT_NAMES, defaultEffect, type Effect } from "@/lib/studio/pro/effects";
 export function GradientFields({
   value,
@@ -28,6 +29,22 @@ export function GradientFields({
           <option value="radial">Radial</option>
         </select>
       </label>
+      {value.kind === "radial" && (
+        <label className="pro-field">
+          {prefix} radial shape
+          <select
+            className="field"
+            aria-label={`${prefix} radial shape`}
+            value={value.radialShape ?? "ellipse"}
+            onChange={(e) =>
+              onChange({ ...value, radialShape: e.target.value as "ellipse" | "circle" })
+            }
+          >
+            <option value="ellipse">Ellipse (fits layer)</option>
+            <option value="circle">Circle</option>
+          </select>
+        </label>
+      )}
       <div className="pro-number-grid">
         <ProNumber
           label={`${prefix} angle`}
@@ -59,6 +76,13 @@ export function GradientFields({
         />
       </div>
       <GradientStops stops={value.stops} onChange={(stops) => onChange({ ...value, stops })} />
+      <Button
+        variant="ghost"
+        aria-label={`Reverse ${prefix.toLowerCase()} stops`}
+        onClick={() => onChange({ ...value, stops: reverseStops(value.stops) })}
+      >
+        Reverse stops
+      </Button>
     </>
   );
 }

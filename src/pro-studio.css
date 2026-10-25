@@ -1294,6 +1294,9 @@
 .pro-vector-gradient-handles circle {
   fill: var(--color-bg);
 }
+.pro-vector-gradient-handles .pro-gradient-radius {
+  fill: none;
+}
 .pro-vector-gradient-handles .pro-gradient-hit {
   fill: transparent;
   stroke: none;
