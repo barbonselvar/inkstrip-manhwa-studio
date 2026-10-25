@@ -106,6 +106,7 @@ import { validateTransform, withPivot, bounds } from "@/lib/studio/pro/transform
 import { ProGeometry } from "./pro-geometry";
 import { fullCrop, type Crop } from "@/lib/studio/pro/geometry";
 import { ProProperties, ProNumber } from "./pro-properties";
+import { ProAppearance } from "./pro-appearance";
 import {
   EMPTY_SELECTION,
   fromPanel,
@@ -3484,6 +3485,15 @@ export default function ProWorkspace({
                                 Editable styles, filters and gradients. Quick Mask and backdrop
                                 adjustments are not artwork targets.
                               </p>
+                              {doc && doc.version !== 3 && active && !quickMask && (
+                                <ProAppearance
+                                  layer={{
+                                    ...active,
+                                    locked: isLocked(doc, active.id) || !!transformDraft,
+                                  }}
+                                  onPatch={patch}
+                                />
+                              )}
                             </div>
                           ) : undefined
                         }

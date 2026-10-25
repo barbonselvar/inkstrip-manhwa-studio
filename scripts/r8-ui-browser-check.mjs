@@ -49,6 +49,12 @@ try {
     await fx.open(p);
     const doc = fromPanel({ id: "r8-ui", name: "R8 UI", width: 128, height: 96 });
     await fx.load(p, doc, source);
+    await fx.tab(p, "Properties");
+    assert.equal(
+      await p.getByText("Editable layer effects", { exact: true }).isVisible(),
+      true,
+      "legacy documents retain their existing direct appearance controls",
+    );
     const original = (await fx.native(p)).value,
       originalPixels = await fx.preview(p);
     await fx.tab(p, "History");
@@ -167,6 +173,11 @@ try {
     const applied = await preview(p);
     await dialog.getByRole("button", { name: "Apply layer properties", exact: true }).click();
     await dialog.waitFor({ state: "hidden" });
+    assert.equal(
+      await p.getByText("Editable layer effects", { exact: true }).count(),
+      0,
+      "upgraded documents use the transactional editor without duplicate legacy controls",
+    );
     fx.same(await fx.preview(p), applied, 0);
     fx.same(await fx.raster(p), applied, 0);
     const native = (await fx.native(p)).value;
