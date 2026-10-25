@@ -68,9 +68,15 @@ try {
     await modes.getByRole("button", { name: "Raster", exact: true }).waitFor();
     assert.equal(await modes.getByRole("button", { name: "Vector", exact: true }).count(), 0);
     await p.getByRole("button", { name: "Brush tool", exact: true }).waitFor();
+    // Gradient layers are Raster content: adding one must not reveal the Vector switch.
+    await fx.tab(p, "Layers");
+    await p.getByRole("button", { name: "Gradient layer", exact: true }).click();
+    await p.getByText("Editable gradient layer", { exact: true }).waitFor();
+    assert.equal(await modes.getByRole("button", { name: "Vector", exact: true }).count(), 0);
     checks.rasterAccessible = true;
 
-    // 4. A legacy vector document (artboards + gradient layer) keeps Vector access and data.
+    // 4. A legacy vector document (artboards) keeps Vector access and its data, including a
+    //    gradient layer.
     const d = fromPanel({ id: "p", name: "Legacy vector", width: 128, height: 96 });
     d.artboards = [
       { id: "board", name: "Cover", x: 0, y: 0, width: 128, height: 96, background: "#ffffff" },

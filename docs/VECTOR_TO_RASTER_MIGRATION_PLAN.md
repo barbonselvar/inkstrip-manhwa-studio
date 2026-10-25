@@ -36,9 +36,10 @@ nothing changed there.
 All of this lives in `src/lib/studio/legacy-vector.ts`.
 
 - **Automatic.** The "Vector" button appears inside Raster Studio for documents that contain
-  vector-only content: artboards, gradient layers, text on a path, Appearance stacks, or vector
-  clips. This rule is `hasLegacyVectorContent`.
-  - Raster Studio already edits paths, shapes and text, so those don't trigger it.
+  vector-only content: artboards, text on a path, Appearance stacks, or vector clips. This rule
+  is `hasLegacyVectorContent`.
+  - Raster Studio already edits paths, shapes, text and gradient layers (Layers → Gradient
+    layer), so those don't trigger it.
   - Grid, snapping and guide settings are shared, so they don't either.
   - Dialogue layers don't count.
 - **On request.** Adding `?vector=legacy` to a chapter link shows the hidden entry points
@@ -170,25 +171,25 @@ reachable only through the hidden Vector mode; _Shared_ = engine used by both.
    need that stated clearly.
 7. **Priority:** **Medium** (copy/UX).
 
-### 2.9 Vector gradients and Appearance stacks
+### 2.9 Gradients and Appearance stacks
 
-1. **Status:** _Vector-only_.
-   - Gradient layers come from the Vector Gradient tool.
-   - Multi-fill/stroke Appearance stacks are edited in the Appearance tab.
-   - Both render in Raster.
-2. **Files:** `gradient.ts`, `vector-appearance.ts`, `appearance.ts`,
+1. **Status:** Mixed.
+   - _Raster:_ editable **gradient layers** (Layers → Gradient layer: linear/radial, angle,
+     scale, center, color and opacity stops, presets) and the Gradient Overlay layer effect are
+     already in Raster Properties (`pro-appearance.tsx`).
+   - _Vector-only:_ gradient **paints** inside multi-fill/stroke Appearance stacks, and the
+     on-canvas handles of the Vector Gradient tool that edit them. Both render in Raster.
+2. **Files:** `gradient.ts`, `vector-appearance.ts`, `effects.ts`, `pro-appearance.tsx`,
    `pro-vector-appearance.tsx`, `pro-color.tsx`; tests `appearance.test.ts`, `color.test.ts`.
 3. **Dependencies:** worker renderer, `svg-paint.ts`.
-4. **Reusability:** Medium.
+4. **Reusability:** Medium–High.
 5. **Raster work:**
-   - Add the Gradient tool to the Raster toolbar.
-   - Expose a simplified Appearance section (single fill/stroke plus gradient) in Raster
-     Properties.
-   - Keep multi-item stacks for advanced users.
+   - On-canvas gradient handles for gradient layers and Appearance paints in Raster.
+   - Expose the Appearance stack (fills/strokes) in Raster Properties.
 6. **Risks:** Medium.
-   - R6 adjustment layers and blend modes must be retested against gradient layers.
-   - Raster's Paint Bucket and Gradient share the "G" shortcut today, so it would need
-     reassigning.
+   - R6 adjustment layers and blend modes must be retested against gradient paints.
+   - Raster's Paint Bucket and the Vector Gradient tool share the "G" shortcut, so a Raster
+     gradient tool needs a different key.
 7. **Priority:** **Medium.**
 
 ### 2.10 Text on a path and Typography
