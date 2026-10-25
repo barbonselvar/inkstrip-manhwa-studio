@@ -180,15 +180,13 @@ This is emulation only; no physical device testing is claimed.
 
 ## R6 integration notes (R6 is Draft PR #16)
 
-- R7 does not change `vercel.json` or any colour/adjustment module. R6 can merge before or after
-  R7 without textual conflicts in those files.
-- If R6 adds adjustment layers or filters that should respect selections, they should clip with
-  `doc.selection` through `selectionCanvas` (as R3 strokes do), not keep their own copy.
-- If R6 introduces non-raster layer kinds, Wand and Color Range active-layer sampling already
-  works through `thumbnailDocument`. R5/R7 clipboard eligibility (`selectionTransformTarget`)
-  would need explicit support for them.
-- A future "Color Range from adjustment output" should pass the adjusted composite to the
-  worker `select` job with `options.range`. No new selection path is needed.
+R7 does not change `vercel.json` or any R6 colour module. R6 has since added code to
+`pro-workspace.tsx`, `worker.ts`, `client.ts` and `package.json`. A trial merge with R6 head
+`21fafe0` produced only additive conflicts. With both sides kept, the merged tree passed
+typecheck, lint, 896 unit tests and the R6, R7 and R5 browser suites. R6 already limits colour
+operations to the document selection through `selectionCanvas`, so it uses the same selection
+source as R7. Details and the small follow-up list (shortcut guard while Color & Filters is open;
+no Color & Filters during Quick Mask) are in [`R7_TEST_REPORT.md`](./R7_TEST_REPORT.md#r6-draft-pr-16-head-21fafe0-integration-check).
 
 ## Deferred (not claimed)
 
