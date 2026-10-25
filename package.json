@@ -61,7 +61,9 @@
     "bench:r5": "node scripts/r5-benchmark.mjs",
     "test:r6:browser": "node --experimental-strip-types scripts/r6-color-browser-check.mjs",
     "bench:r6:color": "node --expose-gc --experimental-strip-types scripts/r6-color-benchmark.mjs",
-    "bench:r6:render": "node scripts/r6-color-render-benchmark.mjs"
+    "bench:r6:render": "node scripts/r6-color-render-benchmark.mjs",
+    "test:r6:layers:browser": "node --experimental-strip-types scripts/r6-adjustment-layers-browser-check.mjs",
+    "bench:r6:layers": "node scripts/r6-adjustment-layers-benchmark.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

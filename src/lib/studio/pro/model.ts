@@ -1,3 +1,4 @@
+import { validateAdjustmentLayer, type AdjustmentLayerSettings } from "./adjustment-schema.ts";
 import {
   validateDialogue,
   validateBubble,
@@ -154,6 +155,7 @@ export type Layer = {
   effects?: Effect[];
   assetId?: string;
   strokes: Stroke[];
+  adjustmentLayer?: AdjustmentLayerSettings;
   adjustments: Adjustments;
   /** Optional additive v1 color pipeline; absent in older native documents. */
   color?: ColorAdjustments;
@@ -204,7 +206,7 @@ export type ProDocument = {
   brushSettings?: Omit<Stroke, "points" | "erase" | "clip" | "clone" | "patch" | "repair" | "seed">;
   savedSelections?: { name: string; selection: Selection }[];
   source?: SourceReference;
-  version: 1;
+  version: 1 | 2;
   id: string;
   name: string;
   panelId: string;
@@ -452,7 +454,7 @@ function validateStroke(s: Stroke) {
 export function validateDocument(d: ProDocument) {
   if (
     !d ||
-    d.version !== 1 ||
+    ![1, 2].includes(d.version) ||
     typeof d.id !== "string" ||
     !d.id ||
     typeof d.panelId !== "string" ||
@@ -470,6 +472,14 @@ export function validateDocument(d: ProDocument) {
     throw new Error(
       "Unsupported or oversized Pro document (up to 48 layers / 16.8 megapixels / 16384px per side).",
     );
+  if (d.version === 2) {
+    const allowed =
+      "dialogue artboards layout crop imageSize selection brushSettings savedSelections source version id name panelId width height background layers".split(
+        " ",
+      );
+    if (Object.keys(d).some((k) => !allowed.includes(k)))
+      throw Error("Unknown schema2 document field.");
+  }
   if (
     d.source !== undefined &&
     (!d.source ||
@@ -501,8 +511,8 @@ export function validateDocument(d: ProDocument) {
   }
   for (let i = 0; i < d.layers.length; i++) {
     const l = d.layers[i]!;
-    if (l.kind === "adjustment" && !l.clipped) {
-      const next = d.layers.slice(i + 1).find((n) => n.parentId === l.parentId);
+    if (l?.kind === "adjustment" && !l.clipped) {
+      const next = d.layers.slice(i + 1).find((n) => n && n.parentId === l.parentId);
       if (next?.clipped)
         throw new Error(
           "An adjustment cannot be a clipping base; clip it to artwork below instead.",
@@ -532,6 +542,37 @@ export function validateDocument(d: ProDocument) {
       l.width * l.height > 16_777_216
     )
       throw new Error("Invalid or oversized layer.");
+    if (d.version === 2) {
+      const allowed =
+        "bubble lettering dialogueRole appearance vectorClips textPath id name kind parentId clipped linkId visible locked opacity blend width height transform mask gradient effects assetId strokes adjustmentLayer adjustments color colorSelection hue black white gamma curve shape fill stroke strokeWidth anchors closed subpaths vectorOverflow fillRule lineCap lineJoin miterLimit dash dashOffset fillOpacity strokeOpacity pathData tail text fontFamily fontSize fontWeight lineHeight letterSpacing align".split(
+          " ",
+        );
+      if (Object.keys(l).some((k) => !allowed.includes(k)))
+        throw Error("Unknown schema2 layer field.");
+    }
+    if (l.adjustmentLayer !== undefined) {
+      if (d.version !== 2 || l.kind !== "adjustment")
+        throw Error(
+          "Persistent color adjustments require document schema2 and an adjustment layer.",
+        );
+      validateAdjustmentLayer(l.adjustmentLayer);
+      if (
+        l.assetId !== undefined ||
+        !Array.isArray(l.strokes) ||
+        l.strokes.length ||
+        l.color !== undefined ||
+        l.colorSelection !== undefined ||
+        !l.adjustments ||
+        Object.values(l.adjustments).some((n) => n !== 0) ||
+        l.hue ||
+        l.black ||
+        l.white !== 255 ||
+        l.gamma !== 1 ||
+        !Array.isArray(l.curve) ||
+        l.curve.some((n, i) => n !== [0, 64, 128, 192, 255][i])
+      )
+        throw Error("Persistent adjustments cannot mix legacy color settings or raster artwork.");
+    }
     if (l.bubble !== undefined) {
       validateBubble(l.bubble);
       if (l.kind !== "shape" || l.shape !== "path")
@@ -622,6 +663,16 @@ export function validateDocument(d: ProDocument) {
       commands += s.points.length;
     }
     if (l.mask) {
+      if (
+        d.version === 2 &&
+        Object.keys(l.mask).some(
+          (k) =>
+            !"width height placement linked selection strokes enabled density feather inverted"
+              .split(" ")
+              .includes(k),
+        )
+      )
+        throw Error("Unknown schema2 mask field.");
       if (l.mask.placement !== undefined) {
         if (Array.isArray(l.mask.placement)) validateAffineMatrix(l.mask.placement);
         else {

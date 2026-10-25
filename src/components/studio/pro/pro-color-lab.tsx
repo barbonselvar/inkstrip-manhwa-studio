@@ -62,7 +62,7 @@ function Control({
     </div>
   );
 }
-function Histogram({ bins }: { bins: number[] | undefined }) {
+export function ColorHistogramView({ bins }: { bins: number[] | undefined }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = canvas.current;
@@ -257,140 +257,23 @@ function CurveEditor({
     </div>
   );
 }
-export function ProColorLab({
-  origin,
-  layerId,
-  session,
-  maxArea,
-  onCancel,
-  onApply,
+export function ColorOperationFields({
+  operation,
+  setOperation,
+  channel,
+  setChannel,
+  hist,
+  onEdit,
+  allowedKinds,
 }: {
-  origin: ProDocument;
-  layerId: string;
-  session: ProSession;
-  maxArea: number;
-  onCancel: () => void;
-  onApply: (blob: Blob) => true | string;
+  operation: ColorOperation;
+  setOperation: React.Dispatch<React.SetStateAction<ColorOperation>>;
+  channel: Channel;
+  setChannel: (c: Channel) => void;
+  hist: Record<Channel, number[]> | null;
+  onEdit?: () => void;
+  allowedKinds?: readonly ColorOperation["kind"][];
 }) {
-  const snapshot = useRef(session).current;
-  const target = origin.layers.find((l) => l.id === layerId)!;
-  const [operation, setOperation] = useState<ColorOperation>(() =>
-      defaultOperation("brightnessContrast"),
-    ),
-    [channel, setChannel] = useState<Channel>("rgb"),
-    [source, setSource] = useState<Blob | null>(null),
-    [result, setResult] = useState<{ blob: Blob; key: string } | null>(null),
-    [displayedKey, setDisplayedKey] = useState(""),
-    [before, setBefore] = useState(false),
-    [selectionOnly, setSelectionOnly] = useState(false),
-    [hist, setHist] = useState<Record<Channel, number[]> | null>(null),
-    [error, setError] = useState(""),
-    [processing, setProcessing] = useState(true),
-    [timing, setTiming] = useState(0),
-    [custom, setCustom] = useState<ColorPreset[]>(() => loadColorPresets(storage())),
-    [presetName, setPresetName] = useState(""),
-    [presetStatus, setPresetStatus] = useState("");
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const key = JSON.stringify({ operation, selectionOnly }),
-    latestKey = useRef(key);
-  latestKey.current = key;
-  const applyRef = useRef(onApply);
-  applyRef.current = onApply;
-  useEffect(() => {
-    let alive = true;
-    const renderer = new ProRenderer();
-    void renderer
-      .init({ ...snapshot, document: origin }, maxArea)
-      .then(() => renderer.colorSource(origin, maxArea, layerId))
-      .then((r) => {
-        if (alive && r.blob) setSource(r.blob);
-      })
-      .catch((e) => {
-        if (alive) {
-          setError(e.message);
-          setProcessing(false);
-        }
-      })
-      .finally(() => renderer.dispose());
-    return () => {
-      alive = false;
-      renderer.dispose();
-    };
-  }, [origin, snapshot, maxArea, layerId]);
-  useEffect(() => {
-    if (!source) return;
-    let active = true;
-    let worker: Worker | undefined;
-    setProcessing(true);
-    setError("");
-    setResult(null);
-    const timer = setTimeout(() => {
-      worker = new Worker(new URL("../../../lib/studio/pro/color-worker.ts", import.meta.url), {
-        type: "module",
-      });
-      worker.onmessage = ({ data }) => {
-        data.bitmap?.close();
-        if (!active) return;
-        if (data.error) {
-          setError(data.error);
-          setProcessing(false);
-          worker?.terminate();
-          return;
-        }
-        setResult({ blob: data.blob, key });
-        setHist(data.histogram);
-        setTiming(data.milliseconds);
-        setProcessing(false);
-        worker?.terminate();
-      };
-      worker.onerror = () => {
-        if (active) {
-          setError("Color processing worker stopped. Reduce the filter radius or layer size.");
-          setProcessing(false);
-        }
-        worker?.terminate();
-      };
-      worker.postMessage({
-        source,
-        operation,
-        selection: selectionOnly
-          ? toLocalSelection(origin.selection ?? EMPTY_SELECTION, target, {
-              width: origin.width,
-              height: origin.height,
-            })
-          : undefined,
-        maxArea,
-      });
-    }, 100);
-    return () => {
-      clearTimeout(timer);
-      active = false;
-      worker?.terminate();
-    };
-  }, [source, key, operation, selectionOnly, origin, target, maxArea]);
-  useEffect(() => {
-    let valid = true;
-    const blob = before ? source : result?.key === key ? result.blob : null;
-    if (blob)
-      void createImageBitmap(blob)
-        .then((b) => {
-          if (valid && canvas.current) {
-            canvas.current.width = b.width;
-            canvas.current.height = b.height;
-            canvas.current.getContext("2d")!.drawImage(b, 0, 0);
-            if (!before) setDisplayedKey(key);
-          }
-          b.close();
-        })
-        .catch((e) => {
-          if (valid) setError(`Preview decode failed: ${e.message}`);
-        });
-    else if (canvas.current)
-      canvas.current.getContext("2d")!.clearRect(0, 0, canvas.current.width, canvas.current.height);
-    return () => {
-      valid = false;
-    };
-  }, [source, result, key, before]);
   // Typed generic patch stays local to this validated discriminated operation.
   const patch = (p: Record<string, unknown>) =>
     setOperation((v) => ({ ...v, ...p }) as ColorOperation);
@@ -622,6 +505,274 @@ export function ProColorLab({
       );
   }
   return (
+    <>
+      <label className="pro-field">
+        Adjustment or filter
+        <select
+          className="field"
+          aria-label="Adjustment or filter"
+          value={operation.kind}
+          onChange={(e) => {
+            setOperation(defaultOperation(e.target.value as ColorOperation["kind"]));
+            onEdit?.();
+          }}
+        >
+          {Object.entries(COLOR_OPERATIONS)
+            .filter(([k]) => !allowedKinds || allowedKinds.includes(k as ColorOperation["kind"]))
+            .map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+        </select>
+      </label>
+      {(operation.kind === "levels" || operation.kind === "curves") && (
+        <label className="pro-field">
+          Channel
+          <select
+            className="field"
+            aria-label="Color channel"
+            value={channel}
+            onChange={(e) => setChannel(e.target.value as Channel)}
+          >
+            {CHANNELS.map((c) => (
+              <option key={c} value={c}>
+                {c === "rgb" ? "RGB composite" : c}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {controls}
+    </>
+  );
+}
+export function ColorPresetControls({
+  operation,
+  onChange,
+  allowedKinds,
+}: {
+  operation: ColorOperation;
+  onChange: (a: ColorOperation, name?: string) => void;
+  allowedKinds?: readonly ColorOperation["kind"][];
+}) {
+  const [custom, setCustom] = useState<ColorPreset[]>(() => loadColorPresets(storage())),
+    [presetName, setPresetName] = useState(""),
+    [presetStatus, setPresetStatus] = useState("");
+  const choices = [...COLOR_PRESETS, ...custom].filter(
+    (p) => !allowedKinds || allowedKinds.includes(p.operation.kind),
+  );
+  return (
+    <details>
+      <summary>Presets</summary>
+      <label className="pro-field">
+        Color preset
+        <select
+          className="field"
+          aria-label="Color preset"
+          value=""
+          onChange={(e) => {
+            const p = choices[+e.target.value];
+            if (p) {
+              onChange(structuredClone(p.operation), p.name);
+            }
+          }}
+        >
+          <option value="" disabled>
+            Choose preset
+          </option>
+          {choices.map((p, i) => (
+            <option key={p.name} value={i}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="pro-field">
+        Custom preset name
+        <input
+          className="field"
+          aria-label="Custom color preset name"
+          value={presetName}
+          maxLength={80}
+          onChange={(e) => setPresetName(e.target.value)}
+        />
+      </label>
+      <Button
+        variant="secondary"
+        onClick={() => {
+          try {
+            const next = [
+              ...custom,
+              { name: presetName.trim(), operation: structuredClone(operation) },
+            ];
+            storeColorPresets(storage(), next);
+            setCustom(next);
+            setPresetName("");
+            setPresetStatus("Custom preset saved on this device.");
+          } catch (e) {
+            setPresetStatus((e as Error).message);
+          }
+        }}
+      >
+        Save color preset
+      </Button>
+      {custom.map((p) => (
+        <Button
+          variant="ghost"
+          key={p.name}
+          onClick={() => {
+            try {
+              const next = custom.filter((v) => v.name !== p.name);
+              storeColorPresets(storage(), next);
+              setCustom(next);
+              setPresetStatus("Preset removed.");
+            } catch (e) {
+              setPresetStatus((e as Error).message);
+            }
+          }}
+        >
+          Delete {p.name}
+        </Button>
+      ))}
+      <p className="pro-help" role="status">
+        {presetStatus}
+      </p>
+    </details>
+  );
+}
+export function ProColorLab({
+  origin,
+  layerId,
+  session,
+  maxArea,
+  onCancel,
+  onApply,
+}: {
+  origin: ProDocument;
+  layerId: string;
+  session: ProSession;
+  maxArea: number;
+  onCancel: () => void;
+  onApply: (blob: Blob) => true | string;
+}) {
+  const snapshot = useRef(session).current;
+  const target = origin.layers.find((l) => l.id === layerId)!;
+  const [operation, setOperation] = useState<ColorOperation>(() =>
+      defaultOperation("brightnessContrast"),
+    ),
+    [channel, setChannel] = useState<Channel>("rgb"),
+    [source, setSource] = useState<Blob | null>(null),
+    [result, setResult] = useState<{ blob: Blob; key: string } | null>(null),
+    [displayedKey, setDisplayedKey] = useState(""),
+    [before, setBefore] = useState(false),
+    [selectionOnly, setSelectionOnly] = useState(false),
+    [hist, setHist] = useState<Record<Channel, number[]> | null>(null),
+    [error, setError] = useState(""),
+    [processing, setProcessing] = useState(true),
+    [timing, setTiming] = useState(0);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const key = JSON.stringify({ operation, selectionOnly }),
+    latestKey = useRef(key);
+  latestKey.current = key;
+  const applyRef = useRef(onApply);
+  applyRef.current = onApply;
+  useEffect(() => {
+    let alive = true;
+    const renderer = new ProRenderer();
+    void renderer
+      .init({ ...snapshot, document: origin }, maxArea)
+      .then(() => renderer.colorSource(origin, maxArea, layerId))
+      .then((r) => {
+        if (alive && r.blob) setSource(r.blob);
+      })
+      .catch((e) => {
+        if (alive) {
+          setError(e.message);
+          setProcessing(false);
+        }
+      })
+      .finally(() => renderer.dispose());
+    return () => {
+      alive = false;
+      renderer.dispose();
+    };
+  }, [origin, snapshot, maxArea, layerId]);
+  useEffect(() => {
+    if (!source) return;
+    let active = true;
+    let worker: Worker | undefined;
+    setProcessing(true);
+    setError("");
+    setResult(null);
+    const timer = setTimeout(() => {
+      worker = new Worker(new URL("../../../lib/studio/pro/color-worker.ts", import.meta.url), {
+        type: "module",
+      });
+      worker.onmessage = ({ data }) => {
+        data.bitmap?.close();
+        if (!active) return;
+        if (data.error) {
+          setError(data.error);
+          setProcessing(false);
+          worker?.terminate();
+          return;
+        }
+        setResult({ blob: data.blob, key });
+        setHist(data.histogram);
+        setTiming(data.milliseconds);
+        setProcessing(false);
+        worker?.terminate();
+      };
+      worker.onerror = () => {
+        if (active) {
+          setError("Color processing worker stopped. Reduce the filter radius or layer size.");
+          setProcessing(false);
+        }
+        worker?.terminate();
+      };
+      worker.postMessage({
+        source,
+        operation,
+        selection: selectionOnly
+          ? toLocalSelection(origin.selection ?? EMPTY_SELECTION, target, {
+              width: origin.width,
+              height: origin.height,
+            })
+          : undefined,
+        maxArea,
+      });
+    }, 100);
+    return () => {
+      clearTimeout(timer);
+      active = false;
+      worker?.terminate();
+    };
+  }, [source, key, operation, selectionOnly, origin, target, maxArea]);
+  useEffect(() => {
+    let valid = true;
+    const blob = before ? source : result?.key === key ? result.blob : null;
+    if (blob)
+      void createImageBitmap(blob)
+        .then((b) => {
+          if (valid && canvas.current) {
+            canvas.current.width = b.width;
+            canvas.current.height = b.height;
+            canvas.current.getContext("2d")!.drawImage(b, 0, 0);
+            if (!before) setDisplayedKey(key);
+          }
+          b.close();
+        })
+        .catch((e) => {
+          if (valid) setError(`Preview decode failed: ${e.message}`);
+        });
+    else if (canvas.current)
+      canvas.current.getContext("2d")!.clearRect(0, 0, canvas.current.width, canvas.current.height);
+    return () => {
+      valid = false;
+    };
+  }, [source, result, key, before]);
+  return (
     <Dialog.Root
       open
       onOpenChange={(open) => {
@@ -671,7 +822,7 @@ export function ProColorLab({
                 />
                 Before / after
               </label>
-              <Histogram bins={hist?.[channel]} />
+              <ColorHistogramView bins={hist?.[channel]} />
               <p role="status" className="pro-help">
                 {processing
                   ? "Processing stable source…"
@@ -681,42 +832,14 @@ export function ProColorLab({
               </p>
             </div>
             <div className="r6-controls">
-              <label className="pro-field">
-                Adjustment or filter
-                <select
-                  className="field"
-                  aria-label="Adjustment or filter"
-                  value={operation.kind}
-                  onChange={(e) => {
-                    setOperation(defaultOperation(e.target.value as ColorOperation["kind"]));
-                    setBefore(false);
-                  }}
-                >
-                  {Object.entries(COLOR_OPERATIONS).map(([k, v]) => (
-                    <option key={k} value={k}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {(operation.kind === "levels" || operation.kind === "curves") && (
-                <label className="pro-field">
-                  Channel
-                  <select
-                    className="field"
-                    aria-label="Color channel"
-                    value={channel}
-                    onChange={(e) => setChannel(e.target.value as Channel)}
-                  >
-                    {CHANNELS.map((c) => (
-                      <option key={c} value={c}>
-                        {c === "rgb" ? "RGB composite" : c}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              {controls}
+              <ColorOperationFields
+                operation={operation}
+                setOperation={setOperation}
+                channel={channel}
+                setChannel={setChannel}
+                hist={hist}
+                onEdit={() => setBefore(false)}
+              />
               <label className="pro-check">
                 <input
                   type="checkbox"
@@ -727,83 +850,13 @@ export function ProColorLab({
                 />
                 Limit operation to captured selection
               </label>
-              <details>
-                <summary>Presets</summary>
-                <label className="pro-field">
-                  Color preset
-                  <select
-                    className="field"
-                    aria-label="Color preset"
-                    value=""
-                    onChange={(e) => {
-                      const p = [...COLOR_PRESETS, ...custom][+e.target.value];
-                      if (p) {
-                        setOperation(structuredClone(p.operation));
-                        setBefore(false);
-                      }
-                    }}
-                  >
-                    <option value="" disabled>
-                      Choose preset
-                    </option>
-                    {[...COLOR_PRESETS, ...custom].map((p, i) => (
-                      <option key={p.name} value={i}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="pro-field">
-                  Custom preset name
-                  <input
-                    className="field"
-                    aria-label="Custom color preset name"
-                    value={presetName}
-                    maxLength={80}
-                    onChange={(e) => setPresetName(e.target.value)}
-                  />
-                </label>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    try {
-                      const next = [
-                        ...custom,
-                        { name: presetName.trim(), operation: structuredClone(operation) },
-                      ];
-                      storeColorPresets(storage(), next);
-                      setCustom(next);
-                      setPresetName("");
-                      setPresetStatus("Custom preset saved on this device.");
-                    } catch (e) {
-                      setPresetStatus((e as Error).message);
-                    }
-                  }}
-                >
-                  Save color preset
-                </Button>
-                {custom.map((p) => (
-                  <Button
-                    variant="ghost"
-                    key={p.name}
-                    onClick={() => {
-                      try {
-                        const next = custom.filter((v) => v.name !== p.name);
-                        storeColorPresets(storage(), next);
-                        setCustom(next);
-                        setPresetStatus("Preset removed.");
-                      } catch (e) {
-                        setPresetStatus((e as Error).message);
-                      }
-                    }}
-                  >
-                    Delete {p.name}
-                  </Button>
-                ))}
-                <p className="pro-help" role="status">
-                  {presetStatus}
-                </p>
-              </details>
+              <ColorPresetControls
+                operation={operation}
+                onChange={(value) => {
+                  setOperation(value);
+                  setBefore(false);
+                }}
+              />
             </div>
           </div>
           {error && (

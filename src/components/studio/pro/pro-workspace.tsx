@@ -1,3 +1,11 @@
+import { ProAdjustmentLab } from "./pro-adjustment-lab";
+import {
+  adjustmentDocument,
+  createAdjustmentDraft,
+  commitAdjustmentDocument,
+  type AdjustmentDraft,
+} from "@/lib/studio/pro/adjustment-layer";
+import type { AdjustmentLayerSettings } from "@/lib/studio/pro/adjustment-schema";
 import { ProColorLab } from "./pro-color-lab";
 import { colorTarget, prepareColorCommit } from "@/lib/studio/pro/color-transaction";
 import { previewTransform } from "@/lib/studio/pro/transform-session";
@@ -139,6 +147,7 @@ export default function ProWorkspace({
   const [colorDraft, setColorDraft] = useState<{ origin: ProDocument; layerId: string } | null>(
     null,
   );
+  const [adjustmentDraft, setAdjustmentDraft] = useState<AdjustmentDraft | null>(null);
   const [dialoguePending, setDialoguePending] = useState(false);
   const dialoguePendingRef = useRef(false);
   dialoguePendingRef.current = dialoguePending;
@@ -221,6 +230,7 @@ export default function ProWorkspace({
     [error, setError] = useState(""),
     [status, setStatus] = useState("Opening layered document…"),
     [saved, setSaved] = useState(false),
+    [saveAcknowledgment, setSaveAcknowledgment] = useState(0),
     [assetEpoch, setAssetEpoch] = useState(0),
     [ready, setReady] = useState(0),
     [rendering, setRendering] = useState(false),
@@ -241,6 +251,7 @@ export default function ProWorkspace({
     alive = useRef(true),
     closeInProgress = useRef(false),
     saveTail = useRef<Promise<unknown>>(Promise.resolve()),
+    pendingSaves = useRef(0),
     lastSaved = useRef(""),
     generation = useRef(0),
     busyRef = useRef(false),
@@ -347,6 +358,8 @@ export default function ProWorkspace({
     };
   }, [panel]);
   const persist = useCallback((document: ProDocument) => {
+    pendingSaves.current++;
+    if (alive.current) setSaved(false);
     const task = saveTail.current
       .catch(() => {})
       .then(async () => {
@@ -366,18 +379,37 @@ export default function ProWorkspace({
         if (alive.current) {
           setSession(currentSession);
           lastSaved.current = JSON.stringify(document);
-          setSaved(JSON.stringify(historyRef.current?.present.doc) === lastSaved.current);
         }
         return next;
-      });
+      })
+      .then(
+        (next) => {
+          pendingSaves.current--;
+          if (alive.current) {
+            setSaved(
+              pendingSaves.current === 0 &&
+                JSON.stringify(historyRef.current?.present.doc) === lastSaved.current,
+            );
+            // An older acknowledgement may have persisted a state we already undid/redid.
+            // Re-evaluate autosave even when history itself has not changed since that request.
+            setSaveAcknowledgment((n) => n + 1);
+          }
+          return next;
+        },
+        (error) => {
+          pendingSaves.current--;
+          throw error;
+        },
+      );
     saveTail.current = task;
     return task;
   }, []);
   useEffect(() => {
     if (!history || !sessionRef.current || closeInProgress.current || busy) return;
     const signature = JSON.stringify(history.present.doc);
-    setSaved(signature === lastSaved.current);
-    if (signature === lastSaved.current) return;
+    const durable = signature === lastSaved.current && pendingSaves.current === 0;
+    setSaved(durable);
+    if (durable || pendingSaves.current > 0) return;
     const timer = setTimeout(() => {
       if (closeInProgress.current || busyRef.current) return;
       void persist(history.present.doc).catch((e) => {
@@ -388,12 +420,13 @@ export default function ProWorkspace({
       });
     }, 500);
     return () => clearTimeout(timer);
-  }, [history, persist, busy]);
+  }, [history, persist, busy, saveAcknowledgment]);
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
       if (
         historyRef.current &&
-        JSON.stringify(historyRef.current.present.doc) !== lastSaved.current
+        (pendingSaves.current > 0 ||
+          JSON.stringify(historyRef.current.present.doc) !== lastSaved.current)
       ) {
         e.preventDefault();
         e.returnValue = "";
@@ -560,6 +593,33 @@ export default function ProWorkspace({
     },
     [setHist, maxArea],
   );
+  const applyPersistentAdjustment = (settings: AdjustmentLayerSettings): true | string => {
+    const current = historyRef.current?.present.doc;
+    if (!current || !adjustmentDraft || busyRef.current || transformRef.current)
+      return "The adjustment target is busy or unavailable.";
+    try {
+      const next = commitAdjustmentDocument(current, adjustmentDraft, settings, maxArea);
+      if (
+        next !== current &&
+        !commit(next, adjustmentDraft.created ? "Create color adjustment" : "Edit color adjustment")
+      )
+        return "The document rejected these adjustment settings. Original settings are unchanged.";
+      setSelectedIds([adjustmentDraft.layerId]);
+      setMaskMode(false);
+      setStatus("Editable color adjustment saved. Original artwork is unchanged.");
+      return true;
+    } catch (e) {
+      return storageMessage(e);
+    }
+  };
+  useEffect(() => {
+    if (
+      adjustmentDraft &&
+      (history?.present.doc !== adjustmentDraft.origin ||
+        (!adjustmentDraft.created && selectedIds[0] !== adjustmentDraft.layerId))
+    )
+      setAdjustmentDraft(null);
+  }, [history?.present.doc, selectedIds, adjustmentDraft]);
   const applyColor = (blob: Blob) => {
     const current = historyRef.current?.present.doc,
       live = sessionRef.current;
@@ -2519,6 +2579,62 @@ export default function ProWorkspace({
                   {tab === "properties" && (
                     <>
                       {mode === "raster" && !dialogue && (
+                        <>
+                          <Button
+                            variant="secondary"
+                            disabled={busy || !!transformDraft || !!cropDraft || maskMode}
+                            onClick={() => {
+                              const current = historyRef.current?.present.doc;
+                              if (!current || busyRef.current || transient) return;
+                              try {
+                                const draft = createAdjustmentDraft(current, active?.id);
+                                adjustmentDocument(
+                                  draft,
+                                  {
+                                    version: 1,
+                                    operation: {
+                                      kind: "brightnessContrast",
+                                      brightness: 0,
+                                      contrast: 0,
+                                    },
+                                  },
+                                  maxArea,
+                                );
+                                setAdjustmentDraft(draft);
+                              } catch (e) {
+                                setError(storageMessage(e));
+                              }
+                            }}
+                          >
+                            New color adjustment
+                          </Button>
+                          {active?.adjustmentLayer && (
+                            <>
+                              <p className="pro-help">
+                                Persistent color settings · masks, opacity and order stay editable.
+                              </p>
+                              <Button
+                                variant="secondary"
+                                disabled={
+                                  busy ||
+                                  !!transformDraft ||
+                                  !!cropDraft ||
+                                  maskMode ||
+                                  isLocked(doc!, active.id)
+                                }
+                                onClick={() => {
+                                  const current = historyRef.current?.present.doc;
+                                  if (current && active)
+                                    setAdjustmentDraft({ origin: current, layerId: active.id });
+                                }}
+                              >
+                                Edit adjustment settings
+                              </Button>
+                            </>
+                          )}
+                        </>
+                      )}
+                      {mode === "raster" && !dialogue && (
                         <Button
                           variant="secondary"
                           disabled={
@@ -2974,6 +3090,16 @@ export default function ProWorkspace({
               <span className="pro-private-label">On this device · original-safe</span>
             )}
           </footer>
+          {adjustmentDraft && session && (
+            <ProAdjustmentLab
+              key={adjustmentDraft.layerId}
+              draft={adjustmentDraft}
+              session={session}
+              maxArea={maxArea}
+              onCancel={() => setAdjustmentDraft(null)}
+              onApply={applyPersistentAdjustment}
+            />
+          )}
           {colorDraft && session && (
             <ProColorLab
               origin={colorDraft.origin}

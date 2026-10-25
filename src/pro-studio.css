@@ -1617,3 +1617,11 @@
     flex-wrap: wrap;
   }
 }
+
+.r6-lab header > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.r6-lab header > button {
+  flex-shrink: 0;
+}

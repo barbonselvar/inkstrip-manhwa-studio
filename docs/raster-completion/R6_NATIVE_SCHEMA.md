@@ -1,0 +1,25 @@
+# R6 persistent adjustment design (authorized extension)
+
+Verified baseline 2026-10-25: main `740720c1d5e141c7f52ecab83d2e505fea7183f0`; R6 PR16 Draft `21fafe068d2c6bb3531c7c949e614501141240fb`. R7 PR17 `8f2134d87e1c10da53fbe7740a986adcd4dcd1c6` overlaps workspace/client/worker but changes neither model nor native formats. No active Chapter change is on main; Chapter backup/recovery APIs must preserve native sessions. AI PR6 reserves envelope6, Dialogue uses7. No unrelated branches are imported.
+
+## Schema and compatibility
+
+Portable envelope8 carries internal document schema2. Legacy envelopes1–5/7 and internal schema1 remain readable and re-exportable unchanged. Adding the first advanced adjustment explicitly upgrades the document to schema2 in the same history action; no legacy layer, source asset, ID, geometry or setting is removed. Undo can restore schema1. Schema2 exports always use8, including after the last advanced layer is deleted. Old readers reject8 and also reject internal2; this prevents silent loss through portable files and Chapter backups. AI6 remains unsupported, independently reserved.
+
+An existing `kind: adjustment` layer gains optional typed `adjustmentLayer: {version: 1, operation: AdjustmentOperation, preset?: {name: string}}`. Operation parameters reuse R6's validated color engine. The eleven persistent types are brightness/contrast, channel Levels, channel cubic Curves, HSL, tonal Balance, exposure/gamma, vibrance/saturation, channel B&W, invert, threshold and posterize. Spatial filters remain in the existing bounded pixel workflow. Legacy adjustment layers without this record keep their exact old behavior. New records require schema2 and neutral legacy color fields so processing order is unambiguous. Masks, opacity, clipping, transform, visibility and blend use existing layer fields.
+
+New envelope/record keys, versions, operation types/ranges, curve ordering, IDs, resources and dangerous JSON keys are validated; unknown types/versions fail before asset decode. New files use canonical key ordering and unchanged layer-array order. Asset bytes are never rewritten. Legacy-to-schema2 upgrade is lossless metadata migration. No serialized code is interpreted.
+
+Recovery storage upgrades `inkstrip-pro` from3 to4 without changing stores or rewriting legacy sessions. This version fence prevents pre-R6 readers opening the same origin's new drafts; their open3 request fails rather than overwriting schema2. Existing versionchange/blocked and unreleased AI guards remain. Chapter's existing backup version2 can carry the typed session: pre-R6 readers reject internal2 through their existing native validation. All associations and immutable source references remain unchanged.
+
+## Rendering and transactions
+
+Each new adjustment transforms the current visible backdrop below its stack position, in the same isolated group. A clipped adjustment transforms only its clipping base stack; an unclipped adjustment is never a clipping base. Group masks and opacity apply after children. Existing mask/plane coverage, clipping alpha, opacity and supported RGB blend modes interpolate the result. Transparent backdrop pixels retain their alpha; source raster, paint strokes, vectors and text remain editable. Hidden layers do not process output. Locks protect editing the adjustment record; a lower locked artwork layer can still be viewed through an adjustment, as with legacy adjustment layers.
+
+Point operations process bounded tiles through the same R6 pixel engine. They have no spatial neighborhood, so tile boundaries introduce no seams. Each tile yields for cancellation; normal worker generation guards reject stale results. Full native output is not silently reduced. Source and cumulative adjustment work budgets remain enforced; any larger supported size must be measured before acceptance. Existing 4MP destructive/spatial-filter limits remain intact.
+
+An isolated draft panel reuses the current controls, curve editor, presets and histogram. A dedicated renderer previews the entire composite without adding assets or recording intermediate slider states. Histograms sample the real native input at the adjustment's exact stack position. Apply compares the live immutable document identity and commits one existing history transaction. Cancel, unmount, document/layer switches and old asynchronous results cannot publish settings. Native/autosave only see accepted metadata.
+
+## Validation plan
+
+Round-trip all legacy envelopes and schema2/8; canonical bytes; malformed/future/prototype input; legacy-reader rejection; recovery fencing; source hashes; stack/group/clip/mask/opacity/blend pixel references; exact Cancel/Apply/Undo/Redo/native/recovery/export; all five mobile/desktop widths; R3/R5; point-tile seam/cancellation and actual large-document timings/memory. Update the three R6 reports with observed results, not this plan alone. Keep PR16 Draft, no main writes, merges or deployment.
