@@ -21,6 +21,7 @@ const EXTENSIONS = [
   "tiff",
   "heic",
   "heif",
+  "jxl",
   "svg",
   "ico",
 ];
@@ -28,7 +29,7 @@ const EXTENSIONS = [
 export const IMAGE_ACCEPT = ["image/*", ...EXTENSIONS.map((ext) => `.${ext}`)].join(",");
 
 export const FORMAT_HINT =
-  "JPG, PNG, WebP, GIF, BMP, ICO, still AVIF/HEIF, classic TIFF and safe SVG. Browser codec support and resource limits apply.";
+  "JPG, PNG, WebP, AVIF, GIF, BMP, ICO and safe SVG keep their original file. HEIC/HEIF, TIFF and JPEG XL are converted to lossless PNG. Animated GIF/WebP/APNG keep their file; the first frame is displayed and edited.";
 
 export function isImageFile(file: File) {
   if (file.type.startsWith("image/")) return true;
@@ -199,12 +200,31 @@ export async function stitchChapter(
       total,
       plan.parts.length > 1 ? `Drawing part ${index + 1}` : "Drawing the page",
     );
+    const only = part.panels.length === 1 ? part.panels[0]! : undefined,
+      source = only && byId.get(only.id);
+    // A page that is exactly one JPEG at its native size keeps the original bytes: no
+    // generational JPEG loss (EXIF orientation still applies when the page is shown).
+    if (
+      plan.parts.length === 1 &&
+      only &&
+      source &&
+      options.format === "image/jpeg" &&
+      source.blob.type === "image/jpeg" &&
+      only.srcY === 0 &&
+      only.drawH === only.fullH &&
+      only.drawW === source.sw &&
+      only.fullH === source.sh &&
+      part.height === source.sh
+    ) {
+      done++;
+      onProgress?.(done, total, `Drawing ${done} of ${total}`);
+      parts.push({ blob: source.blob, height: part.height });
+      continue;
+    }
     const blob = await renderPart({
       width: plan.width,
       part,
       frames: byId,
-      gap: options.gap,
-      isLastPart: index === plan.parts.length - 1,
       format: options.format,
       onImage: () => {
         done++;
@@ -222,8 +242,6 @@ async function renderPart(input: {
   part: PlannedPart;
   frames: Map<string, { id: string; sw: number; sh: number; blob: Blob }>;
   onImage: () => void;
-  gap: number;
-  isLastPart: boolean;
   format: StripFormat;
 }) {
   const canvas = document.createElement("canvas");
@@ -237,21 +255,28 @@ async function renderPart(input: {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    const gap = Math.max(0, Math.round(input.gap));
-    let y = 0;
-    for (let index = 0; index < input.part.panels.length; index++) {
-      const panel = input.part.panels[index]!,
-        frame = input.frames.get(panel.id);
+    for (const panel of input.part.panels) {
+      const frame = input.frames.get(panel.id);
       if (!frame) throw new Error("A panel could not be drawn.");
       const image = await decodeBlob(frame.blob);
       try {
-        ctx.drawImage(image.source, panel.x, y, panel.drawW, panel.drawH);
+        // Draw only this segment's source rows; a tall panel continues in the next part.
+        const scale = image.height / panel.fullH;
+        ctx.drawImage(
+          image.source,
+          0,
+          panel.srcY * scale,
+          image.width,
+          panel.drawH * scale,
+          panel.x,
+          panel.y,
+          panel.drawW,
+          panel.drawH,
+        );
       } finally {
         image.close();
       }
-      y += panel.drawH;
-      if (!(index === input.part.panels.length - 1 && input.isLastPart)) y += gap;
-      input.onImage();
+      if (panel.srcY + panel.drawH >= panel.fullH) input.onImage();
       await yieldToPaint();
     }
 
