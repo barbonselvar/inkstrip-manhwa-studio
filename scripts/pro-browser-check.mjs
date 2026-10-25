@@ -9,6 +9,7 @@ import {
   EMPTY_SELECTION,
   toLocalSelection,
 } from "../src/lib/studio/pro/model.ts";
+import { legacyVector } from "./pro-browser-fixtures.mjs";
 const base = process.argv[2] ?? "http://127.0.0.1:8080";
 assert.ok(["localhost", "127.0.0.1"].includes(new URL(base).hostname));
 await mkdir("/workspace/screenshots", { recursive: true });
@@ -57,6 +58,9 @@ async function open(page) {
   await page.getByRole("button", { name: "Open in Raster Studio", exact: true }).click();
   await page.getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true }).waitFor();
   await page.getByRole("button", { name: "Brush tool", exact: true }).waitFor();
+  // Vector Studio is hidden by default; this suite uses its legacy entry point.
+  assert.equal(await page.getByRole("button", { name: "Vector", exact: true }).count(), 0);
+  await legacyVector(page);
   await page.getByRole("button", { name: "Vector", exact: true }).click();
   await page.getByRole("dialog", { name: "Inkstrip Vector Studio", exact: true }).waitFor();
   await page

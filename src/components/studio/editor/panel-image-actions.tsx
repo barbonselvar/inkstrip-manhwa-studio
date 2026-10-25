@@ -4,6 +4,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { LONG_PRESS_MS, withinPress } from "@/lib/studio/editor/gestures";
 import type { Panel } from "@/lib/studio/types";
+import { useLegacyVector } from "@/lib/studio/legacy-vector";
 
 export function PanelImageActions({
   panel,
@@ -23,6 +24,7 @@ export function PanelImageActions({
   onStudio: (mode: "raster" | "vector") => void;
 }) {
   const [menu, setMenu] = useState(false);
+  const legacyVector = useLegacyVector();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const start = useRef<{ x: number; y: number; pointer: number } | null>(null);
   const suppress = useRef(false);
@@ -191,16 +193,18 @@ export function PanelImageActions({
             <Paintbrush className="size-4" />
             Open in Raster Studio
           </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setMenu(false);
-              onStudio("vector");
-            }}
-          >
-            <PenTool className="size-4" />
-            Open in Vector Studio
-          </Button>
+          {legacyVector && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setMenu(false);
+                onStudio("vector");
+              }}
+            >
+              <PenTool className="size-4" />
+              Open in Vector Studio
+            </Button>
+          )}
           <Button
             variant="secondary"
             onClick={() => {

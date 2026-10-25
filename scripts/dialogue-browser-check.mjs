@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
+import { legacyVector } from "./pro-browser-fixtures.mjs";
 const base = process.argv[2] ?? "http://127.0.0.1:8080";
 const production = new URL(base).hostname === "inkstrip-manhwa-studio.vercel.app",
   expected = process.argv[3];
@@ -148,6 +149,7 @@ try {
     });
     if (width === 1440) {
       await page.getByLabel("Font family", { exact: true }).selectOption("Georgia");
+      await legacyVector(page);
       await page.getByRole("button", { name: "Vector", exact: true }).click();
       await page
         .getByRole("navigation", { name: "Pro panels", exact: true })

@@ -4,6 +4,7 @@ import { readFile, mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
 import { fromPanel, layer } from "../src/lib/studio/pro/model.ts";
 import { patchSelection } from "../src/lib/studio/pro/repair.ts";
+import { legacyVector } from "./pro-browser-fixtures.mjs";
 const base = process.argv[2] ?? "http://127.0.0.1:8080";
 assert.ok(["localhost", "127.0.0.1"].includes(new URL(base).hostname));
 await mkdir("/workspace/screenshots", { recursive: true });
@@ -484,6 +485,9 @@ try {
       p = await c.newPage();
     const originalSource = await start(p);
     const before = await records(p);
+    // Vector Studio is hidden from the Chapter workspace until its legacy entry is enabled.
+    assert.equal(await p.getByRole("button", { name: "Open in Vector Studio" }).count(), 0);
+    await legacyVector(p);
     for (const name of ["Open in Raster Studio", "Open in Vector Studio"]) {
       const entry = p.getByRole("button", { name, exact: true });
       await entry.scrollIntoViewIfNeeded();

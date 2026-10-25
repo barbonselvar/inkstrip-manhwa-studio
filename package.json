@@ -20,7 +20,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "check:build": "node scripts/check-build.mjs",
-    "test:studio": "node --experimental-strip-types --test src/lib/studio/enhance/enhance.test.ts src/lib/studio/image-policy.test.ts src/lib/studio/image-decode.test.ts src/lib/studio/chapter-import.test.ts src/lib/studio/reader-scroll.test.ts src/lib/studio/editor/editor.test.ts src/lib/studio/editor/adjustments.test.ts src/lib/studio/retouch/retouch.test.ts src/lib/ai/image-edit.test.ts src/lib/studio/faces/detect.test.ts src/lib/studio/characters/characters.test.ts src/lib/studio/order.test.ts src/lib/studio/backup.test.ts src/lib/studio/workflow.test.ts src/lib/studio/ui/preferences.test.ts src/lib/studio/ui/gallery.test.ts && npm run test:pro",
+    "test:studio": "node --experimental-strip-types --test src/lib/studio/enhance/enhance.test.ts src/lib/studio/image-policy.test.ts src/lib/studio/image-decode.test.ts src/lib/studio/chapter-import.test.ts src/lib/studio/legacy-vector.test.ts src/lib/studio/reader-scroll.test.ts src/lib/studio/editor/editor.test.ts src/lib/studio/editor/adjustments.test.ts src/lib/studio/retouch/retouch.test.ts src/lib/ai/image-edit.test.ts src/lib/studio/faces/detect.test.ts src/lib/studio/characters/characters.test.ts src/lib/studio/order.test.ts src/lib/studio/backup.test.ts src/lib/studio/workflow.test.ts src/lib/studio/ui/preferences.test.ts src/lib/studio/ui/gallery.test.ts && npm run test:pro",
     "test:studio:browser": "node scripts/studio-browser-check.mjs",
     "test:editor:browser": "node scripts/editor-browser-check.mjs",
     "test:adjustments:browser": "node scripts/adjustments-browser-check.mjs",
@@ -66,7 +66,8 @@
     "test:r5:browser": "node --experimental-strip-types scripts/r5-browser-check.mjs",
     "bench:r5": "node scripts/r5-benchmark.mjs",
     "test:r7:browser": "node --experimental-strip-types scripts/r7-selection-browser-check.mjs",
-    "test:chapter-display:browser": "node scripts/chapter-display-import-browser-check.mjs"
+    "test:chapter-display:browser": "node scripts/chapter-display-import-browser-check.mjs",
+    "test:vector-hidden:browser": "node --experimental-strip-types scripts/vector-deactivation-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

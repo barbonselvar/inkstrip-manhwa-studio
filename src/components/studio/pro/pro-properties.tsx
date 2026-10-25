@@ -448,7 +448,8 @@ export function ProProperties({
                 </label>
                 {selected.appearance !== undefined && (
                   <p className="pro-help">
-                    Edit this text object’s paints in Vector Studio’s Appearance panel.
+                    Edit this text object’s paints with the legacy Vector tools’ Appearance panel
+                    (Vector button above).
                   </p>
                 )}
                 <label className="pro-field">

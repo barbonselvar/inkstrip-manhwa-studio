@@ -1,5 +1,13 @@
 import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
+/** Enables Vector Studio's hidden legacy entry points in this page, exactly as the
+ * `?vector=legacy` link does (device flag plus change event), without reloading. */
+export async function legacyVector(p) {
+  await p.evaluate(() => {
+    localStorage.setItem("inkstrip-legacy-vector-v1", "1");
+    window.dispatchEvent(new Event("inkstrip-legacy-vector"));
+  });
+}
 /** Shared real-UI native/export fixtures; no app hooks or mocked workers. */
 export function proBrowserFixtures(base, errors) {
   // Inspector toggles resize the canvas through ResizeObserver. CDP coordinates
@@ -79,6 +87,8 @@ export function proBrowserFixtures(base, errors) {
   }
 
   async function open(p, mode = "Raster") {
+    // Vector Studio is hidden from navigation; its suites use the legacy entry point.
+    if (mode === "Vector") await legacyVector(p);
     const button = p.getByRole("button", { name: `Open in ${mode} Studio`, exact: true });
     await button.scrollIntoViewIfNeeded();
     assert.ok(await button.isVisible());
@@ -176,5 +186,17 @@ export function proBrowserFixtures(base, errors) {
       };
     });
   }
-  return { tab, records, start, open, load, native, raster, same, preview, artboardBounds };
+  return {
+    tab,
+    records,
+    start,
+    open,
+    load,
+    native,
+    raster,
+    same,
+    preview,
+    artboardBounds,
+    legacyVector,
+  };
 }

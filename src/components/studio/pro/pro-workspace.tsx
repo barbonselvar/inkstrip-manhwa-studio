@@ -55,6 +55,7 @@ import {
 import { coverageRegion } from "@/lib/studio/pro/refine-selection";
 import { thumbnailDocument } from "@/lib/studio/pro/thumbnails";
 import { ProSelectionTools } from "./pro-selection-tools";
+import { hasLegacyVectorContent, useLegacyVector } from "@/lib/studio/legacy-vector";
 import { bucketStroke, hasActiveSelection, intersectRegion } from "@/lib/studio/pro/fill";
 import { selectionCanvas } from "@/lib/studio/pro/render";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -221,6 +222,7 @@ export default function ProWorkspace({
   onContinue: (mode: "enhance" | "image" | "face") => void;
 }) {
   const [mode, setMode] = useState(initialMode);
+  const legacyVector = useLegacyVector();
   const [colorDraft, setColorDraft] = useState<{ origin: ProDocument; layerId: string } | null>(
     null,
   );
@@ -2536,23 +2538,28 @@ export default function ProWorkspace({
               >
                 <Brush /> Raster
               </Button>
-              <Button
-                type="button"
-                variant={mode === "vector" ? "secondary" : "ghost"}
-                aria-pressed={mode === "vector"}
-                disabled={busy || dialoguePending}
-                onClick={() => {
-                  setMode("vector");
-                  if (tab === "dialogue") setTab("layers");
-                  onModeChange("vector");
-                  if (transformRef.current) cancelTransform();
-                  setCropDraft(null);
-                  setTool("pen");
-                  setBefore(false);
-                }}
-              >
-                <PenTool /> Vector
-              </Button>
+              {/* Vector Studio is hidden; legacy access remains for vector-only content. */}
+              {(legacyVector ||
+                (mode === "vector" && !dialogue) ||
+                (doc && hasLegacyVectorContent(doc))) && (
+                <Button
+                  type="button"
+                  variant={mode === "vector" ? "secondary" : "ghost"}
+                  aria-pressed={mode === "vector"}
+                  disabled={busy || dialoguePending}
+                  onClick={() => {
+                    setMode("vector");
+                    if (tab === "dialogue") setTab("layers");
+                    onModeChange("vector");
+                    if (transformRef.current) cancelTransform();
+                    setCropDraft(null);
+                    setTool("pen");
+                    setBefore(false);
+                  }}
+                >
+                  <PenTool /> Vector
+                </Button>
+              )}
               {onDialogue && (
                 <Button
                   variant={dialogue ? "secondary" : "ghost"}
