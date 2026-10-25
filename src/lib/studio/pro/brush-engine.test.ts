@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   DAB_DEFAULTS,
+  MAX_DAB_PATH,
   MAX_STROKE_POINTS,
   appendBrushSample,
   brushDabs,
@@ -17,6 +18,7 @@ import {
   canDeleteBrushPreset,
   duplicateBrushPreset,
   loadPressureGamma,
+  renameBrushPreset,
   resetBrushPresets,
   savePressureGamma,
   upsertBrushPreset,
@@ -44,6 +46,7 @@ function record(
   gamma = 1,
 ) {
   let filtered: Stroke["points"][number] | undefined,
+    length: number | undefined,
     full = false;
   for (const p of samples) {
     if (full) break;
@@ -52,11 +55,13 @@ function record(
       filtered,
       { x: p.x, y: p.y, time: p.time },
       { pointerType, pressure: p.pressure ?? 0.5, pressureGamma: gamma },
+      length,
     );
     filtered = r.filtered;
+    length = r.length;
     full = r.full;
   }
-  return { filtered, full };
+  return { filtered, full, length };
 }
 const fast = Array.from({ length: 20 }, (_, i) => ({ x: (i + 1) * 15, y: 0, time: (i + 1) * 16 }));
 
@@ -297,4 +302,60 @@ test("pressure curve preference persists per device and survives corrupt storage
   data.set("inkstrip-pro-pen-pressure-v1", JSON.stringify({ gamma: 0.1 }));
   assert.equal(loadPressureGamma(storage), 1);
   assert.equal(loadPressureGamma(undefined), 1);
+});
+
+test("long dynamic strokes stop inside the dab budget instead of failing to commit", () => {
+  // Audit repro: a 64 px shading brush scribbling 14 passes over a 4,000 px page is only
+  // ~5,600 points but a 56,000 px path, which validation rejects (stroke lost).
+  const scribble = Array.from({ length: 14 * 400 }, (_, k) => {
+    const pass = Math.floor(k / 400),
+      i = (k % 400) + 1;
+    return { x: pass % 2 ? 4000 - i * 10 : i * 10, y: 100 + pass * 20 };
+  });
+  const s = stroke({
+    size: 64,
+    hardness: 0.2,
+    opacity: 0.6,
+    flow: 0.3,
+    dynamics: { ...DAB_DEFAULTS },
+  });
+  s.points = [{ x: 0, y: 100 }];
+  const { full, filtered, length } = record(s, scribble);
+  assert.equal(full, true);
+  assert.ok(s.points.length < MAX_STROKE_POINTS);
+  assert.ok(length! <= MAX_DAB_PATH && length! > MAX_DAB_PATH - 100);
+  finishBrushStroke(s, filtered, { x: 0, y: 380 }, length);
+  let measured = 0;
+  for (let i = 1; i < s.points.length; i++)
+    measured += Math.hypot(
+      s.points[i]!.x - s.points[i - 1]!.x,
+      s.points[i]!.y - s.points[i - 1]!.y,
+    );
+  near(measured, length!, 1e-6);
+  const d = fromPanel({ id: "r3", name: "R3", width: 4000, height: 600 }),
+    paint = layer("paint", 4000, 600, "paint");
+  paint.strokes = [s];
+  d.layers = [paint];
+  assert.doesNotThrow(() => validateDocument(d));
+  // Strokes without dynamics have no dab budget in validation; only points bound them.
+  const legacy = stroke({ size: 64 });
+  legacy.points = [{ x: 0, y: 100 }];
+  assert.equal(record(legacy, scribble).full, false);
+  d.layers[0]!.strokes = [legacy];
+  assert.doesNotThrow(() => validateDocument(d));
+});
+
+test("preset names: rename cannot shadow Inkstrip presets; duplicates stay valid", () => {
+  let stored = upsertBrushPreset(resetBrushPresets(), {
+    name: "My pen",
+    settings: { size: 5, hardness: 1, opacity: 1, flow: 1, color: "#111111" },
+  });
+  assert.throws(() => renameBrushPreset(stored, "My pen", "G-Pen"), /already exists/);
+  assert.throws(() => renameBrushPreset(stored, "My pen", "Ink · round"), /already exists/);
+  stored = renameBrushPreset(stored, "My pen", "My G");
+  const long = "N".repeat(40);
+  stored = upsertBrushPreset(stored, { name: long, settings: { ...stored.at(-1)!.settings } });
+  for (let i = 0; i < 12; i++) stored = duplicateBrushPreset(stored, long);
+  assert.ok(stored.every((p) => validateBrushPreset(p) && p.name.length <= 40));
+  assert.equal(new Set(stored.map((p) => p.name)).size, stored.length);
 });

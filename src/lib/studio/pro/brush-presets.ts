@@ -371,7 +371,7 @@ export function duplicateBrushPreset(stored: BrushPreset[], name: string) {
   const original = availableBrushPresets(stored).find((p) => p.name === name);
   if (!original) throw Error("Choose a preset to duplicate.");
   const taken = new Set(availableBrushPresets(stored).map((p) => p.name)),
-    base = `${name.slice(0, 33)} copy`;
+    base = `${name.slice(0, 30)} copy`;
   let next = base;
   for (let n = 2; taken.has(next); n++) next = `${base} ${n}`;
   return upsertBrushPreset(stored, { ...structuredClone(original), name: next });
@@ -406,7 +406,7 @@ export function renameBrushPreset(presets: BrushPreset[], name: string, nextName
   const preset = presets.find((p) => p.name === name);
   if (!preset || DEFAULT_BRUSH_PRESETS.some((p) => p.name === name))
     throw Error("Choose a custom preset to rename.");
-  if (presets.some((p) => p.name === nextName.trim()))
+  if (presets.some((p) => p.name === nextName.trim()) || isFactoryPreset(nextName.trim()))
     throw Error("A preset with that name already exists.");
   return upsertBrushPreset(
     presets.filter((p) => p.name !== name),

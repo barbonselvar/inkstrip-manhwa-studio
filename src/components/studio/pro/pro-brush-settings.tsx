@@ -192,6 +192,11 @@ export function ProBrushSettings({
             if (!name) return;
             if (pending.kind === "save")
               run(() => {
+                // Saving as new never overwrites; changing a preset is "Update preset".
+                if (presets.some((p) => p.name === name))
+                  throw Error(
+                    `A preset named “${name}” already exists. Choose another name, or select it and use Update preset.`,
+                  );
                 if (!onSaveBrushPreset(name)) throw Error("Preset was not saved.");
                 setCurrent(name);
               }, `Saved “${name}”.`);

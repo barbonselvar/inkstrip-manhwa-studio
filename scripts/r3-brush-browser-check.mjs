@@ -428,6 +428,14 @@ try {
           await p.getByLabel("Brush preset", { exact: true }).locator("option").allTextContents()
         ).includes(`Inks ${width}`),
       );
+      // Saving as new never overwrites an existing preset name.
+      await p.getByRole("button", { name: "Save current preset", exact: true }).click();
+      await p.getByLabel("New preset name", { exact: true }).fill("G-Pen");
+      await p.getByRole("button", { name: "Save preset", exact: true }).click();
+      await p.getByText(/A preset named “G-Pen” already exists/).waitFor();
+      await p.getByRole("button", { name: "Cancel", exact: true }).click();
+      await p.getByLabel("Brush preset", { exact: true }).selectOption("G-Pen");
+      assert.equal(await p.getByLabel("Brush size", { exact: true }).inputValue(), "14");
       await p.getByLabel("Brush preset", { exact: true }).selectOption("Mapping Pen");
       await section(p, "Pen pressure");
       await p.getByLabel("Pen pressure size", { exact: true }).check();
@@ -463,6 +471,31 @@ try {
       assert.equal(long.length, count + 1, "long stroke committed");
       assert.ok(long.at(-1).points.length <= 10_000);
       assert.ok(long.at(-1).points.length > 100);
+      // A dynamic stroke past the 50,000-unit dab budget ends there and still commits.
+      assert.ok(long.at(-1).dynamics, "Mapping Pen strokes use dynamics");
+      // No smoothing, so the zigzag really travels its full width. The layer is still
+      // scaled 2× from the cursor check and points are layer-local: 900 passes ≈ 54,000.
+      await setNumber(p, fx, "Stroke smoothing", 0);
+      await panel(p, false);
+      await fx.artboardBounds(p);
+      // The panel toggle changes the canvas layout; re-measure screen positions.
+      const left = await point(p, 4, 6),
+        right = await point(p, 124, 6);
+      await p.mouse.move(left.x, left.y);
+      await p.mouse.down();
+      for (let pass = 0; pass < 900; pass++)
+        await p.mouse.move(pass % 2 ? left.x : right.x, left.y + (pass % 40) * 0.5, { steps: 3 });
+      await p.mouse.up();
+      await fx.preview(p);
+      await p.getByText(/maximum stroke length/).waitFor();
+      saved = await native(p, fx);
+      const budget = paintLayer(saved).strokes;
+      assert.equal(budget.length, count + 2, "budget-limited stroke committed");
+      let path = 0;
+      const pts = budget.at(-1).points;
+      for (let i = 1; i < pts.length; i++)
+        path += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+      assert.ok(path <= 50_000 && path > 49_000, `stored path ${path}`);
 
       // 8. Mask painting targets the mask through the stroke's whole lifetime.
       const masked = structuredClone(saved.document),

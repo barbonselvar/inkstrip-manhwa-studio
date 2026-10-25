@@ -49,22 +49,35 @@ export function pressureResponse(pressure: number, gamma = 1) {
 }
 
 export const MAX_STROKE_POINTS = 10_000;
+/** Stroke validation also caps dynamic strokes at 200,000 dabs of the 0.25 px minimum
+ * spacing, i.e. a 50,000-unit stored path; recording must stop inside both budgets. */
+export const MAX_DAB_PATH = 50_000;
 type RecordedStroke = Pick<Stroke, "points" | "size" | "smoothing" | "sizePressure" | "dynamics">;
 type Sample = { pointerType: string; pressure: number; pressureGamma?: number };
+const pathLength = (points: BrushPoint[]) => {
+  let length = 0;
+  for (let i = 1; i < points.length; i++)
+    length += Math.hypot(points[i]!.x - points[i - 1]!.x, points[i]!.y - points[i - 1]!.y);
+  return length;
+};
+const fits = (s: RecordedStroke, length: number, segment: number) =>
+  s.points.length < MAX_STROKE_POINTS && (!s.dynamics || length + segment <= MAX_DAB_PATH);
 /** Filter every sample, but store a point only when it moves a size-relative step or
- * pressure changes, so long or slow strokes stay inside the 10,000-point budget.
- * Returns the new filter state; `full` once the stroke cannot take more points. */
+ * pressure changes, so long or slow strokes stay inside the point and dab budgets.
+ * Returns the new filter state, the stored path `length` (pass it back to avoid
+ * re-measuring) and `full` once the stroke cannot grow without failing validation. */
 export function appendBrushSample(
   s: RecordedStroke,
   filtered: BrushPoint | undefined,
   raw: BrushPoint,
   input: Sample,
+  length = pathLength(s.points),
 ) {
   const last = s.points.at(-1)!,
     state = filtered ?? last;
-  if (s.points.length >= MAX_STROKE_POINTS) return { filtered: state, full: true };
+  if (!fits(s, length, 0)) return { filtered: state, length, full: true };
   if (Math.hypot(raw.x - state.x, raw.y - state.y) <= 0.001)
-    return { filtered: state, full: false };
+    return { filtered: state, length, full: false };
   const next = brushPoint(
     state,
     raw,
@@ -75,13 +88,16 @@ export function appendBrushSample(
     s.dynamics?.stabilization ?? 0,
     input.pressureGamma,
   );
-  const step = Math.max(0.25, s.size * 0.02);
+  const segment = Math.hypot(next.x - last.x, next.y - last.y);
   if (
-    Math.hypot(next.x - last.x, next.y - last.y) >= step ||
+    segment >= Math.max(0.25, s.size * 0.02) ||
     Math.abs((next.pressure ?? 1) - (last.pressure ?? 1)) >= 0.02
-  )
+  ) {
+    if (!fits(s, length, segment)) return { filtered: next, length, full: true };
     s.points.push(next);
-  return { filtered: next, full: s.points.length >= MAX_STROKE_POINTS };
+    length += segment;
+  }
+  return { filtered: next, length, full: !fits(s, length, 0) };
 }
 /** On release, end exactly at the lifted pointer: smoothing and stabilization lag
  * behind it by design, so append the unfiltered final position (catch-up). */
@@ -89,11 +105,12 @@ export function finishBrushStroke(
   s: RecordedStroke,
   filtered: BrushPoint | undefined,
   raw: BrushPoint,
+  length = pathLength(s.points),
 ) {
   const last = s.points.at(-1)!,
-    pressure = (filtered ?? last).pressure;
-  if (s.points.length >= MAX_STROKE_POINTS || Math.hypot(raw.x - last.x, raw.y - last.y) <= 0.001)
-    return;
+    pressure = (filtered ?? last).pressure,
+    segment = Math.hypot(raw.x - last.x, raw.y - last.y);
+  if (segment <= 0.001 || !fits(s, length, segment)) return;
   s.points.push({
     x: raw.x,
     y: raw.y,

@@ -39,12 +39,7 @@ import {
   type Crop,
   type CropHandle,
 } from "@/lib/studio/pro/geometry";
-import {
-  brushPoint,
-  appendBrushSample,
-  finishBrushStroke,
-  MAX_STROKE_POINTS,
-} from "@/lib/studio/pro/brush-dynamics";
+import { brushPoint, appendBrushSample, finishBrushStroke } from "@/lib/studio/pro/brush-dynamics";
 import { patchSelection, type RepairRequest, type RepairKind } from "@/lib/studio/pro/repair";
 import { appendSelection } from "@/lib/studio/pro/selection";
 import { editedAnchor } from "@/lib/studio/pro/anchor-edit";
@@ -135,6 +130,8 @@ type Gesture = {
   stroke?: Stroke;
   /** Latest smoothed sample; stored points are a bounded subset of these. */
   filtered?: Stroke["points"][number];
+  /** Stored path length, tracked so recording stays inside the dab budget. */
+  length?: number;
   full?: boolean;
   repairKind?: RepairKind;
   region?: Region;
@@ -150,6 +147,7 @@ export function ProCanvas({
   doc,
   documentBase,
   pressureGamma = 1,
+  onStatus,
   viewportFrame,
   appearanceId,
   onFitCanvas,
@@ -202,6 +200,8 @@ export function ProCanvas({
   documentBase: ProDocument;
   /** Per-device pen pressure response (p^gamma), applied as samples are recorded. */
   pressureGamma?: number;
+  /** Persistent notice; errors are cleared by the next successful commit. */
+  onStatus?: (message: string) => void;
   viewportFrame: Frame;
   appearanceId: string;
   onFitCanvas: () => void;
@@ -1485,18 +1485,25 @@ export function ProCanvas({
       const s = g.stroke!,
         q = maskMode && g.type === "paint" ? maskPaintPoint(l, localPoint(p, l)) : localPoint(p, l),
         raw = { ...q, ...(s.dynamics ? { time: input?.time ?? performance.now() } : {}) };
-      if (input?.final) finishBrushStroke(s, g.filtered, raw);
+      if (input?.final) finishBrushStroke(s, g.filtered, raw, g.length);
       else if (!g.full) {
-        const recorded = appendBrushSample(s, g.filtered, raw, {
-          pointerType: input?.pointerType ?? "mouse",
-          pressure: input?.pressure ?? 1,
-          pressureGamma,
-        });
+        const recorded = appendBrushSample(
+          s,
+          g.filtered,
+          raw,
+          {
+            pointerType: input?.pointerType ?? "mouse",
+            pressure: input?.pressure ?? 1,
+            pressureGamma,
+          },
+          g.length ?? 0,
+        );
         g.filtered = recorded.filtered;
+        g.length = recorded.length;
         if (recorded.full) {
           g.full = true;
-          onError(
-            `This stroke reached the ${MAX_STROKE_POINTS.toLocaleString()}-point limit and ends here. Lift and start a new stroke to continue.`,
+          (onStatus ?? onError)(
+            "This stroke reached the maximum stroke length and ends here. Lift and start a new stroke to continue.",
           );
         }
       }

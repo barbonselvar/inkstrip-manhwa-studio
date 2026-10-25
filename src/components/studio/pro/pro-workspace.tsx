@@ -2020,6 +2020,7 @@ export default function ProWorkspace({
                 doc={previewDoc ?? doc}
                 documentBase={history?.present.doc ?? doc}
                 pressureGamma={pressureGamma}
+                onStatus={setStatus}
                 activeId={selectedIds[0] ?? ""}
                 selectedIds={selectedIds}
                 activeAnchor={activeAnchor}
