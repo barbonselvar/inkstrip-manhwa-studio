@@ -1,4 +1,6 @@
-# R6 pre-implementation architecture and gap audit
+# R6 architecture and gap audit (final persistent scope)
+
+Implementation/source anchor: `5c00b61b5c1cb4cbef3cfa824ed86b6a798397a3`. Final report/evidence publication and exact publishing HEAD are linked from [Draft PR16](https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/16).
 
 Baseline: main `740720c1d5e141c7f52ecab83d2e505fea7183f0`, verified 2026-10-25. PR14 (R3) and PR15 (R5) are merged. PR6 is open Draft, separate AI stream. No R4 implementation was imported. R6 branch: `codex/r6-color-adjustments-filters`. No merge/deployment is authorized.
 
@@ -26,7 +28,7 @@ Reuse: `color.ts` tonal-range balance (quadratic shadow/midtone/highlight weight
 | Presets                                 | Partially implemented             | Basic existing presets; add validated global custom presets outside native schema                                                         |
 | Mobile                                  | Partially implemented             | Preserve inspector; test new modal at 320/360/390/768/1440                                                                                |
 
-## Native format decision before implementation
+## Original format decision (superseded by explicit R6 authorization)
 
 Internal document version is 1. The portable envelope supports 1–5 and Dialogue 7; AI PR6 reserves 6. `validateColor` rejects unknown advanced color keys. Old native readers accept some extra document fields, which risks silent omissions. R6 will **not change these formats, validators or migrations**. No new native settings are authorized. New advanced operations bake into an ordinary immutable PNG on a raster/paint layer, preserving its transform, mask, clipping, opacity, effects and hierarchy. The untouched original will remain hidden and editable; Apply uses existing history, Cancel publishes neither pixels nor assets. Existing persistent adjustment layers remain functional with their existing settings. Advanced editable adjustment-layer persistence remains explicitly blocked pending an approved, coordinated envelope/migration design (including AI6/Dialogue7). No claim of full R6 completion is permitted while this requirement is blocked.
 
@@ -34,14 +36,24 @@ Internal document version is 1. The portable envelope supports 1–5 and Dialogu
 
 Bound source work to at most 4MP and the device budget. Validate source, layer nesting/count, immutable asset count/bytes and document sources before commit. Process layer-local source at native resolution before its mask/effects; preview identifies that local target and does not claim to be a full-composite proof. Optional selection captures stable document selection into layer-local coordinates. Preserve alpha and invisible RGB. Spatial filters use alpha-weighted neighborhoods and clamped borders; enforce separate kernel-work budgets. PNG encoding remains subject to existing R1.1 header/decode policy. Never accumulate slider processing from the last preview. Terminate superseded workers and reject changed document/layer revisions. Do not write preview settings or pixels into autosave.
 
-## Integration and outstanding verification
+## Authorized persistence completion
 
-R3 and R5 are in the actual base: preserve final stroke length caps, pressure recording, mask transforms, transform drafts and commit acceptance. Preserve all older adjustment output bit-for-bit. No cherry-picks, unrelated studios or PR6 changes. Full tests, browser pixels/history/native/export, actual performance measurements and exact-head Actions remain pending at this audit commit.
+The user subsequently authorized the R6-only native extension. Work continued from existing Draft PR16 HEAD `21fafe068d2c6bb3531c7c949e614501141240fb`; no functioning color/filter implementation was recreated. Main remains `740720c1d5e141c7f52ecab83d2e505fea7183f0`. Concurrent R7 PR17 (`8f2134d87e1c10da53fbe7740a986adcd4dcd1c6` at audit) changes workspace/client/worker/selection tools but reserves no native schema/envelope. At final verification, Chapter PR18 is also open Draft; no Chapter or unrelated changes were imported.
 
-## R6 implementation outcome
+| Capability                                      | Final classification                        | Verified behavior / boundary                                                                                                              |
+| ----------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Eleven color adjustment families above          | Implemented and verified                    | Existing engine reused for both pixel lab and persistent layers; channel Levels/Curves remain editable                                    |
+| Persistent adjustment creation/editing          | Implemented and verified                    | Metadata-only layers, stable IDs, no raster snapshot or source changes                                                                    |
+| Layer order/visibility/opacity/duplicate/delete | Implemented and verified                    | Existing layer/history controls; exact pixel references                                                                                   |
+| Masks, clipping, groups and RGB blend modes     | Implemented and verified                    | Existing coverage/stack semantics; group/clipped/masked multiply fixture and independent pixel math                                       |
+| Preview/Apply/Cancel/Reset/before-after         | Implemented and verified                    | Isolated composite preview and native input histogram; one Apply history action, no slider history                                        |
+| Portable persistence/migrations                 | Implemented and verified                    | Document2/envelope8; legacy1–5/7 read/re-export and opt-in metadata upgrade                                                               |
+| Autosave/crash reload/Chapter backup            | Implemented and verified                    | Storage4 legacy-reader fence; durable save acknowledgement race fixed; real reload and fresh-context recovery                             |
+| PNG/JPEG/WebP export                            | Implemented and verified                    | Full composite; PNG exact through reopen; existing JPEG matte/lossy and WebP pipelines                                                    |
+| Spatial/noise filters                           | Implemented and verified in pixel workflow  | Preserve original phase1 implementations; not represented as persistent point adjustments                                                 |
+| Larger persistent point adjustments             | Implemented and measured                    | 512² tiles, up to existing desktop16.8MP/device budget; cumulative visible work bounded128M; original destructive/filter4MP cap unchanged |
+| Mobile UI                                       | Implemented and verified at all five widths | 1440/768/390/360/320 CSS pixels, real controls and canvas comparisons                                                                     |
+| ICC/wide gamut/16-bit/GPU filters               | Deferred due to architecture                | Existing encoded-sRGB8 pipeline retained; no claim of managed-color parity                                                                |
+| R7 / AI6 integration                            | Separate future integration                 | No merge/cherry-pick; R7 must retain typed schema/storage4 and worker safety after rebase                                                 |
 
-The compatible pixel-processing scope now implements Brightness/Contrast, channel Levels and output endpoints, variable cubic RGB/R/G/B Curves, genuine global/selective HSL, tonal Balance, linear-light exposure/gamma, Vibrance/Saturation, channel-mixed B&W, invert, threshold/posterize and the filter inventory in `R6_IMPLEMENTATION_REPORT.md`. Real histograms, source-stable native-resolution preview, Apply/Cancel/Reset, captured selections, validated device presets, lossless document Cancel and one-step history are present. New processing is limited to visible unlocked integer-sized raster/paint layers within 4MP/device/kernel budgets; mask-only mode cannot launch it.
-
-The existing persistent adjustment-layer feature remains implemented for its pre-R6 settings, including group-local backdrop and clipping/masks/opacity/blend semantics. New advanced editable adjustment-layer settings remain **blocked by the native-format approval dependency**. New operations bake into compatible PNG assets and retain the editable original; this is not full persistent advanced adjustment-layer support. No format was changed and R6 is not declared fully complete.
-
-The actual base contains R3 and R5, so no future R5 merge/cherry-pick is necessary for this branch. Their current transaction/brush/mask/transform contracts were preserved. AI6/Dialogue7 must be coordinated before any future format8 proposal. See the test report/evidence for actual validation and the PR for the final published head.
+No persistent color-adjustment requirement remains blocked by format approval. See [native schema](R6_NATIVE_SCHEMA.md), implementation and test reports for the final semantics, measurements and publishing validation. R3/R5 are already on the verified base and remain regression requirements. Keep PR16 Draft; no merge or deployment is authorized.

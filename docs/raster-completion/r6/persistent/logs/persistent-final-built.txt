@@ -1,0 +1,88 @@
+Persistent R6 1440
+Recovered persistent kind curves
+Persistent R6 768
+Recovered persistent kind curves
+Persistent R6 390
+Recovered persistent kind curves
+Persistent R6 360
+Recovered persistent kind curves
+Persistent R6 320
+Recovered persistent kind curves
+{
+  "passed": true,
+  "widths": [
+    1440,
+    768,
+    390,
+    360,
+    320
+  ],
+  "results": [
+    {
+      "width": 1440,
+      "persistentLevelsCurves": true,
+      "byteExactPreviewApplyCancelUndoRedo": true,
+      "autosaveReload": true,
+      "storageFence": true,
+      "maskOpacity": true,
+      "nativeExport": true,
+      "duplicateDelete": true,
+      "noRasterSnapshots": true
+    },
+    {
+      "width": 768,
+      "persistentLevelsCurves": true,
+      "byteExactPreviewApplyCancelUndoRedo": true,
+      "autosaveReload": true,
+      "storageFence": true,
+      "maskOpacity": true,
+      "nativeExport": true,
+      "duplicateDelete": true,
+      "noRasterSnapshots": true
+    },
+    {
+      "width": 390,
+      "persistentLevelsCurves": true,
+      "byteExactPreviewApplyCancelUndoRedo": true,
+      "autosaveReload": true,
+      "storageFence": true,
+      "maskOpacity": true,
+      "nativeExport": true,
+      "duplicateDelete": true,
+      "noRasterSnapshots": true
+    },
+    {
+      "width": 360,
+      "persistentLevelsCurves": true,
+      "byteExactPreviewApplyCancelUndoRedo": true,
+      "autosaveReload": true,
+      "storageFence": true,
+      "maskOpacity": true,
+      "nativeExport": true,
+      "duplicateDelete": true,
+      "noRasterSnapshots": true
+    },
+    {
+      "width": 320,
+      "persistentLevelsCurves": true,
+      "byteExactPreviewApplyCancelUndoRedo": true,
+      "autosaveReload": true,
+      "storageFence": true,
+      "maskOpacity": true,
+      "nativeExport": true,
+      "duplicateDelete": true,
+      "noRasterSnapshots": true
+    },
+    {
+      "order": true,
+      "groupClippingMaskBlend": true,
+      "unrelatedArtworkUnaffected": true,
+      "r3Painting": true,
+      "r5Transform": true,
+      "chapterBackupFreshContextRecovery": true,
+      "blockedSaveCloseBarrier": true
+    }
+  ],
+  "errors": [],
+  "pixelTolerance": 0
+}

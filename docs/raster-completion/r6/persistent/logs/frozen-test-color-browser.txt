@@ -1,0 +1,7 @@
+Nested/multi-object affine preview, mask/clipping/group opacity, cancel/history/native/export passed.
+Captured-selection UI and native worker projective checkerboard downscaling/reopen/export passed.
+Color local save, Raster/Vector reopen and Chapter pixel/original-byte fidelity passed.
+Seven color adjustments, numeric/reset controls, opacity stops/presets, mask/selection/blend/clip rendering, native/history/export passed.
+Chromium 320px: native touch group handle/Apply, numeric color/reset and no page overflow passed.
+Chromium 390px: native touch group handle/Apply, numeric color/reset and no page overflow passed.
+{"ok":true,"physicalAndroid":false}

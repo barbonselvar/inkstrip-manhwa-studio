@@ -1,0 +1,11 @@
+{
+ "widths": [
+  1440,
+  768,
+  390,
+  360,
+  320
+ ],
+ "errors": [],
+ "syntheticPen": true
+}

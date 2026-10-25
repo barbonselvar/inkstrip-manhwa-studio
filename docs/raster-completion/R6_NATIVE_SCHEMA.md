@@ -1,6 +1,6 @@
 # R6 persistent adjustment design (authorized extension)
 
-Verified baseline 2026-10-25: main `740720c1d5e141c7f52ecab83d2e505fea7183f0`; R6 PR16 Draft `21fafe068d2c6bb3531c7c949e614501141240fb`. R7 PR17 `8f2134d87e1c10da53fbe7740a986adcd4dcd1c6` overlaps workspace/client/worker but changes neither model nor native formats. No active Chapter change is on main; Chapter backup/recovery APIs must preserve native sessions. AI PR6 reserves envelope6, Dialogue uses7. No unrelated branches are imported.
+Verified baseline 2026-10-25: main `740720c1d5e141c7f52ecab83d2e505fea7183f0`; R6 PR16 Draft `21fafe068d2c6bb3531c7c949e614501141240fb`. R7 PR17 `8f2134d87e1c10da53fbe7740a986adcd4dcd1c6` overlaps workspace/client/worker but changes neither model nor native formats. No Chapter change is on main; final verification also found Draft Chapter PR18, whose import/display changes must preserve native sessions. AI PR6 reserves envelope6, Dialogue uses7. No unrelated branches are imported.
 
 ## Schema and compatibility
 
@@ -20,6 +20,10 @@ Point operations process bounded tiles through the same R6 pixel engine. They ha
 
 An isolated draft panel reuses the current controls, curve editor, presets and histogram. A dedicated renderer previews the entire composite without adding assets or recording intermediate slider states. Histograms sample the real native input at the adjustment's exact stack position. Apply compares the live immutable document identity and commits one existing history transaction. Cancel, unmount, document/layer switches and old asynchronous results cannot publish settings. Native/autosave only see accepted metadata.
 
-## Validation plan
+## Validation record
 
-Round-trip all legacy envelopes and schema2/8; canonical bytes; malformed/future/prototype input; legacy-reader rejection; recovery fencing; source hashes; stack/group/clip/mask/opacity/blend pixel references; exact Cancel/Apply/Undo/Redo/native/recovery/export; all five mobile/desktop widths; R3/R5; point-tile seam/cancellation and actual large-document timings/memory. Update the three R6 reports with observed results, not this plan alone. Keep PR16 Draft, no main writes, merges or deployment.
+Completed: round-trip all legacy envelopes and schema2/8; canonical bytes; malformed/future/prototype input; legacy-reader rejection; recovery fencing; source hashes; stack/group/clip/mask/opacity/blend pixel references; exact Cancel/Apply/Undo/Redo/native/recovery/export; all five mobile/desktop widths; R3/R5; point-tile seam/cancellation and actual large-document timings/memory. The three R6 reports and `r6/persistent/validation.json` contain observed results:912 automated tests, all32 browser suites, five widths, strict recovery pixels, blocked-save close barrier, native16.8MP point rendering and exact source/export hashes. The apparent RGB mismatch was an older backup captured by navigating before asynchronous close finished; no color algorithm or tolerance was changed. Keep PR16 Draft, no main writes, merges or deployment.
+
+## Concurrent streams at final verification
+
+Main remains `740720c1d5e141c7f52ecab83d2e505fea7183f0`. R7 PR17 advanced to `454e44c655dff23787399c67651590a624be1cbf`, still Draft; its native files/model remain legacy1–5/7 and schema1, with no competing format8 reservation. Preserve R6 model/files/storage and reconcile workspace/client/worker interfaces when rebasing that branch. Draft Chapter PR18 is `cb767432a9253ce9e0694fe8b8daa569dc1c348d`; it modifies import/display/device budgets and optional `getImageBlob` policy, without native or Pro-store version changes. Preserve Pro resource limits, original/accepted asset checks, native sessions and recovery behavior during future integration. Neither stream was merged or imported.

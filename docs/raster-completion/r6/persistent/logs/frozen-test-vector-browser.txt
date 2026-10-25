@@ -1,0 +1,5 @@
+Desktop: exact canvas insertion, numeric arc-distance insertion, anchor/handle edits, coupling/Alt, reversal, Delete, cancellation and undo/redo passed.
+Perspective-aware anchors, mask/clip metadata, source bytes, native/local save-reopen, worker PNG and Raster/Vector/Chapter handoff passed.
+Chromium 320px: CDP touch anchor drag/cancel, numeric/coupled handles, insertion, native/export, pinch/pan and no page scroll/overflow passed.
+Chromium 390px: CDP touch anchor drag/cancel, numeric/coupled handles, insertion, native/export, pinch/pan and no page scroll/overflow passed.
+{"ok":true,"physicalAndroid":false}

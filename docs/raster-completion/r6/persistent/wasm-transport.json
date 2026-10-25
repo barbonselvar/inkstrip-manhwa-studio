@@ -1,0 +1,9 @@
+{
+  "mime": "application/wasm",
+  "bytes": 11210254,
+  "sha256": "71aef04959c5c1b6de461b6538e2058e306610034a85aad2742d0c7fd4533fe4",
+  "identicalBuildArtifact": true,
+  "productionHeadMime": "application/wasm",
+  "productionHeadStatus": 200,
+  "notes": "Read-only production HEAD; no deployment. Local Nitro preview serves application/octet-stream; proxy supplies production MIME and identity encoding, leaves bytes and all browser assertions unchanged."
+}

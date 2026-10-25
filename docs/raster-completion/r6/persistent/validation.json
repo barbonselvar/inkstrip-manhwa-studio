@@ -1,0 +1,342 @@
+{
+  "baseline": "740720c1d5e141c7f52ecab83d2e505fea7183f0",
+  "continuedR6": "21fafe068d2c6bb3531c7c949e614501141240fb",
+  "implementationSource": "5c00b61b5c1cb4cbef3cfa824ed86b6a798397a3",
+  "testedRuntime": "531c9b0d07e0ba6702733929bcb03ff8e8521e8e",
+  "draftPR": "https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/16",
+  "documentSchema": 2,
+  "portableEnvelope": 8,
+  "adjustmentRecord": 1,
+  "indexedDBVersion": 4,
+  "legacyEnvelopes": [1, 2, 3, 4, 5, 7],
+  "gates": {
+    "npmCi": {
+      "exitCode": 0,
+      "packages": 465
+    },
+    "npmTest": {
+      "exitCode": 0,
+      "tests": 912,
+      "breakdown": [200, 59, 91, 562],
+      "additionalPersistentTests": 24
+    },
+    "typecheck": {
+      "exitCode": 0
+    },
+    "lint": {
+      "exitCode": 0,
+      "warnings": 0
+    },
+    "build": {
+      "exitCode": 0
+    },
+    "checkBuild": {
+      "exitCode": 0
+    },
+    "checkAuth": {
+      "exitCode": 0
+    },
+    "localBuiltAcceptance": {
+      "exitCode": 0,
+      "runtime": "531c9b0d07e0ba6702733929bcb03ff8e8521e8e",
+      "errors": 0,
+      "failedCriticalAssets": 0,
+      "notes": "Unchanged release script via byte-identical local WASM transport matching production MIME, including real inference."
+    }
+  },
+  "browserBatch": [
+    {
+      "command": "test:studio:browser",
+      "exitCode": 1,
+      "seconds": 1.08,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-studio-browser.txt"
+    },
+    {
+      "command": "test:editor:browser",
+      "exitCode": 1,
+      "seconds": 1.03,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-editor-browser.txt"
+    },
+    {
+      "command": "test:adjustments:browser",
+      "exitCode": 0,
+      "seconds": 29.41,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-adjustments-browser.txt"
+    },
+    {
+      "command": "test:retouch:browser",
+      "exitCode": 0,
+      "seconds": 11.79,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-retouch-browser.txt"
+    },
+    {
+      "command": "test:workflow:browser",
+      "exitCode": 0,
+      "seconds": 33.45,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-workflow-browser.txt"
+    },
+    {
+      "command": "test:ui:browser",
+      "exitCode": 0,
+      "seconds": 36.2,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-ui-browser.txt"
+    },
+    {
+      "command": "test:pro:browser",
+      "exitCode": 0,
+      "seconds": 77.36,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-pro-browser.txt"
+    },
+    {
+      "command": "test:layers:browser",
+      "exitCode": 0,
+      "seconds": 64.36,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-layers-browser.txt"
+    },
+    {
+      "command": "test:repair:browser",
+      "exitCode": 0,
+      "seconds": 47.65,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-repair-browser.txt"
+    },
+    {
+      "command": "test:geometry:browser",
+      "exitCode": 0,
+      "seconds": 35.84,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-geometry-browser.txt"
+    },
+    {
+      "command": "test:transform:browser",
+      "exitCode": 0,
+      "seconds": 54.96,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-transform-browser.txt"
+    },
+    {
+      "command": "test:color:browser",
+      "exitCode": 0,
+      "seconds": 40.1,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-color-browser.txt"
+    },
+    {
+      "command": "test:appearance:browser",
+      "exitCode": 0,
+      "seconds": 47.74,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-appearance-browser.txt"
+    },
+    {
+      "command": "test:vector:browser",
+      "exitCode": 0,
+      "seconds": 49.44,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-vector-browser.txt"
+    },
+    {
+      "command": "test:compound:browser",
+      "exitCode": 0,
+      "seconds": 60.96,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-compound-browser.txt"
+    },
+    {
+      "command": "test:pathfinder:browser",
+      "exitCode": 0,
+      "seconds": 97.1,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-pathfinder-browser.txt"
+    },
+    {
+      "command": "test:artboards:browser",
+      "exitCode": 0,
+      "seconds": 58.7,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-artboards-browser.txt"
+    },
+    {
+      "command": "test:vector-final:browser",
+      "exitCode": 0,
+      "seconds": 95.8,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-vector-final-browser.txt"
+    },
+    {
+      "command": "test:raster-refinement:browser",
+      "exitCode": 0,
+      "seconds": 79.54,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-raster-refinement-browser.txt"
+    },
+    {
+      "command": "bench:raster:browser",
+      "exitCode": 0,
+      "seconds": 25.16,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-bench-raster-browser.txt"
+    },
+    {
+      "command": "test:homepage:browser",
+      "exitCode": 0,
+      "seconds": 70.08,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-homepage-browser.txt"
+    },
+    {
+      "command": "test:dialogue:ocr",
+      "exitCode": 0,
+      "seconds": 8.49,
+      "base": "http://127.0.0.1:8080",
+      "log": "logs/frozen-test-dialogue-ocr.txt"
+    },
+    {
+      "command": "test:dialogue:browser",
+      "exitCode": 0,
+      "seconds": 43.31,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-dialogue-browser.txt"
+    },
+    {
+      "command": "test:dialogue:workflow",
+      "exitCode": 0,
+      "seconds": 28.96,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-dialogue-workflow.txt"
+    },
+    {
+      "command": "test:dialogue:render",
+      "exitCode": 0,
+      "seconds": 2.7,
+      "base": "http://127.0.0.1:8080",
+      "log": "logs/frozen-test-dialogue-render.txt"
+    },
+    {
+      "command": "test:dialogue:security",
+      "exitCode": 0,
+      "seconds": 3.25,
+      "base": "http://127.0.0.1:8080",
+      "log": "logs/frozen-test-dialogue-security.txt"
+    },
+    {
+      "command": "test:chapter-import:browser",
+      "exitCode": 0,
+      "seconds": 29.2,
+      "base": "http://127.0.0.1:8080",
+      "log": "logs/frozen-test-chapter-import-browser.txt"
+    },
+    {
+      "command": "test:r2:browser",
+      "exitCode": 0,
+      "seconds": 86.56,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-r2-browser.txt"
+    },
+    {
+      "command": "test:r2:gesture:browser",
+      "exitCode": 0,
+      "seconds": 12.15,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-r2-gesture-browser.txt"
+    },
+    {
+      "command": "test:r3:browser",
+      "exitCode": 1,
+      "seconds": 308.54,
+      "base": "http://127.0.0.1:8080",
+      "log": "logs/frozen-test-r3-browser.txt"
+    },
+    {
+      "command": "test:r5:browser",
+      "exitCode": 0,
+      "seconds": 70.9,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-r5-browser.txt"
+    },
+    {
+      "command": "test:r6:browser",
+      "exitCode": 0,
+      "seconds": 90.83,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-r6-browser.txt"
+    },
+    {
+      "command": "test:r6:layers:browser",
+      "exitCode": 1,
+      "seconds": 80.96,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/frozen-test-r6-layers-browser.txt"
+    }
+  ],
+  "retries": [
+    {
+      "command": "test:editor:browser",
+      "exitCode": 0,
+      "seconds": 42.28,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/retry-test-editor-browser.txt"
+    },
+    {
+      "command": "test:studio:browser",
+      "exitCode": 0,
+      "seconds": 70.95,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/retry-test-studio-browser.txt"
+    },
+    {
+      "command": "test:r3:browser",
+      "exitCode": 0,
+      "seconds": 360.52,
+      "base": "http://127.0.0.1:8080",
+      "log": "logs/retry-r3-browser.txt",
+      "notes": "Unchanged command/assertions; isolated run after all other browsers and local built preview stopped."
+    },
+    {
+      "command": "test:r6:layers:browser",
+      "exitCode": 0,
+      "base": "http://127.0.0.1:8081",
+      "log": "logs/persistent-final-built.txt",
+      "notes": "All5 widths, strict pixels, blocked-write close barrier, exact project recovery; no tolerance change."
+    }
+  ],
+  "finalBrowserCommandCount": 32,
+  "additionalRasterBrowserBenchmark": true,
+  "allBrowserCommandsPass": true,
+  "widths": [1440, 768, 390, 360, 320],
+  "pixelTolerance": 0,
+  "maximumTestedDimensions": [4096, 4096],
+  "persistentTileSide": 512,
+  "destructiveFilterMaxPixels": 4000000,
+  "implementationCI": [
+    {
+      "name": "Node.js application build",
+      "id": 40189889938,
+      "conclusion": "success"
+    },
+    {
+      "name": "Configuration checks",
+      "id": 40189889941,
+      "conclusion": "success"
+    }
+  ],
+  "publishingHeadCI": "Verify exact final report/evidence commit on PR16; final execution handoff and PR body record SHA and run links.",
+  "concurrentStreams": {
+    "r7Draft17": "454e44c655dff23787399c67651590a624be1cbf",
+    "chapterDraft18": "cb767432a9253ce9e0694fe8b8daa569dc1c348d",
+    "noneImported": true
+  },
+  "mainModified": false,
+  "mergePerformed": false,
+  "deploymentPerformed": false,
+  "r7Implemented": false,
+  "rootCause": "Test navigated before asynchronous save-and-close finished, interrupting its final transaction. Removing the new stroke reproduces first failing channel18648 85 vs86,3173 differences,maximum174. Close completion and a blocked-write barrier now precede backup; settings/assets/PNG/preview comparisons remain exact."
+}

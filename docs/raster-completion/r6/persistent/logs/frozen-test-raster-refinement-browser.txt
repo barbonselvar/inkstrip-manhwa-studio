@@ -1,0 +1,41 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "refinement": "staged and committed",
+      "maskDensityFeather": "pixel verified",
+      "maskLinkage": "world-stable",
+      "groupMask": "isolated alpha",
+      "native": "v5 round trip",
+      "brush": "deterministic",
+      "bake": "same pixels and undo/redo",
+      "exports": "PNG/JPEG/WebP",
+      "touch": "not requested"
+    },
+    {
+      "width": 320,
+      "refinement": "staged and committed",
+      "maskDensityFeather": "pixel verified",
+      "maskLinkage": "world-stable",
+      "groupMask": "isolated alpha",
+      "native": "v5 round trip",
+      "brush": "deterministic",
+      "bake": "same pixels and undo/redo",
+      "exports": "PNG/JPEG/WebP",
+      "touch": "cancel/draw/undo"
+    },
+    {
+      "width": 390,
+      "refinement": "staged and committed",
+      "maskDensityFeather": "pixel verified",
+      "maskLinkage": "world-stable",
+      "groupMask": "isolated alpha",
+      "native": "v5 round trip",
+      "brush": "deterministic",
+      "bake": "same pixels and undo/redo",
+      "exports": "PNG/JPEG/WebP",
+      "touch": "cancel/draw/undo"
+    }
+  ],
+  "errors": []
+}

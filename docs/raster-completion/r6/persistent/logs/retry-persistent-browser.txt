@@ -1,0 +1,27 @@
+Persistent R6 1440
+Recovered persistent kind curves
+Persistent R6 768
+Recovered persistent kind curves
+Persistent R6 390
+Recovered persistent kind curves
+Persistent R6 360
+Recovered persistent kind curves
+Persistent R6 320
+Recovered persistent kind curves
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: channel 18648: 85 ≠ 86
+    at Object.same (file:///workspace/inkstrip-r6/scripts/pro-browser-fixtures.mjs:157:14)
+    at same (file:///workspace/inkstrip-r6/scripts/r6-adjustment-layers-browser-check.mjs:24:27)
+    at file:///workspace/inkstrip-r6/scripts/r6-adjustment-layers-browser-check.mjs:538:5 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.19.0
