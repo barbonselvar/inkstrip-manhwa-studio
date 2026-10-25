@@ -1,3 +1,5 @@
+import { canonicalNative } from "./adjustment-schema.ts";
+import { validateR8Settings } from "./r8-presets.ts";
 import { layer, validateDocument, type Layer, type ProDocument, type Selection } from "./model.ts";
 import { isLocked } from "./operations.ts";
 import { documentSources } from "./raster-budget.ts";
@@ -12,7 +14,7 @@ export type R8Settings = {
   gradient?: Gradient;
   light?: number;
 };
-export type R8Draft = { origin: ProDocument; layerId: string };
+export type R8Draft = { origin: ProDocument; layerId: string; created?: ProDocument };
 export function upgradeR8Document(doc: ProDocument): ProDocument {
   validateDocument(doc);
   return doc.version === 3 ? doc : { ...doc, version: 3 };
@@ -26,7 +28,10 @@ export function r8Settings(l: Layer, light = 135): R8Settings {
   });
 }
 export function r8Document(draft: R8Draft, settings: R8Settings, maxArea: number): ProDocument {
-  const doc = draft.origin,
+  validateR8Settings(settings);
+  if (draft.origin.layers.some((l) => l.kind === "paint" && l.name === "Quick Mask (temporary)"))
+    throw Error("Exit Quick Mask before editing layer styles, filters or gradients.");
+  const doc = draft.created ?? draft.origin,
     target = doc.layers.find((l) => l.id === draft.layerId);
   if (!target || target.kind === "adjustment" || isLocked(doc, target.id))
     throw Error(
@@ -60,7 +65,8 @@ export function commitR8Document(
     throw Error(
       "Layer properties canceled because the document changed. Reopen the current layer.",
     );
-  return r8Document(draft, settings, maxArea);
+  const next = r8Document(draft, settings, maxArea);
+  return canonicalNative(current) === canonicalNative(next) ? current : next;
 }
 /** Metadata-only editable fill, captured selection as a normal layer mask, above the full selected clipping stack. */
 export function addGradientFill(
@@ -70,6 +76,8 @@ export function addGradientFill(
   anchorId?: string,
   id: string = crypto.randomUUID(),
 ) {
+  if (doc.layers.some((l) => l.kind === "paint" && l.name === "Quick Mask (temporary)"))
+    throw Error("Exit Quick Mask before adding a gradient fill.");
   const anchor = doc.layers.find((l) => l.id === anchorId),
     parentId = anchor?.kind === "group" ? anchor.id : anchor?.parentId;
   if (parentId && isLocked(doc, parentId))

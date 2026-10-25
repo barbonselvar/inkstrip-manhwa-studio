@@ -369,7 +369,8 @@ export async function surface(
   asset: (id: string, scale: number) => Promise<ImageBitmap>,
   stageCheckpoint?: () => Promise<void>,
 ) {
-  if (l.smartFilters?.length) validateSmartWork(l.width, l.height, l.smartFilters);
+  if (l.smartFilters?.length)
+    validateSmartWork(Math.ceil(l.width), Math.ceil(l.height), l.smartFilters);
   const out = canvas(l.width * scale, l.height * scale),
     ctx = out.getContext("2d")!;
   ctx.scale(scale, scale);

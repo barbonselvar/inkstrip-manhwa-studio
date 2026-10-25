@@ -203,6 +203,8 @@ export function validateEffects(effects: Effect[]) {
           throw Error("Invalid bevel lighting.");
       } else if (e.bevel !== undefined) throw Error("Relief settings need Bevel and Emboss.");
     }
+    if (e.gradient?.version === 2 && e.version !== 2)
+      throw Error("Advanced gradient effects need style version2.");
     validateGradient(e.gradient);
   }
 }
@@ -510,4 +512,28 @@ export function advancedEffect(kind: Effect["kind"]): Effect {
     fillKind: "solid",
     glowSource: "edge",
   };
+}
+
+/** Bound native style work before preview/commit, so a small preview cannot create an unexportable native document. */
+export function validateAdvancedStyleWork(d: ProDocument) {
+  const visible = (l: Layer) => {
+    if (!l.visible) return false;
+    let parent = l.parentId;
+    const seen = new Set<string>();
+    while (parent) {
+      if (seen.has(parent)) throw Error("Invalid group hierarchy.");
+      seen.add(parent);
+      const p = d.layers.find((n) => n.id === parent);
+      if (!p || !p.visible) return false;
+      parent = p.parentId;
+    }
+    return true;
+  };
+  if (!d.layers.some((l) => visible(l) && l.effects?.some((e) => e.enabled && e.version === 2)))
+    return;
+  const padding = effectPadding(d);
+  if ((d.width + 2 * padding) * (d.height + 2 * padding) > 4_000_000)
+    throw Error(
+      "Advanced styles support native document planes up to4MP including effect padding. Remove the style or use a smaller canvas; original resolution was not changed.",
+    );
 }

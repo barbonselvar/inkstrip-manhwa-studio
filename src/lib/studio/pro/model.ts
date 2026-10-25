@@ -24,7 +24,7 @@ import type { Adjustments } from "../editor/adjustments";
 import { NEUTRAL, validateAdjustments } from "../editor/adjustments.ts";
 import { validateColor, type ColorAdjustments } from "./color.ts";
 import { defaultGradient, validateGradient, type Gradient } from "./gradient.ts";
-import { validateEffects, type Effect } from "./effects.ts";
+import { validateEffects, validateAdvancedStyleWork, type Effect } from "./effects.ts";
 import { validateLayout, type Artboard, type Layout } from "./artboards.ts";
 import { isBlendMode, type BlendMode } from "./blend.ts";
 export type Point = { x: number; y: number };
@@ -617,7 +617,8 @@ export function validateDocument(d: ProDocument) {
           "Smart Filters need a bounded source plane. Rasterize extended vector appearance/path text first, or keep it editable without filters.",
         );
       validateSmartFilters(l.smartFilters);
-      if (l.smartFilters.length) validateSmartWork(l.width, l.height, l.smartFilters);
+      if (l.smartFilters.length)
+        validateSmartWork(Math.ceil(l.width), Math.ceil(l.height), l.smartFilters);
     }
     if (
       d.version !== 3 &&
@@ -826,6 +827,7 @@ export function validateDocument(d: ProDocument) {
       parent = p.parentId;
     }
   }
+  if (d.version === 3) validateAdvancedStyleWork(d);
 }
 export function validateAssets(session: ProSession) {
   if (

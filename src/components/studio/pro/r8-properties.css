@@ -1,0 +1,135 @@
+.r8-lab .r6-controls {
+  min-width: 0;
+}
+.r8-lab .r8-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.r8-tabs button {
+  min-height: 44px;
+  flex: 1;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px;
+}
+.r8-tabs button[aria-selected="true"] {
+  color: var(--color-accent);
+  background: var(--color-bg-control);
+}
+.r8-filter-card,
+.r8-presets {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.r8-filter-card summary,
+.r8-presets summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+}
+.r8-gradient-stops {
+  min-width: 0;
+}
+.r8-stop-ramp {
+  position: relative;
+  height: 60px;
+  margin: 12px 12px 8px;
+  touch-action: none;
+}
+.r8-stop-ramp canvas {
+  width: 100%;
+  height: 24px;
+  display: block;
+  border-radius: 4px;
+}
+.r8-stop-marker {
+  position: absolute;
+  top: 12px;
+  width: 28px;
+  height: 44px;
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+}
+.r8-stop-marker span {
+  width: 12px;
+  height: 22px;
+  border: 1px solid var(--color-fg);
+  border-radius: 3px;
+}
+.r8-stop-marker[aria-pressed="true"] span {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.r8-lab .pro-actions {
+  flex-wrap: wrap;
+}
+.r8-lab .pro-actions button {
+  white-space: normal;
+  min-height: 44px;
+}
+.r8-lab input,
+.r8-lab select {
+  min-width: 0;
+  max-width: 100%;
+}
+/* Keep the actual preview and transaction controls available while editing long stacks. */
+.r8-lab {
+  display: flex;
+  flex-direction: column;
+  height: min(900px, calc(100dvh - 16px));
+  overflow: hidden;
+}
+.r8-lab > .r6-lab-grid {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.r8-lab .r6-controls {
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+.r8-lab .r6-preview-column {
+  min-height: 0;
+}
+.r8-lab .r6-preview {
+  min-height: 0;
+  max-height: 350px;
+  flex: 1;
+  overflow: hidden;
+}
+.r8-lab .r6-preview canvas {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+.r8-lab > header,
+.r8-lab > footer,
+.r8-lab > .pro-help,
+.r8-lab > .pro-error {
+  flex-shrink: 0;
+}
+.r8-lab > footer {
+  position: static;
+}
+@media (max-width: 600px) {
+  .r8-lab > .r6-lab-grid {
+    grid-template-rows: minmax(100px, 0.5fr) minmax(0, 1fr);
+  }
+  .r8-lab > header {
+    flex-wrap: wrap;
+  }
+  .r8-lab > footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .r8-lab > footer button {
+    white-space: normal;
+    min-height: 44px;
+  }
+}
