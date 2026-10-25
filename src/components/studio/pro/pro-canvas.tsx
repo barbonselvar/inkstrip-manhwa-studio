@@ -1,6 +1,7 @@
 import { bubbleFor, updateBubble } from "@/lib/studio/dialogue/operations";
 import { DEFAULT_LETTERING } from "@/lib/studio/dialogue/types";
 import { maskPaintPoint, maskWorld, maskLocal } from "@/lib/studio/pro/masks";
+import { brushCursor } from "@/lib/studio/pro/brush-cursor";
 import { clipPath } from "@/lib/studio/pro/vector-clip";
 import { gradientHandles, moveGradientHandle } from "@/lib/studio/pro/vector-appearance";
 import { measureTextPath } from "@/lib/studio/pro/text-path";
@@ -38,7 +39,7 @@ import {
   type Crop,
   type CropHandle,
 } from "@/lib/studio/pro/geometry";
-import { brushPoint } from "@/lib/studio/pro/brush-dynamics";
+import { brushPoint, appendBrushSample, finishBrushStroke } from "@/lib/studio/pro/brush-dynamics";
 import { patchSelection, type RepairRequest, type RepairKind } from "@/lib/studio/pro/repair";
 import { appendSelection } from "@/lib/studio/pro/selection";
 import { editedAnchor } from "@/lib/studio/pro/anchor-edit";
@@ -127,6 +128,11 @@ type Gesture = {
   id?: string;
   ids?: string[];
   stroke?: Stroke;
+  /** Latest smoothed sample; stored points are a bounded subset of these. */
+  filtered?: Stroke["points"][number];
+  /** Stored path length, tracked so recording stays inside the dab budget. */
+  length?: number;
+  full?: boolean;
   repairKind?: RepairKind;
   region?: Region;
   index?: number;
@@ -140,6 +146,8 @@ export function ProCanvas({
   dialogueOverlays = false,
   doc,
   documentBase,
+  pressureGamma = 1,
+  onStatus,
   viewportFrame,
   appearanceId,
   onFitCanvas,
@@ -190,6 +198,10 @@ export function ProCanvas({
   dialogueOverlays?: boolean;
   doc: ProDocument;
   documentBase: ProDocument;
+  /** Per-device pen pressure response (p^gamma), applied as samples are recorded. */
+  pressureGamma?: number;
+  /** Persistent notice; errors are cleared by the next successful commit. */
+  onStatus?: (message: string) => void;
   viewportFrame: Frame;
   appearanceId: string;
   onFitCanvas: () => void;
@@ -857,6 +869,8 @@ export function ProCanvas({
               e.pressure,
               (brush.sizePressure || brush.dynamics?.opacityPressure) ?? false,
               0,
+              0,
+              pressureGamma,
             ),
           ],
           clip:
@@ -943,6 +957,8 @@ export function ProCanvas({
               e.pressure,
               (brush.sizePressure || brush.dynamics?.opacityPressure) ?? false,
               0,
+              0,
+              pressureGamma,
             ),
           ],
         },
@@ -986,6 +1002,8 @@ export function ProCanvas({
               e.pressure,
               (brush.sizePressure || brush.dynamics?.opacityPressure) ?? false,
               0,
+              0,
+              pressureGamma,
             ),
           ],
         },
@@ -1150,6 +1168,8 @@ export function ProCanvas({
       time?: number;
       shiftKey?: boolean;
       altKey?: boolean;
+      /** Pointer release: end the stroke exactly at this position. */
+      final?: boolean;
     },
   ): ProDocument | null => {
     const g = gesture.current;
@@ -1463,20 +1483,30 @@ export function ProCanvas({
     }
     if (g.type === "paint" || g.type === "repair") {
       const s = g.stroke!,
-        previous = s.points.at(-1)!,
-        q = maskMode && g.type === "paint" ? maskPaintPoint(l, localPoint(p, l)) : localPoint(p, l);
-      if (Math.hypot(q.x - previous.x, q.y - previous.y) > 0.001)
-        s.points.push(
-          brushPoint(
-            previous,
-            { ...q, ...(s.dynamics ? { time: input?.time ?? performance.now() } : {}) },
-            input?.pointerType ?? "mouse",
-            input?.pressure ?? 1,
-            (s.sizePressure || s.dynamics?.opacityPressure) ?? false,
-            s.smoothing ?? 0,
-            s.dynamics?.stabilization ?? 0,
-          ),
+        q = maskMode && g.type === "paint" ? maskPaintPoint(l, localPoint(p, l)) : localPoint(p, l),
+        raw = { ...q, ...(s.dynamics ? { time: input?.time ?? performance.now() } : {}) };
+      if (input?.final) finishBrushStroke(s, g.filtered, raw, g.length);
+      else if (!g.full) {
+        const recorded = appendBrushSample(
+          s,
+          g.filtered,
+          raw,
+          {
+            pointerType: input?.pointerType ?? "mouse",
+            pressure: input?.pressure ?? 1,
+            pressureGamma,
+          },
+          g.length ?? 0,
         );
+        g.filtered = recorded.filtered;
+        g.length = recorded.length;
+        if (recorded.full) {
+          g.full = true;
+          (onStatus ?? onError)(
+            "This stroke reached the maximum stroke length and ends here. Lift and start a new stroke to continue.",
+          );
+        }
+      }
       if (g.type === "repair") return null;
       next = maskMode
         ? {
@@ -1554,6 +1584,7 @@ export function ProCanvas({
           time: e.timeStamp,
           shiftKey: e.shiftKey,
           altKey: e.altKey,
+          final: g.type === "paint" || g.type === "repair",
           pressure:
             e.pointerType === "pen"
               ? (g.stroke?.points.at(-1)?.pressure ?? e.pressure)
@@ -2043,14 +2074,47 @@ export function ProCanvas({
                     </g>
                   );
                 })()}
-              {cursor && ["brush", "pencil", "eraser", "clone", "heal", "spot"].includes(tool) ? (
-                <circle
-                  cx={cursor.x}
-                  cy={cursor.y}
-                  r={Math.max(0.5, brush.size / 2)}
-                  className="pro-brush-cursor"
-                />
-              ) : null}
+              {cursor && ["brush", "pencil", "eraser", "clone", "heal", "spot"].includes(tool)
+                ? (() => {
+                    const c = brushCursor(selected, maskMode, cursor, brush, tool);
+                    if (!c)
+                      return (
+                        <circle
+                          cx={cursor.x}
+                          cy={cursor.y}
+                          r={Math.max(0.5, brush.size / 2)}
+                          className="pro-brush-cursor"
+                        />
+                      );
+                    return (
+                      <g
+                        transform={`matrix(${c.matrix.join(" ")})`}
+                        data-brush-cursor={c.square ? "square" : "round"}
+                      >
+                        <g transform={`translate(${c.center.x} ${c.center.y}) rotate(${c.angle})`}>
+                          {c.square ? (
+                            <rect
+                              x={-c.rx}
+                              y={-c.ry}
+                              width={c.rx * 2}
+                              height={c.ry * 2}
+                              className="pro-brush-cursor"
+                            />
+                          ) : (
+                            <ellipse rx={c.rx} ry={c.ry} className="pro-brush-cursor" />
+                          )}
+                          {c.hardness !== undefined && (
+                            <ellipse
+                              rx={c.rx * c.hardness}
+                              ry={c.ry * c.hardness}
+                              className="pro-brush-cursor pro-brush-cursor-core"
+                            />
+                          )}
+                        </g>
+                      </g>
+                    );
+                  })()
+                : null}
               {tool === "patch" &&
                 (patchPreview ?? patchDestination) &&
                 (() => {
