@@ -1,7 +1,7 @@
 # R3 test report — Professional Brush & Painting Engine
 
-Branch `codex/r3-professional-brush-engine` · Draft PR #14 · validated code commit `49dce40`
-(the final commit adds only this report; `src/`, `scripts/` and `package.json` are identical).
+Branch `codex/r3-professional-brush-engine` · Draft PR #14 · validated code commit **`96ca8f1`**
+(after the release-audit fixes; later commits change documentation only).
 
 Environment: Linux sandbox, Intel Xeon 2.80 GHz (4 cores), Node 22.22, dependencies installed with
 npm 11 from the lockfile as in CI (Node 24), Chromium 153 headless shell via Playwright. Touch is
@@ -23,12 +23,15 @@ New unit tests (`src/lib/studio/pro/brush-engine.test.ts`):
 - a 60,000-sample slow stroke stays within one recording step of every sample, under the point
   cap, and validates;
 - a stroke reaching the 10,000-point cap ends there and still validates;
+- a dynamic scribble that would exceed the 50,000-unit dab path ends inside it and validates
+  (fails on the pre-audit code); strokes without dynamics are bounded only by points;
 - pressure curve maths and clamping; mouse/touch never record pressure; recorded pressure drives
   dab radius; release keeps the last real pressure; pressure-only changes are recorded;
 - cursor footprint in rotated/non-uniformly scaled layer frames and in mask frames, square pencil,
   deform fallback;
 - inking presets valid, distinct, existing fields only;
-- duplicate/delete/override/reset behaviour;
+- duplicate/delete/override/reset behaviour; rename cannot shadow Inkstrip presets; repeated
+  duplicates of 40-character names stay valid (fails on the pre-audit code);
 - pressure preference persistence and corrupt-storage fallback.
 
 ## B. Pixel-level results (real `stroke()` in Chromium, asserted in `test:r3:browser`)
@@ -45,20 +48,23 @@ New unit tests (`src/lib/studio/pro/brush-engine.test.ts`):
 | Eraser 50% on 60% red                                                 | alpha 153 → 77, red channel unchanged                      |
 | Soft eraser profile                                                   | 35 → 110 → 230 from centre outward                         |
 
-## C. Browser suites (Chromium, dev server, no edits during the run)
+## C. Browser suites (Chromium, fresh dev server, no edits during the run, commit `96ca8f1`)
 
 | Suite                                                               | Result                                                                                                                                      |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`test:r3:browser` (new)**                                         | **pass** at 1440, 768, 390, 360, 320                                                                                                        |
 | chapter-import, r2, r2-gesture, homepage                            | pass                                                                                                                                        |
-| dialogue, dialogue render / security / ocr                          | pass                                                                                                                                        |
+| dialogue, dialogue workflow / render / security / ocr               | pass                                                                                                                                        |
 | editor, adjustments, retouch, workflow, ui                          | pass                                                                                                                                        |
 | pro, layers, repair, geometry, transform, color, appearance         | pass                                                                                                                                        |
 | vector, compound, pathfinder, artboards, vector-final               | pass                                                                                                                                        |
 | raster-refinement (preset save via inline field)                    | pass                                                                                                                                        |
-| `production-vector-check --raster` on the built output at `49dce40` | pass, no console errors or failed assets                                                                                                    |
-| dialogue workflow                                                   | timed out once at 180 s on the cold OCR model download; **passed on rerun**                                                                 |
+| `production-vector-check --raster` on the built output at `96ca8f1` | pass, no console errors or failed assets                                                                                                    |
 | studio (real Swin2SR inference)                                     | not runnable here: `huggingface.co` is unreachable from the sandbox browser; it fails identically on `main` after the image decode succeeds |
+
+29 of 30 pass; the one exception is the environment-blocked AI inference suite. In the
+pre-audit run the dialogue workflow suite timed out once on the cold OCR model download and
+passed on rerun; in this run it passed first time.
 
 `test:r3:browser` covers at every width:
 
@@ -76,6 +82,10 @@ At 1440 px it also covers:
 
 - synthetic pen force 0.5 with curve 2 records pressure 0.25, while the mouse records none;
 - a 13,200-sample stroke commits;
+- a ~54,000-unit dynamic zigzag ends at the dab budget, commits, and shows the persistent
+  "maximum stroke length" notice (with the pre-audit recorder the notice never appears and the
+  stroke is not committed);
+- "Save current preset" with an existing name refuses instead of overwriting;
 - painting in mask-edit mode goes to the mask, not the artwork.
 
 **Before/after evidence (real UI, smoothing 60%, pen lifted at x=110):** `main` ends the stroke at
