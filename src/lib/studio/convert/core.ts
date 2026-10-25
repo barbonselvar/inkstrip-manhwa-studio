@@ -24,13 +24,18 @@ export async function decodeRaster(type: ConvertibleType, bytes: Uint8Array): Pr
 
 async function decodeTiff(bytes: Uint8Array): Promise<Raster> {
   const { default: UTIF } = await import("utif2");
-  const buffer = bytes.slice().buffer as ArrayBuffer;
+  // Always copy: a Node Buffer's slice() is a view into a shared pool.
+  const buffer = Uint8Array.prototype.slice.call(bytes).buffer as ArrayBuffer;
   const ifds = UTIF.decode(buffer);
   const tag = (ifd: (typeof ifds)[number], name: string) =>
     Number((ifd as unknown as Record<string, ArrayLike<number> | undefined>)[name]?.[0] ?? NaN);
   // The first full-resolution page; reduced-resolution pages (NewSubfileType bit 0) are skipped.
   const page = ifds.find((ifd) => !((tag(ifd, "t254") || 0) & 1)) ?? ifds[0];
   if (!page) throw Error("The TIFF file contains no image.");
+  validateTiffData(new Uint8Array(buffer), (name) => {
+    const v = (page as unknown as Record<string, ArrayLike<number> | undefined>)[name];
+    return v ? Array.from(v, Number) : undefined;
+  });
   UTIF.decodeImage(buffer, page);
   const width = Number(page.width),
     height = Number(page.height);
@@ -45,6 +50,102 @@ async function decodeTiff(bytes: Uint8Array): Promise<Raster> {
     { width, height, data: rgba, channels: 4, depth: 8, notes },
     tag(page, "t274") || 1,
   );
+}
+
+/** utif2 silently turns corrupt LZW/PackBits/uncompressed strips into wrong pixels. Check
+ * that every strip or tile is structurally valid and decodes to at least the image size,
+ * so a corrupted TIFF is rejected instead of being imported with garbage. */
+export function validateTiffData(bytes: Uint8Array, tag: (name: string) => number[] | undefined) {
+  const compression = tag("t259")?.[0] ?? 1,
+    width = tag("t256")?.[0] ?? 0,
+    height = tag("t257")?.[0] ?? 0,
+    bits = tag("t258")?.[0] ?? 1,
+    samples = tag("t277")?.[0] ?? 1,
+    planar = tag("t284")?.[0] ?? 1,
+    tileW = tag("t322")?.[0],
+    tileH = tag("t323")?.[0],
+    offsets = tag(tileW ? "t324" : "t273") ?? [],
+    counts = tag(tileW ? "t325" : "t279") ?? [];
+  const bad = (why: string): never => {
+    throw Error(`The TIFF image data is corrupted or unsupported (${why}).`);
+  };
+  if (!width || !height || !offsets.length || offsets.length !== counts.length)
+    bad("missing strip layout");
+  if ([2, 3, 4].includes(compression)) {
+    if (bits !== 1 || samples !== 1) bad("fax compression on a non-bilevel image");
+    return; // Bilevel fax scans: decoded by utif2's CCITT decoder.
+  }
+  const planes = planar === 2 ? samples : 1,
+    perPixel = planar === 2 ? bits : bits * samples,
+    expected = tileW
+      ? Math.ceil(width / tileW) *
+        Math.ceil(height / tileH!) *
+        tileH! *
+        Math.ceil((tileW * perPixel) / 8) *
+        planes
+      : Math.ceil((width * perPixel) / 8) * height * planes;
+  let total = 0;
+  for (let i = 0; i < offsets.length; i++) {
+    const start = offsets[i]!,
+      size = counts[i]!;
+    if (start + size > bytes.length) bad("strip outside the file");
+    const strip = bytes.subarray(start, start + size);
+    if (compression === 1) total += size;
+    else if (compression === 5) total += lzwLength(strip) ?? bad("invalid LZW stream");
+    else if (compression === 32773) total += packBitsLength(strip);
+    else return; // Deflate: utif2's inflater throws on corrupt streams.
+  }
+  if (total < expected) bad("image data is truncated");
+}
+
+/** Decoded length of a TIFF LZW stream (MSB-first, early code-width change), or undefined. */
+export function lzwLength(data: Uint8Array): number | undefined {
+  let bit = 0,
+    width = 9,
+    next = 258,
+    previous = -1,
+    total = 0,
+    first = true;
+  const lengths = new Uint32Array(4096);
+  for (let i = 0; i < 256; i++) lengths[i] = 1;
+  while (bit + width <= data.length * 8) {
+    let code = 0;
+    for (let k = 0; k < width; k++, bit++)
+      code = (code << 1) | ((data[bit >> 3]! >> (7 - (bit & 7))) & 1);
+    if (first && code !== 256) return undefined;
+    first = false;
+    if (code === 257) return total;
+    if (code === 256) {
+      width = 9;
+      next = 258;
+      previous = -1;
+      continue;
+    }
+    let length: number;
+    if (code < next && (code < 256 || code > 257)) length = lengths[code]!;
+    else if (code === next && previous >= 0) length = lengths[previous]! + 1;
+    else return undefined;
+    if (previous >= 0 && next < 4096) lengths[next++] = lengths[previous]! + 1;
+    total += length;
+    previous = code;
+    if (next + 1 >= 1 << width && width < 12) width++;
+  }
+  return total; // Some writers omit EOI; the length check still applies.
+}
+
+function packBitsLength(data: Uint8Array) {
+  let total = 0;
+  for (let i = 0; i < data.length;) {
+    const n = (data[i]! << 24) >> 24;
+    if (n >= 0) {
+      total += n + 1;
+      i += n + 2;
+    } else if (n !== -128) {
+      total += 1 - n;
+      i += 2;
+    } else i++;
+  }
+  return total;
 }
 
 async function decodeHeif(bytes: Uint8Array): Promise<Raster> {
@@ -73,8 +174,8 @@ async function decodeHeif(bytes: Uint8Array): Promise<Raster> {
 
 async function decodeJxl(bytes: Uint8Array): Promise<Raster> {
   const { default: decode } = await import("@jsquash/jxl/decode.js");
-  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-  const image = await decode(buffer as ArrayBuffer);
+  const buffer = Uint8Array.prototype.slice.call(bytes).buffer as ArrayBuffer;
+  const image = await decode(buffer);
   return {
     width: image.width,
     height: image.height,
