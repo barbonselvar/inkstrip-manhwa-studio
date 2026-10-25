@@ -1403,7 +1403,10 @@ export function ProCanvas({
         g.region = { ...r, points: recorded.points };
         if (recorded.full && !g.full) {
           g.full = true;
-          onError("This lasso reached its point limit; release to apply the outline drawn so far.");
+          // A status (not an error) so the notice survives the commit on release.
+          (onStatus ?? onError)(
+            "This lasso reached its point limit; release to apply the outline drawn so far.",
+          );
         }
       } else
         g.region = {

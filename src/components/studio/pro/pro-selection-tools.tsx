@@ -68,9 +68,9 @@ export function ProSelectionTools({
             onChange={(n) => onQuickMaskOpacity(n / 100)}
           />
           <p className="pro-help" role="status">
-            Quick Mask: paint (Brush/Pencil) to add to the selection and erase to remove it. Hardness,
-            opacity, flow and pen pressure set partial coverage. The tinted area is selected.
-            Exit to turn it back into a selection; export is paused until then.
+            Quick Mask: paint (Brush/Pencil) to add to the selection and erase to remove it.
+            Hardness, opacity, flow and pen pressure set partial coverage. The tinted area is
+            selected. Exit to turn it back into a selection; export is paused until then.
           </p>
         </>
       )}
@@ -120,9 +120,9 @@ export function ProSelectionTools({
         </div>
         <p className="pro-help">
           Mask from selection (Layer mask section) creates or replaces the mask. Add selection to
-          mask keeps the existing mask and reveals the selection too; Selection from mask loads
-          the mask as a selection using the current selection mode. Masks themselves are never
-          changed by loading.
+          mask keeps the existing mask and reveals the selection too; Selection from mask loads the
+          mask as a selection using the current selection mode. Masks themselves are never changed
+          by loading.
         </p>
       </ToolSection>
       <ToolSection title="Copy, cut and paste" defaultOpen={false}>
@@ -145,8 +145,8 @@ export function ProSelectionTools({
         </div>
         <p className="pro-help">
           {clipboard ? `Clipboard: ${clipboard}. ` : ""}Works on one visible, unlocked raster or
-          paint layer (canvas up to 4MP). Cut keeps the original hidden and editable. Ctrl/Cmd+C,
-          X, V, J (layer via copy) and Shift+J (layer via cut).
+          paint layer (canvas up to 4MP). Cut keeps the original hidden and editable. Ctrl/Cmd+C, X,
+          V, J (layer via copy) and Shift+J (layer via cut).
         </p>
       </ToolSection>
     </ToolSection>
