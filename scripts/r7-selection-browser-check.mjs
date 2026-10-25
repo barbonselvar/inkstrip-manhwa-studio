@@ -411,6 +411,87 @@ try {
     fx.same(await exportRaster(p), before);
     checks.persistence = true;
 
+    // --- R6 integration: shortcuts are owned by the adjustment editor, adjustment layers
+    // sample the visible image, and Quick Mask disables the R6 color tools.
+    await loadDoc(p, fixture(), source);
+    const layersBefore = (await exportNative(p)).value.document.layers.length;
+    await openTab(p, "Properties");
+    await p.getByRole("button", { name: "New color adjustment", exact: true }).click();
+    const editor = p.getByRole("dialog", { name: "Color adjustment layer", exact: true });
+    await editor.waitFor();
+    await p.waitForFunction(() =>
+      [...document.querySelectorAll(".r6-lab button")].some(
+        (b) => b.textContent === "Apply adjustment" && !b.disabled,
+      ),
+    );
+    // No input focused: only the editor-open guard can stop these shortcuts.
+    await p.evaluate(() => (document.activeElement)?.blur?.());
+    assert.equal(await p.evaluate(() => document.activeElement?.tagName), "BODY");
+    for (const key of ["q", "Control+c", "Control+x", "Control+v", "Control+j", "Control+a"])
+      await p.keyboard.press(key);
+    await p.getByRole("button", { name: "Apply adjustment", exact: true }).click();
+    await editor.waitFor({ state: "hidden" });
+    native = (await exportNative(p)).value.document;
+    assert.equal(native.layers.length, layersBefore + 1, "only the adjustment layer was added");
+    assert.ok(!native.layers.some((l) => l.name === "Quick Mask (temporary)"), "Q ignored");
+    assert.ok(!native.selection?.regions?.length, "Ctrl+A ignored while the editor was open");
+    const adjustment = native.layers.at(-1);
+    assert.equal(adjustment.kind, "adjustment");
+    // Magic Wand on the active adjustment layer samples the visible image, not an empty bitmap.
+    const wandAt = async (sourceMode) => {
+      await tool(p, "Magic Wand");
+      await p.getByLabel("Selection operation", { exact: true }).selectOption("replace");
+      await p.getByLabel("Sample source", { exact: true }).selectOption(sourceMode);
+      await clickDoc(p, 80, 60);
+      await waitIdle(p);
+      await p.waitForFunction(() =>
+        document.querySelector('canvas[aria-label="Selected coverage preview"]'),
+      );
+      return (await exportNative(p)).value.document.selection;
+    };
+    const visibleSelection = await wandAt("visible");
+    assert.ok(visibleSelection.regions.length, "visible-image wand selects pixels");
+    await p.getByLabel("Sample source", { exact: true }).selectOption("layer");
+    await p
+      .getByText("The active layer is a color adjustment, so the visible image is sampled.", {
+        exact: true,
+      })
+      .waitFor();
+    await openTab(p, "Properties");
+    await p.getByRole("button", { name: "Deselect", exact: true }).first().click();
+    const layerSelection = await wandAt("layer");
+    assert.deepEqual(layerSelection, visibleSelection);
+    await p.getByLabel("Sample source", { exact: true }).selectOption("visible");
+    checks.adjustmentSampling = true;
+    // Quick Mask disables both R6 color tools and restores them afterwards.
+    await openTab(p, "Properties");
+    await p.getByRole("button", { name: "Quick Mask", exact: true }).click();
+    await p.getByRole("button", { name: "Exit Quick Mask", exact: true }).waitFor();
+    assert.equal(
+      await p.getByRole("button", { name: "New color adjustment", exact: true }).isDisabled(),
+      true,
+    );
+    assert.equal(
+      await p.getByRole("button", { name: "Color & Filters…", exact: true }).isDisabled(),
+      true,
+    );
+    await p
+      .getByText("Exit Quick Mask to use color adjustments and Color & Filters.", { exact: true })
+      .waitFor();
+    await p.getByRole("button", { name: "Exit Quick Mask", exact: true }).click();
+    await p.getByRole("button", { name: "Quick Mask", exact: true }).waitFor();
+    assert.equal(
+      await p.getByRole("button", { name: "New color adjustment", exact: true }).isDisabled(),
+      false,
+    );
+    // With the editor closed, R7 shortcuts work again.
+    await command(p, "q");
+    await openTab(p, "Properties");
+    await p.getByRole("button", { name: "Exit Quick Mask", exact: true }).waitFor();
+    await command(p, "q");
+    await p.getByText("Quick Mask converted to a selection", { exact: false }).waitFor();
+    checks.r6Integration = true;
+
     await panels(p, false);
     await p.screenshot({ path: `/workspace/screenshots/r7-${width}.png` });
     await panels(p);

@@ -801,8 +801,14 @@ export default function ProWorkspace({
   );
   /** Wand and Color Range sample the visible composite or only the active layer
    * (isolated with its children, at its real position, unaffected by layers above). */
+  // An R6 adjustment layer has no pixels of its own: isolating it would sample an empty
+  // bitmap, so "Active layer" falls back to the visible composite for it.
+  const adjustmentActive = active?.kind === "adjustment";
   const samplingDocument = (d: ProDocument) =>
-    wandSource === "layer" && active && d.layers.some((l) => l.id === active.id)
+    wandSource === "layer" &&
+    active &&
+    !adjustmentActive &&
+    d.layers.some((l) => l.id === active.id)
       ? thumbnailDocument(d, active.id)
       : d;
   const rangeRun = useRef(0);
@@ -1185,6 +1191,12 @@ export default function ProWorkspace({
         setStatus("Quick Mask converted to a selection at document resolution.");
       }
     });
+  };
+  /** R6 color tools must never target the temporary Quick Mask coverage layer. */
+  const blockedByQuickMaskColor = (d: ProDocument) => {
+    if (!quickMaskLayer(d)) return false;
+    setError("Exit Quick Mask before using color adjustments or Color & Filters.");
+    return true;
   };
   const blockedByQuickMask = () => {
     if (!quickMaskLayer(historyRef.current?.present.doc)) return false;
@@ -2261,7 +2273,9 @@ export default function ProWorkspace({
     save: saveNow,
     /** Selection and clipboard shortcuts (raster mode). Returns true when handled. */
     selectionKey: (e: KeyboardEvent) => {
-      if (mode !== "raster" || transformRef.current || cropDraft) return false;
+      // R6 adjustment / Color & Filters editors own the keyboard while open.
+      if (mode !== "raster" || transformRef.current || cropDraft || colorDraft || adjustmentDraft)
+        return false;
       const k = e.key.toLowerCase(),
         mod = e.ctrlKey || e.metaKey,
         d = historyRef.current?.present.doc;
@@ -2809,6 +2823,13 @@ export default function ProWorkspace({
                     </select>
                   </>
                 )}
+                {wandSource === "layer" &&
+                  adjustmentActive &&
+                  (tool === "wand" || tool === "color-range") && (
+                    <span className="pro-help" role="status">
+                      The active layer is a color adjustment, so the visible image is sampled.
+                    </span>
+                  )}
                 {tool === "color-range" && (
                   <>
                     <label className="pro-check">
@@ -2858,7 +2879,7 @@ export default function ProWorkspace({
                 <span className="pro-help">
                   {tool === "color-range"
                     ? "Tap artwork to add reference colors; the preview updates live"
-                    : `Tap artwork to sample ${wandSource === "layer" && tool === "wand" ? "the active layer" : "visible colors"} · tolerance 0–255`}
+                    : `Tap artwork to sample ${wandSource === "layer" && tool === "wand" && !adjustmentActive ? "the active layer" : "visible colors"} · tolerance 0–255`}
                 </span>
               </>
             )}
@@ -3255,10 +3276,13 @@ export default function ProWorkspace({
                         <>
                           <Button
                             variant="secondary"
-                            disabled={busy || !!transformDraft || !!cropDraft || maskMode}
+                            disabled={
+                              busy || !!transformDraft || !!cropDraft || maskMode || !!quickMask
+                            }
                             onClick={() => {
                               const current = historyRef.current?.present.doc;
                               if (!current || busyRef.current || transient) return;
+                              if (blockedByQuickMaskColor(current)) return;
                               try {
                                 const draft = createAdjustmentDraft(current, active?.id);
                                 adjustmentDocument(
@@ -3317,6 +3341,7 @@ export default function ProWorkspace({
                             !!transformDraft ||
                             !!cropDraft ||
                             maskMode ||
+                            !!quickMask ||
                             selectedIds.length !== 1 ||
                             !["raster", "paint"].includes(active.kind) ||
                             isLocked(doc!, active.id)
@@ -3324,6 +3349,7 @@ export default function ProWorkspace({
                           onClick={() => {
                             const current = historyRef.current?.present.doc;
                             if (!current || !active || transient) return;
+                            if (blockedByQuickMaskColor(current)) return;
                             try {
                               colorTarget(current, active.id, maxArea);
                               setColorDraft({ origin: current, layerId: active.id });
@@ -3339,6 +3365,11 @@ export default function ProWorkspace({
                         <p className="pro-help">
                           Select the artwork thumbnail in Layers to process colors. Mask-only color
                           processing is unavailable.
+                        </p>
+                      )}
+                      {mode === "raster" && !dialogue && quickMask && (
+                        <p className="pro-help" role="status">
+                          Exit Quick Mask to use color adjustments and Color &amp; Filters.
                         </p>
                       )}
                       <ProProperties
