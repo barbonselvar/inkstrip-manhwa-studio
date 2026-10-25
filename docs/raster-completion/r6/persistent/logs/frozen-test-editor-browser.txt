@@ -1,0 +1,17 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:8081/
+Call log:
+[2m  - navigating to "http://127.0.0.1:8081/", waiting until "load"[22m
+
+    at setup (/workspace/inkstrip-r6/scripts/editor-browser-check.mjs:17:14)
+    at async file:///workspace/inkstrip-r6/scripts/editor-browser-check.mjs:147:27 {
+  log: [
+    '  - navigating to "http://127.0.0.1:8081/", waiting until "load"'
+  ],
+  name: 'Error'
+}
+
+Node.js v24.19.0

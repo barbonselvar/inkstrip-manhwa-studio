@@ -1,0 +1,894 @@
+{
+  "baseline": "740720c1d5e141c7f52ecab83d2e505fea7183f0",
+  "runtimeCommit": "6803457862ace58324eec5f58cb2502e5d8bd042",
+  "draftPR": "https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/16",
+  "scope": "Compatible destructive pixel operations and retained existing adjustment layers; advanced persistent adjustment settings blocked pending format approval.",
+  "nativeFormatChanged": false,
+  "mainModified": false,
+  "mergePerformed": false,
+  "deploymentPerformed": false,
+  "r7Started": false,
+  "gates": {
+    "npmCi": {
+      "exitCode": 0,
+      "packages": 465
+    },
+    "npmTest": {
+      "exitCode": 0,
+      "tests": 888,
+      "breakdown": [200, 59, 91, 538],
+      "newTests": 40
+    },
+    "typecheck": {
+      "exitCode": 0
+    },
+    "lint": {
+      "exitCode": 0,
+      "warnings": 0
+    },
+    "build": {
+      "exitCode": 0
+    },
+    "checkBuild": {
+      "exitCode": 0
+    },
+    "checkAuth": {
+      "exitCode": 0
+    }
+  },
+  "codeCI": {
+    "sha": "6803457862ace58324eec5f58cb2502e5d8bd042",
+    "build": {
+      "id": 40181763304,
+      "conclusion": "success"
+    },
+    "configuration": {
+      "id": 40181763295,
+      "conclusion": "success"
+    }
+  },
+  "publicationHeadAndFinalCI": "https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/16/checks",
+  "resolvedRegressionCommands": [
+    {
+      "command": "test:studio:browser",
+      "exitCode": 0,
+      "seconds": 119.22,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-studio-browser.log"
+    },
+    {
+      "command": "test:editor:browser",
+      "exitCode": 0,
+      "seconds": 56.12,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-editor-browser.log"
+    },
+    {
+      "command": "test:adjustments:browser",
+      "exitCode": 0,
+      "seconds": 54.09,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-adjustments-browser.log"
+    },
+    {
+      "command": "test:retouch:browser",
+      "exitCode": 0,
+      "seconds": 15.9,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-retouch-browser.log"
+    },
+    {
+      "command": "test:workflow:browser",
+      "exitCode": 0,
+      "seconds": 52.6,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-workflow-browser.log"
+    },
+    {
+      "command": "test:ui:browser",
+      "exitCode": 0,
+      "seconds": 63.6,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-ui-browser.log"
+    },
+    {
+      "command": "test:pro:browser",
+      "exitCode": 0,
+      "seconds": 108.01,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-pro-browser.log"
+    },
+    {
+      "command": "test:layers:browser",
+      "exitCode": 0,
+      "seconds": 87.05,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-layers-browser.log"
+    },
+    {
+      "command": "test:repair:browser",
+      "exitCode": 0,
+      "seconds": 51.38,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-repair-browser.log"
+    },
+    {
+      "command": "test:geometry:browser",
+      "exitCode": 0,
+      "seconds": 40.39,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-geometry-browser.log"
+    },
+    {
+      "command": "test:transform:browser",
+      "exitCode": 0,
+      "seconds": 58.37,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-transform-browser.log"
+    },
+    {
+      "command": "test:color:browser",
+      "exitCode": 0,
+      "seconds": 45.82,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-color-browser.log"
+    },
+    {
+      "command": "test:appearance:browser",
+      "exitCode": 0,
+      "seconds": 43.98,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-appearance-browser.log"
+    },
+    {
+      "command": "test:vector:browser",
+      "exitCode": 0,
+      "seconds": 40.73,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-vector-browser.log"
+    },
+    {
+      "command": "test:compound:browser",
+      "exitCode": 0,
+      "seconds": 58.68,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-compound-browser.log"
+    },
+    {
+      "command": "test:pathfinder:browser",
+      "exitCode": 0,
+      "seconds": 79.6,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-pathfinder-browser.log"
+    },
+    {
+      "command": "test:artboards:browser",
+      "exitCode": 0,
+      "seconds": 45.38,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-artboards-browser.log"
+    },
+    {
+      "command": "test:vector-final:browser",
+      "exitCode": 0,
+      "seconds": 92.97,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-vector-final-browser.log"
+    },
+    {
+      "command": "test:raster-refinement:browser",
+      "exitCode": 0,
+      "seconds": 77.37,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-raster-refinement-browser.log"
+    },
+    {
+      "command": "bench:raster:browser",
+      "exitCode": 0,
+      "seconds": 27.27,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-bench-raster-browser.log"
+    },
+    {
+      "command": "test:homepage:browser",
+      "exitCode": 0,
+      "seconds": 56.33,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-homepage-browser.log"
+    },
+    {
+      "command": "test:dialogue:ocr",
+      "exitCode": 0,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/ocr-retry.log",
+      "retry": true,
+      "seconds": null,
+      "note": "Unchanged original command and assertions; confirmed successful terminal exit after initial timing failure. Retry duration not instrumented."
+    },
+    {
+      "command": "test:dialogue:browser",
+      "exitCode": 0,
+      "seconds": 21.42,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-dialogue-browser.log"
+    },
+    {
+      "command": "test:dialogue:workflow",
+      "exitCode": 0,
+      "seconds": 21.24,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-dialogue-workflow.log"
+    },
+    {
+      "command": "test:dialogue:render",
+      "exitCode": 0,
+      "seconds": 2.0,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/frozen-test-dialogue-render.log"
+    },
+    {
+      "command": "test:dialogue:security",
+      "exitCode": 0,
+      "seconds": 2.0,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/frozen-test-dialogue-security.log"
+    },
+    {
+      "command": "test:chapter-import:browser",
+      "exitCode": 0,
+      "seconds": 21.74,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/frozen-test-chapter-import-browser.log"
+    },
+    {
+      "command": "test:r2:browser",
+      "exitCode": 0,
+      "seconds": 72.39,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-r2-browser.log"
+    },
+    {
+      "command": "test:r2:gesture:browser",
+      "exitCode": 0,
+      "seconds": 9.52,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-r2-gesture-browser.log"
+    },
+    {
+      "command": "test:r3:browser",
+      "exitCode": 0,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/r3-isolated-retry.log",
+      "retry": true,
+      "seconds": null,
+      "note": "Unchanged original command and assertions; confirmed successful terminal exit after initial timing failure. Retry duration not instrumented."
+    },
+    {
+      "command": "test:r5:browser",
+      "exitCode": 0,
+      "seconds": 67.4,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-r5-browser.log"
+    }
+  ],
+  "newR6Browser": {
+    "exitCode": 0,
+    "base": "http://127.0.0.1:8081",
+    "widths": [1440, 768, 390, 360, 320],
+    "groupMaskClipScene": true,
+    "pointControlPixels": true,
+    "allFiltersRealWorker": true,
+    "curvePointerAndTouch": true,
+    "presets": true,
+    "errors": [],
+    "pixelTolerance": 0,
+    "byteExactPreviewCancelApplyNativeExport": true
+  },
+  "browserCommandSuites": 31,
+  "separateExistingRasterBenchmark": true,
+  "localBuiltAcceptance": {
+    "exitCode": 0,
+    "sha": "6803457862ace58324eec5f58cb2502e5d8bd042",
+    "base": "http://127.0.0.1:8081",
+    "errors": [],
+    "failedCriticalAssets": []
+  },
+  "smoke": {
+    "dev": {
+      "exitCode": 0,
+      "desktopAndMobile": true
+    },
+    "built": {
+      "exitCode": 0,
+      "desktopAndMobile": true,
+      "divergesFromBaseline": false
+    }
+  },
+  "ocrRetryEvidence": {
+    "results": [
+      {
+        "regions": [
+          {
+            "id": "89c0f21a-c3f1-417b-aa79-99104024836a",
+            "x": 50,
+            "y": 119,
+            "width": 859,
+            "height": 51,
+            "sourceLanguage": "en",
+            "targetLanguage": "en",
+            "original": "A WORLD IN EVERY FRAME",
+            "corrected": "A WORLD IN EVERY FRAME",
+            "replacement": "",
+            "confidence": 93,
+            "status": "detected"
+          }
+        ],
+        "text": "A WORLD IN EVERY FRAME\n",
+        "elapsedMs": 1235.9000000003725,
+        "engine": "Tesseract.js7.0.0 / tessdata_fast",
+        "language": "eng",
+        "dimensions": [1100, 280],
+        "expected": "A WORLD IN EVERY FRAME",
+        "characterCoverage": 1
+      },
+      {
+        "regions": [
+          {
+            "id": "a5731151-cdf2-4228-8891-26b5d6f6ab64",
+            "x": 53,
+            "y": 111,
+            "width": 736,
+            "height": 65,
+            "sourceLanguage": "ko",
+            "targetLanguage": "en",
+            "original": "새로운 이야기가 시작됩니다",
+            "corrected": "새로운 이야기가 시작됩니다",
+            "replacement": "",
+            "confidence": 92,
+            "status": "detected"
+          }
+        ],
+        "text": "새로운 이야기가 시작됩니다\n",
+        "elapsedMs": 1652.7000000001863,
+        "engine": "Tesseract.js7.0.0 / tessdata_fast",
+        "language": "kor",
+        "dimensions": [1100, 280],
+        "expected": "새로운 이야기가 시작됩니다",
+        "characterCoverage": 1
+      },
+      {
+        "regions": [
+          {
+            "id": "0d9f35a3-2380-44ee-b609-feb25661d296",
+            "x": 762,
+            "y": 118,
+            "width": 310,
+            "height": 77,
+            "sourceLanguage": "ar",
+            "targetLanguage": "en",
+            "original": "مرحبابالعالم",
+            "corrected": "مرحبابالعالم",
+            "replacement": "",
+            "confidence": 92,
+            "status": "detected"
+          }
+        ],
+        "text": " مرحبابالعالم\n",
+        "elapsedMs": 1243.5,
+        "engine": "Tesseract.js7.0.0 / tessdata_fast",
+        "language": "ara",
+        "dimensions": [1100, 280],
+        "expected": "مرحبا بالعالم",
+        "characterCoverage": 1
+      },
+      {
+        "regions": [
+          {
+            "id": "0615bfb0-586e-4f4f-a705-d6f504e1081a",
+            "x": 53,
+            "y": 110,
+            "width": 439,
+            "height": 66,
+            "sourceLanguage": "ja",
+            "targetLanguage": "en",
+            "original": "次の駅で会おう",
+            "corrected": "次の駅で会おう",
+            "replacement": "",
+            "confidence": 95,
+            "status": "detected"
+          }
+        ],
+        "text": "次の駅で会おう\n",
+        "elapsedMs": 991.8999999999069,
+        "engine": "Tesseract.js7.0.0 / tessdata_fast",
+        "language": "jpn",
+        "dimensions": [1100, 280],
+        "expected": "次の駅で会おう",
+        "characterCoverage": 1
+      },
+      {
+        "regions": [
+          {
+            "id": "1ceafd57-1266-44d4-91bb-542b309c5610",
+            "x": 110,
+            "y": 70,
+            "width": 66,
+            "height": 544,
+            "sourceLanguage": "ja",
+            "targetLanguage": "en",
+            "original": "次の駅で会おう",
+            "corrected": "次の駅で会おう",
+            "replacement": "",
+            "confidence": 95,
+            "status": "detected"
+          }
+        ],
+        "text": "次の駅で会おう\n",
+        "elapsedMs": 1177.8000000002794,
+        "engine": "Tesseract.js7.0.0 / tessdata_fast",
+        "language": "jpn_vert",
+        "dimensions": [260, 900],
+        "expected": "次の駅で会おう",
+        "characterCoverage": 1
+      }
+    ],
+    "cancelled": true,
+    "cachedInference": {
+      "text": "CACHE WORKS\n",
+      "elapsedMs": 533.3000000002794
+    },
+    "unexpectedModelRequests": 0,
+    "corruption": {
+      "message": "OCR model download is incomplete; any corrupt cached copy was removed. Retry to download verified data.",
+      "removed": true
+    },
+    "errors": [],
+    "chromium": "156.0.8078.4",
+    "notes": "Character coverage is a diagnostic, not a character-error rate or proof of reliable OCR on real comics. Glyph fonts are system Noto in this QA host. No physical Android test."
+  },
+  "initialNonAcceptanceRuns": [
+    {
+      "command": "test:studio:browser",
+      "exitCode": 0,
+      "seconds": 61.46,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/test-studio-browser.log"
+    },
+    {
+      "command": "test:editor:browser",
+      "exitCode": 0,
+      "seconds": 29.15,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/test-editor-browser.log"
+    },
+    {
+      "command": "test:adjustments:browser",
+      "exitCode": 1,
+      "seconds": 56.51,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-adjustments-browser.log"
+    },
+    {
+      "command": "test:retouch:browser",
+      "exitCode": 0,
+      "seconds": 11.46,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/test-retouch-browser.log"
+    },
+    {
+      "command": "test:workflow:browser",
+      "exitCode": 1,
+      "seconds": 29.74,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/test-workflow-browser.log"
+    },
+    {
+      "command": "test:ui:browser",
+      "exitCode": 1,
+      "seconds": 31.13,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/test-ui-browser.log"
+    },
+    {
+      "command": "test:pro:browser",
+      "exitCode": 1,
+      "seconds": 110.65,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-pro-browser.log"
+    },
+    {
+      "command": "test:layers:browser",
+      "exitCode": 1,
+      "seconds": 97.0,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-layers-browser.log"
+    },
+    {
+      "command": "test:repair:browser",
+      "exitCode": 0,
+      "seconds": 53.41,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-repair-browser.log"
+    },
+    {
+      "command": "test:geometry:browser",
+      "exitCode": 0,
+      "seconds": 49.16,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-geometry-browser.log"
+    },
+    {
+      "command": "test:transform:browser",
+      "exitCode": 0,
+      "seconds": 58.86,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-transform-browser.log"
+    },
+    {
+      "command": "test:color:browser",
+      "exitCode": 0,
+      "seconds": 43.66,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-color-browser.log"
+    },
+    {
+      "command": "test:appearance:browser",
+      "exitCode": 0,
+      "seconds": 48.54,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-appearance-browser.log"
+    },
+    {
+      "command": "test:vector:browser",
+      "exitCode": 0,
+      "seconds": 60.03,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-vector-browser.log"
+    },
+    {
+      "command": "test:compound:browser",
+      "exitCode": 1,
+      "seconds": 58.83,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-compound-browser.log"
+    },
+    {
+      "command": "test:pathfinder:browser",
+      "exitCode": 1,
+      "seconds": 35.39,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-pathfinder-browser.log"
+    },
+    {
+      "command": "test:artboards:browser",
+      "exitCode": 1,
+      "seconds": 60.31,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-artboards-browser.log"
+    },
+    {
+      "command": "test:vector-final:browser",
+      "exitCode": 1,
+      "seconds": 60.02,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-vector-final-browser.log"
+    },
+    {
+      "command": "test:raster-refinement:browser",
+      "exitCode": 1,
+      "seconds": 89.44,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-raster-refinement-browser.log"
+    },
+    {
+      "command": "bench:raster:browser",
+      "exitCode": 0,
+      "seconds": 25.78,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/bench-raster-browser.log"
+    },
+    {
+      "command": "test:homepage:browser",
+      "exitCode": 1,
+      "seconds": 31.01,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/test-homepage-browser.log"
+    },
+    {
+      "command": "test:dialogue:ocr",
+      "exitCode": 1,
+      "seconds": 2.41,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-dialogue-ocr.log"
+    },
+    {
+      "command": "test:dialogue:browser",
+      "exitCode": 1,
+      "seconds": 31.26,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/test-dialogue-browser.log"
+    },
+    {
+      "command": "test:dialogue:workflow",
+      "exitCode": 1,
+      "seconds": 46.12,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/test-dialogue-workflow.log"
+    },
+    {
+      "command": "test:dialogue:render",
+      "exitCode": 0,
+      "seconds": 2.2,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-dialogue-render.log"
+    },
+    {
+      "command": "test:dialogue:security",
+      "exitCode": 0,
+      "seconds": 3.34,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-dialogue-security.log"
+    },
+    {
+      "command": "test:chapter-import:browser",
+      "exitCode": 0,
+      "seconds": 26.66,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-chapter-import-browser.log"
+    },
+    {
+      "command": "test:r2:browser",
+      "exitCode": 1,
+      "seconds": 39.5,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-r2-browser.log"
+    },
+    {
+      "command": "test:r2:gesture:browser",
+      "exitCode": 0,
+      "seconds": 9.88,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-r2-gesture-browser.log"
+    },
+    {
+      "command": "test:r3:browser",
+      "exitCode": 1,
+      "seconds": 340.01,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-r3-browser.log"
+    },
+    {
+      "command": "test:r5:browser",
+      "exitCode": 1,
+      "seconds": 82.68,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/test-r5-browser.log"
+    }
+  ],
+  "frozenBatchBeforeRetries": [
+    {
+      "command": "test:studio:browser",
+      "exitCode": 0,
+      "seconds": 119.22,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-studio-browser.log"
+    },
+    {
+      "command": "test:editor:browser",
+      "exitCode": 0,
+      "seconds": 56.12,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-editor-browser.log"
+    },
+    {
+      "command": "test:adjustments:browser",
+      "exitCode": 0,
+      "seconds": 54.09,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-adjustments-browser.log"
+    },
+    {
+      "command": "test:retouch:browser",
+      "exitCode": 0,
+      "seconds": 15.9,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-retouch-browser.log"
+    },
+    {
+      "command": "test:workflow:browser",
+      "exitCode": 0,
+      "seconds": 52.6,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-workflow-browser.log"
+    },
+    {
+      "command": "test:ui:browser",
+      "exitCode": 0,
+      "seconds": 63.6,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-ui-browser.log"
+    },
+    {
+      "command": "test:pro:browser",
+      "exitCode": 0,
+      "seconds": 108.01,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-pro-browser.log"
+    },
+    {
+      "command": "test:layers:browser",
+      "exitCode": 0,
+      "seconds": 87.05,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-layers-browser.log"
+    },
+    {
+      "command": "test:repair:browser",
+      "exitCode": 0,
+      "seconds": 51.38,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-repair-browser.log"
+    },
+    {
+      "command": "test:geometry:browser",
+      "exitCode": 0,
+      "seconds": 40.39,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-geometry-browser.log"
+    },
+    {
+      "command": "test:transform:browser",
+      "exitCode": 0,
+      "seconds": 58.37,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-transform-browser.log"
+    },
+    {
+      "command": "test:color:browser",
+      "exitCode": 0,
+      "seconds": 45.82,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-color-browser.log"
+    },
+    {
+      "command": "test:appearance:browser",
+      "exitCode": 0,
+      "seconds": 43.98,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-appearance-browser.log"
+    },
+    {
+      "command": "test:vector:browser",
+      "exitCode": 0,
+      "seconds": 40.73,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-vector-browser.log"
+    },
+    {
+      "command": "test:compound:browser",
+      "exitCode": 0,
+      "seconds": 58.68,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-compound-browser.log"
+    },
+    {
+      "command": "test:pathfinder:browser",
+      "exitCode": 0,
+      "seconds": 79.6,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-pathfinder-browser.log"
+    },
+    {
+      "command": "test:artboards:browser",
+      "exitCode": 0,
+      "seconds": 45.38,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-artboards-browser.log"
+    },
+    {
+      "command": "test:vector-final:browser",
+      "exitCode": 0,
+      "seconds": 92.97,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-vector-final-browser.log"
+    },
+    {
+      "command": "test:raster-refinement:browser",
+      "exitCode": 0,
+      "seconds": 77.37,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-raster-refinement-browser.log"
+    },
+    {
+      "command": "bench:raster:browser",
+      "exitCode": 0,
+      "seconds": 27.27,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-bench-raster-browser.log"
+    },
+    {
+      "command": "test:homepage:browser",
+      "exitCode": 0,
+      "seconds": 56.33,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-homepage-browser.log"
+    },
+    {
+      "command": "test:dialogue:ocr",
+      "exitCode": 124,
+      "seconds": 420.01,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/frozen-test-dialogue-ocr.log"
+    },
+    {
+      "command": "test:dialogue:browser",
+      "exitCode": 0,
+      "seconds": 21.42,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-dialogue-browser.log"
+    },
+    {
+      "command": "test:dialogue:workflow",
+      "exitCode": 0,
+      "seconds": 21.24,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-dialogue-workflow.log"
+    },
+    {
+      "command": "test:dialogue:render",
+      "exitCode": 0,
+      "seconds": 2.0,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/frozen-test-dialogue-render.log"
+    },
+    {
+      "command": "test:dialogue:security",
+      "exitCode": 0,
+      "seconds": 2.0,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/frozen-test-dialogue-security.log"
+    },
+    {
+      "command": "test:chapter-import:browser",
+      "exitCode": 0,
+      "seconds": 21.74,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/frozen-test-chapter-import-browser.log"
+    },
+    {
+      "command": "test:r2:browser",
+      "exitCode": 0,
+      "seconds": 72.39,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-r2-browser.log"
+    },
+    {
+      "command": "test:r2:gesture:browser",
+      "exitCode": 0,
+      "seconds": 9.52,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-r2-gesture-browser.log"
+    },
+    {
+      "command": "test:r3:browser",
+      "exitCode": 1,
+      "seconds": 284.35,
+      "base": "http://127.0.0.1:8080",
+      "log": "/workspace/r6-evidence/frozen-test-r3-browser.log"
+    },
+    {
+      "command": "test:r5:browser",
+      "exitCode": 0,
+      "seconds": 67.4,
+      "base": "http://127.0.0.1:8081",
+      "log": "/workspace/r6-evidence/frozen-test-r5-browser.log"
+    }
+  ],
+  "notes": [
+    "Initial runs overlapped source/build changes and produced invalidation/selector/context timing failures; no existing assertions were modified.",
+    "Frozen batch timed out in long R3 preview and after OCR fixture inference. Both original commands passed on unchanged retries; original failure results are retained.",
+    "New R6 fixture corrections: actual layer checkbox/toolbar labels; native asset rekeying and JSON -0 canonicalization; reduced-density masks reveal outside selection, so an actually transparent source pixel is used for unaffected-output proof.",
+    "The R6 modal stacking defect was caught visually and fixed. Synthetic touch/pen is not physical Android/stylus testing.",
+    "Final publishing head and exact-head Actions are recorded in PR16 after report commit."
+  ]
+}

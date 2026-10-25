@@ -1,0 +1,48 @@
+{
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "platform": "linux",
+  "browser": "156.0.8078.4",
+  "method": "Single cold import/preview and native PNG export per document. Three real layers, source texture, large feathered mask, 50 deterministic brush strokes. Zoom measurement includes UI automation. Peak is summed process-tree RSS sampled every 200 ms, may double-count shared pages; includes browser/runtime/GPU processes, not a per-document allocation measurement.",
+  "measurements": [
+    {
+      "width": 2048,
+      "height": 2048,
+      "layers": 3,
+      "strokes": 50,
+      "mask": "density 0.9 / feather 2",
+      "importPreviewMs": 1840.4,
+      "eightZoomControlClicksMs": 1102.3,
+      "pngExportMs": 1523.7,
+      "pngBytes": 233339,
+      "dimensionsVerified": true,
+      "browserTreeSampledPeakRssMiB": 923
+    },
+    {
+      "width": 4096,
+      "height": 4096,
+      "layers": 3,
+      "strokes": 50,
+      "mask": "density 0.9 / feather 2",
+      "importPreviewMs": 1782.5,
+      "eightZoomControlClicksMs": 818.1,
+      "pngExportMs": 2628.6,
+      "pngBytes": 575022,
+      "dimensionsVerified": true,
+      "browserTreeSampledPeakRssMiB": 1374.4
+    },
+    {
+      "width": 1024,
+      "height": 8192,
+      "layers": 3,
+      "strokes": 50,
+      "mask": "density 0.9 / feather 2",
+      "importPreviewMs": 1158.8,
+      "eightZoomControlClicksMs": 762.4,
+      "pngExportMs": 1315.1,
+      "pngBytes": 323235,
+      "dimensionsVerified": true,
+      "browserTreeSampledPeakRssMiB": 1374.4
+    }
+  ],
+  "errors": []
+}

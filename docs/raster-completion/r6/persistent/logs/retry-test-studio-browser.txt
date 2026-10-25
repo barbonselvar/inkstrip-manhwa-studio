@@ -1,0 +1,6 @@
+Running real Swin2SR inference on an adjusted 16×24 crop…
+Image 1 / 1
+Working…
+
+Preparing AI engine · this can take a moment
+{"ok":true,"chapterUrl":"http://127.0.0.1:8081/p/d71e2c68-a781-48ab-875a-ef364b971399/c/8f797b0a-6f39-49ab-b59a-637716d0a16f","checks":["create/import/stitch","scroll direction","real neural inference","comparison","apply/reload/byte-exact original recovery","cancellation","batch enhancement and recovery","mobile overflow"]}

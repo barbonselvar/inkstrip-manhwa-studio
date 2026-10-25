@@ -1,0 +1,19 @@
+{
+  "layersExact": true,
+  "beforePreviewExport": {
+    "count": 0,
+    "first": []
+  },
+  "afterPreviewExport": {
+    "count": 0,
+    "first": []
+  },
+  "previewRoundtrip": {
+    "count": 0,
+    "first": []
+  },
+  "exportRoundtrip": {
+    "count": 0,
+    "first": []
+  }
+}

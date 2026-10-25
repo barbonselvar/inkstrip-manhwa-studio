@@ -1,0 +1,76 @@
+R6 viewport 1440
+R6 1440: Apply complete
+R6 1440: native and export complete
+R6 viewport 768
+R6 768: Apply complete
+R6 768: native and export complete
+R6 viewport 390
+R6 390: Apply complete
+R6 390: native and export complete
+R6 viewport 360
+R6 360: Apply complete
+R6 360: native and export complete
+R6 viewport 320
+R6 320: Apply complete
+R6 320: native and export complete
+{
+  "passed": true,
+  "results": [
+    {
+      "width": 1440,
+      "pixelApplyCancelHistoryNativeExport": true,
+      "levelsCurvesExposure": true,
+      "selection": true,
+      "rapidPreview": true,
+      "r3Painting": true,
+      "r5Transform": true,
+      "touchEmulation": false
+    },
+    {
+      "width": 768,
+      "pixelApplyCancelHistoryNativeExport": true,
+      "levelsCurvesExposure": true,
+      "selection": true,
+      "rapidPreview": true,
+      "r3Painting": true,
+      "r5Transform": true,
+      "touchEmulation": true
+    },
+    {
+      "width": 390,
+      "pixelApplyCancelHistoryNativeExport": true,
+      "levelsCurvesExposure": true,
+      "selection": true,
+      "rapidPreview": true,
+      "r3Painting": true,
+      "r5Transform": true,
+      "touchEmulation": true
+    },
+    {
+      "width": 360,
+      "pixelApplyCancelHistoryNativeExport": true,
+      "levelsCurvesExposure": true,
+      "selection": true,
+      "rapidPreview": true,
+      "r3Painting": true,
+      "r5Transform": true,
+      "touchEmulation": true
+    },
+    {
+      "width": 320,
+      "pixelApplyCancelHistoryNativeExport": true,
+      "levelsCurvesExposure": true,
+      "selection": true,
+      "rapidPreview": true,
+      "r3Painting": true,
+      "r5Transform": true,
+      "touchEmulation": true
+    },
+    {
+      "groupMaskClippingExistingAdjustment": true,
+      "neutralBakeExact": true,
+      "lockedTargetRejected": true
+    }
+  ],
+  "errors": []
+}

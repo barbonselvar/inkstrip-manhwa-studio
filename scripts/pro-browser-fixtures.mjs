@@ -98,7 +98,7 @@ export function proBrowserFixtures(base, errors) {
         buffer: Buffer.from(
           JSON.stringify({
             format: "inkstrip-pro",
-            version: 1,
+            version: d.version === 2 ? 8 : 1,
             document: d,
             assets,
           }),

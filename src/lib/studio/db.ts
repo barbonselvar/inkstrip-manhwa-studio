@@ -1,7 +1,7 @@
 import { hasLegacyAiDraft } from "./dialogue/storage-compat";
 import { mediaIds } from "./editor/references";
 import { validateRecipe } from "./editor/geometry";
-import { preflightImage, thumbnailPolicy } from "./image-policy";
+import { preflightImage, thumbnailPolicy, type ImagePolicy } from "./image-policy";
 import type { Chapter, Panel, Project, Strip } from "@/lib/studio/types";
 
 const DB_NAME = "inkstrip";
@@ -138,10 +138,10 @@ export async function getBlob(id: string) {
   return blob;
 }
 /** Keep raw getBlob for byte-exact download/recovery; validate only decode consumers. */
-export async function getImageBlob(id: string, thumbnail = false) {
+export async function getImageBlob(id: string, thumbnail = false, policy?: ImagePolicy) {
   const blob = await getBlob(id);
   if (!blob) return undefined;
-  const info = await preflightImage(blob, thumbnail ? thumbnailPolicy() : undefined);
+  const info = await preflightImage(blob, thumbnail ? thumbnailPolicy() : policy);
   return blob.type === info.mime ? blob : blob.slice(0, blob.size, info.mime);
 }
 

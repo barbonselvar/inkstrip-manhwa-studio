@@ -1,3 +1,5 @@
+import { documentSources } from "./raster-budget.ts";
+import { canonicalNative, validateNativeTree } from "./adjustment-schema.ts";
 import { escapeXml } from "./xml.ts";
 export { escapeXml } from "./xml.ts";
 import { appearanceSvg } from "./vector-svg.ts";
@@ -57,49 +59,59 @@ export async function nativeFile(s: ProSession): Promise<Blob> {
     ]),
   ].some((s) => s?.frame?.matrix !== undefined);
   const version =
-    s.document.dialogue || s.document.layers.some((l) => l.bubble || l.lettering || l.dialogueRole)
-      ? 7
-      : matrixSelection ||
-          s.document.brushSettings !== undefined ||
-          s.document.savedSelections !== undefined ||
-          s.document.layers.some(
-            (l) =>
-              (l.kind === "group" && !!l.mask) ||
-              l.mask?.placement !== undefined ||
-              l.mask?.linked !== undefined ||
-              l.mask?.width !== undefined ||
-              l.mask?.density !== undefined ||
-              l.mask?.feather !== undefined ||
-              l.strokes.some((s) => s.dynamics !== undefined) ||
-              l.mask?.strokes.some((s) => s.dynamics !== undefined),
-          )
-        ? 5
-        : s.document.layers.some(
+    s.document.version === 2
+      ? 8
+      : s.document.dialogue ||
+          s.document.layers.some((l) => l.bubble || l.lettering || l.dialogueRole)
+        ? 7
+        : matrixSelection ||
+            s.document.brushSettings !== undefined ||
+            s.document.savedSelections !== undefined ||
+            s.document.layers.some(
               (l) =>
-                l.appearance !== undefined ||
-                l.textPath !== undefined ||
-                l.vectorClips !== undefined,
+                (l.kind === "group" && !!l.mask) ||
+                l.mask?.placement !== undefined ||
+                l.mask?.linked !== undefined ||
+                l.mask?.width !== undefined ||
+                l.mask?.density !== undefined ||
+                l.mask?.feather !== undefined ||
+                l.strokes.some((s) => s.dynamics !== undefined) ||
+                l.mask?.strokes.some((s) => s.dynamics !== undefined),
             )
-          ? 4
-          : s.document.artboards !== undefined || s.document.layout !== undefined
-            ? 3
-            : s.document.layers.some(
-                  (l) =>
-                    l.subpaths?.length ||
-                    l.vectorOverflow ||
-                    l.fillRule === "evenodd" ||
-                    l.lineCap !== undefined ||
-                    l.lineJoin !== undefined ||
-                    l.miterLimit !== undefined ||
-                    l.dash !== undefined ||
-                    l.dashOffset !== undefined ||
-                    l.fillOpacity !== undefined ||
-                    l.strokeOpacity !== undefined,
-                )
-              ? 2
-              : 1;
+          ? 5
+          : s.document.layers.some(
+                (l) =>
+                  l.appearance !== undefined ||
+                  l.textPath !== undefined ||
+                  l.vectorClips !== undefined,
+              )
+            ? 4
+            : s.document.artboards !== undefined || s.document.layout !== undefined
+              ? 3
+              : s.document.layers.some(
+                    (l) =>
+                      l.subpaths?.length ||
+                      l.vectorOverflow ||
+                      l.fillRule === "evenodd" ||
+                      l.lineCap !== undefined ||
+                      l.lineJoin !== undefined ||
+                      l.miterLimit !== undefined ||
+                      l.dash !== undefined ||
+                      l.dashOffset !== undefined ||
+                      l.fillOpacity !== undefined ||
+                      l.strokeOpacity !== undefined,
+                  )
+                ? 2
+                : 1;
   const file = new Blob(
-    [JSON.stringify({ format: "inkstrip-pro", version, document: s.document, assets })],
+    [
+      (version === 8 ? canonicalNative : JSON.stringify)({
+        format: "inkstrip-pro",
+        version,
+        document: s.document,
+        assets,
+      }),
+    ],
     { type: "application/json" },
   );
   if (file.size > 70_000_000)
@@ -115,17 +127,30 @@ export async function readNative(
 ): Promise<ProSession> {
   if (blob.size > 70_000_000) throw new Error("Native document exceeds the 70MB import limit.");
   const value = JSON.parse(await blob.text());
+  validateNativeTree(value);
   if (
     !value ||
     value.format !== "inkstrip-pro" ||
-    ![1, 2, 3, 4, 5, 7].includes(value.version) ||
+    ![1, 2, 3, 4, 5, 7, 8].includes(value.version) ||
     !value.assets ||
     typeof value.assets !== "object" ||
     Array.isArray(value.assets)
   )
     throw new Error(
-      "Unsupported native document. This editor supports native versions 1–5 and Dialogue version 7. Unreleased AI version 6 must be opened in its AI Studio branch.",
+      "Unsupported native document. This editor supports native versions 1–5, Dialogue7 and R6 version8. Unreleased AI version 6 must be opened in its AI Studio branch.",
     );
+  if (
+    !value.document ||
+    (value.version === 8 ? value.document.version !== 2 : value.document.version !== 1)
+  )
+    throw Error("Native envelope and document schema versions do not match.");
+  if (
+    value.version === 8 &&
+    Object.keys(value).some((k) => !["format", "version", "document", "assets"].includes(k))
+  )
+    throw Error("Unknown native version8 field.");
+  validateDocument({ ...value.document, panelId });
+  if (value.version === 8) documentSources({ ...value.document, panelId }, 16_777_216);
   if (Object.keys(value.assets).length > 64)
     throw Error("Native documents support at most64 embedded assets. Nothing was imported.");
   const assets: Record<string, Blob> = Object.create(null);
@@ -134,6 +159,13 @@ export async function readNative(
     const a = entry as { mime: string; data: string };
     if (
       !a ||
+      (value.version === 8 &&
+        (Object.keys(a).some((k) => !["mime", "data"].includes(k)) ||
+          typeof a.data !== "string" ||
+          a.data.length > MAX_ASSET_BYTES * 1.34 ||
+          a.data.length % 4 !== 0 ||
+          /[^A-Za-z0-9+/=]/.test(a.data) ||
+          (a.data.includes("=") && !["=", "=="].includes(a.data.slice(a.data.indexOf("=")))))) ||
       typeof a.data !== "string" ||
       a.data.length > MAX_ASSET_BYTES * 1.34 ||
       !["image/png", "image/jpeg", "image/webp"].includes(a.mime)

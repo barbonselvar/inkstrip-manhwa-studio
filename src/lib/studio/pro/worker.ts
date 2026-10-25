@@ -1,3 +1,5 @@
+import { histogramTiles } from "./adjustment-tiles";
+import { colorTarget } from "./color-transaction";
 import { renderSelectionTransform } from "./selection-transform-worker";
 import { NEUTRAL } from "../editor/adjustments";
 import { preflightImage, imagePolicy } from "../image-policy";
@@ -184,6 +186,52 @@ self.onmessage = async ({ data }) => {
         });
       } finally {
         mask.width = mask.height = 1;
+      }
+      return;
+    }
+    if (type === "adjustment-histogram") {
+      const selected = doc.layers.find((l) => l.id === data.layerId);
+      if (!selected?.adjustmentLayer) throw Error("Choose a persistent color adjustment layer.");
+      let histogram: Awaited<ReturnType<typeof histogramTiles>> | undefined;
+      const complete = new Error("Adjustment histogram captured");
+      try {
+        const rendered = await composite(
+          doc,
+          1,
+          get,
+          () => latest !== id,
+          () => {},
+          undefined,
+          async (layer, input) => {
+            if (layer.id !== selected.id) return;
+            histogram = await histogramTiles(
+              input.getContext("2d")!,
+              input.width,
+              input.height,
+              async () => {
+                await new Promise((resolve) => setTimeout(resolve, 0));
+                if (latest !== id) throw new DOMException("Histogram superseded", "AbortError");
+              },
+            );
+            throw complete;
+          },
+        );
+        rendered.width = rendered.height = 1;
+      } catch (e) {
+        if (e !== complete) throw e;
+      }
+      self.postMessage({ id, type, histogram });
+      return;
+    }
+    if (type === "color-source") {
+      const target = colorTarget(doc, data.layerId, data.maxArea);
+      const output = await surface({ ...target, mask: undefined }, 1, get);
+      try {
+        const blob = await output.convertToBlob({ type: "image/png" });
+        if (latest !== id) throw new DOMException("Color source cancelled", "AbortError");
+        self.postMessage({ id, type, blob });
+      } finally {
+        output.width = output.height = 1;
       }
       return;
     }

@@ -1,10 +1,11 @@
 import { openDb } from "../db";
 import { validateAssets, type ProSession } from "./model";
-/** Independent, self-contained blobs: old chapter garbage collection cannot remove Pro assets. */
+/** Storage version4 fences schema2 drafts from older native readers.
+ * Independent, self-contained blobs: old chapter garbage collection cannot remove Pro assets. */
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     let aiDraft = false;
-    const r = indexedDB.open("inkstrip-pro", 3);
+    const r = indexedDB.open("inkstrip-pro", 4);
     r.onupgradeneeded = () => {
       if (!r.result.objectStoreNames.contains("sessions"))
         r.result.createObjectStore("sessions", { keyPath: "id" });

@@ -1,3 +1,4 @@
+import type { ColorHistogram } from "./adjustment-tiles";
 import type { RefineOptions } from "./refine-selection";
 import type { Frame, Artboard } from "./artboards";
 import type { RepairRequest } from "./repair";
@@ -5,6 +6,7 @@ import type { ColorSelectionOptions } from "./selection";
 import type { ColorRangeOptions, ModifyOperation } from "./selection-tools";
 import type { ProDocument, ProSession, Region } from "./model";
 type RenderReply = {
+  histogram?: ColorHistogram;
   bitmap?: ImageBitmap;
   blob?: Blob;
   region?: Region;
@@ -147,6 +149,12 @@ export class ProRenderer {
   }
   sample(document: ProDocument, maxArea: number, point: { x: number; y: number }) {
     return this.request("sample", { document, maxArea, point });
+  }
+  adjustmentHistogram(document: ProDocument, maxArea: number, layerId: string) {
+    return this.request("adjustment-histogram", { document, maxArea, layerId });
+  }
+  colorSource(document: ProDocument, maxArea: number, layerId: string) {
+    return this.request("color-source", { document, maxArea, layerId });
   }
   stageSelection(document: ProDocument, maxArea: number, layerId: string) {
     return this.request("stage-selection", { document, maxArea, layerId });

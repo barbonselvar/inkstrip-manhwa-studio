@@ -1,0 +1,43 @@
+{
+  "results": [
+    {
+      "size": 128,
+      "layers": 4,
+      "maskedLayers": 4,
+      "sourceMs": 12.5,
+      "filterPixelMs": 10.300000000279397,
+      "filterWorkerWallMs": 130.79999999981374,
+      "exportMs": 49.5,
+      "sourceBytes": 3283,
+      "processedBytes": 3658,
+      "exportBytes": 14922
+    },
+    {
+      "size": 1024,
+      "layers": 4,
+      "maskedLayers": 4,
+      "sourceMs": 20.200000000186265,
+      "filterPixelMs": 135.70000000018626,
+      "filterWorkerWallMs": 243.5,
+      "exportMs": 359.89999999990687,
+      "sourceBytes": 102090,
+      "processedBytes": 127689,
+      "exportBytes": 467675
+    },
+    {
+      "size": 2000,
+      "layers": 4,
+      "maskedLayers": 4,
+      "sourceMs": 53.3000000002794,
+      "filterPixelMs": 471,
+      "filterWorkerWallMs": 730.5,
+      "exportMs": 1263.1999999997206,
+      "sourceBytes": 339086,
+      "processedBytes": 1418623,
+      "exportBytes": 2328188
+    }
+  ],
+  "errors": [],
+  "notes": "Single Chromium desktop runs on shared executor, real native PNG decode/encode, three visible masked layers plus hidden original. No phone hardware or reliable total browser memory measurement.",
+  "runtimeCommit": "6803457862ace58324eec5f58cb2502e5d8bd042"
+}

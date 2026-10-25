@@ -1,0 +1,108 @@
+{
+  "base": "http://127.0.0.1:8082",
+  "expected": "531c9b0d07e0ba6702733929bcb03ff8e8521e8e",
+  "chromium": "156.0.8078.4",
+  "results": [
+    {
+      "width": 1440,
+      "rasterRefinement": true,
+      "nativeV5": true,
+      "selectionSaved": true,
+      "realBrushStroke": true,
+      "maskProperties": true,
+      "historyPixels": true,
+      "strokeCancellation": true,
+      "pngJpegWebp": true
+    },
+    {
+      "width": 1440,
+      "release": "531c9b0d07e0ba6702733929bcb03ff8e8521e8e",
+      "homepage3DGallery": true,
+      "originalArtworks": 9,
+      "robotRemoved": true,
+      "chapter": true,
+      "pathfinder": true,
+      "artboardExport": true,
+      "gradient": true,
+      "textPath": true,
+      "svg": true,
+      "nativeReopen": true,
+      "raster": true,
+      "aiControls": true,
+      "sourcePreserved": true
+    },
+    {
+      "width": 320,
+      "rasterRefinement": true,
+      "nativeV5": true,
+      "selectionSaved": true,
+      "realBrushStroke": true,
+      "maskProperties": true,
+      "historyPixels": true,
+      "strokeCancellation": true,
+      "pngJpegWebp": true
+    },
+    {
+      "width": 320,
+      "release": "531c9b0d07e0ba6702733929bcb03ff8e8521e8e",
+      "homepage3DGallery": true,
+      "originalArtworks": 9,
+      "robotRemoved": true,
+      "chapter": true,
+      "pathfinder": true,
+      "artboardExport": true,
+      "gradient": true,
+      "textPath": true,
+      "svg": true,
+      "nativeReopen": true,
+      "raster": true,
+      "aiControls": true,
+      "sourcePreserved": true
+    },
+    {
+      "width": 390,
+      "rasterRefinement": true,
+      "nativeV5": true,
+      "selectionSaved": true,
+      "realBrushStroke": true,
+      "maskProperties": true,
+      "historyPixels": true,
+      "strokeCancellation": true,
+      "pngJpegWebp": true
+    },
+    {
+      "width": 390,
+      "release": "531c9b0d07e0ba6702733929bcb03ff8e8521e8e",
+      "homepage3DGallery": true,
+      "originalArtworks": 9,
+      "robotRemoved": true,
+      "chapter": true,
+      "pathfinder": true,
+      "artboardExport": true,
+      "gradient": true,
+      "textPath": true,
+      "svg": true,
+      "nativeReopen": true,
+      "raster": true,
+      "aiControls": true,
+      "sourcePreserved": true
+    },
+    {
+      "largeNativeSource": [4096, 4096],
+      "maskedPngDimensionsAndPixels": {
+        "width": 4096,
+        "height": 4096,
+        "left": [36, 71, 59, 255],
+        "right": [35, 70, 60, 51]
+      },
+      "failedAssets": 0
+    },
+    {
+      "realSwin2SRInference": true,
+      "input": [16, 24],
+      "output": [32, 48]
+    }
+  ],
+  "errors": [],
+  "failedCriticalAssets": []
+}

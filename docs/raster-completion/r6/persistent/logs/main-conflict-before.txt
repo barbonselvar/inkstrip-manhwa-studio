@@ -1,0 +1,7 @@
+00669593eb6f58a12353d60c2c9306e671bc46ab
+100644 fdfc957f64f0c26799da02ea687b5431cf7884cd 1	package.json
+100644 0166b6b3adeeb70dc2d949be6d053eb81f06b837 2	package.json
+100644 60abe5875ee2623a3cdd25395d97d98b1b9774cf 3	package.json
+
+Auto-merging package.json
+CONFLICT (content): Merge conflict in package.json
