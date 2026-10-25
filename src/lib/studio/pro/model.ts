@@ -1,3 +1,4 @@
+import { validateSmartFilters, validateSmartWork, type SmartFilter } from "./smart-filters.ts";
 import { validateAdjustmentLayer, type AdjustmentLayerSettings } from "./adjustment-schema.ts";
 import {
   validateDialogue,
@@ -153,6 +154,7 @@ export type Layer = {
   mask?: Mask;
   gradient?: Gradient;
   effects?: Effect[];
+  smartFilters?: SmartFilter[];
   assetId?: string;
   strokes: Stroke[];
   adjustmentLayer?: AdjustmentLayerSettings;
@@ -206,7 +208,8 @@ export type ProDocument = {
   brushSettings?: Omit<Stroke, "points" | "erase" | "clip" | "clone" | "patch" | "repair" | "seed">;
   savedSelections?: { name: string; selection: Selection }[];
   source?: SourceReference;
-  version: 1 | 2;
+  version: 1 | 2 | 3;
+  styleLight?: number;
   id: string;
   name: string;
   panelId: string;
@@ -454,7 +457,7 @@ function validateStroke(s: Stroke) {
 export function validateDocument(d: ProDocument) {
   if (
     !d ||
-    ![1, 2].includes(d.version) ||
+    ![1, 2, 3].includes(d.version) ||
     typeof d.id !== "string" ||
     !d.id ||
     typeof d.panelId !== "string" ||
@@ -472,12 +475,14 @@ export function validateDocument(d: ProDocument) {
     throw new Error(
       "Unsupported or oversized Pro document (up to 48 layers / 16.8 megapixels / 16384px per side).",
     );
-  if (d.version === 2) {
+  if (d.version >= 2) {
     const allowed =
       "dialogue artboards layout crop imageSize selection brushSettings savedSelections source version id name panelId width height background layers".split(
         " ",
       );
-    if (Object.keys(d).some((k) => !allowed.includes(k)))
+    if (
+      Object.keys(d).some((k) => !allowed.includes(k) && !(d.version === 3 && k === "styleLight"))
+    )
       throw Error("Unknown schema2 document field.");
   }
   if (
@@ -509,6 +514,8 @@ export function validateDocument(d: ProDocument) {
       validateSelection(s.selection);
     }
   }
+  if (d.styleLight !== undefined && (d.version !== 3 || !finite(d.styleLight, -360, 360)))
+    throw Error("Shared style light requires schema3 and a valid angle.");
   for (let i = 0; i < d.layers.length; i++) {
     const l = d.layers[i]!;
     if (l?.kind === "adjustment" && !l.clipped) {
@@ -542,16 +549,20 @@ export function validateDocument(d: ProDocument) {
       l.width * l.height > 16_777_216
     )
       throw new Error("Invalid or oversized layer.");
-    if (d.version === 2) {
+    if (d.version >= 2) {
       const allowed =
         "bubble lettering dialogueRole appearance vectorClips textPath id name kind parentId clipped linkId visible locked opacity blend width height transform mask gradient effects assetId strokes adjustmentLayer adjustments color colorSelection hue black white gamma curve shape fill stroke strokeWidth anchors closed subpaths vectorOverflow fillRule lineCap lineJoin miterLimit dash dashOffset fillOpacity strokeOpacity pathData tail text fontFamily fontSize fontWeight lineHeight letterSpacing align".split(
           " ",
         );
-      if (Object.keys(l).some((k) => !allowed.includes(k)))
+      if (
+        Object.keys(l).some(
+          (k) => !allowed.includes(k) && !(d.version === 3 && k === "smartFilters"),
+        )
+      )
         throw Error("Unknown schema2 layer field.");
     }
     if (l.adjustmentLayer !== undefined) {
-      if (d.version !== 2 || l.kind !== "adjustment")
+      if (d.version < 2 || l.kind !== "adjustment")
         throw Error(
           "Persistent color adjustments require document schema2 and an adjustment layer.",
         );
@@ -596,6 +607,24 @@ export function validateDocument(d: ProDocument) {
     else if (l.gradient !== undefined)
       throw new Error("Gradient parameters require a gradient layer.");
     if (l.effects !== undefined) validateEffects(l.effects);
+    if (l.smartFilters !== undefined) {
+      if (d.version !== 3 || !["raster", "paint", "gradient", "shape", "text"].includes(l.kind))
+        throw Error(
+          "Smart Filters require schema3 and an artwork layer. Groups and backdrop adjustments are not filter targets.",
+        );
+      if (l.smartFilters.length && (l.vectorOverflow || l.textPath || l.appearance))
+        throw Error(
+          "Smart Filters need a bounded source plane. Rasterize extended vector appearance/path text first, or keep it editable without filters.",
+        );
+      validateSmartFilters(l.smartFilters);
+      if (l.smartFilters.length) validateSmartWork(l.width, l.height, l.smartFilters);
+    }
+    if (
+      d.version !== 3 &&
+      (l.gradient?.version === 2 ||
+        l.effects?.some((e) => e.version === 2 || e.gradient?.version === 2))
+    )
+      throw Error("Advanced styles and gradients require document schema3.");
     if (l.kind === "adjustment" && l.effects?.length)
       throw new Error("Adjustment layers process the backdrop and cannot have artwork effects.");
     ids.add(l.id);
@@ -664,7 +693,7 @@ export function validateDocument(d: ProDocument) {
     }
     if (l.mask) {
       if (
-        d.version === 2 &&
+        d.version >= 2 &&
         Object.keys(l.mask).some(
           (k) =>
             !"width height placement linked selection strokes enabled density feather inverted"

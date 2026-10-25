@@ -1,6 +1,6 @@
 # R8 implementation report
 
-Status: architecture audit; implementation in progress. No R8 milestone is complete. No merge or deployment is authorized.
+Status: R8.1 foundations implemented and tested; R8.2–R8.5 remain in progress. No merge or deployment is authorized.
 
 ## Verified baseline and isolation
 
@@ -29,10 +29,12 @@ Keep R6's 4MP/128M-tap spatial processing bounds, with aggregate stack checks an
 
 ## Milestones
 
-- R8.1: pending — models, schema/validation, rendering integration, foundational tests.
+- R8.1: implemented and verified — typed records, metadata migration, schema3/envelope9/IDB5, renderer integration, 27 new foundational cases and actual worker/native/PNG integration. Existing dynamic effect tests add coverage for the two new effects. Full suite971 passed, typecheck passed; final whole-R8 regression/CI is still pending.
 - R8.2: pending — styles algorithms, transactional UI and presets.
 - R8.3: pending — Smart Filters algorithms and stack UI.
 - R8.4: pending — advanced gradients, stops, fill layers and canvas editing.
 - R8.5: pending — compatibility, security/performance, persistence/recovery/export and complete regression.
 
 Final commit, Draft PR, measured results and limitations will be recorded as work progresses. No feature parity or unrun-test claim is made by this audit.
+
+R8 uses built-in repeatable checker/stripe/dot texture recipes for Pattern Overlay; custom texture asset import is not yet implemented. Smart Filter masks currently capture R7 selections, with inversion and density; brush editing of an independent per-filter mask is not implemented. Effects remain on the existing document-space compositing planes. Groups and backdrop adjustment layers cannot take Smart Filters; extended vector appearance/path-text planes are explicitly rejected to avoid cropping editable overflow. Advanced styles are bounded to4MP including effect padding.

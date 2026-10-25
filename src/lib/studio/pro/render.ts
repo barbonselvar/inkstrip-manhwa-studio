@@ -1,3 +1,9 @@
+import {
+  processSmart,
+  scaledSmartOperation,
+  mixFilterMask,
+  validateSmartWork,
+} from "./smart-filters";
 import { applyAdjustmentTiles } from "./adjustment-tiles";
 import { letteringFont } from "../dialogue/lettering.ts";
 import { previewCoverage } from "./coverage-preview";
@@ -361,7 +367,9 @@ export async function surface(
   l: Layer,
   scale: number,
   asset: (id: string, scale: number) => Promise<ImageBitmap>,
+  stageCheckpoint?: () => Promise<void>,
 ) {
+  if (l.smartFilters?.length) validateSmartWork(l.width, l.height, l.smartFilters);
   const out = canvas(l.width * scale, l.height * scale),
     ctx = out.getContext("2d")!;
   ctx.scale(scale, scale);
@@ -493,6 +501,30 @@ export async function surface(
     }
     ctx.putImageData(image, 0, 0);
   }
+  if (l.smartFilters?.some((f) => f.enabled)) {
+    const image = ctx.getImageData(0, 0, out.width, out.height);
+    for (const f of l.smartFilters) {
+      if (!f.enabled) continue;
+      await stageCheckpoint?.();
+      const processed = processSmart(
+        image.data,
+        out.width,
+        out.height,
+        scaledSmartOperation(f.operation, scale),
+      );
+      if (f.mask?.enabled) {
+        const stencil = selectionCanvas(f.mask.selection, l.width, l.height, scale),
+          coverage = stencil
+            .getContext("2d")!
+            .getImageData(0, 0, stencil.width, stencil.height).data;
+        mixFilterMask(image.data, processed, coverage, f.mask);
+        stencil.width = stencil.height = 1;
+      }
+      image.data.set(processed);
+    }
+    await stageCheckpoint?.();
+    ctx.putImageData(image, 0, 0);
+  }
   if (l.mask?.enabled) {
     const mask = await layerMaskCanvas(l, scale);
     ctx.globalCompositeOperation = "destination-in";
@@ -597,6 +629,15 @@ export async function composite(
     throw Error(
       "Adjustment render exceeds its actual output-work budget. Hide an adjustment or export a smaller frame.",
     );
+  if (
+    d.layers.some(
+      (l) => visible.has(l.id) && l.effects?.some((e) => e.enabled && e.version === 2),
+    ) &&
+    outputWidth * outputHeight > 4_000_000
+  )
+    throw Error(
+      "Advanced layer styles need a rendered plane up to4MP including padding. Original artwork was not downscaled.",
+    );
   const output = canvas(outputWidth, outputHeight);
   const documentPlanes = new WeakSet<OffscreenCanvas>();
   let done = 0;
@@ -670,11 +711,16 @@ export async function composite(
       l.gamma === 1 &&
       l.curve.every((n, i) => n === [0, 64, 128, 192, 255][i]) &&
       (!l.color || !Object.keys(l.color).length) &&
-      !l.colorSelection;
+      !l.colorSelection &&
+      !l.smartFilters?.some((f) => f.enabled);
     let bitmap =
       l.kind === "group" || direct
         ? canvas(output.width, output.height)
-        : await surface(l, scale, asset);
+        : await surface(l, scale, asset, async () => {
+            if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
+          });
     if (direct) {
       const ctx = bitmap.getContext("2d")!,
         m = affine(l.transform);
@@ -725,7 +771,9 @@ export async function composite(
         }
         const ctx = bitmap.getContext("2d")!,
           image = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
-        image.data.set(effectPixels(image.data, bitmap.width, bitmap.height, l.effects, scale));
+        image.data.set(
+          effectPixels(image.data, bitmap.width, bitmap.height, l.effects, scale, d.styleLight),
+        );
         ctx.putImageData(image, 0, 0);
       }
       return bitmap;
