@@ -31,9 +31,11 @@ stroke-finishing, cursor and preset changes were inspected without importing the
 a read-only `git apply --check` is not clean. There is no published R4 branch/PR to validate
 against. Neither a clean future merge nor combined R3/R4 runtime behavior is claimed.
 
-The sole hosting configuration addition disables automatic Git deployments for this exact
-R5 branch, using [Vercel's documented branch exclusion](https://vercel.com/docs/project-configuration/git-configuration#git.deploymentenabled),
-to honor the explicit no-deployment instruction during push. Other branch defaults, production
+Hosting configuration: the original R5 delivery temporarily added a `git.deploymentEnabled`
+exclusion for this branch to avoid branch previews during push. It was removed during the R3/R5
+integration because it never affected production (production deploys only from `main`) and
+would otherwise remain as dead branch-specific configuration on `main`. `vercel.json` is
+identical to production `main`. Other branch defaults, production
 settings, dependencies, native schema and unrelated engines are unchanged. See the
 [implementation report](R5_IMPLEMENTATION_REPORT.md) and [actual test results](R5_TEST_REPORT.md)
 for delivery status and remaining validation limits. Keep PR #15 Draft; no merge, production
