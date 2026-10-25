@@ -1,3 +1,4 @@
+import { colorTarget } from "./color-transaction";
 import { renderSelectionTransform } from "./selection-transform-worker";
 import { NEUTRAL } from "../editor/adjustments";
 import { preflightImage, imagePolicy } from "../image-policy";
@@ -149,6 +150,18 @@ self.onmessage = async ({ data }) => {
       }
       return cache.get(key)!;
     };
+    if (type === "color-source") {
+      const target = colorTarget(doc, data.layerId, data.maxArea);
+      const output = await surface({ ...target, mask: undefined }, 1, get);
+      try {
+        const blob = await output.convertToBlob({ type: "image/png" });
+        if (latest !== id) throw new DOMException("Color source cancelled", "AbortError");
+        self.postMessage({ id, type, blob });
+      } finally {
+        output.width = output.height = 1;
+      }
+      return;
+    }
     if (type === "stage-selection") {
       if (Object.keys(assets).length > 62)
         throw Error("The immutable asset pool has no room for selected pixels.");

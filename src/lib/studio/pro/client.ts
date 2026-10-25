@@ -126,6 +126,9 @@ export class ProRenderer {
   sample(document: ProDocument, maxArea: number, point: { x: number; y: number }) {
     return this.request("sample", { document, maxArea, point });
   }
+  colorSource(document: ProDocument, maxArea: number, layerId: string) {
+    return this.request("color-source", { document, maxArea, layerId });
+  }
   stageSelection(document: ProDocument, maxArea: number, layerId: string) {
     return this.request("stage-selection", { document, maxArea, layerId });
   }
