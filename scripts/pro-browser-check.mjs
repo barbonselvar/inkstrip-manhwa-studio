@@ -58,8 +58,10 @@ async function open(page) {
   await page.getByRole("button", { name: "Open in Raster Studio", exact: true }).click();
   await page.getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true }).waitFor();
   await page.getByRole("button", { name: "Brush tool", exact: true }).waitFor();
-  // Vector Studio is hidden by default; this suite uses its legacy entry point.
-  assert.equal(await page.getByRole("button", { name: "Vector", exact: true }).count(), 0);
+  // Vector Studio is hidden by default; this suite uses its legacy entry point (which is
+  // remembered on the device once enabled, so later opens in this context show it).
+  if (!(await page.evaluate(() => localStorage.getItem("inkstrip-legacy-vector-v1"))))
+    assert.equal(await page.getByRole("button", { name: "Vector", exact: true }).count(), 0);
   await legacyVector(page);
   await page.getByRole("button", { name: "Vector", exact: true }).click();
   await page.getByRole("dialog", { name: "Inkstrip Vector Studio", exact: true }).waitFor();
