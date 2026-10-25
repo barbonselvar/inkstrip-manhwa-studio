@@ -88,3 +88,9 @@ The local built-output release script's direct request also encountered two pre-
 ## Acceptance boundaries
 
 Persistent color adjustment layers are now implemented; no advanced-color format approval blocker remains. Existing spatial filters remain the separate original-preserving pixel workflow. SVG explicitly rejects adjustment layers. ICC/wide gamut/high-bit-depth, persistent spatial filters, hardware mobile testing and non-Chromium rendering remain outside scope. R7/AI6 were not merged; R7 must retain schema2/envelope8/storage4 and the workspace/client/worker contracts after integration. Main/production are unchanged and PR16 stays Draft pending explicit merge authorization.
+
+## Main advanced during final publication
+
+After the frozen validation, an external actor merged Chapter PR18 at2026-10-25T14:34:15Z. Current main is `e1c21546110c4a469250695539b64ad3b34e347a`; the R6 implementation and browser baseline remain `740720c1d5e141c7f52ecab83d2e505fea7183f0`. This execution did not modify or merge main. R7 PR17 is still Draft and was not imported.
+
+A read-only Git merge-tree calculation found exactly one textual conflict, `package.json`: both streams appended scripts after `bench:r5`. R6's five unchanged command entries were moved beside the existing color-test entry, removing the overlapping insertion. No command/assertion/dependency was changed, no Chapter/R7 source was imported, no branch was merged or rebased, and no force push was used. GitHub PR checks can therefore validate the R6 changes with the new main. Shared Chapter import/display budgets and native-session revision protection remain behavioral integration considerations; the frozen browser results above are explicitly the R6 baseline, not an unrun combined-main browser suite. Final GitHub checks and mergeability are verified on the final PR HEAD.

@@ -34,6 +34,11 @@
     "test:geometry:browser": "node --experimental-strip-types scripts/geometry-browser-check.mjs",
     "test:transform:browser": "node --experimental-strip-types scripts/transform-browser-check.mjs",
     "test:color:browser": "node --experimental-strip-types scripts/color-browser-check.mjs",
+    "test:r6:browser": "node --experimental-strip-types scripts/r6-color-browser-check.mjs",
+    "bench:r6:color": "node --expose-gc --experimental-strip-types scripts/r6-color-benchmark.mjs",
+    "bench:r6:render": "node scripts/r6-color-render-benchmark.mjs",
+    "test:r6:layers:browser": "node --experimental-strip-types scripts/r6-adjustment-layers-browser-check.mjs",
+    "bench:r6:layers": "node scripts/r6-adjustment-layers-benchmark.mjs",
     "test:appearance:browser": "node --experimental-strip-types scripts/appearance-browser-check.mjs",
     "test:vector:browser": "node --experimental-strip-types scripts/vector-browser-check.mjs",
     "test:compound:browser": "node --experimental-strip-types scripts/compound-browser-check.mjs",
@@ -58,12 +63,7 @@
     "test:r3:browser": "node --experimental-strip-types scripts/r3-brush-browser-check.mjs",
     "bench:r3:brush": "node scripts/r3-brush-benchmark.mjs",
     "test:r5:browser": "node --experimental-strip-types scripts/r5-browser-check.mjs",
-    "bench:r5": "node scripts/r5-benchmark.mjs",
-    "test:r6:browser": "node --experimental-strip-types scripts/r6-color-browser-check.mjs",
-    "bench:r6:color": "node --expose-gc --experimental-strip-types scripts/r6-color-benchmark.mjs",
-    "bench:r6:render": "node scripts/r6-color-render-benchmark.mjs",
-    "test:r6:layers:browser": "node --experimental-strip-types scripts/r6-adjustment-layers-browser-check.mjs",
-    "bench:r6:layers": "node scripts/r6-adjustment-layers-benchmark.mjs"
+    "bench:r5": "node scripts/r5-benchmark.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

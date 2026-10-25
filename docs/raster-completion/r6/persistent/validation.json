@@ -338,5 +338,14 @@
   "mergePerformed": false,
   "deploymentPerformed": false,
   "r7Implemented": false,
-  "rootCause": "Test navigated before asynchronous save-and-close finished, interrupting its final transaction. Removing the new stroke reproduces first failing channel18648 85 vs86,3173 differences,maximum174. Close completion and a blocked-write barrier now precede backup; settings/assets/PNG/preview comparisons remain exact."
+  "rootCause": "Test navigated before asynchronous save-and-close finished, interrupting its final transaction. Removing the new stroke reproduces first failing channel18648 85 vs86,3173 differences,maximum174. Close completion and a blocked-write barrier now precede backup; settings/assets/PNG/preview comparisons remain exact.",
+  "externalMainAdvance": {
+    "sha": "e1c21546110c4a469250695539b64ad3b34e347a",
+    "mergedPR": 18,
+    "mergedAt": "2026-10-25T14:34:15Z",
+    "actor": "external to this execution",
+    "actualGitConflicts": ["package.json"],
+    "resolution": "Reorder R6-only script entries; every command value and all dependencies unchanged. No source import, branch merge, rebase or main write.",
+    "r7StillDraft": true
+  }
 }

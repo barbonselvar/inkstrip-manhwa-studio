@@ -57,3 +57,9 @@ The user subsequently authorized the R6-only native extension. Work continued fr
 | R7 / AI6 integration                            | Separate future integration                 | No merge/cherry-pick; R7 must retain typed schema/storage4 and worker safety after rebase                                                 |
 
 No persistent color-adjustment requirement remains blocked by format approval. See [native schema](R6_NATIVE_SCHEMA.md), implementation and test reports for the final semantics, measurements and publishing validation. R3/R5 are already on the verified base and remain regression requirements. Keep PR16 Draft; no merge or deployment is authorized.
+
+## Main advanced during final publication
+
+After the frozen validation, an external actor merged Chapter PR18 at2026-10-25T14:34:15Z. Current main is `e1c21546110c4a469250695539b64ad3b34e347a`; the R6 implementation and browser baseline remain `740720c1d5e141c7f52ecab83d2e505fea7183f0`. This execution did not modify or merge main. R7 PR17 is still Draft and was not imported.
+
+A read-only Git merge-tree calculation found exactly one textual conflict, `package.json`: both streams appended scripts after `bench:r5`. R6's five unchanged command entries were moved beside the existing color-test entry, removing the overlapping insertion. No command/assertion/dependency was changed, no Chapter/R7 source was imported, no branch was merged or rebased, and no force push was used. GitHub PR checks can therefore validate the R6 changes with the new main. Shared Chapter import/display budgets and native-session revision protection remain behavioral integration considerations; the frozen browser results above are explicitly the R6 baseline, not an unrun combined-main browser suite. Final GitHub checks and mergeability are verified on the final PR HEAD.

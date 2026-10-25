@@ -84,3 +84,9 @@ R3/R5 are already merged into the actual base; no future transform cherry-pick i
 ICC/wide gamut/16-bit precision, persistent spatial filters, physical Android/stylus hardware and non-Chromium engines remain outside the implemented scope. Mask density/feather, clipping, group isolation and supported blend math are tested; no Photoshop blend/compositing parity claim is made. Original phase1 limitations still apply to its separate destructive filter workflow.
 
 The R6 branch's Vercel deployment exclusion remains intact. Keep [PR16](https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/16) **Draft**. No merge, production change or deployment is performed. Final source/publishing SHA and exact-head CI links are recorded with the final validation publication and PR head.
+
+## Main advanced during final publication
+
+After the frozen validation, an external actor merged Chapter PR18 at2026-10-25T14:34:15Z. Current main is `e1c21546110c4a469250695539b64ad3b34e347a`; the R6 implementation and browser baseline remain `740720c1d5e141c7f52ecab83d2e505fea7183f0`. This execution did not modify or merge main. R7 PR17 is still Draft and was not imported.
+
+A read-only Git merge-tree calculation found exactly one textual conflict, `package.json`: both streams appended scripts after `bench:r5`. R6's five unchanged command entries were moved beside the existing color-test entry, removing the overlapping insertion. No command/assertion/dependency was changed, no Chapter/R7 source was imported, no branch was merged or rebased, and no force push was used. GitHub PR checks can therefore validate the R6 changes with the new main. Shared Chapter import/display budgets and native-session revision protection remain behavioral integration considerations; the frozen browser results above are explicitly the R6 baseline, not an unrun combined-main browser suite. Final GitHub checks and mergeability are verified on the final PR HEAD.
