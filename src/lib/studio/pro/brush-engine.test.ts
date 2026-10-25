@@ -359,3 +359,51 @@ test("preset names: rename cannot shadow Inkstrip presets; duplicates stay valid
   assert.ok(stored.every((p) => validateBrushPreset(p) && p.name.length <= 40));
   assert.equal(new Set(stored.map((p) => p.name)).size, stored.length);
 });
+
+test("R3 mask painting and cursor follow an R5 mask-only transform", async () => {
+  const { nudgeDocument, transformMask, maskFrame } = await import("./geometry-operations.ts");
+  const { maskPaintPoint } = await import("./masks.ts");
+  const { localPoint } = await import("./model.ts");
+  let d = fromPanel({ id: "x", name: "x", width: 400, height: 300 });
+  const l = layer("paint", 400, 300, "paint");
+  l.transform = { x: 20, y: 10, scaleX: 1.5, scaleY: 1.5, rotation: 15 };
+  l.mask = {
+    enabled: true,
+    inverted: false,
+    selection: { regions: [], inverted: true, feather: 0 },
+    strokes: [],
+  } as unknown as typeof l.mask;
+  d.layers = [l];
+  // R5: move the mask on its own, then rotate/scale it independently of the artwork.
+  d = nudgeDocument(d, [l.id], { x: 37, y: -12 }, true);
+  const frame = maskFrame(d, l.id);
+  d = transformMask(d, l.id, {
+    ...frame.transform,
+    rotation: frame.transform.rotation + 30,
+    scaleX: 0.8,
+    scaleY: 0.8,
+  });
+  const moved = d.layers[0]!;
+  assert.deepEqual(moved.transform, l.transform, "artwork transform untouched");
+  const brush = { size: 24, hardness: 1, tip: "round" as const };
+  for (const point of [
+    { x: 150, y: 120 },
+    { x: 300, y: 40 },
+  ]) {
+    // The stroke point R3 records in mask mode, and the cursor it draws, both map back
+    // to the document point under the pointer through the transformed mask frame.
+    const recorded = maskPaintPoint(moved, localPoint(point, moved)),
+      cursor = brushCursor(moved, true, point, brush, "brush")!;
+    near(recorded.x, cursor.center.x, 1e-9);
+    near(recorded.y, cursor.center.y, 1e-9);
+    const back = applyMatrix(cursor.matrix, cursor.center);
+    near(back.x, point.x, 1e-6);
+    near(back.y, point.y, 1e-6);
+  }
+  // A recorded mask stroke survives validation on the R5-transformed mask.
+  const s = stroke({ size: 24, dynamics: { ...DAB_DEFAULTS } });
+  s.points = [maskPaintPoint(moved, localPoint({ x: 150, y: 120 }, moved))];
+  finishBrushStroke(s, undefined, maskPaintPoint(moved, localPoint({ x: 250, y: 160 }, moved)));
+  moved.mask!.strokes = [s];
+  assert.doesNotThrow(() => validateDocument(d));
+});

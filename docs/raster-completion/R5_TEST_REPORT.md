@@ -125,3 +125,50 @@ mask geometry. Physical Android/stylus and other browser engines remain untested
 supported scope.** Keep PR #15 Draft. Publication is not a merge/deployment approval. No main mutation,
 unrelated merge, deployment or R6 work occurred. Any unfinished validation gate is identified
 in the evidence inventory and PR, rather than marked complete.
+
+## R3/R5 integration validation (2026-10-25)
+
+`main` @ `d055027` (R3 merged) was merged into this branch with a merge commit (`690dcce`); no
+published history was rewritten. Validated code commit: `3225ba4` plus the cross-engine unit test
+in the following commit.
+
+**Conflicts resolved.**
+
+- `package.json`: both sides appended scripts after `test:r2:gesture:browser`; all four kept
+  (`test:r3:browser`, `bench:r3:brush`, `test:r5:browser`, `bench:r5`).
+- `pro-canvas.tsx`, `pro-properties.tsx`, `pro-workspace.tsx`: merged without textual conflicts.
+  R3 (stroke recording, release catch-up, budgets, cursor, pressure curve, preset panel) and R5
+  (mask Move/nudge, transform-draft cloning, selected-pixel transactions, Geometry commit) touch
+  disjoint code paths. A cross-engine unit test confirms that after an R5 mask-only move, rotate
+  and scale, R3's recorded mask stroke point and brush cursor both map back to the pointer, the
+  artwork transform is untouched, and the stroke validates.
+- `vercel.json`: the branch-only `git.deploymentEnabled` exclusion was removed. It never affected
+  production, which deploys only from `main`. The file is identical to production `main`;
+  branch pushes now create ordinary Vercel preview (non-production) deployments again.
+
+**Integration defect fixed.** `r5-browser-check.mjs` and `r5-benchmark.mjs` wrote
+`/workspace/r5-evidence/*.json` without creating the directory, so on a fresh machine the R5
+browser suite failed after every viewport had passed. Directory creation added; assertions
+unchanged.
+
+**Independently verified here (ran in this environment).**
+
+| Check                                                                                                                                                                                                                                        | Result                                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| R5's own head `f6e6b76`, `npm test`                                                                                                                                                                                                          | **837 / 837** (matches the reported figure)                                                    |
+| Combined branch, `npm test`                                                                                                                                                                                                                  | **848 / 848** = 813 baseline + 10 R3 + 24 R5 + 1 cross-engine; 0 failed, skipped or cancelled  |
+| typecheck, lint, Prettier, build, `check:build`, `check:auth`                                                                                                                                                                                | pass                                                                                           |
+| `test:r5:browser` at 1440/768/390/360/320                                                                                                                                                                                                    | pass after the evidence-directory fix (first run: all viewports passed, then the write failed) |
+| `test:r3:browser` at 1440/768/390/360/320                                                                                                                                                                                                    | pass                                                                                           |
+| 27 other Chromium suites (R1.1/R2, homepage, Dialogue ×5, editor, adjustments, retouch, workflow, ui, pro, layers, repair, geometry, transform, color, appearance, vector, compound, pathfinder, artboards, vector-final, raster-refinement) | pass                                                                                           |
+| `production-vector-check --raster` on the built output at the integration commit                                                                                                                                                             | pass, no console errors or failed critical assets                                              |
+
+**Not verifiable in this environment (blocked, neither confirmed nor refuted).**
+
+- R5's reported real Swin2SR inference, comparison/apply/reload and batch enhancement:
+  `test:studio:browser` reaches real inference after a successful image decode, but
+  `huggingface.co` is unreachable from this sandbox ("Failed to fetch"). The same happens on `main`.
+- Production `inkstrip-manhwa-studio.vercel.app`: denied by the environment network policy; no
+  live smoke test was possible.
+- R5's reported 4MP timings were not re-measured. Physical stylus/Android and other browser
+  engines remain untested.
