@@ -1,6 +1,6 @@
 /** Bounded real-worker selected-pixel staging and initial-pose pixel regression. */
 import assert from "node:assert/strict";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
 const base = process.argv[2] ?? "http://127.0.0.1:8080";
 assert.ok(["localhost", "127.0.0.1"].includes(new URL(base).hostname));
@@ -135,6 +135,7 @@ try {
     }
     return results;
   });
+  await mkdir("/workspace/r5-evidence", { recursive: true });
   await writeFile("/workspace/r5-evidence/r5-benchmark.json", JSON.stringify(results, null, 2));
   console.log(JSON.stringify(results, null, 2));
 } finally {

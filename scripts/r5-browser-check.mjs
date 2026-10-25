@@ -12,6 +12,7 @@ const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] }
   results = [],
   fx = proBrowserFixtures(base, errors);
 await mkdir("/workspace/screenshots", { recursive: true });
+await mkdir("/workspace/r5-evidence", { recursive: true });
 const pixel = (image, x, y) =>
   image.pixels.slice((y * image.width + x) * 4, (y * image.width + x) * 4 + 4);
 const near = (a, b, tolerance = 1) =>
