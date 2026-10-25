@@ -28,3 +28,9 @@ Current working implementation passes988 full unit tests (200+59+105+624), typec
 `r8-processing-browser-check.mjs` passes actual worker/filter-selection-mask/layer-mask staging, neutral R6 color-source replacement without double filtering, native reopen, whole-layer transforms, hidden-layer exclusion and explicit mask-bake/selected-pixel guards. All deterministic pixels use tolerance0. Its first fixture attempted OffscreenCanvas encoding before creating a rendering context; creating the actual2D context fixes the fixture, with no production/tolerance change.
 
 The filtered-painting regression initially found Gaussian output still had original brush alpha. Diagnosis confirmed the shared R6 filter intentionally preserved coverage. The R8 Smart path now opts into alpha blur in the same kernels; original R6 tests remain unchanged. The strict brush-halo assertion, preview/PNG equality and native reopen pass after the implementation fix.
+
+## R8.4 targeted results
+
+The expanded properties suite passes1440/768/390/360/320 including actual touch stop reordering, preservation of midpoint records, before/after pixels, rapid seed changes, one-entry Apply, source-asset equality, native/PNG equivalence and no horizontal overflow. The Raster gradient tool suite passes the same five widths: source-local endpoint dragging, Escape/touch cancellation, retained R7 mask, exact Undo/Redo/export/native reopen and blurred-paint preview invalidation. Pointer coordinate assertions account for browser input quantization; all image comparisons remain tolerance0.
+
+Focused gradient/style tests68 pass; typecheck and lint pass with0 warnings. Gradient midpoint exponents are precompiled once per stop instead of recomputed per pixel, retaining the same interpolation formula. Full R8.5 recovery/performance/final CI remain pending.

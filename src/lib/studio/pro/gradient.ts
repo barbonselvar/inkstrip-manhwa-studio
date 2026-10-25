@@ -146,6 +146,7 @@ export function advancedGradientSampler(g: Gradient) {
     const rgb = [1, 3, 5].map((i) => parseInt(s.color.slice(i, i + 2), 16));
     return g.interpolation === "oklab" ? oklab(rgb[0]!, rgb[1]!, rgb[2]!) : rgb.map((v) => v / 255);
   });
+  const powers = g.stops.map((s) => Math.log(0.5) / Math.log(s.midpoint ?? 0.5));
   return (value: number): [number, number, number, number] => {
     const v = limit(g.reverse ? 1 - value : value);
     let lo = 0,
@@ -158,7 +159,7 @@ export function advancedGradientSampler(g: Gradient) {
     const a = g.stops[lo]!,
       b = g.stops[hi]!;
     let t = (v - a.position) / (b.position - a.position);
-    t = t ** (Math.log(0.5) / Math.log(a.midpoint ?? 0.5));
+    t = t ** powers[lo]!;
     t = t * (1 - (g.smoothness ?? 0)) + t * t * (3 - 2 * t) * (g.smoothness ?? 0);
     const alpha = a.opacity * (1 - t) + b.opacity * t;
     let rgb = colors[lo]!.map((c, i) =>

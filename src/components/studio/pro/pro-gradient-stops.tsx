@@ -75,6 +75,24 @@ export function AdvancedGradientStops({
           ))}
         </select>
       </label>
+      <label className="pro-field">
+        Active gradient stop
+        <select
+          className="field"
+          aria-label="Active gradient stop"
+          value={index}
+          onChange={(e) => {
+            drag.current = null;
+            setSelected(Number(e.target.value));
+          }}
+        >
+          {stops.map((s, i) => (
+            <option key={i} value={i}>
+              Stop {i + 1} · {Math.round(s.position * 1000) / 10}%
+            </option>
+          ))}
+        </select>
+      </label>
       <div
         className="r8-stop-ramp"
         onPointerMove={(e) => {

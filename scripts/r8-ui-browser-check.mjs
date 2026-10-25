@@ -49,7 +49,8 @@ try {
     await fx.open(p);
     const doc = fromPanel({ id: "r8-ui", name: "R8 UI", width: 128, height: 96 });
     await fx.load(p, doc, source);
-    const original = (await fx.native(p)).value;
+    const original = (await fx.native(p)).value,
+      originalPixels = await fx.preview(p);
     await fx.tab(p, "History");
     const count = await p.locator(".pro-history-list li").count();
     await fx.tab(p, "Properties");
@@ -76,6 +77,44 @@ try {
     }
     await dialog.getByRole("button", { name: "Add gradient stop", exact: true }).click();
     await number(dialog, "Stop midpoint", 40);
+    await dialog.getByRole("button", { name: "Add gradient stop", exact: true }).click();
+    await number(dialog, "Stop midpoint", 30);
+    const marker = dialog.getByLabel("Select gradient stop 2", { exact: true });
+    await marker.scrollIntoViewIfNeeded();
+    const ramp = await dialog.locator(".r8-stop-ramp").boundingBox(),
+      handle = await marker.boundingBox(),
+      a = { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 },
+      z = { x: ramp.x + ramp.width * 0.75, y: a.y };
+    if (width < 800) {
+      const c = await context.newCDPSession(p);
+      await c.send("Input.dispatchTouchEvent", {
+        type: "touchStart",
+        touchPoints: [{ ...a, id: 1 }],
+      });
+      for (let i = 1; i <= 8; i++)
+        await c.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [{ x: a.x + ((z.x - a.x) * i) / 8, y: a.y, id: 1 }],
+        });
+      await c.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+      await c.detach();
+    } else {
+      await p.mouse.move(a.x, a.y);
+      await p.mouse.down();
+      await p.mouse.move(z.x, z.y, { steps: 8 });
+      await p.mouse.up();
+    }
+    await dialog.getByLabel("Active gradient stop", { exact: true }).selectOption("2");
+    assert.equal(
+      await dialog.getByLabel("Stop midpoint", { exact: true }).inputValue(),
+      "30",
+      "drag preserves/reorders the actual stop record",
+    );
+    assert.equal(
+      await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth),
+      true,
+      "properties panel has no horizontal overflow",
+    );
     await dialog.getByRole("tab", { name: "Layer Styles", exact: true }).click();
     await dialog.getByLabel("Enable Color Overlay", { exact: true }).check();
     await dialog.getByLabel("Color Overlay color", { exact: true }).fill("#ff0000");
@@ -103,6 +142,24 @@ try {
       beforeOrder.pixels,
       "filter reorder changes actual pixels",
     );
+    for (const seed of [43, 99, 100]) await number(dialog, "Noise seed", seed);
+    await dialog.getByLabel("Compare committed layer properties", { exact: true }).check();
+    await p.waitForFunction(
+      () =>
+        document
+          .querySelector('[aria-label="Layer properties composite preview"]')
+          ?.getAttribute("aria-busy") === "false",
+    );
+    const comparison = await dialog
+      .getByLabel("Layer properties composite preview", { exact: true })
+      .evaluate((c) => ({
+        width: c.width,
+        height: c.height,
+        pixels: [...c.getContext("2d").getImageData(0, 0, c.width, c.height).data],
+      }));
+    fx.same(comparison, originalPixels, 0);
+    await dialog.getByLabel("Compare committed layer properties", { exact: true }).uncheck();
+    await ready(p);
     await dialog.locator(".r8-presets summary").click();
     await dialog.getByLabel("Layer property preset name", { exact: true }).fill(`R8 ${width}`);
     await dialog.getByRole("button", { name: "Save layer property preset", exact: true }).click();
@@ -122,7 +179,9 @@ try {
     assert.equal(fill.kind, "gradient");
     assert.equal(fill.gradient.kind, "diamond");
     assert.equal(fill.gradient.interpolation, "oklab");
-    assert.equal(fill.gradient.stops.length, 3);
+    assert.equal(fill.gradient.stops.length, 4);
+    assert.equal(fill.gradient.stops[2].midpoint, 0.3);
+    assert.equal(fill.smartFilters[0].operation.seed, 100);
     assert.deepEqual(
       fill.smartFilters.map((f) => f.operation.kind),
       ["grain", "gaussian"],
@@ -154,6 +213,9 @@ try {
       stylesPixels: true,
       filterReorderPixels: true,
       presetSaved: true,
+      stopDragReorder: true,
+      beforeAfterExact: true,
+      rapidParameters: true,
       nativeExact: true,
       cancelExact: true,
       sourcePreserved: true,

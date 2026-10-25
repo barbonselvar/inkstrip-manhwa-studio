@@ -2104,6 +2104,22 @@ export default function ProWorkspace({
       if (active?.kind === "shape") createPathText();
       return;
     }
+    if (id === "gradient-fill") {
+      if (
+        mode !== "raster" ||
+        quickMask ||
+        active?.kind !== "gradient" ||
+        isLocked(doc!, active.id)
+      ) {
+        setError(
+          "Choose an unlocked Gradient Fill layer and exit Quick Mask before editing its endpoints.",
+        );
+        return;
+      }
+      setTab("properties");
+      setPanelOpen(true);
+      setMaskMode(false);
+    }
     if (id === "gradient") {
       setTab("appearance");
       setPanelOpen(true);
@@ -2986,7 +3002,9 @@ export default function ProWorkspace({
                     busy ||
                     (id === "text-path" &&
                       (active?.kind !== "shape" || isLocked(doc!, active.id))) ||
-                    (id === "gradient" && !active?.appearance?.some((a) => a.paint.gradient))
+                    (id === "gradient" && !active?.appearance?.some((a) => a.paint.gradient)) ||
+                    (id === "gradient-fill" &&
+                      (!!quickMask || active?.kind !== "gradient" || isLocked(doc!, active.id)))
                   }
                   onClick={() => {
                     chooseTool(id);
