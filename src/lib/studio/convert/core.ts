@@ -16,10 +16,32 @@ export type Raster = {
   notes: string[];
 };
 
-export async function decodeRaster(type: ConvertibleType, bytes: Uint8Array): Promise<Raster> {
+/** libheif (LGPL-3.0) is never bundled with this code: the caller supplies a loader for the
+ * separate, unmodified libheif-js file, so it can be replaced (LGPL-3.0 §4(d)(1)). */
+export type HeifFactory = () => {
+  HeifDecoder: new () => { decode(bytes: Uint8Array): HeifImage[] };
+};
+type HeifImage = {
+  get_width(): number;
+  get_height(): number;
+  is_primary?(): boolean;
+  display(
+    target: { data: Uint8ClampedArray; width: number; height: number },
+    done: (result: unknown) => void,
+  ): void;
+  free?(): void;
+};
+export type Loaders = { heif?: () => Promise<HeifFactory> };
+
+export async function decodeRaster(
+  type: ConvertibleType,
+  bytes: Uint8Array,
+  loaders: Loaders = {},
+): Promise<Raster> {
   if (type === "tiff") return decodeTiff(bytes);
   if (type === "jxl") return decodeJxl(bytes);
-  return decodeHeif(bytes);
+  if (!loaders.heif) throw Error("The HEIC/HEIF decoder is not available.");
+  return decodeHeif(bytes, await loaders.heif());
 }
 
 async function decodeTiff(bytes: Uint8Array): Promise<Raster> {
@@ -148,13 +170,12 @@ function packBitsLength(data: Uint8Array) {
   return total;
 }
 
-async function decodeHeif(bytes: Uint8Array): Promise<Raster> {
-  const { default: factory } = await import("libheif-js/libheif-wasm/libheif-bundle.mjs");
+async function decodeHeif(bytes: Uint8Array, factory: HeifFactory): Promise<Raster> {
   const lib = factory(),
     decoder = new lib.HeifDecoder(),
     images = decoder.decode(bytes);
   if (!images.length) throw Error("The HEIC/HEIF file contains no decodable image.");
-  const image = images.find((i: { is_primary?: () => boolean }) => i.is_primary?.()) ?? images[0]!,
+  const image = images.find((i) => i.is_primary?.()) ?? images[0]!,
     width = image.get_width(),
     height = image.get_height(),
     data = new Uint8ClampedArray(width * height * 4);

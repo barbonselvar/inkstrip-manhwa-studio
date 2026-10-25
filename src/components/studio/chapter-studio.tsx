@@ -358,6 +358,18 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                   Your panels, at their original quality. Drop, paste, or choose files.
                   <span className="sr-only">{FORMAT_HINT}</span>
                 </p>
+                <p className="upload-hint text-sm text-muted">
+                  HEIC/HEIF import uses the libheif library (LGPL-3.0); TIFF and JPEG XL use
+                  open-source decoders.{" "}
+                  <a
+                    className="focus-ring underline"
+                    href="/licenses/THIRD-PARTY-NOTICES.txt"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    Open-source notices
+                  </a>
+                </p>
                 {importFailures?.length || importNotes?.length ? (
                   <div className="import-report" role="region" aria-label="Import report">
                     {importFailures?.length ? (

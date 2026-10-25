@@ -79,7 +79,9 @@ test("JPEG XL (lossless) decodes to exactly the reference pixels", async () => {
 
 test("HEIC decodes at its native size (lossy source, close to the reference)", async () => {
   const ref = await reference(),
-    raster = await decodeRaster("heic", await fixture("original.heic"));
+    raster = await decodeRaster("heic", await fixture("original.heic"), {
+      heif: async () => (await import("libheif-js/libheif-wasm/libheif-bundle.mjs")).default,
+    });
   assert.deepEqual([raster.width, raster.height], [32, 24]);
   // HEIC is lossy with 4:2:0 chroma: the fixture's single changed pixel is smeared, so
   // compare the mean error (an independent pillow-heif decode differs by at most 2 levels).
@@ -239,4 +241,40 @@ test("import issues are specific and classified", () => {
     importSummary(1, [importIssue("x.heic", Error("bad")), importIssue("y", Error("bad"))], 0),
     /Added 1 photo\. 2 files were not imported/,
   );
+});
+
+test("LGPL-3.0 libheif stays a separate, unmodified, replaceable file with notices and source", async () => {
+  const { createHash } = await import("node:crypto");
+  const read = (path: string) => readFile(new URL(`../../../${path}`, import.meta.url));
+  const sha = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
+  // Our code never bundles the Library: the worker only takes its URL, the core takes a loader.
+  const worker = (await read("src/lib/studio/convert/worker.ts")).toString(),
+    core = (await read("src/lib/studio/convert/core.ts")).toString();
+  assert.doesNotMatch(core, /(from|import\()\s*["']libheif-js/);
+  assert.deepEqual(
+    [...worker.matchAll(/(?:from|import\()\s*["']([^"']*libheif-js[^"']*)["']/g)].map((m) => m[1]),
+    ["../../../../node_modules/libheif-js/libheif-wasm/libheif-bundle.mjs?url"],
+  );
+  // The notices name the exact shipped file, versions and hosted Corresponding Source.
+  const notices = (await read("public/licenses/THIRD-PARTY-NOTICES.txt")).toString(),
+    pkg = JSON.parse((await read("node_modules/libheif-js/package.json")).toString());
+  assert.match(notices, new RegExp(`libheif-js ${pkg.version.replace(/\./g, "\\.")}`));
+  assert.ok(
+    notices.includes(sha(await read("node_modules/libheif-js/libheif-wasm/libheif-bundle.mjs"))),
+  );
+  for (const tarball of ["libheif-1.23.5.tar.gz", "libde265-1.0.15.tar.gz"])
+    assert.ok(notices.includes(sha(await read(`public/licenses/source/${tarball}`))), tarball);
+  // Versions compiled into the shipped WebAssembly match the hosted source.
+  const wasm = (await read("node_modules/libheif-js/libheif-wasm/libheif.wasm")).toString("latin1");
+  assert.ok(wasm.includes("1.23.5") && wasm.includes("1.0.15"));
+  for (const text of [
+    "LGPL-3.0.txt",
+    "GPL-3.0.txt",
+    "libheif-LGPL-3.0.txt",
+    "libde265-LGPL-3.0.txt",
+  ])
+    assert.match(
+      (await read(`public/licenses/${text}`)).toString(),
+      /GENERAL PUBLIC LICENSE|Lesser General Public License/,
+    );
 });

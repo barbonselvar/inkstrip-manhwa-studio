@@ -59,8 +59,9 @@ Truncated and non-image files were already rejected with specific reasons; that 
 | TIFF/TIF                                 | Decoded with utif2: first full-resolution page, EXIF orientation applied, alpha kept, data validated. Stored as **lossless PNG**  |
 | JPEG XL                                  | Decoded with @jsquash/jxl (first frame), stored as **lossless PNG**                                                               |
 
-The decoders load on demand in one worker chunk (about 2.2 MB, including libheif's WebAssembly),
-only when such a file is imported. They are not part of the main bundle.
+The decoders load on demand, only when such a file is imported, and are not part of the main
+bundle: a ~148 KB conversion worker (TIFF, JPEG XL, PNG encoder) plus, for HEIC/HEIF only,
+libheif as its own unmodified ~2 MB file.
 
 ## 4. Remaining format limitations
 
@@ -76,8 +77,20 @@ only when such a file is imported. They are not part of the main bundle.
   risking garbage.
 - **Not supported**: RAW camera formats, PSD, PDF and EPS. They are rejected with "This encoded
   image format is not supported".
-- **Licence**: `libheif-js` is LGPL-3.0. It is shipped unmodified as a separately loaded chunk.
-  The project owner should confirm this suits the project's licensing.
+- **Licence (LGPL-3.0 compliance)**: libheif, libde265 and libheif-js are LGPL-3.0.
+  - §4(d)(1): the Library is served as a separate, byte-identical file (SHA-256 recorded and
+    tested) loaded at run time through its public interface, so users can substitute a modified
+    build.
+  - §4(a)–(c): a prominent in-app notice beside the import controls links to
+    `/licenses/THIRD-PARTY-NOTICES.txt`, which lists copyrights and points to the full LGPL-3.0
+    and GPL-3.0 texts.
+  - §4(d)/GPL §6: Corresponding Source (the libheif 1.23.5 and libde265 1.0.15 release tarballs,
+    plus the upstream Emscripten build workflow and packaging script) is hosted with the app
+    under `/licenses/source/`.
+  - The versions compiled into the shipped WebAssembly were confirmed from the binary, and a unit
+    test guards all of this.
+  - Permissive notices for libjxl, Brotli, skcms, Highway, Emscripten, jSquash, utif2, pako,
+    fast-png and iobuffer are included. This is a good-faith engineering review, not legal advice.
 
 ## 5. File-size and pixel-dimension limits
 
