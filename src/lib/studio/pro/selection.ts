@@ -1,9 +1,12 @@
 import type { Point, Region } from "./model.ts";
+import { colorDistanceTo, oklab, type ColorMetric } from "./color-distance.ts";
 
 export type ColorSelectionOptions = {
   tolerance: number;
   contiguous: boolean;
   antiAlias: boolean;
+  /** Default "rgb" keeps the original straight-alpha channel metric. */
+  metric?: ColorMetric;
 };
 export const MAX_SELECTION_RUNS = 200_000;
 /** Straight-alpha sRGB distance in 0..255. Hidden RGB in transparent pixels is ignored. */
@@ -49,7 +52,19 @@ export function selectColor(
   const count = width * height,
     seed = Math.floor(point.y) * width + Math.floor(point.x),
     selected = new Uint8Array(count),
-    matches = (i: number) => colorDistance(pixels, i * 4, seed * 4) <= options.tolerance;
+    metric = options.metric ?? "rgb";
+  if (metric !== "rgb" && metric !== "perceptual") throw new Error("Invalid color metric.");
+  const reference = [...pixels.subarray(seed * 4, seed * 4 + 4)] as [
+      number,
+      number,
+      number,
+      number,
+    ],
+    referenceLab = oklab(reference[0], reference[1], reference[2]),
+    matches = (i: number) =>
+      (metric === "rgb"
+        ? colorDistance(pixels, i * 4, seed * 4)
+        : colorDistanceTo(pixels, i * 4, reference, metric, referenceLab)) <= options.tolerance;
   if (options.contiguous) {
     const queue = new Int32Array(count);
     let head = 0,
