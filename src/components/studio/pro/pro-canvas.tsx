@@ -43,7 +43,12 @@ import {
 } from "@/lib/studio/pro/geometry";
 import { brushPoint, appendBrushSample, finishBrushStroke } from "@/lib/studio/pro/brush-dynamics";
 import { patchSelection, type RepairRequest, type RepairKind } from "@/lib/studio/pro/repair";
-import { appendSelection } from "@/lib/studio/pro/selection";
+import {
+  appendLassoPoint,
+  combineSelection,
+  marqueeCorners,
+  type SelectionMode,
+} from "@/lib/studio/pro/selection-tools";
 import { editedAnchor } from "@/lib/studio/pro/anchor-edit";
 import {
   viewFit,
@@ -178,6 +183,7 @@ export function ProCanvas({
   onSelection,
   brush,
   operation,
+  marqueeRatio = 0,
   maskMode,
   snapping,
   grid,
@@ -231,7 +237,9 @@ export function ProCanvas({
   selectionView?: "overlay" | "mask" | "ants";
   onSelection: (s: Selection, expected?: ProDocument) => void;
   brush: Omit<Stroke, "points" | "erase">;
-  operation: Region["operation"];
+  operation: SelectionMode;
+  /** Fixed marquee width:height ratio (0 = free). Shift squares, Alt draws from centre. */
+  marqueeRatio?: number;
   maskMode: boolean;
   snapping: boolean;
   grid: boolean;
@@ -424,7 +432,13 @@ export function ProCanvas({
         setPolygon([]);
       }
       if (e.key === "Enter" && polygon.length >= 3) {
-        onSelection(appendSelection(selection, { kind: "lasso", operation, points: polygon }));
+        onSelection(
+          combineSelection(
+            selection,
+            { kind: "lasso", operation: "add", points: polygon },
+            operation,
+          ),
+        );
         setPolygon([]);
       }
     };
@@ -449,6 +463,28 @@ export function ProCanvas({
       window.removeEventListener("blur", blur);
     };
   }, [polygon, selection, operation, onSelection, onTransient, onCommit, tool, changeRotation]);
+  // Every close path (Enter, double-click, Finish) combines through one function.
+  const closePolygon = () => {
+    if (polygon.length < 3) return;
+    onSelection(
+      combineSelection(selection, { kind: "lasso", operation: "add", points: polygon }, operation),
+    );
+    setPolygon([]);
+  };
+  useEffect(() => {
+    if (!polygon.length) return;
+    // Claim Backspace before the workspace's delete-layer shortcut (capture phase).
+    const backspace = (e: KeyboardEvent) => {
+      if (e.key !== "Backspace") return;
+      if ((e.target as HTMLElement)?.closest('input,textarea,select,[contenteditable="true"]'))
+        return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setPolygon((a) => a.slice(0, -1));
+    };
+    window.addEventListener("keydown", backspace, true);
+    return () => window.removeEventListener("keydown", backspace, true);
+  }, [polygon.length]);
   const docPoint = (p: Point): Point => {
     return canvasPoint(p, board.current!.getBoundingClientRect(), viewportFrame, view.rotation);
   };
@@ -906,7 +942,7 @@ export function ProCanvas({
         region: {
           kind:
             tool === "select-rect" ? "rectangle" : tool === "select-ellipse" ? "ellipse" : "lasso",
-          operation,
+          operation: "add",
           points: [p, p],
         },
       };
@@ -1361,8 +1397,24 @@ export function ProCanvas({
     if (g.type === "patch-source") return null;
     if (g.type === "selection") {
       const r = g.region!;
-      g.region = { ...r, points: r.kind === "lasso" ? [...r.points, p] : [g.start, p] };
-      setSelectionDraft(appendSelection(g.selection, g.region));
+      if (r.kind === "lasso") {
+        // Spacing is screen-relative (2 CSS px at the current zoom); the point budget is fixed.
+        const recorded = appendLassoPoint(r.points, p, 2 / (fit * view.zoom));
+        g.region = { ...r, points: recorded.points };
+        if (recorded.full && !g.full) {
+          g.full = true;
+          onError("This lasso reached its point limit; release to apply the outline drawn so far.");
+        }
+      } else
+        g.region = {
+          ...r,
+          points: marqueeCorners(g.start, p, {
+            ratio: marqueeRatio,
+            square: input?.shiftKey,
+            center: input?.altKey,
+          }),
+        };
+      setSelectionDraft(combineSelection(g.selection, g.region, operation));
       return null;
     }
     const l = g.doc.layers.find((x) => x.id === g.id);
@@ -1683,7 +1735,7 @@ export function ProCanvas({
         }
       }
       if (g.type === "selection" && g.region)
-        onSelection(appendSelection(g.selection, g.region), g.origin);
+        onSelection(combineSelection(g.selection, g.region, operation), g.origin);
     }
     setSelectionDraft(null);
     setSnapGuides([]);
@@ -1784,12 +1836,7 @@ export function ProCanvas({
           e.preventDefault();
           setContext(true);
         }}
-        onDoubleClick={() => {
-          if (polygon.length >= 3) {
-            onSelection(appendSelection(selection, { kind: "lasso", operation, points: polygon }));
-            setPolygon([]);
-          }
-        }}
+        onDoubleClick={closePolygon}
       >
         <div
           ref={board}
@@ -2474,20 +2521,17 @@ export function ProCanvas({
         </button>
       </div>
       {polygon.length > 0 && (
-        <Button
-          variant="secondary"
-          onClick={() => {
-            if (polygon.length >= 3) {
-              onSelection({
-                ...selection,
-                regions: [...selection.regions, { kind: "lasso", operation, points: polygon }],
-              });
-              setPolygon([]);
-            }
-          }}
-        >
-          Finish polygon selection
-        </Button>
+        <div className="pro-actions pro-polygon-actions" role="group" aria-label="Polygon lasso">
+          <Button variant="secondary" disabled={polygon.length < 3} onClick={closePolygon}>
+            Finish polygon selection
+          </Button>
+          <Button variant="ghost" onClick={() => setPolygon((a) => a.slice(0, -1))}>
+            Remove last point
+          </Button>
+          <Button variant="ghost" onClick={() => setPolygon([])}>
+            Cancel polygon
+          </Button>
+        </div>
       )}
       {context && (
         <div className="pro-context" role="group" aria-label="Canvas context actions">
