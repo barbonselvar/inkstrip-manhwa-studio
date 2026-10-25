@@ -229,11 +229,11 @@ export default function ProWorkspace({
   onContinue: (mode: "enhance" | "image" | "face") => void;
 }) {
   const [mode, setMode] = useState(initialMode);
-  const [r8Draft, setR8Draft] = useState<R8Draft | null>(null);
   const [colorDraft, setColorDraft] = useState<{ origin: ProDocument; layerId: string } | null>(
     null,
   );
   const [adjustmentDraft, setAdjustmentDraft] = useState<AdjustmentDraft | null>(null);
+  const [r8Draft, setR8Draft] = useState<R8Draft | null>(null);
   const [dialoguePending, setDialoguePending] = useState(false);
   const dialoguePendingRef = useRef(false);
   dialoguePendingRef.current = dialoguePending;
