@@ -258,7 +258,14 @@ export function processSmart(
   if (input.length !== w * h * 4) throw Error("Invalid Smart Filter pixel buffer.");
   if (["gaussian", "motion", "unsharp", "highPass", "median"].includes(a.kind)) {
     validateColorWork(w, h, a as Reused);
-    return processColor(input, w, h, a as Reused);
+    return processColor(
+      input,
+      w,
+      h,
+      a as Reused,
+      undefined,
+      a.kind === "gaussian" || a.kind === "motion" ? "blur" : "preserve",
+    );
   }
   if (a.kind === "grain" && a.distribution === "uniform")
     return processColor(input, w, h, {

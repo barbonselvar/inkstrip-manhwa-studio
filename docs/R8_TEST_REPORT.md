@@ -22,3 +22,9 @@ The new properties workflow passes1440/768/390/360/320px: creation Cancel adds n
 An early workspace hook referenced Quick Mask before initialization; typecheck/UI caught it and the hook was moved below that initialization. The gradient pointer harness initially exported while its inspector remained hidden; it now reopens the inspector through the actual UI. These were diagnosed, not hidden with sleeps or looser pixels.
 
 Current working implementation passes988 full unit tests (200+59+105+624), typecheck and lint with0 warnings. Targeted gradient/filtered-painting suite passes all five widths with zero-tolerance native/reopen/PNG comparisons. Its tests found R6 blur preserved coverage by design; Smart Gaussian/Motion use an explicit premultiplied coverage-blur mode in the shared kernels, while the original R6 default stays unchanged. Original R6 tests pass unchanged. Remaining recovery/performance/full-browser/final-HEAD CI work is pending.
+
+## R8.3 worker integration
+
+`r8-processing-browser-check.mjs` passes actual worker/filter-selection-mask/layer-mask staging, neutral R6 color-source replacement without double filtering, native reopen, whole-layer transforms, hidden-layer exclusion and explicit mask-bake/selected-pixel guards. All deterministic pixels use tolerance0. Its first fixture attempted OffscreenCanvas encoding before creating a rendering context; creating the actual2D context fixes the fixture, with no production/tolerance change.
+
+The filtered-painting regression initially found Gaussian output still had original brush alpha. Diagnosis confirmed the shared R6 filter intentionally preserved coverage. The R8 Smart path now opts into alpha blur in the same kernels; original R6 tests remain unchanged. The strict brush-halo assertion, preview/PNG equality and native reopen pass after the implementation fix.

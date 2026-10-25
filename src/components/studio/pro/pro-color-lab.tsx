@@ -808,6 +808,12 @@ export function ProColorLab({
             shows layer-local pixels before masks, clipping, blend, opacity and effects; those
             remain editable in the document. Use Properties for existing editable adjustment layers.
           </p>
+          {origin.layers.find((l) => l.id === layerId)?.smartFilters?.some((f) => f.enabled) && (
+            <p className="pro-help">
+              This pixel preview edits the base artwork before Smart Filters. The committed layer
+              keeps its editable filter stack and applies it once.
+            </p>
+          )}
           <div className="r6-lab-grid">
             <div className="r6-preview-column">
               <div className="r6-preview">

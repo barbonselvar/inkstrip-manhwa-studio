@@ -106,7 +106,14 @@ for (const kind of ["gaussian", "motion", "unsharp", "highPass", "median"] as co
       op = defaultSmartOperation(kind);
     assert.deepEqual(
       processSmart(src, 7, 7, op),
-      processColor(src, 7, 7, op as Parameters<typeof processColor>[3]),
+      processColor(
+        src,
+        7,
+        7,
+        op as Parameters<typeof processColor>[3],
+        undefined,
+        kind === "gaussian" || kind === "motion" ? "blur" : "preserve",
+      ),
     );
     assert.deepEqual(src, before);
   });
@@ -305,4 +312,21 @@ test("schema1/2 cannot carry advanced records; unknown versions, locked targets 
       ),
     /Unsupported/,
   );
+});
+
+test("Smart Gaussian/Motion blur coverage in premultiplied alpha while legacy R6 defaults preserve coverage exactly", () => {
+  const src = pixels(9, 9, [255, 0, 0, 0]);
+  src.set([0, 0, 255, 255], (4 * 9 + 4) * 4);
+  for (const op of [
+    { kind: "gaussian" as const, radius: 1 },
+    { kind: "motion" as const, length: 3, angle: 0 },
+  ]) {
+    const legacy = processColor(src, 9, 9, op),
+      smart = processSmart(src, 9, 9, op),
+      neighbor = (4 * 9 + 3) * 4;
+    assert.equal(legacy[neighbor + 3], 0);
+    assert.ok(smart[neighbor + 3]! > 0);
+    assert.deepEqual([...smart.slice(neighbor, neighbor + 3)], [0, 0, 255]);
+    assert.ok(smart[(4 * 9 + 4) * 4 + 3]! < 255);
+  }
 });
