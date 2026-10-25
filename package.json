@@ -65,6 +65,7 @@
     "bench:r3:brush": "node scripts/r3-brush-benchmark.mjs",
     "test:r5:browser": "node --experimental-strip-types scripts/r5-browser-check.mjs",
     "bench:r5": "node scripts/r5-benchmark.mjs",
+    "test:r7:browser": "node --experimental-strip-types scripts/r7-selection-browser-check.mjs",
     "test:chapter-display:browser": "node scripts/chapter-display-import-browser-check.mjs"
   },
   "dependencies": {

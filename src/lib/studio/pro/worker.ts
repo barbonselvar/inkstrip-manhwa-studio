@@ -11,6 +11,7 @@ import { effectPadding } from "./effects";
 import { renderOutput } from "./output";
 import { renderRepair } from "./repair-worker";
 import { selectColor } from "./selection";
+import { alphaRegion, colorRangeRegion, modifySelection } from "./selection-tools";
 import { composite, selectionCanvas, surface } from "./render";
 import { planMerge, finishMerge, visibleLayerIds } from "./layers";
 import { documentSources } from "./raster-budget";
@@ -151,6 +152,43 @@ self.onmessage = async ({ data }) => {
       }
       return cache.get(key)!;
     };
+    if (type === "modify-selection") {
+      // Feather stays a live selection property: modify the unfeathered coverage.
+      const mask = selectionCanvas(
+        { ...(doc.selection ?? { regions: [], inverted: false }), feather: 0 },
+        doc.width,
+        doc.height,
+      );
+      try {
+        const alpha = mask.getContext("2d")!.getImageData(0, 0, doc.width, doc.height).data,
+          input = new Uint8Array(doc.width * doc.height);
+        for (let i = 0; i < input.length; i++) input[i] = alpha[i * 4 + 3]!;
+        mask.width = mask.height = 1;
+        let yielded = performance.now();
+        const out = await modifySelection(
+          input,
+          doc.width,
+          doc.height,
+          data.operation,
+          data.amount,
+          async () => {
+            if (latest !== id) throw new DOMException("Selection change cancelled", "AbortError");
+            if (performance.now() - yielded > 12) {
+              await new Promise((resolve) => setTimeout(resolve, 0));
+              yielded = performance.now();
+            }
+          },
+        );
+        self.postMessage({
+          id,
+          type: "selection",
+          region: coverageRegion(out, doc.width, doc.height),
+        });
+      } finally {
+        mask.width = mask.height = 1;
+      }
+      return;
+    }
     if (type === "adjustment-histogram") {
       const selected = doc.layers.find((l) => l.id === data.layerId);
       if (!selected?.adjustmentLayer) throw Error("Choose a persistent color adjustment layer.");
@@ -471,7 +509,11 @@ self.onmessage = async ({ data }) => {
     if (type === "select") {
       try {
         const pixels = output.getContext("2d")!.getImageData(0, 0, doc.width, doc.height);
-        const region = selectColor(pixels.data, doc.width, doc.height, data.point, data.options);
+        const region = data.options?.range
+          ? colorRangeRegion(pixels.data, doc.width, doc.height, data.options.range)
+          : data.options?.alpha
+            ? alphaRegion(pixels.data, doc.width, doc.height)
+            : selectColor(pixels.data, doc.width, doc.height, data.point, data.options);
         self.postMessage({ id, type: "selection", region });
       } finally {
         output.width = output.height = 1;

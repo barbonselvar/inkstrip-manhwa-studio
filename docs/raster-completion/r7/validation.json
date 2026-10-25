@@ -1,0 +1,288 @@
+{
+  "runtimeSha": "8f2134d87e1c10da53fbe7740a986adcd4dcd1c6",
+  "base": "740720c1d5e141c7f52ecab83d2e505fea7183f0",
+  "devServerRegression": [
+    {
+      "command": "npm run test:studio:browser",
+      "exitCode": 1,
+      "seconds": 8
+    },
+    {
+      "command": "npm run test:editor:browser",
+      "exitCode": 0,
+      "seconds": 24
+    },
+    {
+      "command": "npm run test:adjustments:browser",
+      "exitCode": 0,
+      "seconds": 26
+    },
+    {
+      "command": "npm run test:retouch:browser",
+      "exitCode": 0,
+      "seconds": 9
+    },
+    {
+      "command": "npm run test:workflow:browser",
+      "exitCode": 0,
+      "seconds": 25
+    },
+    {
+      "command": "npm run test:ui:browser",
+      "exitCode": 0,
+      "seconds": 32
+    },
+    {
+      "command": "npm run test:pro:browser",
+      "exitCode": 0,
+      "seconds": 69
+    },
+    {
+      "command": "npm run test:layers:browser",
+      "exitCode": 0,
+      "seconds": 58
+    },
+    {
+      "command": "npm run test:repair:browser",
+      "exitCode": 0,
+      "seconds": 43
+    },
+    {
+      "command": "npm run test:geometry:browser",
+      "exitCode": 0,
+      "seconds": 39
+    },
+    {
+      "command": "npm run test:transform:browser",
+      "exitCode": 0,
+      "seconds": 53
+    },
+    {
+      "command": "npm run test:color:browser",
+      "exitCode": 0,
+      "seconds": 40
+    },
+    {
+      "command": "npm run test:appearance:browser",
+      "exitCode": 0,
+      "seconds": 42
+    },
+    {
+      "command": "npm run test:vector:browser",
+      "exitCode": 0,
+      "seconds": 43
+    },
+    {
+      "command": "npm run test:compound:browser",
+      "exitCode": 0,
+      "seconds": 67
+    },
+    {
+      "command": "npm run test:pathfinder:browser",
+      "exitCode": 0,
+      "seconds": 80
+    },
+    {
+      "command": "npm run test:artboards:browser",
+      "exitCode": 0,
+      "seconds": 48
+    },
+    {
+      "command": "npm run test:vector-final:browser",
+      "exitCode": 0,
+      "seconds": 105
+    },
+    {
+      "command": "npm run test:raster-refinement:browser",
+      "exitCode": 0,
+      "seconds": 93
+    },
+    {
+      "command": "npm run test:homepage:browser",
+      "exitCode": 0,
+      "seconds": 53
+    },
+    {
+      "command": "npm run test:dialogue:ocr",
+      "exitCode": 0,
+      "seconds": 9
+    },
+    {
+      "command": "npm run test:dialogue:browser",
+      "exitCode": 0,
+      "seconds": 28
+    },
+    {
+      "command": "npm run test:dialogue:workflow",
+      "exitCode": 0,
+      "seconds": 21
+    },
+    {
+      "command": "npm run test:dialogue:render",
+      "exitCode": 0,
+      "seconds": 4
+    },
+    {
+      "command": "npm run test:dialogue:security",
+      "exitCode": 0,
+      "seconds": 5
+    },
+    {
+      "command": "npm run test:chapter-import:browser",
+      "exitCode": 0,
+      "seconds": 32
+    },
+    {
+      "command": "npm run test:r2:browser",
+      "exitCode": 0,
+      "seconds": 109
+    },
+    {
+      "command": "npm run test:r2:gesture:browser",
+      "exitCode": 1,
+      "seconds": 1
+    },
+    {
+      "command": "npm run test:r3:browser",
+      "exitCode": 0,
+      "seconds": 433
+    },
+    {
+      "command": "npm run test:r5:browser",
+      "exitCode": 0,
+      "seconds": 87
+    },
+    {
+      "command": "npm run test:r7:browser",
+      "exitCode": 0,
+      "seconds": 234
+    }
+  ],
+  "devServerNotes": {
+    "npm run test:studio:browser": "environment: huggingface.co model download blocked by network policy (ERR_TUNNEL_CONNECTION_FAILED / proxy 403)",
+    "npm run test:r2:gesture:browser": "defaults to the built preview on :8081, which was not running; passed on the production build below"
+  },
+  "productionBuild": [
+    {
+      "command": "r7-selection-browser-check",
+      "exitCode": 0
+    },
+    {
+      "command": "r2-gesture-browser-check",
+      "exitCode": 0
+    },
+    {
+      "command": "r5-browser-check",
+      "exitCode": 0
+    },
+    {
+      "command": "production-vector-check --raster <sha>",
+      "exitCode": 0,
+      "errors": [],
+      "failedCriticalAssets": []
+    },
+    {
+      "command": "browser-smoke (desktop+mobile, dev baseline)",
+      "exitCode": 0,
+      "consoleErrors": [],
+      "divergesFromBaseline": false
+    },
+    {
+      "command": "r3-brush-browser-check",
+      "exitCode": 1,
+      "note": "not runnable on built output by design: imports /src modules from the dev server; passed on dev"
+    }
+  ],
+  "r6TrialMergeBuild": {
+    "r6Head": "21fafe0",
+    "conflicts": [
+      "package.json",
+      "src/lib/studio/pro/worker.ts",
+      "src/components/studio/pro/pro-workspace.tsx (3 hunks)"
+    ],
+    "resolution": "additive, keep both",
+    "typecheck": "pass",
+    "lint": "pass",
+    "unitTests": "896 pass / 0 fail",
+    "browser": {
+      "r6-color-browser-check": 0,
+      "r7-selection-browser-check": 0,
+      "r5-browser-check": 0
+    },
+    "pushed": false
+  },
+  "r7Browser": {
+    "results": [
+      {
+        "width": 1440,
+        "lassoPastLimit": {
+          "moves": 6300,
+          "points": 5000
+        },
+        "polygonBackspace": true,
+        "replaceAndRatio": true,
+        "regionLimitCompaction": true,
+        "colorRange": true,
+        "modify": true,
+        "masks": true,
+        "clipboard": true,
+        "quickMask": true,
+        "persistence": true,
+        "noOverflow": true
+      },
+      {
+        "width": 768,
+        "polygonBackspace": true,
+        "replaceAndRatio": true,
+        "regionLimitCompaction": true,
+        "colorRange": true,
+        "modify": true,
+        "masks": true,
+        "clipboard": true,
+        "quickMask": true,
+        "persistence": true,
+        "noOverflow": true
+      },
+      {
+        "width": 390,
+        "polygonBackspace": true,
+        "replaceAndRatio": true,
+        "regionLimitCompaction": true,
+        "colorRange": true,
+        "modify": true,
+        "masks": true,
+        "clipboard": true,
+        "quickMask": true,
+        "persistence": true,
+        "noOverflow": true
+      },
+      {
+        "width": 360,
+        "polygonBackspace": true,
+        "replaceAndRatio": true,
+        "regionLimitCompaction": true,
+        "colorRange": true,
+        "modify": true,
+        "masks": true,
+        "clipboard": true,
+        "quickMask": true,
+        "persistence": true,
+        "noOverflow": true
+      },
+      {
+        "width": 320,
+        "polygonBackspace": true,
+        "replaceAndRatio": true,
+        "regionLimitCompaction": true,
+        "colorRange": true,
+        "modify": true,
+        "masks": true,
+        "clipboard": true,
+        "quickMask": true,
+        "persistence": true,
+        "noOverflow": true
+      }
+    ],
+    "errors": []
+  }
+}

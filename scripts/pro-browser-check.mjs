@@ -666,6 +666,8 @@ try {
     await p.getByRole("button", { name: "Deselect", exact: true }).click();
     await p.getByRole("button", { name: "Color Range tool", exact: true }).click();
     await clickAt(p, { x: 8, y: 8 });
+    // R7: Color Range previews live and commits only on Apply.
+    await p.getByRole("button", { name: "Apply color range", exact: true }).click();
     await coverage(8, 8, true);
     await coverage(104, 8, true);
     await p.getByRole("button", { name: "Magic Wand tool", exact: true }).click();

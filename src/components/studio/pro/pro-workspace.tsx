@@ -45,7 +45,16 @@ import {
   type Frame,
 } from "@/lib/studio/pro/artboards";
 import type { RepairRequest } from "@/lib/studio/pro/repair";
-import { appendSelection } from "@/lib/studio/pro/selection";
+import {
+  combineSelection,
+  SELECTION_REGION_LIMIT,
+  type ColorMetric,
+  type ModifyOperation,
+  type SelectionMode,
+} from "@/lib/studio/pro/selection-tools";
+import { coverageRegion } from "@/lib/studio/pro/refine-selection";
+import { thumbnailDocument } from "@/lib/studio/pro/thumbnails";
+import { ProSelectionTools } from "./pro-selection-tools";
 import { bucketStroke, hasActiveSelection, intersectRegion } from "@/lib/studio/pro/fill";
 import { selectionCanvas } from "@/lib/studio/pro/render";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -103,6 +112,7 @@ import {
   type Selection,
   type Stroke,
   type CloneSource,
+  type Region,
 } from "@/lib/studio/pro/model";
 import { createHistory, record, undo, redo, type History } from "@/lib/studio/editor/history";
 import { isLocked, ungroupLayers } from "@/lib/studio/pro/operations";
@@ -133,6 +143,60 @@ import {
   type BrushPreset,
 } from "@/lib/studio/pro/brush-presets";
 type Entry = { doc: ProDocument; label: string };
+type Rgb = [number, number, number];
+type ColorRangeDraft = { include: Rgb[]; exclude: Rgb[]; region?: Region };
+const EMPTY_RANGE: ColorRangeDraft = { include: [], exclude: [] };
+/** Session-only pixel clipboard (browser clipboard permission is not required). */
+type PixelClipboard = {
+  blob: Blob;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  name: string;
+};
+/** Quick Mask is a temporary paint layer, so it reuses the R3 brush engine and history.
+ * Its presence in the document is the state: undo/redo and reopened drafts stay consistent. */
+export const QUICK_MASK_NAME = "Quick Mask (temporary)";
+const QUICK_MASK_TINT = "#ff2a55";
+const quickMaskLayer = (d: ProDocument | undefined) =>
+  d?.layers.find((l) => l.kind === "paint" && l.name === QUICK_MASK_NAME);
+/** Past the native region limit, rasterize the unfeathered selection into one
+ * document-resolution pixel region (feather stays a live setting), so the next
+ * add/subtract never fails to commit. */
+function compactSelection(s: Selection, d: { width: number; height: number }): Selection {
+  if (s.regions.length <= SELECTION_REGION_LIMIT) return s;
+  const c = selectionCanvas({ ...s, feather: 0 }, d.width, d.height);
+  try {
+    const data = c.getContext("2d")!.getImageData(0, 0, d.width, d.height).data,
+      alpha = new Uint8Array(d.width * d.height);
+    for (let i = 0; i < alpha.length; i++) alpha[i] = data[i * 4 + 3]!;
+    return {
+      regions: [coverageRegion(alpha, d.width, d.height)],
+      inverted: false,
+      feather: s.feather,
+    };
+  } finally {
+    c.width = c.height = 1;
+  }
+}
+/** A fully covered paint layer carrying `target`'s mask: its composite alpha is the
+ * mask coverage in document space (layer transform, placement, inversion included). */
+function maskCoverageDocument(d: ProDocument, target: Layer): ProDocument {
+  const probe = layer("paint", target.width, target.height);
+  probe.transform = structuredClone(target.transform);
+  probe.mask = { ...structuredClone(target.mask!), enabled: true };
+  probe.strokes = [bucketStroke(probe, { regions: [], inverted: true, feather: 0 }, "#ffffff", 1)];
+  return { ...d, background: "transparent", layers: [probe] };
+}
+const decodeCoverage = (r: Region) => {
+  const { width, height, runs } = r.pixels!,
+    out = new Uint8Array(width * height);
+  for (let i = 0; i < runs.length; i += 3)
+    out.fill(runs[i + 2]!, runs[i]!, runs[i]! + runs[i + 1]!);
+  return out;
+};
+
 export default function ProWorkspace({
   panel,
   projectId,
@@ -189,7 +253,16 @@ export default function ProWorkspace({
     [tolerance, setTolerance] = useState(32),
     [contiguous, setContiguous] = useState(true),
     [antiAlias, setAntiAlias] = useState(true),
-    [operation, setOperation] = useState<"add" | "subtract" | "intersect">("add"),
+    [operation, setOperation] = useState<SelectionMode>("add"),
+    [marqueeRatio, setMarqueeRatio] = useState(0),
+    [wandSource, setWandSource] = useState<"visible" | "layer">("visible"),
+    [colorMetric, setColorMetric] = useState<ColorMetric>("rgb"),
+    [colorRange, setColorRange] = useState<ColorRangeDraft>(EMPTY_RANGE),
+    [rangeFuzziness, setRangeFuzziness] = useState(0),
+    [rangeRemove, setRangeRemove] = useState(false),
+    [rangeInvert, setRangeInvert] = useState(false),
+    [quickMaskOpacity, setQuickMaskOpacity] = useState(0.5),
+    [clipboard, setClipboard] = useState<PixelClipboard | null>(null),
     [brush, setBrush] = useState<Omit<Stroke, "points" | "erase">>({
       size: 24,
       hardness: 0.8,
@@ -717,10 +790,419 @@ export default function ProWorkspace({
   const setSelection = useCallback(
     (selection: Selection, expected?: ProDocument) => {
       const current = historyRef.current?.present.doc;
-      if (current) commitCanvas({ ...current, selection }, "Change selection", expected);
+      if (current)
+        commitCanvas(
+          { ...current, selection: compactSelection(selection, current) },
+          "Change selection",
+          expected,
+        );
     },
     [commitCanvas],
   );
+  /** Wand and Color Range sample the visible composite or only the active layer
+   * (isolated with its children, at its real position, unaffected by layers above). */
+  // An R6 adjustment layer has no pixels of its own: isolating it would sample an empty
+  // bitmap, so "Active layer" falls back to the visible composite for it.
+  const adjustmentActive = active?.kind === "adjustment";
+  const samplingDocument = (d: ProDocument) =>
+    wandSource === "layer" &&
+    active &&
+    !adjustmentActive &&
+    d.layers.some((l) => l.id === active.id)
+      ? thumbnailDocument(d, active.id)
+      : d;
+  const rangeRun = useRef(0);
+  useEffect(() => {
+    // Color Range is a pending dialog: leaving the tool cancels it, never commits it.
+    if (tool !== "color-range") {
+      ++rangeRun.current;
+      setColorRange(EMPTY_RANGE);
+    }
+  }, [tool]);
+  const rangeInclude = colorRange.include,
+    rangeExclude = colorRange.exclude;
+  useEffect(() => {
+    const worker = renderer.current;
+    if (tool !== "color-range" || !rangeInclude.length || !doc || !worker) return;
+    const run = ++rangeRun.current,
+      document = samplingDocument(doc),
+      timer = setTimeout(() => {
+        void worker
+          .colorRange(document, maxArea, {
+            include: rangeInclude,
+            exclude: rangeExclude,
+            tolerance,
+            fuzziness: rangeFuzziness,
+            metric: colorMetric,
+          })
+          .then((result) => {
+            if (run === rangeRun.current && result.region)
+              setColorRange((c) => ({ ...c, region: result.region }));
+          })
+          .catch((e) => {
+            if (run === rangeRun.current && (e as Error).name !== "AbortError")
+              setError(storageMessage(e));
+          });
+      }, 120);
+    return () => clearTimeout(timer);
+    // samplingDocument depends on wandSource/active, listed explicitly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    tool,
+    rangeInclude,
+    rangeExclude,
+    tolerance,
+    rangeFuzziness,
+    colorMetric,
+    wandSource,
+    active?.id,
+    doc,
+    maxArea,
+  ]);
+  const colorRangeSelection =
+    tool === "color-range" && colorRange.region && colorRange.include.length && doc
+      ? combineSelection(
+          doc.selection ?? EMPTY_SELECTION,
+          { ...colorRange.region, inverted: rangeInvert },
+          operation,
+        )
+      : null;
+  const applyColorRange = () => {
+    const current = historyRef.current?.present.doc;
+    if (!current || !colorRange.region || busyRef.current) return;
+    const next = compactSelection(
+      combineSelection(
+        current.selection ?? EMPTY_SELECTION,
+        { ...colorRange.region, inverted: rangeInvert },
+        operation,
+      ),
+      current,
+    );
+    if (commit({ ...current, selection: next }, "Color Range selection")) {
+      ++rangeRun.current;
+      setColorRange(EMPTY_RANGE);
+      setStatus("Color Range applied at document resolution.");
+    }
+  };
+  const cancelColorRange = () => {
+    ++rangeRun.current;
+    setColorRange(EMPTY_RANGE);
+    setStatus("Color Range cancelled. The selection is unchanged.");
+  };
+  /** Worker-computed selection change, committed as one undo step only if the document
+   * did not change meanwhile (stale results are discarded, never applied). */
+  const selectionJob = async (
+    progress: string,
+    label: string,
+    job: (worker: ProRenderer, document: ProDocument) => Promise<ProDocument | null | undefined>,
+  ) => {
+    const document = historyRef.current?.present.doc,
+      worker = renderer.current;
+    if (!document || !worker || busyRef.current || transformRef.current) return false;
+    busyRef.current = true;
+    setBusy(true);
+    setError("");
+    setProgress(progress);
+    try {
+      const next = await job(worker, document);
+      if (!next || !alive.current) return false;
+      if (historyRef.current?.present.doc !== document)
+        throw Error("The document changed while the selection was computed. Nothing was applied.");
+      busyRef.current = false;
+      return commit(next, label);
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") setError(storageMessage(e));
+      return false;
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+      setProgress("");
+    }
+  };
+  const modifySelection = (operation: ModifyOperation, amount: number) =>
+    void selectionJob(
+      "Modifying the selection at document resolution…",
+      `${operation[0]!.toUpperCase()}${operation.slice(1)} selection`,
+      async (worker, d) => {
+        if (!hasActiveSelection(d.selection)) throw Error("Make a selection first.");
+        const result = await worker.modifySelection(d, maxArea, operation, amount);
+        if (!result.region) return null;
+        return {
+          ...d,
+          selection: {
+            regions: result.region.pixels?.runs.length ? [result.region] : [],
+            inverted: false,
+            feather: d.selection!.feather,
+          },
+        };
+      },
+    );
+  const selectionFromMask = () =>
+    void selectionJob(
+      "Loading the mask as a selection…",
+      "Selection from mask",
+      async (worker, d) => {
+        const target = d.layers.find((l) => l.id === selectedIds[0]);
+        if (!target?.mask) throw Error("Select a layer with a mask.");
+        const result = await worker.alphaSelection(maskCoverageDocument(d, target), maxArea);
+        if (!result.region) return null;
+        return {
+          ...d,
+          selection: compactSelection(
+            combineSelection(d.selection ?? EMPTY_SELECTION, result.region, operation),
+            d,
+          ),
+        };
+      },
+    );
+  /** Union of the current mask and the selection, baked into a document-frame pixel mask
+   * (painted mask strokes become part of that coverage). The enabled state is kept. */
+  const addSelectionToMask = () =>
+    void selectionJob(
+      "Adding the selection to the mask…",
+      "Add selection to mask",
+      async (worker, d) => {
+        const target = d.layers.find((l) => l.id === selectedIds[0]);
+        if (!target?.mask || isLocked(d, target.id))
+          throw Error("Select an unlocked layer with a mask.");
+        if (!hasActiveSelection(d.selection)) throw Error("Make a selection first.");
+        const result = await worker.alphaSelection(maskCoverageDocument(d, target), maxArea);
+        if (!result.region) return null;
+        const mask = decodeCoverage(result.region),
+          canvas = selectionCanvas(d.selection!, d.width, d.height);
+        try {
+          const data = canvas.getContext("2d")!.getImageData(0, 0, d.width, d.height).data;
+          for (let i = 0; i < mask.length; i++) mask[i] = Math.max(mask[i]!, data[i * 4 + 3]!);
+        } finally {
+          canvas.width = canvas.height = 1;
+        }
+        const union = {
+          regions: [coverageRegion(mask, d.width, d.height)],
+          inverted: false,
+          feather: 0,
+        };
+        return {
+          ...d,
+          layers: d.layers.map((l) =>
+            l.id === target.id
+              ? { ...l, mask: { ...maskFromSelection(union, l, d), enabled: target.mask!.enabled } }
+              : l,
+          ),
+        };
+      },
+    );
+  /** Copy/cut reuse R5's native-resolution split (same eligibility and budgets). */
+  const liftPixels = async (kind: "copy" | "cut" | "layer-copy" | "layer-cut") => {
+    const current = historyRef.current?.present.doc,
+      worker = renderer.current;
+    if (!current || !worker || !sessionRef.current || busyRef.current || transformRef.current)
+      return;
+    if (selectedIds.length !== 1) {
+      setError("Select one raster or paint layer.");
+      return;
+    }
+    busyRef.current = true;
+    setBusy(true);
+    setError("");
+    setProgress("Reading selected pixels at native resolution…");
+    try {
+      const target = selectionTransformTarget(current, selectedIds[0]!, maxArea),
+        result = await worker.stageSelection(current, maxArea, target.id);
+      if (!alive.current) return;
+      if (historyRef.current?.present.doc !== current)
+        throw Error("The document changed while pixels were read. Nothing was changed.");
+      if (!result.document || !result.assets || !result.layerId)
+        throw Error("No selected pixels were returned.");
+      const floating = result.document.layers.find((l) => l.id === result.layerId)!,
+        lifted = result.assets[floating.assetId!]!,
+        clip: PixelClipboard = {
+          blob: lifted,
+          width: floating.width,
+          height: floating.height,
+          x: floating.transform.x,
+          y: floating.transform.y,
+          name: target.name,
+        };
+      if (kind === "copy") {
+        setClipboard(clip);
+        setStatus(`Copied ${clip.width} × ${clip.height} px from ${target.name}.`);
+        return;
+      }
+      let next: ProDocument, assets: Record<string, Blob>, focus: string;
+      if (kind === "layer-copy") {
+        const id = crypto.randomUUID(),
+          l = layer("raster", clip.width, clip.height),
+          index = current.layers.findIndex((x) => x.id === target.id);
+        l.assetId = id;
+        l.name = `${target.name.slice(0, 90)} copy`;
+        l.transform = { ...floating.transform };
+        l.parentId = target.parentId;
+        next = {
+          ...current,
+          layers: [...current.layers.slice(0, index + 1), l, ...current.layers.slice(index + 1)],
+        };
+        assets = { [id]: lifted };
+        focus = l.id;
+      } else {
+        const groupId = floating.parentId!;
+        next = {
+          ...result.document,
+          layers: result.document.layers
+            .filter((l) => kind === "layer-cut" || l.id !== floating.id)
+            .map((l) =>
+              l.id === groupId
+                ? { ...l, name: `${target.name.slice(0, 80)} · cut` }
+                : l.id === floating.id
+                  ? { ...l, name: `${target.name.slice(0, 90)} cut` }
+                  : l,
+            ),
+        };
+        assets = Object.fromEntries(
+          Object.entries(result.assets).filter(
+            ([id]) => kind === "layer-cut" || id !== floating.assetId,
+          ),
+        );
+        focus = kind === "layer-cut" ? floating.id : groupId;
+      }
+      const nextSession = {
+        ...sessionRef.current,
+        document: next,
+        assets: { ...sessionRef.current.assets, ...assets },
+      };
+      validateAssets(nextSession);
+      busyRef.current = false;
+      const label = {
+        "layer-copy": "Layer via copy",
+        "layer-cut": "Layer via cut",
+        cut: "Cut selected pixels",
+      }[kind];
+      if (!commit(next, label)) return;
+      sessionRef.current = nextSession;
+      setSession(nextSession);
+      setAssetEpoch((n) => n + 1);
+      setSelectedIds([focus]);
+      if (kind === "cut") setClipboard(clip);
+      setStatus(
+        kind === "layer-copy"
+          ? "Selected pixels copied to a new layer above the original."
+          : "Selected pixels cut. The original stays hidden and editable inside the group; Undo restores it.",
+      );
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") setError(storageMessage(e));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+      setProgress("");
+    }
+  };
+  const pastePixels = () => {
+    const current = historyRef.current?.present.doc;
+    if (!clipboard || !current || !sessionRef.current || busyRef.current || transformRef.current)
+      return;
+    try {
+      const id = crypto.randomUUID(),
+        l = layer("raster", clipboard.width, clipboard.height);
+      l.assetId = id;
+      l.name = `Pasted · ${clipboard.name.slice(0, 80)}`;
+      // Same canvas position; clamp so pasted pixels stay inside a smaller document.
+      l.transform.x = Math.max(0, Math.min(clipboard.x, current.width - clipboard.width));
+      l.transform.y = Math.max(0, Math.min(clipboard.y, current.height - clipboard.height));
+      const next = { ...current, layers: [...current.layers, l] },
+        nextSession = {
+          ...sessionRef.current,
+          document: next,
+          assets: { ...sessionRef.current.assets, [id]: clipboard.blob },
+        };
+      validateAssets(nextSession);
+      if (!commit(next, "Paste pixels")) return;
+      sessionRef.current = nextSession;
+      setSession(nextSession);
+      setAssetEpoch((n) => n + 1);
+      setSelectedIds([l.id]);
+      setStatus("Pasted as a new layer at the copied position.");
+    } catch (e) {
+      setError(storageMessage(e));
+    }
+  };
+  const quickMask = quickMaskLayer(doc);
+  useEffect(() => {
+    // While Quick Mask is active, painting must target only its coverage layer.
+    if (quickMask && selectedIds[0] !== quickMask.id) setSelectedIds([quickMask.id]);
+  }, [quickMask, selectedIds]);
+  const toggleQuickMask = () => {
+    const current = historyRef.current?.present.doc;
+    if (!current || busyRef.current || transformRef.current) return;
+    const existing = quickMaskLayer(current);
+    if (!existing) {
+      // Seed with the exact selection coverage (feather included), then clear the live
+      // selection so it no longer clips the Quick Mask brush.
+      const l = layer("paint", current.width, current.height);
+      l.name = QUICK_MASK_NAME;
+      l.opacity = quickMaskOpacity;
+      if (hasActiveSelection(current.selection))
+        l.strokes = [bucketStroke(l, current.selection!, QUICK_MASK_TINT, 1)];
+      if (
+        commit(
+          { ...current, selection: { ...EMPTY_SELECTION }, layers: [...current.layers, l] },
+          "Enter Quick Mask",
+        )
+      ) {
+        setSelectedIds([l.id]);
+        setMaskMode(false);
+        if (!["brush", "pencil", "eraser"].includes(tool)) setTool("brush");
+        setStatus(
+          "Quick Mask: paint to select, erase to deselect. Press Q or Exit Quick Mask to finish.",
+        );
+      }
+      return;
+    }
+    void selectionJob(
+      "Converting Quick Mask to a selection…",
+      "Exit Quick Mask",
+      async (worker, d) => {
+        const probe = {
+          ...d,
+          background: "transparent",
+          layers: [
+            {
+              ...existing,
+              opacity: 1,
+              visible: true,
+              blend: "source-over" as const,
+              parentId: undefined,
+            },
+          ],
+        };
+        const result = await worker.alphaSelection(probe, maxArea);
+        if (!result.region) return null;
+        return {
+          ...d,
+          layers: d.layers.filter((l) => l.id !== existing.id),
+          selection: {
+            regions: result.region.pixels?.runs.length ? [result.region] : [],
+            inverted: false,
+            feather: 0,
+          },
+        };
+      },
+    ).then((done) => {
+      if (done) {
+        setSelectedIds((ids) => ids.filter((id) => id !== existing.id));
+        setStatus("Quick Mask converted to a selection at document resolution.");
+      }
+    });
+  };
+  /** R6 color tools must never target the temporary Quick Mask coverage layer. */
+  const blockedByQuickMaskColor = (d: ProDocument) => {
+    if (!quickMaskLayer(d)) return false;
+    setError("Exit Quick Mask before using color adjustments or Color & Filters.");
+    return true;
+  };
+  const blockedByQuickMask = () => {
+    if (!quickMaskLayer(historyRef.current?.present.doc)) return false;
+    setError("Exit Quick Mask before exporting or applying to the chapter.");
+    return true;
+  };
   const armRefineSample = useCallback((key: "foreground" | "background" | null) => {
     setRefineSampleKey(key);
     if (key) {
@@ -748,11 +1230,32 @@ export default function ProWorkspace({
         }
         return;
       }
-      const result = await worker.select(document, maxArea, point, {
-        tolerance,
-        contiguous: (tool === "wand" || tool === "fill") && contiguous,
-        antiAlias,
-      });
+      if (tool === "color-range") {
+        // Each tap adds (or removes) a reference colour; Apply commits the preview.
+        const sampled = await worker.sample(samplingDocument(document), maxArea, point);
+        if (!sampled.sample || !alive.current) return;
+        const color = sampled.sample.map(Math.round) as Rgb;
+        setColorRange((c) =>
+          rangeRemove
+            ? { ...c, exclude: [...c.exclude, color].slice(-16) }
+            : { ...c, include: [...c.include, color].slice(-16) },
+        );
+        setStatus(
+          `${rangeRemove ? "Removed" : "Added"} rgb(${color.join(", ")}). Adjust tolerance and fuzziness, then Apply or Cancel.`,
+        );
+        return;
+      }
+      const result = await worker.select(
+        tool === "wand" ? samplingDocument(document) : document,
+        maxArea,
+        point,
+        {
+          tolerance,
+          contiguous: (tool === "wand" || tool === "fill") && contiguous,
+          antiAlias,
+          ...(tool === "wand" ? { metric: colorMetric } : {}),
+        },
+      );
       if (!result.region || !alive.current) return;
       if (tool === "fill") {
         const target = document.layers.find((l) => l.id === selectedIds[0]);
@@ -802,8 +1305,14 @@ export default function ProWorkspace({
       // Release the operation lock before recording its single undo transaction.
       busyRef.current = false;
       commit(
-        { ...document, selection: appendSelection(previous, { ...result.region, operation }) },
-        tool === "wand" ? "Magic Wand selection" : "Color Range selection",
+        {
+          ...document,
+          selection: compactSelection(
+            combineSelection(previous, result.region, operation),
+            document,
+          ),
+        },
+        "Magic Wand selection",
       );
       setStatus(
         "Selection analyzed at full document resolution. Blue overlay shows selected coverage.",
@@ -964,6 +1473,7 @@ export default function ProWorkspace({
     }
   }, [persist, onClose]);
   const apply = async () => {
+    if (blockedByQuickMask()) return;
     if (dialoguePendingRef.current) return false;
     const d = historyRef.current?.present.doc,
       s = sessionRef.current;
@@ -1088,6 +1598,7 @@ export default function ProWorkspace({
   };
   const exportBoards = async (boards: Artboard[], format: string, scale: number) => {
     if (!doc || busyRef.current || !boards.length || !renderer.current) return;
+    if (blockedByQuickMask()) return;
     setError("");
     try {
       if (cropDraft || transformRef.current)
@@ -1146,6 +1657,7 @@ export default function ProWorkspace({
   };
   const exportFile = async (kind: "raster" | "native" | "svg") => {
     if (!doc || !sessionRef.current || busyRef.current || dialoguePendingRef.current) return;
+    if (blockedByQuickMask()) return;
     setError("");
     try {
       if (cropDraft || transformRef.current)
@@ -1755,9 +2267,49 @@ export default function ProWorkspace({
     remove,
     selectTool: chooseTool,
     nudge: (_key: string, _large: boolean) => {},
+    selectionKey: (_e: KeyboardEvent): boolean => false,
   });
   actions.current = {
     save: saveNow,
+    /** Selection and clipboard shortcuts (raster mode). Returns true when handled. */
+    selectionKey: (e: KeyboardEvent) => {
+      // R6 adjustment / Color & Filters editors own the keyboard while open.
+      if (mode !== "raster" || transformRef.current || cropDraft || colorDraft || adjustmentDraft)
+        return false;
+      const k = e.key.toLowerCase(),
+        mod = e.ctrlKey || e.metaKey,
+        d = historyRef.current?.present.doc;
+      if (!d) return false;
+      if (!mod && !e.altKey && !e.shiftKey && k === "q") {
+        toggleQuickMask();
+        return true;
+      }
+      if (!mod || e.altKey) return false;
+      if (k === "a" && !e.shiftKey) {
+        setSelection({
+          regions: [
+            {
+              kind: "rectangle",
+              operation: "add",
+              points: [
+                { x: 0, y: 0 },
+                { x: d.width, y: d.height },
+              ],
+            },
+          ],
+          inverted: false,
+          feather: 0,
+        });
+      } else if (k === "d" && !e.shiftKey) setSelection({ ...EMPTY_SELECTION });
+      else if (k === "i" && e.shiftKey)
+        setSelection({ ...(d.selection ?? EMPTY_SELECTION), inverted: !d.selection?.inverted });
+      else if (k === "c" && !e.shiftKey) void liftPixels("copy");
+      else if (k === "x" && !e.shiftKey) void liftPixels("cut");
+      else if (k === "v" && !e.shiftKey && clipboard) pastePixels();
+      else if (k === "j") void liftPixels(e.shiftKey ? "layer-cut" : "layer-copy");
+      else return false;
+      return true;
+    },
     undo: () => {
       if (transformRef.current) cancelTransform();
       if (cropDraft) cancelCrop();
@@ -1845,6 +2397,10 @@ export default function ProWorkspace({
       ) {
         e.preventDefault();
         actions.current.nudge(e.key, e.shiftKey);
+        return;
+      }
+      if (actions.current.selectionKey(e)) {
+        e.preventDefault();
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
@@ -2197,10 +2753,27 @@ export default function ProWorkspace({
               value={operation}
               onChange={(e) => setOperation(e.target.value as typeof operation)}
             >
+              <option value="replace">New selection</option>
               <option value="add">Add selection</option>
               <option value="subtract">Subtract</option>
               <option value="intersect">Intersect</option>
             </select>
+            {(tool === "select-rect" || tool === "select-ellipse") && (
+              <select
+                className="field pro-selection-mode"
+                aria-label="Marquee aspect ratio"
+                value={marqueeRatio}
+                onChange={(e) => setMarqueeRatio(Number(e.target.value))}
+              >
+                <option value={0}>Free ratio</option>
+                <option value={1}>1:1</option>
+                <option value={4 / 3}>4:3</option>
+                <option value={3 / 2}>3:2</option>
+                <option value={16 / 9}>16:9</option>
+                <option value={2 / 3}>2:3 (portrait)</option>
+                <option value={9 / 16}>9:16 (portrait)</option>
+              </select>
+            )}
             {(tool === "wand" || tool === "color-range" || tool === "fill") && (
               <>
                 <ProNumber
@@ -2228,8 +2801,85 @@ export default function ProWorkspace({
                   />
                   Anti-alias
                 </label>
+                {(tool === "wand" || tool === "color-range") && (
+                  <>
+                    <select
+                      className="field pro-selection-mode"
+                      aria-label="Sample source"
+                      value={wandSource}
+                      onChange={(e) => setWandSource(e.target.value as typeof wandSource)}
+                    >
+                      <option value="visible">Visible composite</option>
+                      <option value="layer">Active layer</option>
+                    </select>
+                    <select
+                      className="field pro-selection-mode"
+                      aria-label="Color distance"
+                      value={colorMetric}
+                      onChange={(e) => setColorMetric(e.target.value as ColorMetric)}
+                    >
+                      <option value="rgb">RGB distance</option>
+                      <option value="perceptual">Perceptual (OKLab)</option>
+                    </select>
+                  </>
+                )}
+                {wandSource === "layer" &&
+                  adjustmentActive &&
+                  (tool === "wand" || tool === "color-range") && (
+                    <span className="pro-help" role="status">
+                      The active layer is a color adjustment, so the visible image is sampled.
+                    </span>
+                  )}
+                {tool === "color-range" && (
+                  <>
+                    <label className="pro-check">
+                      <input
+                        type="checkbox"
+                        aria-label="Remove sample"
+                        checked={rangeRemove}
+                        onChange={(e) => setRangeRemove(e.target.checked)}
+                      />
+                      Remove sample
+                    </label>
+                    <ProNumber
+                      label="Fuzziness"
+                      value={rangeFuzziness}
+                      min={0}
+                      max={255}
+                      onChange={setRangeFuzziness}
+                    />
+                    <label className="pro-check">
+                      <input
+                        type="checkbox"
+                        aria-label="Invert color range"
+                        checked={rangeInvert}
+                        onChange={(e) => setRangeInvert(e.target.checked)}
+                      />
+                      Invert
+                    </label>
+                    <span className="pro-help" aria-live="polite">
+                      {colorRange.include.length} added · {colorRange.exclude.length} removed
+                    </span>
+                    <Button
+                      variant="secondary"
+                      disabled={busy || !colorRange.region || !colorRange.include.length}
+                      onClick={applyColorRange}
+                    >
+                      Apply color range
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={!colorRange.include.length && !colorRange.exclude.length}
+                      onClick={cancelColorRange}
+                    >
+                      Cancel color range
+                    </Button>
+                  </>
+                )}
                 <span className="pro-help">
-                  Tap artwork to sample visible colors · tolerance 0–255
+                  {tool === "color-range"
+                    ? "Tap artwork to add reference colors; the preview updates live"
+                    : `Tap artwork to sample ${wandSource === "layer" && tool === "wand" && !adjustmentActive ? "the active layer" : "visible colors"} · tolerance 0–255`}
                 </span>
               </>
             )}
@@ -2333,11 +2983,12 @@ export default function ProWorkspace({
                 onSelectAnchor={selectAnchor}
                 onError={setError}
                 tool={tool}
-                selection={refinePreview ?? selection}
+                selection={refinePreview ?? colorRangeSelection ?? selection}
                 selectionView={selectionView}
                 onSelection={setSelection}
-                brush={brush}
+                brush={quickMask ? { ...brush, color: QUICK_MASK_TINT } : brush}
                 operation={operation}
+                marqueeRatio={marqueeRatio}
                 maskMode={maskMode}
                 snapping={snapping}
                 grid={grid}
@@ -2625,10 +3276,13 @@ export default function ProWorkspace({
                         <>
                           <Button
                             variant="secondary"
-                            disabled={busy || !!transformDraft || !!cropDraft || maskMode}
+                            disabled={
+                              busy || !!transformDraft || !!cropDraft || maskMode || !!quickMask
+                            }
                             onClick={() => {
                               const current = historyRef.current?.present.doc;
                               if (!current || busyRef.current || transient) return;
+                              if (blockedByQuickMaskColor(current)) return;
                               try {
                                 const draft = createAdjustmentDraft(current, active?.id);
                                 adjustmentDocument(
@@ -2687,6 +3341,7 @@ export default function ProWorkspace({
                             !!transformDraft ||
                             !!cropDraft ||
                             maskMode ||
+                            !!quickMask ||
                             selectedIds.length !== 1 ||
                             !["raster", "paint"].includes(active.kind) ||
                             isLocked(doc!, active.id)
@@ -2694,6 +3349,7 @@ export default function ProWorkspace({
                           onClick={() => {
                             const current = historyRef.current?.present.doc;
                             if (!current || !active || transient) return;
+                            if (blockedByQuickMaskColor(current)) return;
                             try {
                               colorTarget(current, active.id, maxArea);
                               setColorDraft({ origin: current, layerId: active.id });
@@ -2709,6 +3365,11 @@ export default function ProWorkspace({
                         <p className="pro-help">
                           Select the artwork thumbnail in Layers to process colors. Mask-only color
                           processing is unavailable.
+                        </p>
+                      )}
+                      {mode === "raster" && !dialogue && quickMask && (
+                        <p className="pro-help" role="status">
+                          Exit Quick Mask to use color adjustments and Color &amp; Filters.
                         </p>
                       )}
                       <ProProperties
@@ -2741,9 +3402,14 @@ export default function ProWorkspace({
                         onSelection={setSelection}
                         onMask={() => {
                           if (active && doc) {
+                            const replaced = !!active.mask;
                             patch({ mask: maskFromSelection(selection, active, doc) });
                             setMaskMode(true);
                             setTool("brush");
+                            if (replaced)
+                              setStatus(
+                                "Replaced the existing mask with the selection. Undo restores the previous mask.",
+                              );
                           }
                         }}
                         brush={brush}
@@ -2885,6 +3551,55 @@ export default function ProWorkspace({
                           }
                         }}
                       />
+                      {doc && mode === "raster" && (
+                        <ProSelectionTools
+                          hasSelection={hasActiveSelection(selection)}
+                          canMask={!!active && !isLocked(doc, active.id)}
+                          hasMask={!!active?.mask}
+                          canLift={(() => {
+                            if (selectedIds.length !== 1) return false;
+                            try {
+                              selectionTransformTarget(doc, selectedIds[0]!, maxArea);
+                              return true;
+                            } catch {
+                              return false;
+                            }
+                          })()}
+                          clipboard={
+                            clipboard
+                              ? `${clipboard.width} × ${clipboard.height} px from ${clipboard.name}`
+                              : null
+                          }
+                          quickMask={!!quickMask}
+                          quickMaskOpacity={quickMask?.opacity ?? quickMaskOpacity}
+                          disabled={busy || dialoguePending || !!transformDraft || !!cropDraft}
+                          onModify={modifySelection}
+                          onAddToMask={addSelectionToMask}
+                          onSelectionFromMask={selectionFromMask}
+                          onCopy={() => void liftPixels("copy")}
+                          onCut={() => void liftPixels("cut")}
+                          onPaste={pastePixels}
+                          onLayerViaCopy={() => void liftPixels("layer-copy")}
+                          onLayerViaCut={() => void liftPixels("layer-cut")}
+                          onQuickMask={toggleQuickMask}
+                          onQuickMaskOpacity={(opacity) => {
+                            setQuickMaskOpacity(opacity);
+                            const current = historyRef.current?.present.doc,
+                              qm = quickMaskLayer(current);
+                            if (current && qm)
+                              commit(
+                                {
+                                  ...current,
+                                  layers: current.layers.map((l) =>
+                                    l.id === qm.id ? { ...l, opacity } : l,
+                                  ),
+                                },
+                                "Quick Mask overlay opacity",
+                                "quick-mask-opacity",
+                              );
+                          }}
+                        />
+                      )}
                     </>
                   )}
                   {tab === "layers" && doc && (

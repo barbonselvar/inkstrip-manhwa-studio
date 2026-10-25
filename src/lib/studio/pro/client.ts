@@ -3,6 +3,7 @@ import type { RefineOptions } from "./refine-selection";
 import type { Frame, Artboard } from "./artboards";
 import type { RepairRequest } from "./repair";
 import type { ColorSelectionOptions } from "./selection";
+import type { ColorRangeOptions, ModifyOperation } from "./selection-tools";
 import type { ProDocument, ProSession, Region } from "./model";
 type RenderReply = {
   histogram?: ColorHistogram;
@@ -124,6 +125,27 @@ export class ProRenderer {
     options: ColorSelectionOptions,
   ) {
     return this.request("select", { document, maxArea, point, options });
+  }
+  /** Whole-image Color Range (no seed point needed). */
+  colorRange(document: ProDocument, maxArea: number, range: ColorRangeOptions) {
+    return this.request("select", { document, maxArea, point: { x: 0, y: 0 }, options: { range } });
+  }
+  /** Composite alpha of `document` as selection coverage (masks, Quick Mask). */
+  alphaSelection(document: ProDocument, maxArea: number) {
+    return this.request("select", {
+      document,
+      maxArea,
+      point: { x: 0, y: 0 },
+      options: { alpha: true },
+    });
+  }
+  modifySelection(
+    document: ProDocument,
+    maxArea: number,
+    operation: ModifyOperation,
+    amount: number,
+  ) {
+    return this.request("modify-selection", { document, maxArea, operation, amount });
   }
   sample(document: ProDocument, maxArea: number, point: { x: number; y: number }) {
     return this.request("sample", { document, maxArea, point });
