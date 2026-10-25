@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
 import { fromPanel, layer } from "../src/lib/studio/pro/model.ts";
-import { ADJUSTMENT_KINDS } from "../src/lib/studio/pro/adjustment-schema.ts";
+import { ADJUSTMENT_KINDS, canonicalNative } from "../src/lib/studio/pro/adjustment-schema.ts";
 import { defaultOperation, processColor } from "../src/lib/studio/pro/color-engine.ts";
 import {
   createAdjustmentDraft,
@@ -14,7 +14,11 @@ import { maskFromSelection } from "../src/lib/studio/pro/masks.ts";
 import { proBrowserFixtures } from "./pro-browser-fixtures.mjs";
 const base = process.argv[2] ?? "http://127.0.0.1:8080";
 assert.ok(["127.0.0.1", "localhost"].includes(new URL(base).hostname));
-const widths = process.argv.includes("--quick") ? [1440] : [1440, 768, 390, 360, 320],
+const widths = process.argv.includes("--recovery-only")
+    ? []
+    : process.argv.includes("--quick")
+      ? [1440]
+      : [1440, 768, 390, 360, 320],
   browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] }),
   errors = [],
   results = [],
@@ -509,9 +513,63 @@ try {
     assert.ok(painted.document.layers.some((l) => l.kind === "paint" && l.strokes.length));
     assert.ok(painted.document.layers.some((l) => l.id === "invert" && l.adjustmentLayer));
     // Back up the Chapter with its actual schema2 native session and recover on a fresh origin context.
+    await writeFile(
+      "/workspace/r6-persistent-evidence/painted-native.json",
+      JSON.stringify(painted),
+    );
     const paintedPixels = await fx.preview(p),
+      paintedExport = await fx.raster(p),
       chapterUrl = p.url();
-    await p.getByRole("button", { name: "Back to chapter from Pro Studio", exact: true }).click();
+    // Hold a real IDB write transaction to prove close waits for durable save.
+    // Navigation must follow the completed close, never cancel it mid-transaction.
+    await p.evaluate(async () => {
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open("inkstrip-pro");
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const original = IDBDatabase.prototype.transaction;
+      const transaction = original.call(db, "sessions", "readwrite");
+      const store = transaction.objectStore("sessions");
+      let active = true;
+      const pump = () => {
+        const request = store.get("__r6-save-barrier__");
+        request.onsuccess = () => {
+          if (active) pump();
+        };
+      };
+      pump();
+      window.__r6QueuedSaves = 0;
+      IDBDatabase.prototype.transaction = function (...args) {
+        if (this.name === "inkstrip-pro" && args[1] === "readwrite") window.__r6QueuedSaves++;
+        return original.apply(this, args);
+      };
+      window.__r6ReleaseSave = () => {
+        IDBDatabase.prototype.transaction = original;
+        active = false;
+        db.close();
+      };
+    });
+    try {
+      await p.getByRole("button", { name: "Back to chapter from Pro Studio", exact: true }).click();
+      await p.waitForFunction(() => window.__r6QueuedSaves > 0);
+      await p.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+      );
+      assert.equal(
+        await p.locator(".pro-studio").isVisible(),
+        true,
+        "close must wait for the durable write",
+      );
+    } finally {
+      await p.evaluate(() => window.__r6ReleaseSave());
+    }
+    await p.locator(".pro-studio").waitFor({ state: "hidden" });
+    const durable = (await stored(p)).find((s) => s.document.panelId === painted.document.panelId);
+    assert.equal(
+      canonicalNative(durable.document.layers),
+      canonicalNative(painted.document.layers),
+    );
     await p.goto(chapterUrl.slice(0, chapterUrl.indexOf("/c/")));
     const download = p.waitForEvent("download");
     await p.getByRole("button", { name: "Backup", exact: true }).click();
@@ -535,9 +593,33 @@ try {
     await rp.waitForURL(/\/p\//);
     await rp.goto(chapterUrl);
     await fx.open(rp);
-    same(await fx.preview(rp), paintedPixels);
-    const restored = (await fx.native(rp)).value;
+    const recoveredPreview = await fx.preview(rp),
+      restored = (await fx.native(rp)).value;
     assert.deepEqual(restored.document.layers, painted.document.layers);
+    assert.deepEqual(restored.assets, painted.assets);
+    const recoveredExport = await fx.raster(rp);
+    const difference = (a, b) => {
+      const mismatches = [];
+      for (let i = 0; i < a.pixels.length; i++)
+        if (a.pixels[i] !== b.pixels[i]) mismatches.push([i, a.pixels[i], b.pixels[i]]);
+      return { count: mismatches.length, first: mismatches.slice(0, 20) };
+    };
+    await writeFile(
+      "/workspace/r6-persistent-evidence/recovery-comparison.json",
+      JSON.stringify(
+        {
+          layersExact: true,
+          beforePreviewExport: difference(paintedPixels, paintedExport),
+          afterPreviewExport: difference(recoveredPreview, recoveredExport),
+          previewRoundtrip: difference(paintedPixels, recoveredPreview),
+          exportRoundtrip: difference(paintedExport, recoveredExport),
+        },
+        null,
+        2,
+      ),
+    );
+    same(recoveredExport, paintedExport);
+    same(recoveredPreview, paintedPixels);
     await rp.getByRole("button", { name: "Save draft", exact: true }).click();
     assert.ok((await stored(rp)).some((s) => s.document.version === 2));
     await recovery.close();
@@ -548,6 +630,7 @@ try {
       r3Painting: true,
       r5Transform: true,
       chapterBackupFreshContextRecovery: true,
+      blockedSaveCloseBarrier: true,
     });
     await context.close();
   }
@@ -555,9 +638,35 @@ try {
   const report = { passed: true, widths, results, errors, pixelTolerance: 0 };
   console.log(JSON.stringify(report, null, 2));
   await writeFile(
-    `/workspace/r6-persistent-evidence/browser${widths.length < 5 ? "-quick" : ""}.json`,
+    `/workspace/r6-persistent-evidence/browser${widths.length === 0 ? "-recovery-only" : widths.length < 5 ? "-quick" : ""}.json`,
     JSON.stringify(report, null, 2),
   );
+} catch (error) {
+  const failures = [];
+  for (const context of browser.contexts())
+    for (const page of context.pages()) {
+      const i = failures.length;
+      await page
+        .screenshot({ path: `/workspace/r6-persistent-evidence/failure-${i}.png` })
+        .catch(() => {});
+      failures.push(
+        await page
+          .evaluate(() => ({
+            url: location.href,
+            body: document.body.innerText.slice(-5000),
+            dialogs: [...document.querySelectorAll('[role="dialog"]')].map((el) => ({
+              label: el.getAttribute("aria-labelledby"),
+              hidden: el.getAttribute("aria-hidden"),
+            })),
+          }))
+          .catch(() => ({})),
+      );
+    }
+  await writeFile(
+    "/workspace/r6-persistent-evidence/browser-failure.json",
+    JSON.stringify({ message: error.message, failures }, null, 2),
+  );
+  throw error;
 } finally {
   await browser.close();
 }
