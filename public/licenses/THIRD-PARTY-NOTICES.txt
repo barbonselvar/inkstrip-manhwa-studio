@@ -1,0 +1,85 @@
+INKSTRIP — THIRD-PARTY NOTICES FOR IMAGE IMPORT DECODERS
+=========================================================
+
+Inkstrip converts HEIC/HEIF, TIFF and JPEG XL images in your browser with the
+open-source components below. They run only on your device; no image is uploaded.
+Each license text is published next to this file under /licenses/.
+
+
+1. libheif and libde265 — GNU Lesser General Public License v3.0 (LGPL-3.0)
+---------------------------------------------------------------------------
+
+This application uses the libheif library, which is licensed under the GNU
+Lesser General Public License version 3. HEIC/HEIF decoding in Inkstrip is a
+"Combined Work" that uses the following "Library" components:
+
+  * libheif 1.23.5
+    Copyright (c) 2017-2025 Dirk Farin <dirk.farin@gmail.com> and contributors
+    License: LGPL-3.0 — /licenses/libheif-LGPL-3.0.txt
+  * libde265 1.0.15 (HEVC decoder, compiled into the same WebAssembly module)
+    Copyright (c) 2013-2014 struktur AG, Dirk Farin <farin@struktur.de> and contributors
+    License: LGPL-3.0 — /licenses/libde265-LGPL-3.0.txt, authors: /licenses/libde265-AUTHORS.txt
+  * libheif-js 1.23.5 (JavaScript/Emscripten packaging), by Kiril Vatev <vatev.1@gmail.com>
+    License: LGPL-3.0 — /licenses/libheif-js-LGPL-3.0.txt
+  * Emscripten 3.1.61 runtime (compiler support code in the same module)
+    License: MIT / University of Illinois NCSA — /licenses/Emscripten-MIT-NCSA.txt
+
+The full texts of the GNU LGPL v3.0 and of the GNU GPL v3.0 it supplements are
+at /licenses/LGPL-3.0.txt and /licenses/GPL-3.0.txt.
+
+How the Library is combined (LGPL-3.0 section 4(d)(1)):
+  The Library is not merged into Inkstrip's code. It is delivered as a separate,
+  unmodified file (libheif-js 1.23.5 "libheif-wasm/libheif-bundle.mjs", served
+  from /assets/libheif-bundle-<hash>.mjs; SHA-256
+  095194187be00d3e36335b8ad7f5552d70655e5e2159486d7d36cd4daa47bba9) and is
+  loaded at run time only when a HEIC/HEIF image is imported. Inkstrip calls only
+  the public HeifDecoder interface (decode, get_width, get_height, is_primary,
+  display, free). You may replace that file with a modified, interface-compatible
+  build of libheif-js/libheif (for example with your browser's local overrides)
+  and Inkstrip will use it.
+
+Corresponding Source (LGPL-3.0 section 4(d) and GPL-3.0 section 6):
+  The complete source code of the Library versions used, and the build scripts,
+  are hosted with this application at no charge:
+    /licenses/source/libheif-1.23.5.tar.gz
+        SHA-256 fd9036064c4432f0550d15072ddf34956a248279ee9aeaff0fba3fa0f77d8f1a
+        (upstream release: https://github.com/strukturag/libheif/releases/tag/v1.23.5;
+        contains build-emscripten.sh, which selects libde265 1.0.15 and leaves
+        AOM, OpenJPEG and the uncompressed codec disabled)
+    /licenses/source/libde265-1.0.15.tar.gz
+        SHA-256 00251986c29d34d3af7117ed05874950c875dd9292d016be29d3b3762666511d
+        (upstream release: https://github.com/strukturag/libde265/releases/tag/v1.0.15)
+    /licenses/source/libheif-emscripten-v1.23.5-emscripten.yml and
+    /licenses/source/libheif-emscripten-v1.23.5-dist-prep.sh
+        (the build workflow of https://github.com/catdad-experiments/libheif-emscripten
+        tag v1.23.5, which compiles the libheif submodule with Emscripten 3.1.61
+        using libheif's own unmodified scripts)
+    /licenses/source/libheif-js-1.23.5-install.js.txt
+        (the packaging script of https://github.com/catdad-experiments/libheif-js,
+        commit d8ec4bc3bc5bf8055975577bccbbc7e1d7313c2d, which produced the shipped file)
+  Inkstrip does not modify the Library.
+
+
+2. JPEG XL decoding — @jsquash/jxl 1.3.0
+----------------------------------------
+  * jSquash JXL — Apache License 2.0 — /licenses/jSquash-jxl-Apache-2.0.txt
+  * libjxl — Copyright (c) the JPEG XL Project Authors — BSD 3-Clause —
+    /licenses/libjxl-BSD-3-Clause.txt; patent grant: /licenses/libjxl-PATENTS.txt
+  * Brotli — Copyright (c) 2009, 2010, 2013-2016 by the Brotli Authors — MIT —
+    /licenses/brotli-MIT.txt
+  * skcms — Copyright (c) 2018 Google Inc. — BSD 3-Clause — /licenses/skcms-BSD-3-Clause.txt
+  * Highway — Copyright (c) The Highway Project Authors — Apache-2.0 or BSD 3-Clause —
+    /licenses/highway-Apache-2.0.txt, /licenses/highway-BSD-3-Clause.txt
+
+
+3. TIFF decoding and lossless PNG encoding
+------------------------------------------
+  * UTIF.js (utif2 4.1.0) — Copyright (c) 2017 Photopea — MIT — /licenses/utif2-MIT.txt
+  * pako 1.0.11 — Copyright (C) 2014-2017 Vitaly Puzrin and Andrei Tuputcyn — MIT —
+    /licenses/pako-MIT.txt
+  * fast-png 8.0.0 — Copyright (c) 2015 Michaël Zasso — MIT — /licenses/fast-png-MIT.txt
+  * iobuffer 6.0.1 — Copyright (c) 2015 Michaël Zasso — MIT — /licenses/iobuffer-MIT.txt
+
+
+These components are provided "AS IS", WITHOUT WARRANTY OF ANY KIND, as stated
+in their licenses.

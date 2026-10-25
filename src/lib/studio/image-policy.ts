@@ -16,11 +16,21 @@ export function imagePolicy(constrained = false) {
     maxBatchHeaders: 32 * MiB,
   };
 }
+/** Memory-aware tier. Chromium reports `deviceMemory` in steps (…2, 4, 8 GiB; 4 covers
+ * 4–7.9 GiB phones), so a touch screen alone no longer forces the 16MP budget: Android
+ * phones with ≥4 GiB get the standard 32MP budget. Where memory is not reported (Safari,
+ * Firefox), touch devices stay constrained. Canvas stitching keeps its own device limits. */
+export function constrainedDevice(deviceMemory: number | undefined, coarse: boolean) {
+  return deviceMemory !== undefined && Number.isFinite(deviceMemory) ? deviceMemory < 4 : coarse;
+}
 export function browserImagePolicy() {
   return imagePolicy(
-    (typeof matchMedia !== "undefined" && matchMedia("(pointer:coarse)").matches) ||
-      (typeof navigator !== "undefined" &&
-        ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) <= 4),
+    constrainedDevice(
+      typeof navigator !== "undefined"
+        ? (navigator as Navigator & { deviceMemory?: number }).deviceMemory
+        : undefined,
+      typeof matchMedia !== "undefined" && matchMedia("(pointer:coarse)").matches,
+    ),
   );
 }
 export type ImageInfo = {
@@ -45,6 +55,7 @@ const mimes: Record<string, string> = {
   heif: "image/heif",
   heic: "image/heic",
   svg: "image/svg+xml",
+  jxl: "image/jxl",
 };
 const fail = (message: string): never => {
   throw Error(`${message} Image was not decoded or imported.`);
@@ -55,7 +66,9 @@ export function imageDimensions(width: number, height: number, policy: ImagePoli
   // Side checks precede multiplication: no unsafe integer product can pass.
   const pixels = width * height;
   if (pixels > policy.maxPixels)
-    fail(`Image exceeds the ${policy.maxPixels / 1e6} megapixel device budget.`);
+    fail(
+      `Image exceeds the ${policy.maxPixels / 1e6} megapixel device budget (${(pixels / 1e6).toFixed(1)} MP). Split very long pages into shorter images and import them in order.`,
+    );
   return pixels;
 }
 class Header {
@@ -493,8 +506,12 @@ async function locations(h: Header, from: number, end: number) {
 async function heif(h: Header) {
   // Check every declared image plane, not only the first thumbnail chosen by a size library.
   const images: { width: number; height: number }[] = [];
-  let boxes = 0;
-  const walk = async (from: number, end: number, depth: number) => {
+  // Item properties in ipco order (1-based ipma indices), plus primary item associations.
+  const props: { type: string; at: number }[] = [],
+    associations = new Map<number, number[]>();
+  let boxes = 0,
+    primary: number | undefined;
+  const walk = async (from: number, end: number, depth: number, parent = "") => {
     if (depth > 5) fail("Excessively nested image container.");
     for (let at = from; at < end;) {
       if (++boxes > 1024) fail("Excessive image container boxes.");
@@ -512,7 +529,29 @@ async function heif(h: Header) {
       if (size < header || size > end - at) fail("Truncated image container box.");
       if (["moov", "trak", "dref", "url ", "urn ", "ipro"].includes(type))
         fail("Timed/external image containers require conversion to a still image.");
+      if (parent === "ipco") props.push({ type, at: at + header });
       if (type === "iloc") await locations(h, at + header, at + size);
+      if (type === "pitm") {
+        const b = await h.read(at + header, Math.min(size - header, 8));
+        primary = b[0] ? view(b).getUint32(4) : view(b).getUint16(4);
+      }
+      if (type === "ipma" && size - header <= 65536) {
+        const b = await h.read(at + header, size - header),
+          d = view(b),
+          version = b[0]!,
+          wide = b[3]! & 1;
+        let p = 8;
+        for (let n = d.getUint32(4); n > 0 && p < b.length; n--) {
+          const item = version ? d.getUint32(p) : d.getUint16(p);
+          p += version ? 4 : 2;
+          const list: number[] = [];
+          for (let count = b[p++]!; count > 0 && p < b.length; count--) {
+            list.push(wide ? d.getUint16(p) & 0x7fff : b[p]! & 0x7f);
+            p += wide ? 2 : 1;
+          }
+          associations.set(item, list);
+        }
+      }
       if (type === "pixi") {
         const b = await h.read(at + header, Math.min(size - header, 9)),
           channels = b[4]!;
@@ -532,7 +571,7 @@ async function heif(h: Header) {
         images.push(image);
       }
       if (["meta", "iprp", "ipco", "dinf"].includes(type))
-        await walk(at + header + (type === "meta" ? 4 : 0), at + size, depth + 1);
+        await walk(at + header + (type === "meta" ? 4 : 0), at + size, depth + 1, type);
       at += size;
     }
   };
@@ -541,7 +580,35 @@ async function heif(h: Header) {
     fail("Missing/excessive encoded image planes.");
   const pixels = images.reduce((n, i) => n + i.width * i.height, 0);
   if (pixels > h.policy.maxPixels) fail("Encoded image planes exceed the decoded pixel budget.");
-  return { images, pixels };
+  return { images, pixels, display: await heifDisplay(h, props, associations.get(primary ?? -1)) };
+}
+/** Displayed size of the primary item: its ispe, cropped by clap, transposed by irot —
+ * what decoders output. Size libraries can pick a thumbnail or mis-apply the crop. */
+async function heifDisplay(
+  h: Header,
+  props: { type: string; at: number }[],
+  indices: number[] | undefined,
+) {
+  const owned = (indices ?? []).map((i) => props[i - 1]).filter(Boolean) as typeof props;
+  const ispe = owned.find((p) => p.type === "ispe");
+  if (!ispe) return undefined;
+  const size = view(await h.read(ispe.at + 4, 8));
+  let width = size.getUint32(0),
+    height = size.getUint32(4);
+  const clap = owned.find((p) => p.type === "clap");
+  if (clap) {
+    const c = view(await h.read(clap.at, 16)),
+      w = c.getUint32(4) ? c.getUint32(0) / c.getUint32(4) : 0,
+      hh = c.getUint32(12) ? c.getUint32(8) / c.getUint32(12) : 0;
+    if (w >= 1 && hh >= 1 && w <= width && hh <= height) {
+      width = Math.round(w);
+      height = Math.round(hh);
+    }
+  }
+  const irot = owned.find((p) => p.type === "irot");
+  if (irot && (await h.read(irot.at, 1))[0]! & 1) [width, height] = [height, width];
+  imageDimensions(width, height, h.policy);
+  return { width, height };
 }
 async function svg(h: Header) {
   if (h.blob.size > MiB) fail("SVG exceeds the1MiB markup budget.");
@@ -615,8 +682,13 @@ export async function preflightImage(
         } else return fail("Unsupported, malformed or truncated image header.");
       }
     }
-    const { width, height } = dimensions,
-      type = dimensions.type === "mif1" ? "heif" : (dimensions.type ?? "");
+    let { width, height } = dimensions;
+    const type =
+      dimensions.type === "mif1"
+        ? "heif"
+        : dimensions.type === "jxl-stream"
+          ? "jxl"
+          : (dimensions.type ?? "");
     if (!mimes[type])
       fail("This encoded image format is not supported. Export PNG/JPEG/WebP first.");
     imageDimensions(width, height, policy);
@@ -629,6 +701,10 @@ export async function preflightImage(
     } else if (["avif", "heif", "heic"].includes(type)) {
       const info = await heif(h);
       pixels = info.pixels;
+      if (info.display) {
+        width = info.display.width;
+        height = info.display.height;
+      }
     } else if (type === "ico") {
       frames = dimensions.images?.length ?? 1;
       for (let i = 0; i < frames; i++) {

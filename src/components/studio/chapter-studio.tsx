@@ -50,6 +50,10 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const cancelImport = useStudio((state) => state.cancelImport);
   const loadMedia = useStudio((state) => state.loadMedia);
   const addImages = useStudio((state) => state.addImages);
+  const importFailures = useStudio((state) => state.importFailures[chapterId]);
+  const importNotes = useStudio((state) => state.importNotes[chapterId]);
+  const retryImport = useStudio((state) => state.retryImport);
+  const dismissImportReport = useStudio((state) => state.dismissImportReport);
   const renameChapter = useStudio((state) => state.renameChapter);
   const deleteChapter = useStudio((state) => state.deleteChapter);
   const setChapterOptions = useStudio((state) => state.setChapterOptions);
@@ -94,6 +98,12 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
     ? checked.filter((id) => !chapter.strip?.panelIds.includes(id))
     : [];
   const freshness = chapter ? stripFreshness(chapter, panels) : "empty";
+  // Selection changes do not invalidate the saved page, but the user must see that the
+  // page no longer matches what is checked.
+  const checkedDiffers =
+    !!chapter?.strip &&
+    (checked.length !== chapter.strip.panelIds.length ||
+      checked.some((id, index) => id !== chapter.strip?.panelIds[index]));
   const panelKey = list.map((panel) => panel.id).join(",");
   const stripKey = chapter?.strip?.createdAt ?? 0;
 
@@ -348,6 +358,58 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                   Your panels, at their original quality. Drop, paste, or choose files.
                   <span className="sr-only">{FORMAT_HINT}</span>
                 </p>
+                <p className="upload-hint text-sm text-muted">
+                  HEIC/HEIF import uses the libheif library (LGPL-3.0); TIFF and JPEG XL use
+                  open-source decoders.{" "}
+                  <a
+                    className="focus-ring underline"
+                    href="/licenses/THIRD-PARTY-NOTICES.txt"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    Open-source notices
+                  </a>
+                </p>
+                {importFailures?.length || importNotes?.length ? (
+                  <div className="import-report" role="region" aria-label="Import report">
+                    {importFailures?.length ? (
+                      <>
+                        <p className="text-sm text-fg">
+                          {countLabel(importFailures.length, "file")} not imported
+                        </p>
+                        <ul className="import-report-list">
+                          {importFailures.map((failure, index) => (
+                            <li key={`${failure.name}-${index}`} data-kind={failure.kind}>
+                              <span className="import-report-name">{failure.name}</span>
+                              <span className="import-report-reason">{failure.reason}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    ) : null}
+                    {importNotes?.length ? (
+                      <ul className="import-report-list" aria-label="Conversion notes">
+                        {importNotes.map((note, index) => (
+                          <li key={index}>{note}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    <div className="flex flex-wrap gap-2">
+                      {importFailures?.length ? (
+                        <Button
+                          variant="secondary"
+                          disabled={busy}
+                          onClick={() => void retryImport(chapterId)}
+                        >
+                          Retry {countLabel(importFailures.length, "failed file")}
+                        </Button>
+                      ) : null}
+                      <Button variant="ghost" onClick={() => dismissImportReport(chapterId)}>
+                        Dismiss import report
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="studio-launch-grid" aria-label="Open selected image in an editor">
                   <Button
                     variant="secondary"
@@ -643,11 +705,11 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                   <div className="flex flex-col gap-2">
                     <Button
                       intent="create"
-                      disabled={checked.length < 2}
+                      disabled={checked.length < 1}
                       onClick={() => void runDisplay("replace")}
                     >
                       <Layers3 className="size-4" />
-                      Display{checked.length >= 2 ? ` ${checked.length}` : ""}
+                      Display{checked.length >= 1 ? ` ${checked.length}` : ""}
                     </Button>
                     {chapter.strip && extras.length > 0 ? (
                       <Button variant="secondary" onClick={() => void runDisplay("append")}>
@@ -655,8 +717,9 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                       </Button>
                     ) : null}
                     <p className="text-xs text-subtle">
-                      Display rebuilds the page from the checked photos, in this order. Add below
-                      keeps the current page and stitches newly checked photos underneath.
+                      Display rebuilds the page from the checked photos, in this order: one photo is
+                      shown on its own, two or more are stitched. Add below keeps the current page
+                      and stitches newly checked photos underneath.
                     </p>
                   </div>
                 )}
@@ -723,8 +786,12 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
               </div>
 
               {freshness === "stale" ? (
-                <p className="px-4 pb-4 text-sm text-muted sm:px-8">
+                <p className="px-4 pb-4 text-sm text-muted sm:px-8" role="status">
                   Images, order, or settings changed. Display again to update the page.
+                </p>
+              ) : chapter.strip && checkedDiffers ? (
+                <p className="px-4 pb-4 text-sm text-muted sm:px-8" role="status">
+                  The checked photos differ from the page shown. Press Display to update it.
                 </p>
               ) : null}
 
@@ -762,10 +829,17 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                     <p className="text-xs tracking-widest uppercase text-subtle">
                       YOUR CHAPTER CANVAS
                     </p>
-                    <h3 className="mt-3 font-display text-3xl">Nothing stitched yet.</h3>
+                    <h3 className="mt-3 font-display text-3xl">
+                      {list.length ? "Nothing displayed yet." : "No images yet."}
+                    </h3>
                     <p className="mt-3 max-w-xs text-sm text-muted">
-                      Check at least two photos, then press Display. Add more later and stitch them
-                      into the same chapter.
+                      {!list.length
+                        ? "Add images to this chapter. One image is shown on its own; two or more are stitched in reading order."
+                        : !checked.length
+                          ? "Check at least one photo, then press Display."
+                          : checked.length === 1
+                            ? "Press Display to show the checked photo at full width."
+                            : `Press Display to stitch the ${checked.length} checked photos in reading order.`}
                     </p>
                   </div>
                 </div>

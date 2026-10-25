@@ -3,8 +3,15 @@ export type Frame = { id: string; sw: number; sh: number };
 export type PlannedPanel = {
   id: string;
   drawW: number;
+  /** Height of this segment on the page. */
   drawH: number;
   x: number;
+  /** Top of this segment within its part. */
+  y: number;
+  /** Offset of this segment within the scaled panel (0 unless the panel continues from the previous part). */
+  srcY: number;
+  /** Full scaled height of the panel; larger than drawH when the panel spans parts. */
+  fullH: number;
 };
 
 export type PlannedPart = {
@@ -20,6 +27,10 @@ export type StripPlan = {
 
 export type CanvasLimits = { maxSide: number; maxArea: number };
 
+/** Every panel is drawn at the full page width, in reading order. A panel taller than one
+ * device canvas continues seamlessly into the next part instead of being shrunk, so long
+ * vertical images keep their resolution. Whole panels move to a new part when they would
+ * otherwise be cut and fit on their own. The seam gap keeps its size across part breaks. */
 export function planStrip(
   frames: Frame[],
   targetWidth: number,
@@ -27,79 +38,40 @@ export function planStrip(
   limits: CanvasLimits,
 ): StripPlan {
   const safeGap = Math.max(0, Math.round(gap));
-  const requested = Math.max(1, Math.round(targetWidth));
-  if (frames.length === 0) {
-    return { width: requested, totalHeight: 0, parts: [] };
-  }
+  const width = Math.max(1, Math.min(Math.round(targetWidth), limits.maxSide, limits.maxArea));
+  if (frames.length === 0) return { width, totalHeight: 0, parts: [] };
+  const maxPartH = Math.max(1, Math.min(limits.maxSide, Math.floor(limits.maxArea / width)));
 
-  const minWidth = Math.min(320, requested);
-
-  const measure = (width: number): PlannedPanel[] => {
-    const maxH = Math.max(
-      1,
-      Math.min(limits.maxSide, Math.floor(limits.maxArea / width)) - safeGap,
-    );
-    return frames.map((frame) => {
-      const sw = Math.max(1, frame.sw);
-      const sh = Math.max(1, frame.sh);
-      let drawW = width;
-      let drawH = Math.max(1, Math.round(sh * (width / sw)));
-      if (drawH > maxH) {
-        drawH = maxH;
-        drawW = Math.max(1, Math.min(width, Math.round(drawH * (sw / sh))));
-      }
-      return {
-        id: frame.id,
-        drawW,
-        drawH,
-        x: Math.round((width - drawW) / 2),
-      };
-    });
+  const parts: PlannedPart[] = [];
+  let current: PlannedPanel[] = [],
+    height = 0;
+  const close = () => {
+    if (current.length) parts.push({ height, panels: current });
+    current = [];
+    height = 0;
   };
 
-  let width = requested;
-  let panels = measure(width);
-  const stacked = (items: PlannedPanel[]) =>
-    items.reduce((sum, item) => sum + item.drawH, 0) + safeGap * Math.max(0, items.length - 1);
-
-  while (width > minWidth) {
-    const height = stacked(panels);
-    const tooTall = height > limits.maxSide || width * height > limits.maxArea;
-    if (!tooTall) break;
-    const next = Math.max(minWidth, Math.floor(width * 0.85));
-    if (next === width) break;
-    width = next;
-    panels = measure(width);
-  }
-
-  const fits = (height: number) => height <= limits.maxSide && width * height <= limits.maxArea;
-  const parts: PlannedPart[] = [];
-  let current: PlannedPanel[] = [];
-  let height = 0;
-
-  for (let index = 0; index < panels.length; index += 1) {
-    const panel = panels[index];
-    if (!panel) continue;
-    const gapBefore = current.length > 0 ? safeGap : 0;
-    const next = height + gapBefore + panel.drawH;
-    const isLast = index === panels.length - 1;
-    const padded = next + (isLast ? 0 : safeGap);
-    if (current.length > 0 && !fits(padded)) {
-      parts.push({ height, panels: current });
-      current = [panel];
-      height = panel.drawH;
-    } else {
-      current = [...current, panel];
-      height = next;
+  frames.forEach((frame, index) => {
+    const sw = Math.max(1, frame.sw),
+      sh = Math.max(1, frame.sh),
+      fullH = Math.max(1, Math.round(sh * (width / sw)));
+    if (index > 0) {
+      // Keep whole panels together when they fit on a fresh part; the gap then opens the
+      // next part so the visual seam is unchanged.
+      if (height + safeGap + fullH > maxPartH && fullH + safeGap <= maxPartH) close();
+      if (height + safeGap >= maxPartH) close();
+      height += safeGap;
     }
-  }
-  if (current.length > 0) parts.push({ height, panels: current });
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const part = parts[index];
-    if (!part) continue;
-    parts[index] = { ...part, height: part.height + safeGap };
-  }
+    let srcY = 0;
+    while (srcY < fullH) {
+      if (height >= maxPartH) close();
+      const segment = Math.min(fullH - srcY, maxPartH - height);
+      current.push({ id: frame.id, drawW: width, drawH: segment, x: 0, y: height, srcY, fullH });
+      height += segment;
+      srcY += segment;
+    }
+  });
+  close();
 
   const totalHeight = parts.reduce((sum, part) => sum + part.height, 0);
   return { width, totalHeight, parts };
