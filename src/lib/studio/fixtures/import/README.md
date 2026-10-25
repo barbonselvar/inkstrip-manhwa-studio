@@ -3,8 +3,8 @@ solid-color image and one changed pixel. No user or third-party artwork is used.
 They may be reused under CC0-1.0. `tall.png` is a 1 × 50000 source-coordinate/side-limit
 fixture; `animated.gif` and `animated.webp` have two 8 × 8 frames. `progressive.jpg`
 tests progressive scan compatibility. `page.png` is 512 × 512 and
-`batch-plane.png` is a solid 4000 × 4000 plane used to prove default aggregate
-rejection without native decoding. `iccp.png` is a 64 × 48 PNG carrying Pillow's
+`batch-plane.png` is a solid 4000 × 4000 plane used to prove aggregate budgets
+(preflight rejection without native decoding; chunked Chapter import). `iccp.png` is a 64 × 48 PNG carrying Pillow's
 generated sRGB `iCCP` colour profile, as screenshots and editor exports commonly do. The other fixtures are 32 × 24 (except ICO,
 which contains 16/24/32px square PNG representations).
 

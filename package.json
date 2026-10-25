@@ -58,7 +58,8 @@
     "test:r3:browser": "node --experimental-strip-types scripts/r3-brush-browser-check.mjs",
     "bench:r3:brush": "node scripts/r3-brush-benchmark.mjs",
     "test:r5:browser": "node --experimental-strip-types scripts/r5-browser-check.mjs",
-    "bench:r5": "node scripts/r5-benchmark.mjs"
+    "bench:r5": "node scripts/r5-benchmark.mjs",
+    "test:chapter-display:browser": "node scripts/chapter-display-import-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

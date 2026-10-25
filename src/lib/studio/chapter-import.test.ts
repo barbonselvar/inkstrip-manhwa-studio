@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { decode as decodePng } from "fast-png";
-import { decodeRaster, encodePng, orient, type Raster } from "./convert/core.ts";
+import { decodeRaster, encodePng, lzwLength, orient, type Raster } from "./convert/core.ts";
 import { planStrip } from "./plan.ts";
 import { importIssue, importSummary } from "./import-report.ts";
 import { constrainedDevice, imagePolicy, preflightImage } from "./image-policy.ts";
@@ -45,6 +45,28 @@ test("TIFF alpha, orientation, 16-bit and multi-page inputs are handled and repo
   assert.deepEqual(rgba(pages), ref.rgba);
 });
 
+/** original.tiff (uncompressed RGB) with its Compression tag rewritten. */
+async function recompressed(code: number) {
+  const b = new Uint8Array(await fixture("original.tiff")),
+    v = new DataView(b.buffer, b.byteOffset, b.byteLength),
+    ifd = v.getUint32(4, true);
+  for (let i = 0; i < v.getUint16(ifd, true); i++)
+    if (v.getUint16(ifd + 2 + i * 12, true) === 259) v.setUint16(ifd + 10 + i * 12, code, true);
+  return b;
+}
+
+test("corrupted TIFF data is rejected instead of importing garbage pixels", async () => {
+  // utif2 would "decode" each of these without error into wrong pixels.
+  await assert.rejects(decodeRaster("tiff", await recompressed(5)), /invalid LZW stream/);
+  await assert.rejects(decodeRaster("tiff", await recompressed(3)), /non-bilevel/);
+  const whole = new Uint8Array(await fixture("original.tiff"));
+  await assert.rejects(decodeRaster("tiff", whole.subarray(0, whole.length - 400)), /corrupted/);
+  // Clear, "A", EOI as 9-bit MSB-first codes decodes to exactly one byte; a stream that
+  // does not start with Clear is invalid.
+  assert.equal(lzwLength(Uint8Array.of(128, 16, 96, 32)), 1);
+  assert.equal(lzwLength(Uint8Array.of(0, 0, 0)), undefined);
+});
+
 test("JPEG XL (lossless) decodes to exactly the reference pixels", async () => {
   const { init } = await import("@jsquash/jxl/decode.js");
   const wasm = await readFile(require.resolve("@jsquash/jxl/codec/dec/jxl_dec.wasm"));
@@ -79,7 +101,9 @@ test("PNG encoding is lossless, exact-length and keeps alpha only when needed", 
   const opaque = decodePng(encodePng(await decodeRaster("tiff", await fixture("lzw.tiff"))));
   assert.equal(opaque.channels, 3);
   // The stored PNG passes the app's own strict PNG validator (exact IEND termination).
-  const info = await preflightImage(new Blob([png as Uint8Array<ArrayBuffer>], { type: "image/png" }));
+  const info = await preflightImage(
+    new Blob([png as Uint8Array<ArrayBuffer>], { type: "image/png" }),
+  );
   assert.deepEqual([info.width, info.height, info.mime], [32, 24, "image/png"]);
 });
 
@@ -109,8 +133,12 @@ test("orientation transform covers all eight EXIF orientations", () => {
 test("JPEG XL and converted formats pass header preflight with real dimensions", async () => {
   const jxl = await preflightImage(await blob("original.jxl"));
   assert.deepEqual([jxl.type, jxl.mime, jxl.width, jxl.height], ["jxl", "image/jxl", 32, 24]);
+  // The HEIC stores a 64×64 coded plane cropped (clap) to 32×24: the primary item's
+  // displayed size is what decoders output, not the coded or library-guessed size.
   const heic = await preflightImage(await blob("original.heic"));
-  assert.equal(heic.type, "heic");
+  assert.deepEqual([heic.type, heic.width, heic.height], ["heic", 32, 24]);
+  const avif = await preflightImage(await blob("original.avif"));
+  assert.deepEqual([avif.width, avif.height], [32, 24]);
 });
 
 test("memory-aware tier: reported memory decides; touch alone only when memory is unknown", () => {

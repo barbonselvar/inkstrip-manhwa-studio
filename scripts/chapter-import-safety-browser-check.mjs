@@ -136,7 +136,7 @@ try {
       assert.deepEqual(await snapshot(p), before);
       assert.deepEqual(await counters(p), calls);
     }
-    // The same aggregate rejection happens before ANY valid-looking member is decoded.
+    // Aggregate budgets: the preflight API still rejects over-budget batches before ANY decode.
     const plane = await file("plane.png", "batch-plane.png");
     const aggregate = Array.from({ length: width < 500 ? 5 : 9 }, (_, i) => ({
       ...plane,
@@ -160,13 +160,29 @@ try {
     });
     assert.ok(aggregateRejected);
     assert.equal(decoderCalls, 0);
+    // The Chapter store no longer rejects an over-budget batch as a whole (a single file
+    // must not block the batch): files are validated and decoded one at a time, exactly
+    // once each, and published in budget-sized atomic chunks in the chosen order.
     const beforeAggregate = await counters(p);
     await input(p, aggregate);
-    assert.deepEqual(await snapshot(p), initial);
-    assert.deepEqual(await counters(p), beforeAggregate);
+    const afterAggregate = await snapshot(p),
+      addedPlanes = afterAggregate.panels
+        .filter((x) => !initial.panels.some((b) => b.id === x.id))
+        .sort((a, b) => a.order - b.order);
+    assert.deepEqual(
+      addedPlanes.map((x) => x.name),
+      aggregate.map((x) => x.name),
+    );
+    assert.equal((await counters(p)).bitmaps - beforeAggregate.bitmaps, aggregate.length);
     assert.match(
       await p.evaluate(() => window.__r11Store.getState().banner),
-      /Batch exceeds aggregate/,
+      new RegExp(`Added ${aggregate.length} photos`),
+    );
+    for (const plane of addedPlanes)
+      await p.evaluate((id) => window.__r11Store.getState().removePanel(id), plane.id);
+    assert.deepEqual(
+      (await snapshot(p)).panels.map((x) => x.id),
+      initial.panels.map((x) => x.id),
     );
 
     const valid = await file("valid-as-text.dat", "original.png", "text/plain");
@@ -301,10 +317,25 @@ try {
     assert.match(replacement, /dimensions|header/);
     assert.deepEqual(await snapshot(p), beforeReplace);
     assert.deepEqual(await counters(p), counts);
-    // This environment has no TIFF pixel decoder. Its genuine valid header is
-    // accepted, then actual bitmap/Image decoding fails without publishing data.
-    await input(p, [await file("unsupported-codec.tiff", "original.tiff", "image/tiff")]);
+    // A genuinely valid TIFF header whose pixel data cannot be decoded (raw strips
+    // relabelled as LZW): the header is accepted, conversion then fails, nothing is published.
+    const corrupt = await file("corrupt-codec.tiff", "original.tiff", "image/tiff");
+    {
+      const v = new DataView(
+          corrupt.buffer.buffer,
+          corrupt.buffer.byteOffset,
+          corrupt.buffer.length,
+        ),
+        ifd = v.getUint32(4, true);
+      for (let i = 0; i < v.getUint16(ifd, true); i++)
+        if (v.getUint16(ifd + 2 + i * 12, true) === 259) v.setUint16(ifd + 10 + i * 12, 5, true);
+    }
+    await input(p, [corrupt]);
     assert.deepEqual(await snapshot(p), beforeReplace);
+    assert.match(
+      await p.evaluate(() => window.__r11Store.getState().banner),
+      /corrupt-codec\.tiff: TIFF conversion failed: The TIFF image data is corrupted/,
+    );
     // Cancellation also protects direct editor/AI replacement callers.
     await pause(p);
     await p.evaluate(
