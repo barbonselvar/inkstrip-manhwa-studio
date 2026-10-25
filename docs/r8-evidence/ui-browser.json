@@ -1,0 +1,83 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "creationCancelExact": true,
+      "oneHistoryEntry": true,
+      "stylesPixels": true,
+      "filterReorderPixels": true,
+      "presetSaved": true,
+      "stopDragReorder": true,
+      "beforeAfterExact": true,
+      "rapidParameters": true,
+      "nativeExact": true,
+      "cancelExact": true,
+      "sourcePreserved": true,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "creationCancelExact": true,
+      "oneHistoryEntry": true,
+      "stylesPixels": true,
+      "filterReorderPixels": true,
+      "presetSaved": true,
+      "stopDragReorder": true,
+      "beforeAfterExact": true,
+      "rapidParameters": true,
+      "nativeExact": true,
+      "cancelExact": true,
+      "sourcePreserved": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "creationCancelExact": true,
+      "oneHistoryEntry": true,
+      "stylesPixels": true,
+      "filterReorderPixels": true,
+      "presetSaved": true,
+      "stopDragReorder": true,
+      "beforeAfterExact": true,
+      "rapidParameters": true,
+      "nativeExact": true,
+      "cancelExact": true,
+      "sourcePreserved": true,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "creationCancelExact": true,
+      "oneHistoryEntry": true,
+      "stylesPixels": true,
+      "filterReorderPixels": true,
+      "presetSaved": true,
+      "stopDragReorder": true,
+      "beforeAfterExact": true,
+      "rapidParameters": true,
+      "nativeExact": true,
+      "cancelExact": true,
+      "sourcePreserved": true,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "creationCancelExact": true,
+      "oneHistoryEntry": true,
+      "stylesPixels": true,
+      "filterReorderPixels": true,
+      "presetSaved": true,
+      "stopDragReorder": true,
+      "beforeAfterExact": true,
+      "rapidParameters": true,
+      "nativeExact": true,
+      "cancelExact": true,
+      "sourcePreserved": true,
+      "overflow": false
+    }
+  ],
+  "errors": [],
+  "pixelTolerance": 0,
+  "chromium": "156.0.8078.4",
+  "physicalAndroid": false
+}

@@ -174,6 +174,10 @@ function taps(a: SmartOperation) {
       return 1;
   }
 }
+/** Native kernel samples across this ordered stack; used for per-layer and document budgets. */
+export function smartFilterWork(w: number, h: number, stack: SmartFilter[] = []) {
+  return stack.reduce((sum, f) => sum + (f.enabled ? taps(f.operation) : 0), 0) * w * h;
+}
 /** Validate native dimensions even for reduced previews. No silent downscaling/budget bypass. */
 export function validateSmartWork(w: number, h: number, stack: SmartFilter[]) {
   validateSmartFilters(stack);
@@ -189,10 +193,7 @@ export function validateSmartWork(w: number, h: number, stack: SmartFilter[]) {
     throw Error(
       "Smart Filters support source layers up to4MP. Original resolution was not changed.",
     );
-  if (
-    stack.reduce((sum, f) => sum + (f.enabled ? taps(f.operation) : 0), 0) * w * h >
-    SMART_MAX_TAPS
-  )
+  if (smartFilterWork(w, h, stack) > SMART_MAX_TAPS)
     throw Error(
       "Smart Filter stack exceeds128M kernel taps. Reduce radius, strength or active filter count.",
     );

@@ -17,7 +17,16 @@ type RenderReply = {
   assets?: Record<string, Blob>;
   thumbnails?: { id: string; blob: Blob }[];
 };
+type LatestPreview = {
+  document: ProDocument;
+  maxArea: number;
+  frame?: Frame;
+  resolve: (r: RenderReply) => void;
+  reject: (e: Error) => void;
+};
 export class ProRenderer {
+  private latestActive = false;
+  private latestQueued: LatestPreview | null = null;
   private worker: Worker;
   private serial = 0;
   private stopped = false;
@@ -88,6 +97,39 @@ export class ProRenderer {
   render(document: ProDocument, maxArea: number, frame?: Frame) {
     return this.request("preview", { document, maxArea, frame });
   }
+  /** R8 properties own a dedicated renderer: at most one native job and one latest
+   * metadata request are retained. Rapid edits do not queue full-resolution planes. */
+  renderLatest(document: ProDocument, maxArea: number, frame?: Frame): Promise<RenderReply> {
+    if (this.stopped) return Promise.reject(new Error("The rendering worker is closed."));
+    return new Promise((resolve, reject) => {
+      const job = { document, maxArea, frame, resolve, reject };
+      if (this.latestActive) {
+        this.latestQueued?.reject(new DOMException("Preview superseded.", "AbortError"));
+        this.latestQueued = job;
+      } else this.runLatest(job);
+    });
+  }
+  private runLatest(job: LatestPreview) {
+    this.latestActive = true;
+    void this.request("preview", { document: job.document, maxArea: job.maxArea, frame: job.frame })
+      .then((reply) => {
+        if (this.latestQueued) {
+          reply.bitmap?.close();
+          job.reject(new DOMException("Preview superseded.", "AbortError"));
+        } else job.resolve(reply);
+      })
+      .catch(job.reject)
+      .finally(() => {
+        this.latestActive = false;
+        const next = this.latestQueued;
+        this.latestQueued = null;
+        if (next) {
+          if (this.stopped) next.reject(new DOMException("Processing cancelled.", "AbortError"));
+          else this.runLatest(next);
+        }
+      });
+  }
+
   export(
     document: ProDocument,
     maxArea: number,
@@ -188,6 +230,8 @@ export class ProRenderer {
   dispose(reason: Error = new DOMException("Processing cancelled.", "AbortError")) {
     this.stopped = true;
     this.worker.terminate();
+    this.latestQueued?.reject(reason);
+    this.latestQueued = null;
     for (const p of this.pending.values()) p.reject(reason);
     this.pending.clear();
   }

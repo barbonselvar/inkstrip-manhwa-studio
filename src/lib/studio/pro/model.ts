@@ -1,4 +1,9 @@
-import { validateSmartFilters, validateSmartWork, type SmartFilter } from "./smart-filters.ts";
+import {
+  validateSmartFilters,
+  validateSmartWork,
+  smartFilterWork,
+  type SmartFilter,
+} from "./smart-filters.ts";
 import { validateAdjustmentLayer, type AdjustmentLayerSettings } from "./adjustment-schema.ts";
 import {
   validateDialogue,
@@ -606,6 +611,12 @@ export function validateDocument(d: ProDocument) {
     if (l.kind === "gradient") validateGradient(l.gradient!);
     else if (l.gradient !== undefined)
       throw new Error("Gradient parameters require a gradient layer.");
+    if (
+      l.kind === "paint" &&
+      l.name === "Quick Mask (temporary)" &&
+      (l.effects?.length || l.smartFilters?.length)
+    )
+      throw Error("Quick Mask cannot contain layer styles or Smart Filters.");
     if (l.effects !== undefined) validateEffects(l.effects);
     if (l.smartFilters !== undefined) {
       if (d.version !== 3 || !["raster", "paint", "gradient", "shape", "text"].includes(l.kind))
@@ -827,7 +838,30 @@ export function validateDocument(d: ProDocument) {
       parent = p.parentId;
     }
   }
-  if (d.version === 3) validateAdvancedStyleWork(d);
+  if (d.version === 3) {
+    validateAdvancedStyleWork(d);
+    const live = (l: Layer) => {
+      let current: Layer | undefined = l;
+      while (current) {
+        if (!current.visible) return false;
+        const parent: string | undefined = current.parentId;
+        current = d.layers.find((n) => n.id === parent);
+      }
+      return true;
+    };
+    if (
+      d.layers
+        .filter(live)
+        .reduce(
+          (sum, l) =>
+            sum + smartFilterWork(Math.ceil(l.width), Math.ceil(l.height), l.smartFilters),
+          0,
+        ) > 128_000_000
+    )
+      throw Error(
+        "Visible Smart Filters exceed the128M native document kernel-work budget. Hide a filtered layer or reduce its radius; original data is unchanged.",
+      );
+  }
 }
 export function validateAssets(session: ProSession) {
   if (

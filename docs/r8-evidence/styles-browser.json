@@ -1,0 +1,32 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "nineEffectsRealPixels": true,
+      "disableExact": true,
+      "gradientStroke": true,
+      "pattern": true,
+      "bevel": true,
+      "copyPasteExact": true,
+      "duplicatePreset": true,
+      "removeUndoRedoExact": true,
+      "quickMaskExcluded": true,
+      "sourcePreserved": true
+    },
+    {
+      "width": 320,
+      "nineEffectsRealPixels": true,
+      "disableExact": true,
+      "gradientStroke": true,
+      "pattern": true,
+      "bevel": true,
+      "copyPasteExact": true,
+      "duplicatePreset": true,
+      "removeUndoRedoExact": true,
+      "quickMaskExcluded": true,
+      "sourcePreserved": true
+    }
+  ],
+  "errors": [],
+  "pixelTolerance": 0
+}

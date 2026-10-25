@@ -73,7 +73,13 @@ export function ProR8Lab({
   }, [key]);
   useEffect(() => {
     let active = true;
-    const renderer = new ProRenderer();
+    let renderer: ProRenderer;
+    try {
+      renderer = new ProRenderer();
+    } catch (e) {
+      setError((e as Error).message);
+      return;
+    }
     worker.current = renderer;
     void renderer
       .init({ ...base.session, document: draft.origin }, maxArea)
@@ -98,7 +104,7 @@ export function ProR8Lab({
     setError("");
     const timer = setTimeout(() => {
       void renderer
-        .render(before ? draft.origin : proposed.document, maxArea)
+        .renderLatest(before ? draft.origin : proposed.document, maxArea)
         .then((result) => {
           if (!result.bitmap) return;
           try {
@@ -351,7 +357,19 @@ export function ProR8Lab({
                       Choose a preset
                     </option>
                     {[...factoryR8Presets(), ...saved].map((p) => (
-                      <option key={p.name}>{p.name}</option>
+                      <option
+                        key={p.name}
+                        value={p.name}
+                        disabled={
+                          (!!p.settings.gradient && base.layer.kind !== "gradient") ||
+                          (!!p.settings.smartFilters?.length && !!disabledReason)
+                        }
+                      >
+                        {p.name}
+                        {p.settings.gradient && base.layer.kind !== "gradient"
+                          ? " (Gradient Fill only)"
+                          : ""}
+                      </option>
                     ))}
                   </select>
                 </label>

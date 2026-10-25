@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "schema": 3,
+  "envelope": 9,
+  "r6Adjustment": true,
+  "r7Mask": true,
+  "filterOrder": true,
+  "styles": true,
+  "nativeReopen": true,
+  "pngExact": true,
+  "pixelTolerance": 0,
+  "errors": []
+}

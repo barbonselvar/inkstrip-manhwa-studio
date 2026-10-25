@@ -1,6 +1,6 @@
 # R8 test report
 
-Status: baseline audit. R8 tests and final regression are pending; no milestone is declared complete.
+Status: R8.1–R8.4 and targeted hardening tests pass. Full frozen-candidate regression and final CI remain pending. Historical audit/results below record actual implementation stages.
 
 Baseline is main `02eb697450a7eeeadbd53d73cea5931905c5b2f2`. Dependency installation and the existing full unit suite were run in the isolated worktree; raw logs are retained under `/workspace/r8-evidence/`. Final totals, new pixel/security tests, browser results, exact-head CI and measured performance will be added after execution.
 
@@ -34,3 +34,17 @@ The filtered-painting regression initially found Gaussian output still had origi
 The expanded properties suite passes1440/768/390/360/320 including actual touch stop reordering, preservation of midpoint records, before/after pixels, rapid seed changes, one-entry Apply, source-asset equality, native/PNG equivalence and no horizontal overflow. The Raster gradient tool suite passes the same five widths: source-local endpoint dragging, Escape/touch cancellation, retained R7 mask, exact Undo/Redo/export/native reopen and blurred-paint preview invalidation. Pointer coordinate assertions account for browser input quantization; all image comparisons remain tolerance0.
 
 Focused gradient/style tests68 pass; typecheck and lint pass with0 warnings. Gradient midpoint exponents are precompiled once per stop instead of recomputed per pixel, retaining the same interpolation formula. Full R8.5 recovery/performance/final CI remain pending.
+
+## R8.5 targeted security, recovery and performance
+
+- Full working suite1002 passes (200 scripts +59 app/auth +105 Studio +638 Pro). Typecheck, lint0 warnings, production build, check:build and check:auth pass after correcting the new traversal's explicit parent-ID type. Final frozen candidate runs remain pending.
+- Recovery browser passes native9/schema3/store5, actual old-writer VersionError, autosave reload, a real blocked-write close with changed gradient settings, durable latest native record and fresh-context Chapter backup restore at390px. Complex styles/filter masks/groups/clipping/R6 adjustment/R7 mask/selection/R3 strokes/R5 metadata persist with source-asset equality and pixelTolerance0.
+- The actual pre-R8 main reader (02eb697) rejects native9 and internal3, while its legacy native file opens in R8 with unchanged source bytes.
+- Untrusted metadata tests reject future versions/filter/style types, malformed gradients/masks, giant dimensions, prototype keys and corrupt JSON before any atob/embedded-image decode. Visible filter work cannot be multiplied beyond128M by adding layers; hidden originals do not consume render work.
+- All nine style families alter real browser pixels and disable back to exact source. Copy/paste, duplicate presets, removal Undo/Redo and Quick Mask exclusion pass1440/320. Pure tests cover spread/choke, gradient stroke geometry, pattern repeat/offset, relief direction/depth, alpha, style order and invalid records.
+- Worker benchmarks cover512²,1024²,2000² filtered/masked/styled cases and4096²/128-stop gradient-only. RGBA/source hashes remain exact after native round trip; every12-edit burst sends2 physical preview jobs. Raw timing/RSS observations are in the implementation report and evidence JSON.
+- Initial benchmark fixture used an invalid Array.from callback argument; it failed before measurements and was corrected. Both logs are preserved; no benchmark values were invented or extrapolated.
+
+Remaining final gates: frozen-source install/unit/type/lint/build/config/auth, all41 browser suites plus raster benchmark/local production-build acceptance, final CI, read-only concurrent PR20 integration analysis and final reports. No phase-complete/merge/deployment claim is made yet.
+
+The complex recovery suite additionally verifies PNG, JPEG and WebP before/after fresh-context recovery with per-format decoded-pixel tolerance0. Actual pre-R8 reader compatibility and new format rejection results are committed under docs/r8-evidence. All six R8 suites are registered; the complete matrix is41 suites plus the existing raster browser benchmark.

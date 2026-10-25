@@ -31,21 +31,27 @@ export function r8Document(draft: R8Draft, settings: R8Settings, maxArea: number
   validateR8Settings(settings);
   if (draft.origin.layers.some((l) => l.kind === "paint" && l.name === "Quick Mask (temporary)"))
     throw Error("Exit Quick Mask before editing layer styles, filters or gradients.");
-  const doc = draft.created ?? draft.origin,
+  const doc = upgradeR8Document(draft.created ?? draft.origin),
     target = doc.layers.find((l) => l.id === draft.layerId);
   if (!target || target.kind === "adjustment" || isLocked(doc, target.id))
     throw Error(
       "Choose an unlocked artwork layer. Backdrop adjustments and Quick Mask are not style/filter targets.",
     );
+  if (settings.gradient !== undefined && target.kind !== "gradient")
+    throw Error(
+      "Gradient definitions require a Gradient Fill layer. Use Copy layer style to transfer only effects.",
+    );
   const next: ProDocument = {
-    ...upgradeR8Document(doc),
+    ...doc,
     styleLight: settings.light ?? doc.styleLight ?? 135,
     layers: doc.layers.map((l) =>
       l.id === target.id
         ? {
             ...l,
-            effects: structuredClone(settings.effects),
-            smartFilters: structuredClone(settings.smartFilters),
+            effects: settings.effects?.length ? structuredClone(settings.effects) : undefined,
+            smartFilters: settings.smartFilters?.length
+              ? structuredClone(settings.smartFilters)
+              : undefined,
             ...(target.kind === "gradient" ? { gradient: structuredClone(settings.gradient) } : {}),
           }
         : l,
@@ -78,6 +84,7 @@ export function addGradientFill(
 ) {
   if (doc.layers.some((l) => l.kind === "paint" && l.name === "Quick Mask (temporary)"))
     throw Error("Exit Quick Mask before adding a gradient fill.");
+  validateDocument(doc);
   const anchor = doc.layers.find((l) => l.id === anchorId),
     parentId = anchor?.kind === "group" ? anchor.id : anchor?.parentId;
   if (parentId && isLocked(doc, parentId))

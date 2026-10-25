@@ -532,8 +532,22 @@ export function validateAdvancedStyleWork(d: ProDocument) {
   if (!d.layers.some((l) => visible(l) && l.effects?.some((e) => e.enabled && e.version === 2)))
     return;
   const padding = effectPadding(d);
-  if ((d.width + 2 * padding) * (d.height + 2 * padding) > 4_000_000)
+  const styleCount = d.layers
+    .filter((l) => visible(l) && l.effects?.some((e) => e.enabled && e.version === 2))
+    .reduce(
+      (sum, l) => sum + (l.effects?.filter((e) => e.enabled && e.opacity > 0).length ?? 0),
+      0,
+    );
+  if (styleCount * (d.width + 2 * padding) * (d.height + 2 * padding) > 128_000_000)
     throw Error(
-      "Advanced styles support native document planes up to4MP including effect padding. Remove the style or use a smaller canvas; original resolution was not changed.",
+      "Visible advanced styles exceed the128M document style-pixel budget. Hide a styled layer or disable an effect; original data is unchanged.",
+    );
+  if (
+    (d.width + 2 * padding) * (d.height + 2 * padding) > 4_000_000 ||
+    d.width + 2 * padding > 16384 ||
+    d.height + 2 * padding > 16384
+  )
+    throw Error(
+      "Advanced styles support native document planes up to4MP /16384px per side including effect padding. Remove the style or use a smaller canvas; original resolution was not changed.",
     );
 }

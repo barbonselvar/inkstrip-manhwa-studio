@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "filterSelectionMask": true,
+  "layerMask": true,
+  "r6BaseColorNoDoubleBake": true,
+  "nativeRoundTrip": true,
+  "r5WholeLayerTransform": true,
+  "selectedPixelGuard": "Selected-pixel staging requires affine artwork without linked layers, clipping stacks, enabled effects or Smart Filters. Disable Smart Filters first; whole-layer transforms remain available. Original artwork is unchanged.",
+  "maskBakeGuard": "Disable Smart Filters before baking a layer mask, to keep the filter stack editable. The mask, original artwork and filters are unchanged.",
+  "visibility": true,
+  "pixelTolerance": 0,
+  "errors": []
+}
