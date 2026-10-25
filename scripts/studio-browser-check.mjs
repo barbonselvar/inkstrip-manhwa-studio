@@ -20,7 +20,9 @@ try {
     isMobile: true,
     hasTouch: true,
     deviceScaleFactor: 1,
-    ignoreHTTPSErrors: true,
+    // Local Nitro preview compresses large WASM files on demand. Ask for the
+    // identical uncompressed artifact to keep QA focused on real inference.
+    extraHTTPHeaders: { "Accept-Encoding": "identity" },
   });
   const page = await context.newPage();
   const errors = [];

@@ -225,7 +225,12 @@ export function ProProperties({
                 ))}
               </select>
             </label>
-            {selected.kind !== "group" && (
+            {maskMode && (
+              <p className="pro-help">
+                Mask selected. Use Free Transform (F) to move, resize, rotate or flip this mask.
+              </p>
+            )}
+            {selected.kind !== "group" && !maskMode && (
               <ToolSection title="Transform & alignment" defaultOpen>
                 <div className="pro-number-grid">
                   {(["x", "y", "rotation"] as const).map((key) => (

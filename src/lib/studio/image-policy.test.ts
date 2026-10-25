@@ -405,3 +405,20 @@ test("cancelled header/batch validation never proceeds to later assets", async (
   });
   assert.equal(reads, 1);
 });
+
+test("many bounded PNG IDAT chunks charge header bytes rather than compressed pixel read-ahead", async () => {
+  const original = new Uint8Array(await (await fixture()).arrayBuffer()),
+    chunks: Uint8Array<ArrayBuffer>[] = [original.slice(0, 33)];
+  for (let i = 0; i < 600; i++) {
+    const chunk = new Uint8Array(8192 + 12);
+    new DataView(chunk.buffer).setUint32(0, 8192);
+    chunk.set([73, 68, 65, 84], 4);
+    chunks.push(chunk);
+  }
+  chunks.push(original.slice(-12));
+  const info = await preflightImage(new Blob(chunks));
+  assert.equal(info.width, 32);
+  assert.equal(info.height, 24);
+  assert.ok(info.headerBytes < 100_000);
+  // Payload validity/CRC belongs to the browser decoder, as in existing IDAT handling.
+});

@@ -70,7 +70,7 @@ class Header {
     this.policy = policy;
     this.signal = signal;
   }
-  async read(start: number, length: number) {
+  async read(start: number, length: number, readAhead = true) {
     this.signal?.throwIfAborted();
     if (
       ++this.steps > 32768 ||
@@ -88,7 +88,7 @@ class Header {
       start + length <= this.cache.start + this.cache.bytes.length
     )
       return this.cache.bytes.subarray(start - this.cache.start, start - this.cache.start + length);
-    const size = Math.min(Math.max(length, 4096), this.blob.size - start);
+    const size = Math.min(Math.max(length, readAhead ? 4096 : length), this.blob.size - start);
     if (this.bytesRead + size > this.policy.maxHeaderBytes)
       fail("Image metadata exceeds the bounded header-reading budget.");
     const bytes = new Uint8Array(await this.blob.slice(start, start + size).arrayBuffer());
@@ -140,7 +140,10 @@ async function png(h: Header) {
     animationFrames = 0,
     inflated = 0;
   for (let n = 0; n < 4096; n++) {
-    const c = await h.read(at, 8),
+    // Chunk payloads are skipped by length. Speculative reads here charged
+    // 4096 compressed pixel bytes for every 8-byte header, rejecting ordinary
+    // high-entropy PNGs while inspecting far less than the metadata budget.
+    const c = await h.read(at, 8, false),
       size = view(c).getUint32(0),
       kind = ascii(c, 4, 4);
     if (size > h.blob.size - at - 12) fail("Truncated PNG chunk.");
