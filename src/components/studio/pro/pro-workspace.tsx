@@ -1,3 +1,8 @@
+import {
+  previewTarget,
+  samePreviewTarget,
+  type PreviewTarget,
+} from "@/lib/studio/pro/preview-target";
 import { ProAdjustmentLab } from "./pro-adjustment-lab";
 import {
   adjustmentDocument,
@@ -44,7 +49,15 @@ import { appendSelection } from "@/lib/studio/pro/selection";
 import { bucketStroke, hasActiveSelection, intersectRegion } from "@/lib/studio/pro/fill";
 import { selectionCanvas } from "@/lib/studio/pro/render";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ArrowLeft,
   Brush,
@@ -244,7 +257,8 @@ export default function ProWorkspace({
   const pathfinderJob = useRef<PathfinderJob | null>(null);
   useEffect(() => () => pathfinderJob.current?.cancel(), []);
   const displayedDocument = useRef<ProDocument | null>(null),
-    displayedBefore = useRef(false);
+    displayedBefore = useRef(false),
+    displayedTarget = useRef<PreviewTarget | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null),
     renderer = useRef<ProRenderer | null>(null),
     root = useRef<HTMLDivElement>(null),
@@ -285,6 +299,24 @@ export default function ProWorkspace({
     if (viewScope === "all" && boards.length) return unionFrames(boards);
     return boards.find((b) => b.id === viewScope) ?? workspaceFrame(d);
   }, [history?.present.doc, mode, viewScope, dialogue]);
+  const requestedPreview = useMemo(
+    () =>
+      previewTarget(previewDoc, {
+        mode,
+        before,
+        frame: viewportFrame,
+        maxArea,
+        assetEpoch,
+        ready,
+        quick,
+      }),
+    [previewDoc, mode, before, viewportFrame, maxArea, assetEpoch, ready, quick],
+  );
+  const currentPreviewTarget = useRef(requestedPreview);
+  useLayoutEffect(() => {
+    // Commit the target before asynchronous replies/passive effects can run.
+    currentPreviewTarget.current = requestedPreview;
+  }, [requestedPreview]);
   const grid = !!doc && layout(doc).grid,
     snapping = !doc || layout(doc).snapping;
   const activeContour =
@@ -470,7 +502,8 @@ export default function ProWorkspace({
   }, [assetEpoch, maxArea]);
   useEffect(() => {
     if (!previewDoc || !ready || busy || !renderer.current) return;
-    const id = ++generation.current;
+    const id = ++generation.current,
+      target = requestedPreview;
     setRendering(true);
     const original = sourceReference(previewDoc);
     const raw = original ? layer("raster", original.width, original.height) : undefined;
@@ -491,7 +524,11 @@ export default function ProWorkspace({
         ?.render(document, maxArea, mode === "vector" ? viewportFrame : undefined)
         .then((r) => {
           if (!r.bitmap) return;
-          if (id !== generation.current || !alive.current) {
+          if (
+            id !== generation.current ||
+            !alive.current ||
+            !samePreviewTarget(currentPreviewTarget.current, target)
+          ) {
             r.bitmap.close();
             return;
           }
@@ -522,13 +559,18 @@ export default function ProWorkspace({
             }
             displayedDocument.current = previewDoc;
             displayedBefore.current = before;
+            displayedTarget.current = target;
             setVersion((v) => v + 1);
           }
           r.bitmap.close();
           setRendering(false);
         })
         .catch((e) => {
-          if (id === generation.current && alive.current) {
+          if (
+            id === generation.current &&
+            alive.current &&
+            samePreviewTarget(currentPreviewTarget.current, target)
+          ) {
             setRendering(false);
             if (e.name !== "AbortError") {
               const c = canvas.current;
@@ -541,7 +583,7 @@ export default function ProWorkspace({
     return () => {
       clearTimeout(timer);
     };
-  }, [previewDoc, ready, before, busy, maxArea, mode, viewportFrame, quick]);
+  }, [previewDoc, ready, before, busy, maxArea, mode, viewportFrame, quick, requestedPreview]);
   useEffect(() => {
     const current = history?.present.doc;
     if (!current || pixelStage.current) return;
@@ -2319,7 +2361,8 @@ export default function ProWorkspace({
                   rendering ||
                   !ready ||
                   displayedDocument.current !== doc ||
-                  displayedBefore.current !== before
+                  displayedBefore.current !== before ||
+                  !samePreviewTarget(displayedTarget.current, requestedPreview)
                 }
                 cloneSource={cloneSource}
                 cloneSampleArmed={cloneSampleArmed}

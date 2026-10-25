@@ -44,6 +44,7 @@
     "test:compound:browser": "node --experimental-strip-types scripts/compound-browser-check.mjs",
     "test:pathfinder:browser": "node --experimental-strip-types scripts/pathfinder-browser-check.mjs",
     "test:artboards:browser": "node --experimental-strip-types scripts/artboards-browser-check.mjs",
+    "test:preview:browser": "node --experimental-strip-types scripts/preview-viewport-browser-check.mjs",
     "test:vector-final:browser": "node --experimental-strip-types scripts/vector-final-browser-check.mjs",
     "bench:vector": "node --experimental-strip-types scripts/vector-benchmark.mjs",
     "test:production:browser": "node --experimental-strip-types scripts/production-vector-check.mjs",

@@ -1,0 +1,15 @@
+{
+  "label": "main",
+  "transition": {
+    "frame": [10000, 0, 64, 64],
+    "bitmap": [1400, 18],
+    "busy": "false",
+    "board": "east"
+  },
+  "complete": {
+    "width": 64,
+    "height": 64,
+    "pixel": [255, 0, 0, 255]
+  },
+  "errors": []
+}
