@@ -1,3 +1,4 @@
+import { applyAdjustmentTiles } from "./adjustment-tiles";
 import { letteringFont } from "../dialogue/lettering.ts";
 import { previewCoverage } from "./coverage-preview";
 import { maskLocal, maskWorld } from "./masks";
@@ -561,6 +562,7 @@ export async function composite(
   cancel: () => boolean,
   progress: (done: number, total: number) => void,
   frame?: Frame & { background?: string },
+  adjustmentInput?: (layer: Layer, input: OffscreenCanvas) => Promise<void>,
 ) {
   validateDocument(d);
   // Resolve installed/fallback fonts before measuring or painting editable text.
@@ -583,7 +585,19 @@ export async function composite(
     nativeHeight = Math.max(1, Math.round((frame?.height ?? d.height) * scale)),
     originX = padding - (frame?.x ?? 0) * scale,
     originY = padding - (frame?.y ?? 0) * scale,
-    output = canvas(nativeWidth + 2 * padding, nativeHeight + 2 * padding);
+    outputWidth = nativeWidth + 2 * padding,
+    outputHeight = nativeHeight + 2 * padding;
+  const visible = visibleLayerIds(d);
+  if (
+    d.layers.filter((l) => l.adjustmentLayer && visible.has(l.id)).length *
+      outputWidth *
+      outputHeight >
+    128_000_000
+  )
+    throw Error(
+      "Adjustment render exceeds its actual output-work budget. Hide an adjustment or export a smaller frame.",
+    );
+  const output = canvas(outputWidth, outputHeight);
   const documentPlanes = new WeakSet<OffscreenCanvas>();
   let done = 0;
   const total = visibleLayerIds(d).size;
@@ -721,15 +735,60 @@ export async function composite(
     }
   };
   const adjust = async (target: OffscreenCanvas, l: Layer) => {
-    const ctx = target.getContext("2d")!,
-      image = ctx.getImageData(0, 0, target.width, target.height),
-      filtered = applyAdjustments(image.data, target.width, target.height, l.adjustments, scale);
-    tonePixels(filtered, l);
-    if (l.color) colorPixels(filtered, l.color);
+    if (adjustmentInput) await adjustmentInput(l, target);
+    const ctx = target.getContext("2d")!;
+    const tileCheckpoint = async () => {
+      if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
+    };
+    const matrix = affine(l.transform);
+    // An unmasked identity plane covers every pixel exactly; avoid two native-size coverage canvases.
+    if (
+      l.adjustmentLayer &&
+      !l.mask?.enabled &&
+      !l.colorSelection &&
+      !l.transform.deform &&
+      matrix.every((v, i) => v === [1, 0, 0, 1, 0, 0][i]) &&
+      originX === 0 &&
+      originY === 0 &&
+      l.width * scale === target.width &&
+      l.height * scale === target.height
+    ) {
+      await applyAdjustmentTiles(
+        ctx,
+        {
+          getImageData: (_x, _y, w, h) => {
+            const tile = ctx.createImageData(w, h);
+            tile.data.fill(255);
+            return tile;
+          },
+        },
+        target.width,
+        target.height,
+        l.adjustmentLayer.operation,
+        l.opacity,
+        l.blend,
+        tileCheckpoint,
+      );
+      return;
+    }
+    // Legacy settings retain their old full-plane algorithm and exact stage order.
+    const image = !l.adjustmentLayer
+      ? ctx.getImageData(0, 0, target.width, target.height)
+      : undefined;
+    const filtered = image
+      ? applyAdjustments(image.data, target.width, target.height, l.adjustments, scale)
+      : undefined;
+    if (filtered) {
+      tonePixels(filtered, l);
+      if (l.color) colorPixels(filtered, l.color);
+    }
     let coverage = await surface(
       {
         ...l,
         kind: "shape",
+        adjustmentLayer: undefined,
         shape: "rectangle",
         fill: "#ffffff",
         strokeWidth: 0,
@@ -758,16 +817,32 @@ export async function composite(
     draw(full, coverage, l, false, 1, "source-over");
     release(coverage);
     coverage = full;
-    const mask = coverage
-      .getContext("2d")!
-      .getImageData(0, 0, coverage.width, coverage.height).data;
-    for (let i = 0; i < filtered.length; i += 4)
-      filtered[i + 3] = image.data[i + 3]
-        ? (mask[i + 3]! * filtered[i + 3]!) / image.data[i + 3]!
-        : 0;
-    image.data.set(blendClippedPixels(image.data, filtered, l.opacity, l.blend));
-    ctx.putImageData(image, 0, 0);
-    release(coverage);
+    try {
+      if (l.adjustmentLayer) {
+        await applyAdjustmentTiles(
+          ctx,
+          coverage.getContext("2d")!,
+          target.width,
+          target.height,
+          l.adjustmentLayer.operation,
+          l.opacity,
+          l.blend,
+          tileCheckpoint,
+        );
+      } else if (image && filtered) {
+        const mask = coverage
+          .getContext("2d")!
+          .getImageData(0, 0, coverage.width, coverage.height).data;
+        for (let i = 0; i < filtered.length; i += 4)
+          filtered[i + 3] = image.data[i + 3]
+            ? (mask[i + 3]! * filtered[i + 3]!) / image.data[i + 3]!
+            : 0;
+        image.data.set(blendClippedPixels(image.data, filtered, l.opacity, l.blend));
+        ctx.putImageData(image, 0, 0);
+      }
+    } finally {
+      release(coverage);
+    }
   };
   const branch = async (target: OffscreenCanvas, parent?: string) => {
     for (const { base, clips } of stacks(siblings(d, parent))) {

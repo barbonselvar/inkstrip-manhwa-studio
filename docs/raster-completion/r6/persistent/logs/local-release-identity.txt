@@ -1,0 +1,26 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ [
++   "wasm streaming compile failed: TypeError: Failed to execute 'compile' on 'WebAssembly': Incorrect response MIME type. Expected 'application/wasm'.",
++   'falling back to ArrayBuffer instantiation'
++ ]
+- []
+
+    at file:///workspace/inkstrip-r6/scripts/production-vector-check.mjs:471:10 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [
+    "wasm streaming compile failed: TypeError: Failed to execute 'compile' on 'WebAssembly': Incorrect response MIME type. Expected 'application/wasm'.",
+    'falling back to ArrayBuffer instantiation'
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

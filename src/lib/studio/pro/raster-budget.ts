@@ -1,8 +1,18 @@
+import { visibleLayerIds } from "./layers.ts";
 import { effectPadding } from "./effects.ts";
 import { sourceReference, type ProDocument } from "./model.ts";
 /** Validate active sources before decoding, including proposed merge documents. */
 export function documentSources(doc: ProDocument, maxArea: number) {
+  const visible = visibleLayerIds(doc);
+  const operations = doc.layers.filter((l) => l.adjustmentLayer && visible.has(l.id)).length;
   const padding = effectPadding(doc);
+  if (
+    operations * (doc.width + 2 * padding) * (doc.height + 2 * padding) >
+    Math.min(128_000_000, maxArea * 8)
+  )
+    throw Error(
+      "Active color adjustment layers exceed this device's processing budget. Hide an adjustment or use a smaller document; no resolution was reduced.",
+    );
   if (padding > 2048 || (doc.width + 2 * padding) * (doc.height + 2 * padding) > maxArea * 3)
     throw new Error(
       "Layer effects exceed this device’s padded rendering budget. Reduce effect radius/distance or export a native backup.",

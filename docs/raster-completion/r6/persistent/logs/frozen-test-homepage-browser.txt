@@ -1,0 +1,83 @@
+{
+  "ok": true,
+  "base": "http://127.0.0.1:8081",
+  "results": [
+    {
+      "test": "real three-second full nine-artwork rotation",
+      "changes": [
+        {
+          "index": 1,
+          "at": 4662.5
+        },
+        {
+          "index": 2,
+          "at": 7343.300000000745
+        },
+        {
+          "index": 3,
+          "at": 10343.60000000149
+        },
+        {
+          "index": 4,
+          "at": 13344.900000000373
+        },
+        {
+          "index": 5,
+          "at": 16345.200000001118
+        },
+        {
+          "index": 6,
+          "at": 19343.300000000745
+        },
+        {
+          "index": 7,
+          "at": 22343.400000000373
+        },
+        {
+          "index": 8,
+          "at": 25343.60000000149
+        },
+        {
+          "index": 0,
+          "at": 28343.200000001118
+        },
+        {
+          "index": 1,
+          "at": 31343.300000000745
+        }
+      ]
+    },
+    {
+      "test": "hover, focus, buttons, keyboard, explicit pause, hidden tab, reduced/quiet motion, links, project creation, unmount cleanup",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "portraitAndLandscape": true,
+      "touchEmulation": true
+    },
+    {
+      "width": 360,
+      "portraitAndLandscape": true,
+      "touchEmulation": true
+    },
+    {
+      "width": 390,
+      "portraitAndLandscape": true,
+      "touchEmulation": true
+    },
+    {
+      "width": 768,
+      "portraitAndLandscape": true,
+      "touchEmulation": false
+    },
+    {
+      "width": 1440,
+      "portraitAndLandscape": true,
+      "touchEmulation": false
+    }
+  ],
+  "errors": [],
+  "failedAssets": [],
+  "physicalAndroid": false
+}

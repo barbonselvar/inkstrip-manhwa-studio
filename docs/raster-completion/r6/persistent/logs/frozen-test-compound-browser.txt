@@ -1,0 +1,13 @@
+Compound creation/release, nested winding/holes, independent subpath editing, history, local/native reopen, hit testing and SVG/PNG fidelity passed.
+SVG comparison 0: mean channel difference 0, max 0
+SVG comparison 1: mean channel difference 0.00008138020833333333, max 2
+SVG comparison 2: mean channel difference 0, max 0
+SVG comparison 3: mean channel difference 0.0126953125, max 9
+SVG comparison 4: mean channel difference 0.2342529296875, max 255
+SVG comparison 5: mean channel difference 0, max 0
+Independent SVG comparisons: path commands/arcs, viewBox/negative coordinates, affine reflection/shear, isolated nested groups, winding, stroke/dash/cap/join and opacity passed.
+Differently sized SVG viewport clipping, editable native mask and recovery of off-viewport source geometry passed.
+Legacy conversion, unsafe/unsupported SVG and malformed-path atomic rollback, and Chapter source isolation passed.
+Chromium 320px: compound creation/release, touch subpath dragging, holes, native/export and no page overflow/scroll passed.
+Chromium 390px: compound creation/release, touch subpath dragging, holes, native/export and no page overflow/scroll passed.
+{"ok":true,"physicalAndroid":false}

@@ -463,7 +463,7 @@ export function ProProperties({
                 </label>
               </ToolSection>
             )}
-            {selected.kind !== "group" && (
+            {selected.kind !== "group" && !selected.adjustmentLayer && (
               <ToolSection title="Non-destructive adjustments">
                 <p className="pro-help">
                   Traditional RGB filters. Preview is reduced resolution; exports use document
@@ -549,7 +549,7 @@ export function ProProperties({
                 </Button>
               </ToolSection>
             )}
-            {selected.kind !== "group" && (
+            {selected.kind !== "group" && !selected.adjustmentLayer && (
               <ProColor
                 layer={selected}
                 selection={selection}

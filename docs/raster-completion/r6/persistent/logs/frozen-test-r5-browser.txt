@@ -1,0 +1,6 @@
+R5 viewport 1440
+R5 viewport 768
+R5 viewport 390
+R5 viewport 360
+R5 viewport 320
+{"results":[{"width":1440,"selectedPixels":true,"cancel":true,"protectedPixels":true,"native":true,"history":true,"maskOnly":true,"nudge":true,"percent":true,"canvasAnchor":true,"resampling":true},{"width":768,"selectedPixels":true,"cancel":true,"protectedPixels":true,"native":true,"history":true,"maskOnly":true,"nudge":true,"percent":true,"canvasAnchor":true,"resampling":true},{"width":390,"selectedPixels":true,"cancel":true,"protectedPixels":true,"native":true,"history":true,"maskOnly":true,"nudge":true,"percent":true,"canvasAnchor":true,"resampling":true},{"width":360,"selectedPixels":true,"cancel":true,"protectedPixels":true,"native":true,"history":true,"maskOnly":true,"nudge":true,"percent":true,"canvasAnchor":true,"resampling":true},{"width":320,"selectedPixels":true,"cancel":true,"protectedPixels":true,"native":true,"history":true,"maskOnly":true,"nudge":true,"percent":true,"canvasAnchor":true,"resampling":true}],"errors":[]}

@@ -1,0 +1,63 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "width": 1440,
+      "pixelApplyCancelHistoryNativeExport": true,
+      "levelsCurvesExposure": true,
+      "selection": true,
+      "rapidPreview": true,
+      "r3Painting": true,
+      "r5Transform": true,
+      "touchEmulation": false
+    },
+    {
+      "width": 768,
+      "pixelApplyCancelHistoryNativeExport": true,
+      "levelsCurvesExposure": true,
+      "selection": true,
+      "rapidPreview": true,
+      "r3Painting": true,
+      "r5Transform": true,
+      "touchEmulation": true
+    },
+    {
+      "width": 390,
+      "pixelApplyCancelHistoryNativeExport": true,
+      "levelsCurvesExposure": true,
+      "selection": true,
+      "rapidPreview": true,
+      "r3Painting": true,
+      "r5Transform": true,
+      "touchEmulation": true
+    },
+    {
+      "width": 360,
+      "pixelApplyCancelHistoryNativeExport": true,
+      "levelsCurvesExposure": true,
+      "selection": true,
+      "rapidPreview": true,
+      "r3Painting": true,
+      "r5Transform": true,
+      "touchEmulation": true
+    },
+    {
+      "width": 320,
+      "pixelApplyCancelHistoryNativeExport": true,
+      "levelsCurvesExposure": true,
+      "selection": true,
+      "rapidPreview": true,
+      "r3Painting": true,
+      "r5Transform": true,
+      "touchEmulation": true
+    },
+    {
+      "groupMaskClippingExistingAdjustment": true,
+      "neutralBakeExact": true,
+      "lockedTargetRejected": true
+    }
+  ],
+  "errors": [],
+  "runtimeCommit": "6803457862ace58324eec5f58cb2502e5d8bd042",
+  "pixelTolerance": 0
+}

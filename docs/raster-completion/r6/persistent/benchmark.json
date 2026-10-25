@@ -1,0 +1,110 @@
+{
+  "results": [
+    {
+      "size": 512,
+      "pixels": 262144,
+      "pointLayers": 2,
+      "maskedLayers": 1,
+      "tileSide": 512,
+      "timings": {
+        "initMs": 118.90000000037253,
+        "previewMs": 312.69999999925494,
+        "histogramMs": 34.80000000074506,
+        "exportMs": 114.5,
+        "nativeSaveMs": 6.300000000745058,
+        "nativeReadMs": 3,
+        "reopenedExportMs": 113.40000000037253
+      },
+      "previewSize": [512, 512],
+      "nativeBytes": 30030,
+      "exportBytes": 194229,
+      "sourceBytes": 20398,
+      "sourceHash": "ffee056c9c047af19518c3007f407dcee81b403c3d24eaa6b749d16d1ab6cd9c",
+      "compositeHash": "24eedb0e11552137d7bb1069bcd76e66d8fdeff8f782569d977cd441b5cbae68",
+      "exactReopen": true,
+      "stalePreviewRejected": true,
+      "formats": ["image/jpeg", "image/webp"],
+      "browserProcessTreePeakRssMiB": 652
+    },
+    {
+      "size": 2000,
+      "pixels": 4000000,
+      "pointLayers": 2,
+      "maskedLayers": 1,
+      "tileSide": 512,
+      "timings": {
+        "initMs": 67.10000000149012,
+        "previewMs": 833.6999999992549,
+        "histogramMs": 608.6999999992549,
+        "exportMs": 1420.8999999985099,
+        "nativeSaveMs": 9.099999999627471,
+        "nativeReadMs": 22.5,
+        "reopenedExportMs": 1447.5
+      },
+      "previewSize": [1400, 1400],
+      "nativeBytes": 326963,
+      "exportBytes": 2744130,
+      "sourceBytes": 243098,
+      "sourceHash": "77daa0031cd25604a2e5693803328746ebf16d637fb51779f463edbc6a3fc4d8",
+      "compositeHash": "2617034375be6225bf4e1fc03b69486d37709f2764460dc68bc6fbcbee03e7dd",
+      "exactReopen": true,
+      "stalePreviewRejected": true,
+      "formats": [],
+      "browserProcessTreePeakRssMiB": 838
+    },
+    {
+      "size": 3000,
+      "pixels": 9000000,
+      "pointLayers": 2,
+      "maskedLayers": 1,
+      "tileSide": 512,
+      "timings": {
+        "initMs": 96.5,
+        "previewMs": 1090.300000000745,
+        "histogramMs": 2921.2999999988824,
+        "exportMs": 7297.9000000003725,
+        "nativeSaveMs": 84,
+        "nativeReadMs": 86.90000000037253,
+        "reopenedExportMs": 7973.699999999255
+      },
+      "previewSize": [1400, 1400],
+      "nativeBytes": 706923,
+      "exportBytes": 6098193,
+      "sourceBytes": 528068,
+      "sourceHash": "2e2f4cb22da84aea39719bc4bc4b843d01b793dc260a24e261c4c0abe537f563",
+      "compositeHash": "fccc9220c1934b4080db72b9b7283f48975d2fd5dd100a86a94c06627148c3ea",
+      "exactReopen": true,
+      "stalePreviewRejected": true,
+      "formats": [],
+      "browserProcessTreePeakRssMiB": 972
+    },
+    {
+      "size": 4096,
+      "pixels": 16777216,
+      "pointLayers": 2,
+      "maskedLayers": 1,
+      "tileSide": 512,
+      "timings": {
+        "initMs": 196.30000000074506,
+        "previewMs": 2037.7000000011176,
+        "histogramMs": 5890.5999999996275,
+        "exportMs": 10993.5,
+        "nativeSaveMs": 43.59999999962747,
+        "nativeReadMs": 83,
+        "reopenedExportMs": 5755.39999999851
+      },
+      "previewSize": [1400, 1400],
+      "nativeBytes": 1296824,
+      "exportBytes": 11301790,
+      "sourceBytes": 970481,
+      "sourceHash": "40c8b29fdaa3d59bde3e71db1a4bcdac71d0b08c4ab2dede92a3018187e5c1c9",
+      "compositeHash": "671325e8f0c09f2542da4824696b524225836cc1690702d4a590c9d55875f55d",
+      "exactReopen": true,
+      "stalePreviewRejected": true,
+      "formats": [],
+      "browserProcessTreePeakRssMiB": 1185
+    }
+  ],
+  "errors": [],
+  "notes": "Single Chromium desktop runs on shared executor. Two persistent point layers, one large selection mask/density. Full native PNG pixels exact before/after reopen; original PNG hash unchanged. Summed process-tree RSS sampled at 100ms includes shared pages, image generation and hashing; it is a coarse resident-memory observation, not allocation accounting or mobile hardware. Preview uses existing 1400px viewport cap; native exports retain full dimensions. Destructive/spatial R6 operations retain their 4MP cap."
+}

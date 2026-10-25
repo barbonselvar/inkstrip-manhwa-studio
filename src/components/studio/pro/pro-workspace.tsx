@@ -1,3 +1,18 @@
+import {
+  previewTarget,
+  samePreviewTarget,
+  type PreviewTarget,
+} from "@/lib/studio/pro/preview-target";
+import { ProAdjustmentLab } from "./pro-adjustment-lab";
+import {
+  adjustmentDocument,
+  createAdjustmentDraft,
+  commitAdjustmentDocument,
+  type AdjustmentDraft,
+} from "@/lib/studio/pro/adjustment-layer";
+import type { AdjustmentLayerSettings } from "@/lib/studio/pro/adjustment-schema";
+import { ProColorLab } from "./pro-color-lab";
+import { colorTarget, prepareColorCommit } from "@/lib/studio/pro/color-transaction";
 import { previewTransform } from "@/lib/studio/pro/transform-session";
 import { maskFrame, nudgeDocument } from "@/lib/studio/pro/geometry-operations";
 import { selectionTransformTarget } from "@/lib/studio/pro/selection-transform";
@@ -34,7 +49,15 @@ import { appendSelection } from "@/lib/studio/pro/selection";
 import { bucketStroke, hasActiveSelection, intersectRegion } from "@/lib/studio/pro/fill";
 import { selectionCanvas } from "@/lib/studio/pro/render";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ArrowLeft,
   Brush,
@@ -134,6 +157,10 @@ export default function ProWorkspace({
   onContinue: (mode: "enhance" | "image" | "face") => void;
 }) {
   const [mode, setMode] = useState(initialMode);
+  const [colorDraft, setColorDraft] = useState<{ origin: ProDocument; layerId: string } | null>(
+    null,
+  );
+  const [adjustmentDraft, setAdjustmentDraft] = useState<AdjustmentDraft | null>(null);
   const [dialoguePending, setDialoguePending] = useState(false);
   const dialoguePendingRef = useRef(false);
   dialoguePendingRef.current = dialoguePending;
@@ -216,6 +243,7 @@ export default function ProWorkspace({
     [error, setError] = useState(""),
     [status, setStatus] = useState("Opening layered document…"),
     [saved, setSaved] = useState(false),
+    [saveAcknowledgment, setSaveAcknowledgment] = useState(0),
     [assetEpoch, setAssetEpoch] = useState(0),
     [ready, setReady] = useState(0),
     [rendering, setRendering] = useState(false),
@@ -229,13 +257,15 @@ export default function ProWorkspace({
   const pathfinderJob = useRef<PathfinderJob | null>(null);
   useEffect(() => () => pathfinderJob.current?.cancel(), []);
   const displayedDocument = useRef<ProDocument | null>(null),
-    displayedBefore = useRef(false);
+    displayedBefore = useRef(false),
+    displayedTarget = useRef<PreviewTarget | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null),
     renderer = useRef<ProRenderer | null>(null),
     root = useRef<HTMLDivElement>(null),
     alive = useRef(true),
     closeInProgress = useRef(false),
     saveTail = useRef<Promise<unknown>>(Promise.resolve()),
+    pendingSaves = useRef(0),
     lastSaved = useRef(""),
     generation = useRef(0),
     busyRef = useRef(false),
@@ -269,6 +299,24 @@ export default function ProWorkspace({
     if (viewScope === "all" && boards.length) return unionFrames(boards);
     return boards.find((b) => b.id === viewScope) ?? workspaceFrame(d);
   }, [history?.present.doc, mode, viewScope, dialogue]);
+  const requestedPreview = useMemo(
+    () =>
+      previewTarget(previewDoc, {
+        mode,
+        before,
+        frame: viewportFrame,
+        maxArea,
+        assetEpoch,
+        ready,
+        quick,
+      }),
+    [previewDoc, mode, before, viewportFrame, maxArea, assetEpoch, ready, quick],
+  );
+  const currentPreviewTarget = useRef(requestedPreview);
+  useLayoutEffect(() => {
+    // Commit the target before asynchronous replies/passive effects can run.
+    currentPreviewTarget.current = requestedPreview;
+  }, [requestedPreview]);
   const grid = !!doc && layout(doc).grid,
     snapping = !doc || layout(doc).snapping;
   const activeContour =
@@ -342,6 +390,8 @@ export default function ProWorkspace({
     };
   }, [panel]);
   const persist = useCallback((document: ProDocument) => {
+    pendingSaves.current++;
+    if (alive.current) setSaved(false);
     const task = saveTail.current
       .catch(() => {})
       .then(async () => {
@@ -361,18 +411,37 @@ export default function ProWorkspace({
         if (alive.current) {
           setSession(currentSession);
           lastSaved.current = JSON.stringify(document);
-          setSaved(JSON.stringify(historyRef.current?.present.doc) === lastSaved.current);
         }
         return next;
-      });
+      })
+      .then(
+        (next) => {
+          pendingSaves.current--;
+          if (alive.current) {
+            setSaved(
+              pendingSaves.current === 0 &&
+                JSON.stringify(historyRef.current?.present.doc) === lastSaved.current,
+            );
+            // An older acknowledgement may have persisted a state we already undid/redid.
+            // Re-evaluate autosave even when history itself has not changed since that request.
+            setSaveAcknowledgment((n) => n + 1);
+          }
+          return next;
+        },
+        (error) => {
+          pendingSaves.current--;
+          throw error;
+        },
+      );
     saveTail.current = task;
     return task;
   }, []);
   useEffect(() => {
     if (!history || !sessionRef.current || closeInProgress.current || busy) return;
     const signature = JSON.stringify(history.present.doc);
-    setSaved(signature === lastSaved.current);
-    if (signature === lastSaved.current) return;
+    const durable = signature === lastSaved.current && pendingSaves.current === 0;
+    setSaved(durable);
+    if (durable || pendingSaves.current > 0) return;
     const timer = setTimeout(() => {
       if (closeInProgress.current || busyRef.current) return;
       void persist(history.present.doc).catch((e) => {
@@ -383,12 +452,13 @@ export default function ProWorkspace({
       });
     }, 500);
     return () => clearTimeout(timer);
-  }, [history, persist, busy]);
+  }, [history, persist, busy, saveAcknowledgment]);
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
       if (
         historyRef.current &&
-        JSON.stringify(historyRef.current.present.doc) !== lastSaved.current
+        (pendingSaves.current > 0 ||
+          JSON.stringify(historyRef.current.present.doc) !== lastSaved.current)
       ) {
         e.preventDefault();
         e.returnValue = "";
@@ -432,7 +502,8 @@ export default function ProWorkspace({
   }, [assetEpoch, maxArea]);
   useEffect(() => {
     if (!previewDoc || !ready || busy || !renderer.current) return;
-    const id = ++generation.current;
+    const id = ++generation.current,
+      target = requestedPreview;
     setRendering(true);
     const original = sourceReference(previewDoc);
     const raw = original ? layer("raster", original.width, original.height) : undefined;
@@ -453,7 +524,11 @@ export default function ProWorkspace({
         ?.render(document, maxArea, mode === "vector" ? viewportFrame : undefined)
         .then((r) => {
           if (!r.bitmap) return;
-          if (id !== generation.current || !alive.current) {
+          if (
+            id !== generation.current ||
+            !alive.current ||
+            !samePreviewTarget(currentPreviewTarget.current, target)
+          ) {
             r.bitmap.close();
             return;
           }
@@ -484,13 +559,18 @@ export default function ProWorkspace({
             }
             displayedDocument.current = previewDoc;
             displayedBefore.current = before;
+            displayedTarget.current = target;
             setVersion((v) => v + 1);
           }
           r.bitmap.close();
           setRendering(false);
         })
         .catch((e) => {
-          if (id === generation.current && alive.current) {
+          if (
+            id === generation.current &&
+            alive.current &&
+            samePreviewTarget(currentPreviewTarget.current, target)
+          ) {
             setRendering(false);
             if (e.name !== "AbortError") {
               const c = canvas.current;
@@ -503,7 +583,7 @@ export default function ProWorkspace({
     return () => {
       clearTimeout(timer);
     };
-  }, [previewDoc, ready, before, busy, maxArea, mode, viewportFrame, quick]);
+  }, [previewDoc, ready, before, busy, maxArea, mode, viewportFrame, quick, requestedPreview]);
   useEffect(() => {
     const current = history?.present.doc;
     if (!current || pixelStage.current) return;
@@ -555,6 +635,72 @@ export default function ProWorkspace({
     },
     [setHist, maxArea],
   );
+  const applyPersistentAdjustment = (settings: AdjustmentLayerSettings): true | string => {
+    const current = historyRef.current?.present.doc;
+    if (!current || !adjustmentDraft || busyRef.current || transformRef.current)
+      return "The adjustment target is busy or unavailable.";
+    try {
+      const next = commitAdjustmentDocument(current, adjustmentDraft, settings, maxArea);
+      if (
+        next !== current &&
+        !commit(next, adjustmentDraft.created ? "Create color adjustment" : "Edit color adjustment")
+      )
+        return "The document rejected these adjustment settings. Original settings are unchanged.";
+      setSelectedIds([adjustmentDraft.layerId]);
+      setMaskMode(false);
+      setStatus("Editable color adjustment saved. Original artwork is unchanged.");
+      return true;
+    } catch (e) {
+      return storageMessage(e);
+    }
+  };
+  useEffect(() => {
+    if (
+      adjustmentDraft &&
+      (history?.present.doc !== adjustmentDraft.origin ||
+        (!adjustmentDraft.created && selectedIds[0] !== adjustmentDraft.layerId))
+    )
+      setAdjustmentDraft(null);
+  }, [history?.present.doc, selectedIds, adjustmentDraft]);
+  const applyColor = (blob: Blob) => {
+    const current = historyRef.current?.present.doc,
+      live = sessionRef.current;
+    if (!current || !live || !colorDraft || busyRef.current || transformRef.current)
+      return "The document is busy or the color target is no longer available.";
+    try {
+      const next = prepareColorCommit(
+        live,
+        current,
+        colorDraft.origin,
+        colorDraft.layerId,
+        blob,
+        crypto.randomUUID(),
+        crypto.randomUUID(),
+        maxArea,
+      );
+      // Install assets only after acceptance. No await can expose a half-committed entry.
+      if (!commit(next.document, "Apply color / filter"))
+        return "The document rejected this color transaction. Original pixels are unchanged.";
+      sessionRef.current = next;
+      setSession(next);
+      setAssetEpoch((n) => n + 1);
+      setStatus(
+        "Color applied in one undo step. Editable original retained hidden; masks and geometry unchanged.",
+      );
+      return true as const;
+    } catch (e) {
+      const message = storageMessage(e);
+      setError(message);
+      return message;
+    }
+  };
+  useEffect(() => {
+    if (
+      colorDraft &&
+      (history?.present.doc !== colorDraft.origin || selectedIds[0] !== colorDraft.layerId)
+    )
+      setColorDraft(null);
+  }, [history?.present.doc, selectedIds, colorDraft]);
   const commitCanvas = useCallback(
     (next: ProDocument, label: string, expected?: ProDocument) => {
       // Check the live history ref as well as the canvas effect. A key/pointer
@@ -2215,7 +2361,8 @@ export default function ProWorkspace({
                   rendering ||
                   !ready ||
                   displayedDocument.current !== doc ||
-                  displayedBefore.current !== before
+                  displayedBefore.current !== before ||
+                  !samePreviewTarget(displayedTarget.current, requestedPreview)
                 }
                 cloneSource={cloneSource}
                 cloneSampleArmed={cloneSampleArmed}
@@ -2473,167 +2620,272 @@ export default function ProWorkspace({
                   )}
 
                   {tab === "properties" && (
-                    <ProProperties
-                      anchorControls={
-                        active && doc && active.shape === "path" ? (
-                          <ProAnchors
-                            key={active.id}
-                            doc={doc}
-                            layer={active}
-                            index={activeAnchor}
-                            contour={activeContour}
-                            onSelectContour={(contour) => selectAnchor(0, contour)}
-                            onSelect={selectAnchor}
-                            onChange={(next, label, group) => {
-                              documentSources(next, maxArea);
-                              commit(next, label, group);
+                    <>
+                      {mode === "raster" && !dialogue && (
+                        <>
+                          <Button
+                            variant="secondary"
+                            disabled={busy || !!transformDraft || !!cropDraft || maskMode}
+                            onClick={() => {
+                              const current = historyRef.current?.present.doc;
+                              if (!current || busyRef.current || transient) return;
+                              try {
+                                const draft = createAdjustmentDraft(current, active?.id);
+                                adjustmentDocument(
+                                  draft,
+                                  {
+                                    version: 1,
+                                    operation: {
+                                      kind: "brightnessContrast",
+                                      brightness: 0,
+                                      contrast: 0,
+                                    },
+                                  },
+                                  maxArea,
+                                );
+                                setAdjustmentDraft(draft);
+                              } catch (e) {
+                                setError(storageMessage(e));
+                              }
                             }}
-                            onError={setError}
-                          />
-                        ) : undefined
-                      }
-                      documentSize={doc ? { width: doc.width, height: doc.height } : undefined}
-                      selected={
-                        active && doc
-                          ? { ...active, locked: isLocked(doc, active.id) || !!transformDraft }
-                          : active
-                      }
-                      onPatch={patch}
-                      selection={selection}
-                      onSelection={setSelection}
-                      onMask={() => {
-                        if (active && doc) {
-                          patch({ mask: maskFromSelection(selection, active, doc) });
-                          setMaskMode(true);
-                          setTool("brush");
+                          >
+                            New color adjustment
+                          </Button>
+                          {active?.adjustmentLayer && (
+                            <>
+                              <p className="pro-help">
+                                Persistent color settings · masks, opacity and order stay editable.
+                              </p>
+                              <Button
+                                variant="secondary"
+                                disabled={
+                                  busy ||
+                                  !!transformDraft ||
+                                  !!cropDraft ||
+                                  maskMode ||
+                                  isLocked(doc!, active.id)
+                                }
+                                onClick={() => {
+                                  const current = historyRef.current?.present.doc;
+                                  if (current && active)
+                                    setAdjustmentDraft({ origin: current, layerId: active.id });
+                                }}
+                              >
+                                Edit adjustment settings
+                              </Button>
+                            </>
+                          )}
+                        </>
+                      )}
+                      {mode === "raster" && !dialogue && (
+                        <Button
+                          variant="secondary"
+                          disabled={
+                            !active ||
+                            busy ||
+                            dialoguePending ||
+                            !!transformDraft ||
+                            !!cropDraft ||
+                            maskMode ||
+                            selectedIds.length !== 1 ||
+                            !["raster", "paint"].includes(active.kind) ||
+                            isLocked(doc!, active.id)
+                          }
+                          onClick={() => {
+                            const current = historyRef.current?.present.doc;
+                            if (!current || !active || transient) return;
+                            try {
+                              colorTarget(current, active.id, maxArea);
+                              setColorDraft({ origin: current, layerId: active.id });
+                            } catch (e) {
+                              setError(storageMessage(e));
+                            }
+                          }}
+                        >
+                          Color &amp; Filters…
+                        </Button>
+                      )}
+                      {mode === "raster" && maskMode && (
+                        <p className="pro-help">
+                          Select the artwork thumbnail in Layers to process colors. Mask-only color
+                          processing is unavailable.
+                        </p>
+                      )}
+                      <ProProperties
+                        anchorControls={
+                          active && doc && active.shape === "path" ? (
+                            <ProAnchors
+                              key={active.id}
+                              doc={doc}
+                              layer={active}
+                              index={activeAnchor}
+                              contour={activeContour}
+                              onSelectContour={(contour) => selectAnchor(0, contour)}
+                              onSelect={selectAnchor}
+                              onChange={(next, label, group) => {
+                                documentSources(next, maxArea);
+                                commit(next, label, group);
+                              }}
+                              onError={setError}
+                            />
+                          ) : undefined
                         }
-                      }}
-                      brush={brush}
-                      onBrush={(p) => {
-                        const next = { ...brush, ...p };
-                        setBrush(next);
-                        if (doc)
-                          commit(
-                            { ...doc, brushSettings: next },
-                            "Brush settings",
-                            "brush-settings",
-                          );
-                      }}
-                      cloneSource={cloneSource}
-                      cloneSampleArmed={cloneSampleArmed}
-                      onArmCloneSample={() => {
-                        setCloneSampleArmed((armed) => !armed);
-                        setStatus("Tap the artwork to sample a Clone Stamp source.");
-                      }}
-                      onCloneAlignment={(aligned) =>
-                        setCloneSource((source) => (source ? { ...source, aligned } : source))
-                      }
-                      brushPresets={brushPresets}
-                      onPresets={(next) => {
-                        if (saveBrushPresets(browserBrushStorage(), next)) setBrushPresets(next);
-                        else
-                          setError(
-                            "Could not save brush presets. Existing preferences are unchanged.",
-                          );
-                      }}
-                      onApplyBrushPreset={(preset, presetTool) => {
-                        if (presetTool) chooseTool(presetTool);
-                        const next = { ...brush, ...preset };
-                        setBrush(next);
-                        const current = historyRef.current?.present.doc;
-                        if (current)
-                          commit({ ...current, brushSettings: next }, "Apply brush preset");
-                      }}
-                      onSaveBrushPreset={(name) => {
-                        try {
-                          const next = upsertBrushPreset(brushPresets, {
-                            name,
-                            tool:
-                              tool === "eraser" ? "eraser" : tool === "pencil" ? "pencil" : "brush",
-                            settings: {
-                              size: brush.size,
-                              hardness: brush.hardness,
-                              opacity: brush.opacity,
-                              flow: brush.flow,
-                              color: brush.color === "transparent" ? "#172420" : brush.color,
-                              ...(brush.tip ? { tip: brush.tip } : {}),
-                              ...(brush.dynamics
-                                ? { dynamics: structuredClone(brush.dynamics) }
-                                : {}),
-                              sizePressure: brush.sizePressure,
-                              smoothing: brush.smoothing,
-                            },
-                          });
-                          if (!saveBrushPresets(browserBrushStorage(), next))
-                            throw new Error("Browser storage is unavailable.");
-                          setBrushPresets(next);
-                          return true;
-                        } catch (e) {
-                          setError(storageMessage(e));
-                          return false;
+                        documentSize={doc ? { width: doc.width, height: doc.height } : undefined}
+                        selected={
+                          active && doc
+                            ? { ...active, locked: isLocked(doc, active.id) || !!transformDraft }
+                            : active
                         }
-                      }}
-                      pressureGamma={pressureGamma}
-                      onPressureGamma={(gamma) => {
-                        setPressureGamma(gamma);
-                        savePressureGamma(browserBrushStorage(), gamma);
-                      }}
-                      maskMode={maskMode}
-                      setMaskMode={setMaskMode}
-                      maskClipboard={!!maskClipboard}
-                      onCopyMask={() => {
-                        try {
-                          if (active) setMaskClipboard(copyLayerMask(active));
-                        } catch (e) {
-                          setError(storageMessage(e));
+                        onPatch={patch}
+                        selection={selection}
+                        onSelection={setSelection}
+                        onMask={() => {
+                          if (active && doc) {
+                            patch({ mask: maskFromSelection(selection, active, doc) });
+                            setMaskMode(true);
+                            setTool("brush");
+                          }
+                        }}
+                        brush={brush}
+                        onBrush={(p) => {
+                          const next = { ...brush, ...p };
+                          setBrush(next);
+                          if (doc)
+                            commit(
+                              { ...doc, brushSettings: next },
+                              "Brush settings",
+                              "brush-settings",
+                            );
+                        }}
+                        cloneSource={cloneSource}
+                        cloneSampleArmed={cloneSampleArmed}
+                        onArmCloneSample={() => {
+                          setCloneSampleArmed((armed) => !armed);
+                          setStatus("Tap the artwork to sample a Clone Stamp source.");
+                        }}
+                        onCloneAlignment={(aligned) =>
+                          setCloneSource((source) => (source ? { ...source, aligned } : source))
                         }
-                      }}
-                      onPasteMask={() => {
-                        if (maskClipboard) patch({ mask: structuredClone(maskClipboard) });
-                      }}
-                      onApplyMask={async () => {
-                        if (
-                          !doc ||
-                          !active ||
-                          !renderer.current ||
-                          !sessionRef.current ||
-                          busyRef.current
-                        )
-                          return;
-                        busyRef.current = true;
-                        setBusy(true);
-                        setCancellable(true);
-                        setProgress("Baking layer and mask…");
-                        const current = sessionRef.current;
-                        try {
-                          const result = await renderer.current.applyMask(doc, maxArea, active.id);
-                          if (!result.document || !result.blob || !result.assetId || !alive.current)
+                        brushPresets={brushPresets}
+                        onPresets={(next) => {
+                          if (saveBrushPresets(browserBrushStorage(), next)) setBrushPresets(next);
+                          else
+                            setError(
+                              "Could not save brush presets. Existing preferences are unchanged.",
+                            );
+                        }}
+                        onApplyBrushPreset={(preset, presetTool) => {
+                          if (presetTool) chooseTool(presetTool);
+                          const next = { ...brush, ...preset };
+                          setBrush(next);
+                          const current = historyRef.current?.present.doc;
+                          if (current)
+                            commit({ ...current, brushSettings: next }, "Apply brush preset");
+                        }}
+                        onSaveBrushPreset={(name) => {
+                          try {
+                            const next = upsertBrushPreset(brushPresets, {
+                              name,
+                              tool:
+                                tool === "eraser"
+                                  ? "eraser"
+                                  : tool === "pencil"
+                                    ? "pencil"
+                                    : "brush",
+                              settings: {
+                                size: brush.size,
+                                hardness: brush.hardness,
+                                opacity: brush.opacity,
+                                flow: brush.flow,
+                                color: brush.color === "transparent" ? "#172420" : brush.color,
+                                ...(brush.tip ? { tip: brush.tip } : {}),
+                                ...(brush.dynamics
+                                  ? { dynamics: structuredClone(brush.dynamics) }
+                                  : {}),
+                                sizePressure: brush.sizePressure,
+                                smoothing: brush.smoothing,
+                              },
+                            });
+                            if (!saveBrushPresets(browserBrushStorage(), next))
+                              throw new Error("Browser storage is unavailable.");
+                            setBrushPresets(next);
+                            return true;
+                          } catch (e) {
+                            setError(storageMessage(e));
+                            return false;
+                          }
+                        }}
+                        pressureGamma={pressureGamma}
+                        onPressureGamma={(gamma) => {
+                          setPressureGamma(gamma);
+                          savePressureGamma(browserBrushStorage(), gamma);
+                        }}
+                        maskMode={maskMode}
+                        setMaskMode={setMaskMode}
+                        maskClipboard={!!maskClipboard}
+                        onCopyMask={() => {
+                          try {
+                            if (active) setMaskClipboard(copyLayerMask(active));
+                          } catch (e) {
+                            setError(storageMessage(e));
+                          }
+                        }}
+                        onPasteMask={() => {
+                          if (maskClipboard) patch({ mask: structuredClone(maskClipboard) });
+                        }}
+                        onApplyMask={async () => {
+                          if (
+                            !doc ||
+                            !active ||
+                            !renderer.current ||
+                            !sessionRef.current ||
+                            busyRef.current
+                          )
                             return;
-                          const next = {
-                            ...current,
-                            document: result.document,
-                            assets: { ...current.assets, [result.assetId]: result.blob },
-                          };
-                          validateAssets(next);
-                          sessionRef.current = next;
-                          setSession(next);
-                          busyRef.current = false;
-                          commit(next.document, "Bake layer and mask (destructive)");
-                          setMaskMode(false);
-                          setAssetEpoch((n) => n + 1);
-                          setStatus(
-                            "Layer and mask baked. Undo and the retained original artwork are available.",
-                          );
-                        } catch (e) {
-                          if ((e as Error).name !== "AbortError") setError(storageMessage(e));
-                        } finally {
-                          busyRef.current = false;
-                          setBusy(false);
-                          setCancellable(false);
-                          setProgress("");
-                        }
-                      }}
-                    />
+                          busyRef.current = true;
+                          setBusy(true);
+                          setCancellable(true);
+                          setProgress("Baking layer and mask…");
+                          const current = sessionRef.current;
+                          try {
+                            const result = await renderer.current.applyMask(
+                              doc,
+                              maxArea,
+                              active.id,
+                            );
+                            if (
+                              !result.document ||
+                              !result.blob ||
+                              !result.assetId ||
+                              !alive.current
+                            )
+                              return;
+                            const next = {
+                              ...current,
+                              document: result.document,
+                              assets: { ...current.assets, [result.assetId]: result.blob },
+                            };
+                            validateAssets(next);
+                            sessionRef.current = next;
+                            setSession(next);
+                            busyRef.current = false;
+                            commit(next.document, "Bake layer and mask (destructive)");
+                            setMaskMode(false);
+                            setAssetEpoch((n) => n + 1);
+                            setStatus(
+                              "Layer and mask baked. Undo and the retained original artwork are available.",
+                            );
+                          } catch (e) {
+                            if ((e as Error).name !== "AbortError") setError(storageMessage(e));
+                          } finally {
+                            busyRef.current = false;
+                            setBusy(false);
+                            setCancellable(false);
+                            setProgress("");
+                          }
+                        }}
+                      />
+                    </>
                   )}
                   {tab === "layers" && doc && (
                     <>
@@ -2881,6 +3133,26 @@ export default function ProWorkspace({
               <span className="pro-private-label">On this device · original-safe</span>
             )}
           </footer>
+          {adjustmentDraft && session && (
+            <ProAdjustmentLab
+              key={adjustmentDraft.layerId}
+              draft={adjustmentDraft}
+              session={session}
+              maxArea={maxArea}
+              onCancel={() => setAdjustmentDraft(null)}
+              onApply={applyPersistentAdjustment}
+            />
+          )}
+          {colorDraft && session && (
+            <ProColorLab
+              origin={colorDraft.origin}
+              layerId={colorDraft.layerId}
+              session={session}
+              maxArea={maxArea}
+              onCancel={() => setColorDraft(null)}
+              onApply={applyColor}
+            />
+          )}
         </Dialog.Content>
       </Portal>
     </Dialog.Root>
