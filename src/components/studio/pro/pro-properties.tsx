@@ -1,11 +1,6 @@
 import { ProMaskThumbnail } from "./pro-mask-thumbnail";
+import { ProBrushSettings } from "./pro-brush-settings";
 import { setMaskLinked } from "@/lib/studio/pro/masks";
-import {
-  DEFAULT_BRUSH_PRESETS,
-  availableBrushPresets,
-  renameBrushPreset,
-} from "@/lib/studio/pro/brush-presets";
-import { DAB_DEFAULTS } from "@/lib/studio/pro/brush-dynamics";
 import { BLEND_GROUPS, BLEND_GROUP_NAMES, BLEND_LABELS } from "@/lib/studio/pro/blend";
 import { ProAppearance } from "./pro-appearance";
 import type { ReactNode } from "react";
@@ -67,7 +62,8 @@ export function ProProperties({
   brushPresets,
   onApplyBrushPreset,
   onSaveBrushPreset,
-  onDeleteBrushPreset,
+  pressureGamma,
+  onPressureGamma,
   onPresets,
   cloneSource,
   cloneSampleArmed,
@@ -91,8 +87,9 @@ export function ProProperties({
   onBrush: (p: Partial<Stroke>) => void;
   brushPresets: BrushPreset[];
   onApplyBrushPreset: (settings: BrushSettings, tool?: "brush" | "pencil" | "eraser") => void;
-  onSaveBrushPreset: (name: string) => void;
-  onDeleteBrushPreset: (name: string) => void;
+  onSaveBrushPreset: (name: string) => boolean;
+  pressureGamma: number;
+  onPressureGamma: (gamma: number) => void;
   onPresets: (presets: BrushPreset[]) => void;
   cloneSource: CloneSource | null;
   cloneSampleArmed: boolean;
@@ -105,10 +102,19 @@ export function ProProperties({
   onPasteMask: () => void;
   onApplyMask: () => void;
 }) {
-  const presets = availableBrushPresets(brushPresets);
   return (
     <div className="pro-properties-content">
       <ToolSection title="Brush & selection" defaultOpen>
+        <ProBrushSettings
+          brush={brush}
+          onBrush={onBrush}
+          brushPresets={brushPresets}
+          onPresets={onPresets}
+          onApplyBrushPreset={onApplyBrushPreset}
+          onSaveBrushPreset={onSaveBrushPreset}
+          pressureGamma={pressureGamma}
+          onPressureGamma={onPressureGamma}
+        />
         <ToolSection title="Clone & Healing source" defaultOpen={false}>
           <p className="pro-help">
             Clone Stamp copies the sampled pixels. Healing Brush uses the same full-resolution
@@ -145,216 +151,6 @@ export function ProProperties({
           patch-edge softness. Repairs use traditional pixel processing, with the active selection
           and target layer mask preserved.
         </p>
-        <label className="pro-check">
-          <input
-            type="checkbox"
-            aria-label="Pen pressure size"
-            checked={brush.sizePressure ?? false}
-            onChange={(e) => onBrush({ sizePressure: e.target.checked })}
-          />{" "}
-          Pen pressure controls size
-        </label>
-        <ProNumber
-          label="Stroke smoothing"
-          value={(brush.smoothing ?? 0) * 100}
-          min={0}
-          max={95}
-          onChange={(n) => onBrush({ smoothing: n / 100 })}
-        />
-        <ToolSection title="Brush dynamics" defaultOpen={false}>
-          <p className="pro-help">
-            Distance-based dabs with deterministic jitter. Pressure uses a real pen only; mouse and
-            touch use full configured strength.
-          </p>
-          <ProNumber
-            label="Brush stabilization"
-            value={brush.dynamics?.stabilization ?? 0}
-            min={0}
-            max={200}
-            onChange={(n) =>
-              onBrush({ dynamics: { ...DAB_DEFAULTS, ...brush.dynamics, stabilization: n } })
-            }
-          />
-          <div className="pro-number-grid">
-            {(
-              [
-                ["spacing", "Dab spacing", 0.01, 2, 0.01],
-                ["roundness", "Brush roundness", 0.05, 1, 0.05],
-                ["angle", "Brush angle", -360, 360, 1],
-                ["scatter", "Brush scatter", 0, 2, 0.05],
-                ["sizeJitter", "Size jitter", 0, 1, 0.05],
-                ["opacityJitter", "Opacity jitter", 0, 1, 0.05],
-                ["velocity", "Velocity thinning", 0, 1, 0.05],
-              ] as const
-            ).map(([key, label, min, max, step]) => (
-              <ProNumber
-                key={key}
-                label={label}
-                value={(brush.dynamics ?? DAB_DEFAULTS)[key]}
-                min={min}
-                max={max}
-                step={step}
-                onChange={(n) =>
-                  onBrush({ dynamics: { ...DAB_DEFAULTS, ...brush.dynamics, [key]: n } })
-                }
-              />
-            ))}
-          </div>
-          {(
-            [
-              ["opacityPressure", "Pen pressure opacity"],
-              ["followDirection", "Rotate tip along stroke"],
-            ] as const
-          ).map(([key, label]) => (
-            <label className="pro-check" key={key}>
-              <input
-                type="checkbox"
-                aria-label={label}
-                checked={brush.dynamics?.[key] ?? false}
-                onChange={(e) =>
-                  onBrush({
-                    dynamics: { ...DAB_DEFAULTS, ...brush.dynamics, [key]: e.target.checked },
-                  })
-                }
-              />
-              {label}
-            </label>
-          ))}
-          <Button variant="ghost" onClick={() => onBrush({ dynamics: { ...DAB_DEFAULTS } })}>
-            Reset brush dynamics
-          </Button>
-        </ToolSection>
-        <label className="pro-field">
-          Brush preset
-          <select
-            className="field"
-            aria-label="Brush preset"
-            value=""
-            onChange={(e) => {
-              const preset = presets.find((item) => item.name === e.target.value);
-              if (preset)
-                onApplyBrushPreset(
-                  {
-                    ...preset.settings,
-                    dynamics: preset.settings.dynamics,
-                    tip: preset.settings.tip ?? "round",
-                    sizePressure: preset.settings.sizePressure ?? false,
-                    smoothing: preset.settings.smoothing ?? 0,
-                  },
-                  preset.tool ?? "brush",
-                );
-            }}
-          >
-            <option value="" disabled>
-              Choose a preset
-            </option>
-            {presets.map((preset) => (
-              <option key={preset.name} value={preset.name}>
-                {preset.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="pro-actions">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              const name = window.prompt("Name this brush preset");
-              if (name?.trim()) onSaveBrushPreset(name.trim());
-            }}
-          >
-            Save current preset
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              const name = window.prompt("Custom preset to rename"),
-                next = name ? window.prompt("New preset name") : null;
-              if (name && next) {
-                try {
-                  onPresets(renameBrushPreset(brushPresets, name.trim(), next.trim()));
-                } catch (e) {
-                  window.alert((e as Error).message);
-                }
-              }
-            }}
-          >
-            Rename custom preset
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              const name = window.prompt("Preset to duplicate"),
-                next = name ? window.prompt("Name of duplicate") : null;
-              const original = presets.find((p) => p.name === name?.trim());
-              if (
-                original &&
-                next?.trim() &&
-                !brushPresets.some((p) => p.name === next.trim()) &&
-                brushPresets.length < 24
-              )
-                onPresets([
-                  ...brushPresets,
-                  {
-                    name: next.trim().slice(0, 40),
-                    settings: structuredClone(original.settings),
-                    ...(original.tool ? { tool: original.tool } : {}),
-                  },
-                ]);
-            }}
-          >
-            Duplicate preset
-          </Button>
-          <Button
-            variant="ghost"
-            disabled={brushPresets.length <= DEFAULT_BRUSH_PRESETS.length}
-            onClick={() => {
-              const name = window.prompt("Enter the exact name of the custom preset to delete");
-              if (name?.trim()) onDeleteBrushPreset(name.trim());
-            }}
-          >
-            Delete custom preset
-          </Button>
-        </div>
-        <div className="pro-number-grid">
-          <ProNumber
-            label="Brush size"
-            value={brush.size}
-            min={1}
-            max={1000}
-            onChange={(n) => onBrush({ size: n })}
-          />
-          <ProNumber
-            label="Brush hardness"
-            value={brush.hardness * 100}
-            min={0}
-            max={100}
-            onChange={(n) => onBrush({ hardness: n / 100 })}
-          />
-          <ProNumber
-            label="Brush opacity"
-            value={brush.opacity * 100}
-            min={0}
-            max={100}
-            onChange={(n) => onBrush({ opacity: n / 100 })}
-          />
-          <ProNumber
-            label="Brush flow"
-            value={brush.flow * 100}
-            min={1}
-            max={100}
-            onChange={(n) => onBrush({ flow: n / 100 })}
-          />
-        </div>
-        <label className="pro-field">
-          Brush / object color
-          <input
-            type="color"
-            aria-label="Brush color"
-            value={brush.color === "transparent" ? "#a4efd6" : brush.color}
-            onChange={(e) => onBrush({ color: e.target.value })}
-          />
-        </label>
         <ProNumber
           label="Selection feather"
           value={selection.feather}
