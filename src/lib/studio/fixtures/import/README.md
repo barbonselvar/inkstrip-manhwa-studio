@@ -8,6 +8,13 @@ rejection without native decoding. `iccp.png` is a 64 × 48 PNG carrying Pillow'
 generated sRGB `iCCP` colour profile, as screenshots and editor exports commonly do. The other fixtures are 32 × 24 (except ICO,
 which contains 16/24/32px square PNG representations).
 
+Conversion fixtures (CC0-1.0, made with Pillow, pillow-heif and pillow-jxl-plugin from
+`original.png`): `original.heic` (lossy HEIC), `original.jxl` (lossless JPEG XL),
+`lzw.tiff`, `alpha.tiff` (Deflate RGBA with two edited alpha pixels), `rotated.tiff`
+(Orientation 6), `multipage.tiff` (two pages) and `gray16.tiff` (16-bit grayscale).
+They prove the Chapter conversion decoders (utif2, libheif-js, @jsquash/jxl) and the
+lossless PNG encoder (fast-png).
+
 TIFF and HEIF/HEIC header validation does not install a browser codec. Actual
 decoding depends on the browser. AVIF, PNG/JPEG/WebP/GIF/BMP/ICO and safe SVG are
 also checked in Chromium through the real Chapter workflow. Tests distinguish

@@ -16,11 +16,21 @@ export function imagePolicy(constrained = false) {
     maxBatchHeaders: 32 * MiB,
   };
 }
+/** Memory-aware tier. Chromium reports `deviceMemory` in steps (…2, 4, 8 GiB; 4 covers
+ * 4–7.9 GiB phones), so a touch screen alone no longer forces the 16MP budget: Android
+ * phones with ≥4 GiB get the standard 32MP budget. Where memory is not reported (Safari,
+ * Firefox), touch devices stay constrained. Canvas stitching keeps its own device limits. */
+export function constrainedDevice(deviceMemory: number | undefined, coarse: boolean) {
+  return deviceMemory !== undefined && Number.isFinite(deviceMemory) ? deviceMemory < 4 : coarse;
+}
 export function browserImagePolicy() {
   return imagePolicy(
-    (typeof matchMedia !== "undefined" && matchMedia("(pointer:coarse)").matches) ||
-      (typeof navigator !== "undefined" &&
-        ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) <= 4),
+    constrainedDevice(
+      typeof navigator !== "undefined"
+        ? (navigator as Navigator & { deviceMemory?: number }).deviceMemory
+        : undefined,
+      typeof matchMedia !== "undefined" && matchMedia("(pointer:coarse)").matches,
+    ),
   );
 }
 export type ImageInfo = {
@@ -45,6 +55,7 @@ const mimes: Record<string, string> = {
   heif: "image/heif",
   heic: "image/heic",
   svg: "image/svg+xml",
+  jxl: "image/jxl",
 };
 const fail = (message: string): never => {
   throw Error(`${message} Image was not decoded or imported.`);
@@ -55,7 +66,9 @@ export function imageDimensions(width: number, height: number, policy: ImagePoli
   // Side checks precede multiplication: no unsafe integer product can pass.
   const pixels = width * height;
   if (pixels > policy.maxPixels)
-    fail(`Image exceeds the ${policy.maxPixels / 1e6} megapixel device budget.`);
+    fail(
+      `Image exceeds the ${policy.maxPixels / 1e6} megapixel device budget (${(pixels / 1e6).toFixed(1)} MP). Split very long pages into shorter images and import them in order.`,
+    );
   return pixels;
 }
 class Header {
@@ -616,7 +629,12 @@ export async function preflightImage(
       }
     }
     const { width, height } = dimensions,
-      type = dimensions.type === "mif1" ? "heif" : (dimensions.type ?? "");
+      type =
+        dimensions.type === "mif1"
+          ? "heif"
+          : dimensions.type === "jxl-stream"
+            ? "jxl"
+            : (dimensions.type ?? "");
     if (!mimes[type])
       fail("This encoded image format is not supported. Export PNG/JPEG/WebP first.");
     imageDimensions(width, height, policy);
