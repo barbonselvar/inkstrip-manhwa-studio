@@ -425,7 +425,7 @@ try {
       ),
     );
     // No input focused: only the editor-open guard can stop these shortcuts.
-    await p.evaluate(() => (document.activeElement)?.blur?.());
+    await p.evaluate(() => document.activeElement?.blur?.());
     assert.equal(await p.evaluate(() => document.activeElement?.tagName), "BODY");
     for (const key of ["q", "Control+c", "Control+x", "Control+v", "Control+j", "Control+a"])
       await p.keyboard.press(key);
