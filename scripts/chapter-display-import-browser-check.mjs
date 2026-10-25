@@ -470,6 +470,39 @@ try {
     results.push({ width: view.width, mobileEmulation: !!view.mobile, ...checks });
     await context.close();
   }
+  // --- Low-memory phone (deviceMemory 2, emulated): the 16 MP budget still applies and an
+  // over-budget long strip gets a specific, actionable reason instead of a crash.
+  {
+    const context = await browser.newContext({
+        viewport: { width: 360, height: 780 },
+        hasTouch: true,
+        isMobile: true,
+      }),
+      p = await context.newPage();
+    await context.addInitScript(() =>
+      Object.defineProperty(Navigator.prototype, "deviceMemory", { get: () => 2 }),
+    );
+    p.setDefaultTimeout(60000);
+    p.on("pageerror", (e) => errors.push(e.message));
+    p.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+    await p.goto(base);
+    await p.getByRole("button", { name: "New project", exact: true }).click();
+    await p.getByPlaceholder("Night Market").fill("Low memory QA");
+    await p.getByRole("button", { name: "Create chapter 1", exact: true }).click();
+    await p.getByText("Chapter workspace", { exact: true }).waitFor();
+    await store(p);
+    await input(p, [tall("long-strip.png", 1080, 20000), solid("ok.png", 400, 300, [9, 9, 9])]);
+    const s = await state(p);
+    assert.deepEqual(
+      s.panels.map((x) => x.name),
+      ["ok.png"],
+    );
+    assert.equal(s.failures.length, 1);
+    assert.equal(s.failures[0].kind, "dimensions");
+    assert.match(s.failures[0].reason, /16 megapixel device budget \(21\.6 MP\)\. Split/);
+    results.push({ width: 360, lowMemoryEmulation: true, constrainedBudgetReason: true });
+    await context.close();
+  }
   assert.deepEqual(errors, []);
   await writeFile(
     "/workspace/chapter-evidence/chapter-display-import.json",
