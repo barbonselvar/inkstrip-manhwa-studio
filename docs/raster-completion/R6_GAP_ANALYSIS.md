@@ -37,3 +37,11 @@ Bound source work to at most 4MP and the device budget. Validate source, layer n
 ## Integration and outstanding verification
 
 R3 and R5 are in the actual base: preserve final stroke length caps, pressure recording, mask transforms, transform drafts and commit acceptance. Preserve all older adjustment output bit-for-bit. No cherry-picks, unrelated studios or PR6 changes. Full tests, browser pixels/history/native/export, actual performance measurements and exact-head Actions remain pending at this audit commit.
+
+## R6 implementation outcome
+
+The compatible pixel-processing scope now implements Brightness/Contrast, channel Levels and output endpoints, variable cubic RGB/R/G/B Curves, genuine global/selective HSL, tonal Balance, linear-light exposure/gamma, Vibrance/Saturation, channel-mixed B&W, invert, threshold/posterize and the filter inventory in `R6_IMPLEMENTATION_REPORT.md`. Real histograms, source-stable native-resolution preview, Apply/Cancel/Reset, captured selections, validated device presets, lossless document Cancel and one-step history are present. New processing is limited to visible unlocked integer-sized raster/paint layers within 4MP/device/kernel budgets; mask-only mode cannot launch it.
+
+The existing persistent adjustment-layer feature remains implemented for its pre-R6 settings, including group-local backdrop and clipping/masks/opacity/blend semantics. New advanced editable adjustment-layer settings remain **blocked by the native-format approval dependency**. New operations bake into compatible PNG assets and retain the editable original; this is not full persistent advanced adjustment-layer support. No format was changed and R6 is not declared fully complete.
+
+The actual base contains R3 and R5, so no future R5 merge/cherry-pick is necessary for this branch. Their current transaction/brush/mask/transform contracts were preserved. AI6/Dialogue7 must be coordinated before any future format8 proposal. See the test report/evidence for actual validation and the PR for the final published head.

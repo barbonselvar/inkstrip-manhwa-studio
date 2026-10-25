@@ -1,0 +1,634 @@
+{
+  "node": "v24.19.0",
+  "platform": "linux",
+  "results": [
+    {
+      "width": 128,
+      "height": 96,
+      "operation": {
+        "kind": "levels",
+        "channels": {
+          "rgb": {
+            "black": 16,
+            "white": 238,
+            "gamma": 0.9,
+            "outBlack": 4,
+            "outWhite": 250
+          },
+          "red": {
+            "black": 0,
+            "white": 255,
+            "gamma": 1,
+            "outBlack": 0,
+            "outWhite": 255
+          },
+          "green": {
+            "black": 0,
+            "white": 255,
+            "gamma": 1,
+            "outBlack": 0,
+            "outWhite": 255
+          },
+          "blue": {
+            "black": 0,
+            "white": 255,
+            "gamma": 1,
+            "outBlack": 0,
+            "outWhite": 255
+          }
+        }
+      },
+      "milliseconds": 3.22,
+      "rssBefore": 59891712,
+      "rssAfter": 60284928,
+      "arrayBuffersBefore": 186623,
+      "arrayBuffersAfter": 241919,
+      "peakProcessRssBytes": 60284928,
+      "checksum": 6110
+    },
+    {
+      "width": 128,
+      "height": 96,
+      "operation": {
+        "kind": "curves",
+        "channels": {
+          "rgb": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 64,
+              "y": 50
+            },
+            {
+              "x": 128,
+              "y": 150
+            },
+            {
+              "x": 255,
+              "y": 255
+            }
+          ],
+          "red": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 255,
+              "y": 255
+            }
+          ],
+          "green": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 255,
+              "y": 255
+            }
+          ],
+          "blue": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 255,
+              "y": 255
+            }
+          ]
+        }
+      },
+      "milliseconds": 2.35,
+      "rssBefore": 60809216,
+      "rssAfter": 61333504,
+      "arrayBuffersBefore": 235775,
+      "arrayBuffersAfter": 299263,
+      "peakProcessRssBytes": 61464576,
+      "checksum": 6652
+    },
+    {
+      "width": 128,
+      "height": 96,
+      "operation": {
+        "kind": "hsl",
+        "hue": 15,
+        "saturation": 8,
+        "lightness": 4,
+        "range": "all"
+      },
+      "milliseconds": 11.16,
+      "rssBefore": 61595648,
+      "rssAfter": 63954944,
+      "arrayBuffersBefore": 235775,
+      "arrayBuffersAfter": 284927,
+      "peakProcessRssBytes": 63954944,
+      "checksum": 6336
+    },
+    {
+      "width": 128,
+      "height": 96,
+      "operation": {
+        "kind": "balance",
+        "shadows": [0, 0, 0],
+        "midtones": [8, 2, -4],
+        "highlights": [0, 0, 0],
+        "preserveLuminance": true
+      },
+      "milliseconds": 10.16,
+      "rssBefore": 63954944,
+      "rssAfter": 64086016,
+      "arrayBuffersBefore": 235775,
+      "arrayBuffersAfter": 284927,
+      "peakProcessRssBytes": 64086016,
+      "checksum": 6365
+    },
+    {
+      "width": 128,
+      "height": 96,
+      "operation": {
+        "kind": "noise",
+        "amount": 10,
+        "monochrome": true,
+        "seed": 12345
+      },
+      "milliseconds": 3.78,
+      "rssBefore": 64086016,
+      "rssAfter": 64217088,
+      "arrayBuffersBefore": 235775,
+      "arrayBuffersAfter": 284927,
+      "peakProcessRssBytes": 64217088,
+      "checksum": 6484
+    },
+    {
+      "width": 128,
+      "height": 96,
+      "operation": {
+        "kind": "median",
+        "radius": 1
+      },
+      "milliseconds": 30.03,
+      "rssBefore": 64217088,
+      "rssAfter": 68018176,
+      "arrayBuffersBefore": 284927,
+      "arrayBuffersAfter": 334079,
+      "peakProcessRssBytes": 68018176,
+      "checksum": 6140
+    },
+    {
+      "width": 128,
+      "height": 96,
+      "operation": {
+        "kind": "gaussian",
+        "radius": 32
+      },
+      "milliseconds": 45.04,
+      "rssBefore": 68149248,
+      "rssAfter": 68411392,
+      "arrayBuffersBefore": 235775,
+      "arrayBuffersAfter": 530687,
+      "peakProcessRssBytes": 68411392,
+      "checksum": 6327
+    },
+    {
+      "width": 1024,
+      "height": 1024,
+      "operation": {
+        "kind": "levels",
+        "channels": {
+          "rgb": {
+            "black": 16,
+            "white": 238,
+            "gamma": 0.9,
+            "outBlack": 4,
+            "outWhite": 250
+          },
+          "red": {
+            "black": 0,
+            "white": 255,
+            "gamma": 1,
+            "outBlack": 0,
+            "outWhite": 255
+          },
+          "green": {
+            "black": 0,
+            "white": 255,
+            "gamma": 1,
+            "outBlack": 0,
+            "outWhite": 255
+          },
+          "blue": {
+            "black": 0,
+            "white": 255,
+            "gamma": 1,
+            "outBlack": 0,
+            "outWhite": 255
+          }
+        }
+      },
+      "milliseconds": 28.63,
+      "rssBefore": 74178560,
+      "rssAfter": 78372864,
+      "arrayBuffersBefore": 4380927,
+      "arrayBuffersAfter": 8581375,
+      "peakProcessRssBytes": 78372864,
+      "checksum": 623576
+    },
+    {
+      "width": 1024,
+      "height": 1024,
+      "operation": {
+        "kind": "curves",
+        "channels": {
+          "rgb": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 64,
+              "y": 50
+            },
+            {
+              "x": 128,
+              "y": 150
+            },
+            {
+              "x": 255,
+              "y": 255
+            }
+          ],
+          "red": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 255,
+              "y": 255
+            }
+          ],
+          "green": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 255,
+              "y": 255
+            }
+          ],
+          "blue": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 255,
+              "y": 255
+            }
+          ]
+        }
+      },
+      "milliseconds": 12.76,
+      "rssBefore": 78372864,
+      "rssAfter": 78372864,
+      "arrayBuffersBefore": 4331775,
+      "arrayBuffersAfter": 8540415,
+      "peakProcessRssBytes": 78372864,
+      "checksum": 679851
+    },
+    {
+      "width": 1024,
+      "height": 1024,
+      "operation": {
+        "kind": "exposure",
+        "stops": 0.7,
+        "gamma": 1.1
+      },
+      "milliseconds": 13.11,
+      "rssBefore": 78372864,
+      "rssAfter": 79159296,
+      "arrayBuffersBefore": 4331775,
+      "arrayBuffersAfter": 8532223,
+      "peakProcessRssBytes": 79159296,
+      "checksum": 750399
+    },
+    {
+      "width": 1024,
+      "height": 1024,
+      "operation": {
+        "kind": "vibrance",
+        "vibrance": 35,
+        "saturation": 10
+      },
+      "milliseconds": 196.07,
+      "rssBefore": 79421440,
+      "rssAfter": 84664320,
+      "arrayBuffersBefore": 4331775,
+      "arrayBuffersAfter": 12720383,
+      "peakProcessRssBytes": 84664320,
+      "checksum": 644773
+    },
+    {
+      "width": 1024,
+      "height": 1024,
+      "operation": {
+        "kind": "gaussian",
+        "radius": 4
+      },
+      "milliseconds": 409.8,
+      "rssBefore": 84664320,
+      "rssAfter": 106553344,
+      "arrayBuffersBefore": 12720383,
+      "arrayBuffersAfter": 29497599,
+      "peakProcessRssBytes": 106553344,
+      "checksum": 644689
+    },
+    {
+      "width": 1024,
+      "height": 1024,
+      "operation": {
+        "kind": "box",
+        "radius": 32
+      },
+      "milliseconds": 68.93,
+      "rssBefore": 106553344,
+      "rssAfter": 102608896,
+      "arrayBuffersBefore": 25303295,
+      "arrayBuffersAfter": 29497599,
+      "peakProcessRssBytes": 106553344,
+      "checksum": 644687
+    },
+    {
+      "width": 1024,
+      "height": 1024,
+      "operation": {
+        "kind": "unsharp",
+        "radius": 2,
+        "amount": 100,
+        "threshold": 2
+      },
+      "milliseconds": 232.41,
+      "rssBefore": 102608896,
+      "rssAfter": 102608896,
+      "arrayBuffersBefore": 4331775,
+      "arrayBuffersAfter": 29497599,
+      "peakProcessRssBytes": 106553344,
+      "checksum": 644816
+    },
+    {
+      "width": 1024,
+      "height": 1024,
+      "operation": {
+        "kind": "motion",
+        "length": 9,
+        "angle": 0
+      },
+      "milliseconds": 405.02,
+      "rssBefore": 102608896,
+      "rssAfter": 106934272,
+      "arrayBuffersBefore": 29497599,
+      "arrayBuffersAfter": 12720383,
+      "peakProcessRssBytes": 106934272,
+      "checksum": 644742
+    },
+    {
+      "width": 1024,
+      "height": 1024,
+      "operation": {
+        "kind": "median",
+        "radius": 1
+      },
+      "milliseconds": 1140.7,
+      "rssBefore": 106934272,
+      "rssAfter": 112701440,
+      "arrayBuffersBefore": 4331775,
+      "arrayBuffersAfter": 12720383,
+      "peakProcessRssBytes": 112701440,
+      "checksum": 644857
+    },
+    {
+      "width": 1024,
+      "height": 1024,
+      "operation": {
+        "kind": "edges"
+      },
+      "milliseconds": 151.88,
+      "rssBefore": 112701440,
+      "rssAfter": 112701440,
+      "arrayBuffersBefore": 4331775,
+      "arrayBuffersAfter": 8526079,
+      "peakProcessRssBytes": 112701440,
+      "checksum": 272313
+    },
+    {
+      "width": 1024,
+      "height": 1024,
+      "operation": {
+        "kind": "denoise",
+        "amount": 30
+      },
+      "milliseconds": 112.3,
+      "rssBefore": 112701440,
+      "rssAfter": 112701440,
+      "arrayBuffersBefore": 4331775,
+      "arrayBuffersAfter": 16914687,
+      "peakProcessRssBytes": 112701440,
+      "checksum": 644861
+    },
+    {
+      "width": 2000,
+      "height": 2000,
+      "operation": {
+        "kind": "levels",
+        "channels": {
+          "rgb": {
+            "black": 16,
+            "white": 238,
+            "gamma": 0.9,
+            "outBlack": 4,
+            "outWhite": 250
+          },
+          "red": {
+            "black": 0,
+            "white": 255,
+            "gamma": 1,
+            "outBlack": 0,
+            "outWhite": 255
+          },
+          "green": {
+            "black": 0,
+            "white": 255,
+            "gamma": 1,
+            "outBlack": 0,
+            "outWhite": 255
+          },
+          "blue": {
+            "black": 0,
+            "white": 255,
+            "gamma": 1,
+            "outBlack": 0,
+            "outWhite": 255
+          }
+        }
+      },
+      "milliseconds": 44.7,
+      "rssBefore": 112701440,
+      "rssAfter": 112701440,
+      "arrayBuffersBefore": 16137471,
+      "arrayBuffersAfter": 32143615,
+      "peakProcessRssBytes": 112701440,
+      "checksum": 2379219
+    },
+    {
+      "width": 2000,
+      "height": 2000,
+      "operation": {
+        "kind": "curves",
+        "channels": {
+          "rgb": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 64,
+              "y": 50
+            },
+            {
+              "x": 128,
+              "y": 150
+            },
+            {
+              "x": 255,
+              "y": 255
+            }
+          ],
+          "red": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 255,
+              "y": 255
+            }
+          ],
+          "green": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 255,
+              "y": 255
+            }
+          ],
+          "blue": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 255,
+              "y": 255
+            }
+          ]
+        }
+      },
+      "milliseconds": 44.01,
+      "rssBefore": 112701440,
+      "rssAfter": 109047808,
+      "arrayBuffersBefore": 16137471,
+      "arrayBuffersAfter": 32151807,
+      "peakProcessRssBytes": 112701440,
+      "checksum": 2593813
+    },
+    {
+      "width": 2000,
+      "height": 2000,
+      "operation": {
+        "kind": "exposure",
+        "stops": 0.7,
+        "gamma": 1.1
+      },
+      "milliseconds": 43.61,
+      "rssBefore": 109047808,
+      "rssAfter": 109047808,
+      "arrayBuffersBefore": 16137471,
+      "arrayBuffersAfter": 32143615,
+      "peakProcessRssBytes": 112701440,
+      "checksum": 2862846
+    },
+    {
+      "width": 2000,
+      "height": 2000,
+      "operation": {
+        "kind": "vibrance",
+        "vibrance": 35,
+        "saturation": 10
+      },
+      "milliseconds": 640.39,
+      "rssBefore": 109047808,
+      "rssAfter": 124252160,
+      "arrayBuffersBefore": 16137471,
+      "arrayBuffersAfter": 48137471,
+      "peakProcessRssBytes": 124252160,
+      "checksum": 2460208
+    },
+    {
+      "width": 2000,
+      "height": 2000,
+      "operation": {
+        "kind": "gaussian",
+        "radius": 1
+      },
+      "milliseconds": 440.76,
+      "rssBefore": 124252160,
+      "rssAfter": 188215296,
+      "arrayBuffersBefore": 16137471,
+      "arrayBuffersAfter": 112137471,
+      "peakProcessRssBytes": 188215296,
+      "checksum": 2460062
+    },
+    {
+      "width": 2000,
+      "height": 2000,
+      "operation": {
+        "kind": "box",
+        "radius": 32
+      },
+      "milliseconds": 360.77,
+      "rssBefore": 188215296,
+      "rssAfter": 204206080,
+      "arrayBuffersBefore": 112137471,
+      "arrayBuffersAfter": 112137471,
+      "peakProcessRssBytes": 204206080,
+      "checksum": 2455956
+    },
+    {
+      "width": 2000,
+      "height": 2000,
+      "operation": {
+        "kind": "unsharp",
+        "radius": 1,
+        "amount": 100,
+        "threshold": 2
+      },
+      "milliseconds": 561.67,
+      "rssBefore": 204206080,
+      "rssAfter": 204296192,
+      "arrayBuffersBefore": 112137471,
+      "arrayBuffersAfter": 112137471,
+      "peakProcessRssBytes": 204296192,
+      "checksum": 2460215
+    }
+  ],
+  "largeRadiusRejected": true,
+  "notes": "Non-neutral color settings; single timed runs after optional GC, process RSS includes runtime/allocator retention; not browser heap or Android measurements. Pixel loops only, PNG/decode excluded.",
+  "runtimeCommit": "6803457862ace58324eec5f58cb2502e5d8bd042"
+}

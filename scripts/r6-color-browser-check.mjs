@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
 import { fromPanel, layer } from "../src/lib/studio/pro/model.ts";
+import { processColor, defaultOperation } from "../src/lib/studio/pro/color-engine.ts";
 import { maskFromSelection } from "../src/lib/studio/pro/masks.ts";
 import { proBrowserFixtures } from "./pro-browser-fixtures.mjs";
 const base = process.argv[2] ?? "http://127.0.0.1:8080";
@@ -11,6 +12,7 @@ const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] }
   errors = [],
   results = [],
   fx = proBrowserFixtures(base, errors);
+const same = (a, b) => fx.same(a, b, 0);
 await mkdir("/workspace/screenshots", { recursive: true });
 await mkdir("/workspace/r6-evidence", { recursive: true });
 const pixel = (image, x, y) =>
@@ -83,7 +85,7 @@ try {
     await fx.tab(p, "History");
     const historyCount = await p.locator(".pro-history-list li").count();
     await lab(p);
-    fx.same(await preview(p), before);
+    same(await preview(p), before);
     await number(p, "Brightness", 20);
     await ready(p);
     const changed = await preview(p);
@@ -96,7 +98,7 @@ try {
           .getContext("2d")
           .getImageData(50, 30, 1, 1).data[0] === 100,
     );
-    fx.same(await preview(p), before);
+    same(await preview(p), before);
     await p.getByLabel("Compare original color", { exact: true }).uncheck();
     await p.getByLabel("Adjustment or filter", { exact: true }).selectOption("levels");
     await p.getByLabel("Color channel", { exact: true }).selectOption("red");
@@ -140,7 +142,7 @@ try {
     assert.ok(pixel(curve, 64, 40)[0] > 190);
     await p.getByRole("button", { name: "Remove curve point", exact: true }).click();
     await ready(p);
-    fx.same(await preview(p), before);
+    same(await preview(p), before);
     if (width === 1440) {
       await p.locator(".r6-lab summary").filter({ hasText: "Presets" }).click();
       await p
@@ -155,6 +157,68 @@ try {
       await p.getByRole("button", { name: "Delete R6 test preset", exact: true }).click();
       await p.getByLabel("Adjustment or filter", { exact: true }).selectOption("curves");
       await ready(p);
+      const pointCases = [
+        {
+          kind: "hsl",
+          fields: [
+            ["Hue shift", 120],
+            ["Saturation", -40],
+            ["Lightness", 10],
+          ],
+          operation: { kind: "hsl", hue: 120, saturation: -40, lightness: 10, range: "all" },
+        },
+        {
+          kind: "vibrance",
+          fields: [
+            ["Vibrance", 70],
+            ["Saturation", -20],
+          ],
+          operation: { kind: "vibrance", vibrance: 70, saturation: -20 },
+        },
+        {
+          kind: "blackWhite",
+          fields: [
+            ["red mix (%)", 0],
+            ["green mix (%)", 100],
+            ["blue mix (%)", 0],
+          ],
+          operation: { kind: "blackWhite", red: 0, green: 100, blue: 0 },
+        },
+        {
+          kind: "threshold",
+          fields: [["Threshold cutoff", 100]],
+          operation: { kind: "threshold", level: 100 },
+        },
+        {
+          kind: "posterize",
+          fields: [["Discrete levels", 3]],
+          operation: { kind: "posterize", levels: 3 },
+        },
+        {
+          kind: "balance",
+          fields: [
+            ["midtones Cyan / Red", 30],
+            ["midtones Yellow / Blue", -20],
+          ],
+          operation: { ...defaultOperation("balance"), midtones: [30, 0, -20] },
+        },
+      ];
+      for (const recipe of pointCases) {
+        await p.getByLabel("Adjustment or filter", { exact: true }).selectOption(recipe.kind);
+        for (const [label, value] of recipe.fields) await number(p, label, value);
+        await ready(p);
+        const actual = await preview(p),
+          expected = processColor(new Uint8ClampedArray(before.pixels), 128, 96, recipe.operation);
+        for (const [x, y] of [
+          [64, 40],
+          [100, 70],
+        ])
+          assert.deepEqual(
+            pixel(actual, x, y),
+            [...expected.slice((y * 128 + x) * 4, (y * 128 + x) * 4 + 4)],
+            recipe.kind,
+          );
+      }
       // Exercise all spatial operations through their actual worker/PNG preview.
       for (const kind of [
         "gaussian",
@@ -184,7 +248,7 @@ try {
     await p.getByLabel("Adjustment or filter", { exact: true }).selectOption("gaussian");
     await number(p, "Gaussian sigma", 32);
     await p.getByRole("button", { name: "Cancel color", exact: true }).click();
-    fx.same(await fx.preview(p), before);
+    same(await fx.preview(p), before);
     await fx.tab(p, "History");
     assert.equal(await p.locator(".pro-history-list li").count(), historyCount);
     const cancelled = (await fx.native(p)).value;
@@ -219,21 +283,21 @@ try {
       .waitFor({ state: "hidden" });
     console.log(`R6 ${width}: Apply complete`);
     const applied = await fx.preview(p);
-    fx.same(applied, staged);
+    same(applied, staged);
     await fx.tab(p, "History");
     assert.equal(await p.locator(".pro-history-list li").count(), historyCount + 1);
     await command(p, "Control+z");
-    fx.same(await fx.preview(p), before);
+    same(await fx.preview(p), before);
     await command(p, "Control+Shift+z");
-    fx.same(await fx.preview(p), applied);
+    same(await fx.preview(p), applied);
     const saved = (await fx.native(p)).value;
     assert.equal(saved.version, 1);
     assert.equal(saved.document.layers.length, 2);
     assert.equal(saved.document.layers[0].visible, false);
     assert.ok(Object.values(saved.assets).some((a) => a.data === source));
-    fx.same(await fx.raster(p), applied);
+    same(await fx.raster(p), applied);
     await fx.load(p, saved.document, source, saved.assets);
-    fx.same(await fx.preview(p), applied);
+    same(await fx.preview(p), applied);
     console.log(`R6 ${width}: native and export complete`);
     // R5 transform still acts on the processed layer and Undo restores processed pixels.
     await fx.tab(p, "Transform");
@@ -243,7 +307,7 @@ try {
     const moved = await fx.preview(p);
     assert.deepEqual(pixel(moved, 54, 30), pixel(applied, 50, 30));
     await command(p, "Control+z");
-    fx.same(await fx.preview(p), applied);
+    same(await fx.preview(p), applied);
     // Native touch/desktop brush creates editable R3 paint above immutable processed raster.
     const toggle = p.getByRole("button", { name: "Toggle Pro panels", exact: true });
     if ((await toggle.getAttribute("aria-expanded")) === "true") await toggle.click();
@@ -331,13 +395,13 @@ try {
     await p
       .getByRole("dialog", { name: "Color & Filters", exact: true })
       .waitFor({ state: "hidden" });
-    fx.same(await fx.preview(p), before);
+    same(await fx.preview(p), before);
     const saved = (await fx.native(p)).value,
       target = saved.document.layers.find((l) => l.name === "Masked source");
     assert.deepEqual(target.mask, JSON.parse(JSON.stringify(base.mask)));
     assert.equal(target.parentId, "g");
     assert.ok(saved.document.layers.some((l) => l.id === "adjustment" && l.kind === "adjustment"));
-    fx.same(await fx.raster(p), before);
+    same(await fx.raster(p), before);
     await lab(p);
     await p.getByLabel("Adjustment or filter", { exact: true }).selectOption("invert");
     await ready(p);
@@ -350,7 +414,7 @@ try {
     assert.deepEqual(pixel(masked, 8, 85), pixel(before, 8, 85));
     for (let i = 3; i < masked.pixels.length; i += 4)
       assert.equal(masked.pixels[i], before.pixels[i]);
-    fx.same(await fx.raster(p), masked);
+    same(await fx.raster(p), masked);
     await fx.tab(p, "Layers");
     await p.getByRole("button", { name: "Edit mask Masked source", exact: true }).click();
     await fx.tab(p, "Properties");
