@@ -235,7 +235,9 @@ try {
     same(await fx.preview(p), levels);
     await command(p, "Control+Shift+z");
     same(await fx.preview(p), curves);
-    await p.getByText("Draft saved", { exact: true }).waitFor();
+    await p.waitForFunction(
+      () => document.querySelector(".pro-save-state")?.textContent === "Draft saved",
+    );
     await waitStored(p, id, "curves");
     const saved = (await fx.native(p)).value;
     await p.reload();
