@@ -10,8 +10,33 @@ export const EFFECT_NAMES = {
   stroke: "Stroke",
   colorOverlay: "Color Overlay",
   gradientOverlay: "Gradient Overlay",
+  patternOverlay: "Pattern Overlay",
+  bevel: "Bevel and Emboss",
 } as const;
 export type Effect = {
+  version?: 2;
+  spread?: number;
+  choke?: number;
+  globalLight?: boolean;
+  fillKind?: "solid" | "gradient";
+  glowSource?: "edge" | "center";
+  pattern?: {
+    kind: "checker" | "stripes" | "dots";
+    scale: number;
+    offsetX: number;
+    offsetY: number;
+    color2: string;
+  };
+  bevel?: {
+    depth: number;
+    direction: "up" | "down";
+    soften: number;
+    elevation: number;
+    highlight: string;
+    shadow: string;
+    highlightOpacity: number;
+    shadowOpacity: number;
+  };
   kind: keyof typeof EFFECT_NAMES;
   enabled: boolean;
   opacity: number;
@@ -27,6 +52,33 @@ export type Effect = {
 export function defaultEffect(kind: Effect["kind"]): Effect {
   return {
     kind,
+    ...(kind === "patternOverlay"
+      ? {
+          version: 2 as const,
+          pattern: {
+            kind: "checker" as const,
+            scale: 1,
+            offsetX: 0,
+            offsetY: 0,
+            color2: "#ffffff",
+          },
+        }
+      : {}),
+    ...(kind === "bevel"
+      ? {
+          version: 2 as const,
+          bevel: {
+            depth: 1,
+            direction: "up" as const,
+            soften: 0,
+            elevation: 45,
+            highlight: "#ffffff",
+            shadow: "#000000",
+            highlightOpacity: 0.75,
+            shadowOpacity: 0.75,
+          },
+        }
+      : {}),
     enabled: true,
     opacity: 1,
     blend: "source-over",
@@ -44,10 +96,10 @@ export function validateEffects(effects: Effect[]) {
     typeof v === "number" && Number.isFinite(v) && v >= a && v <= b;
   if (
     !Array.isArray(effects) ||
-    effects.length > 7 ||
+    effects.length > 9 ||
     new Set(effects.map((e) => e?.kind)).size !== effects.length
   )
-    throw new Error("Use at most one of each of the seven layer effects.");
+    throw new Error("Use at most one of each of the nine layer effects.");
   for (const e of effects) {
     if (
       !e ||
@@ -64,6 +116,95 @@ export function validateEffects(effects: Effect[]) {
       !["inside", "outside", "center"].includes(e.position)
     )
       throw new Error("Invalid layer effect.");
+    const advanced = [
+      "spread",
+      "choke",
+      "globalLight",
+      "fillKind",
+      "glowSource",
+      "pattern",
+      "bevel",
+    ];
+    if (
+      e.version === undefined &&
+      (advanced.some((k) => Object.hasOwn(e, k)) || ["patternOverlay", "bevel"].includes(e.kind))
+    )
+      throw Error("Advanced layer styles need version2.");
+    if (e.version !== undefined) {
+      if (
+        e.version !== 2 ||
+        Object.keys(e).some(
+          (k) =>
+            ![
+              "kind",
+              "enabled",
+              "opacity",
+              "blend",
+              "color",
+              "radius",
+              "distance",
+              "angle",
+              "size",
+              "position",
+              "gradient",
+              "version",
+              ...advanced,
+            ].includes(k),
+        ) ||
+        (e.spread !== undefined && !n(e.spread, 0, 64)) ||
+        (e.choke !== undefined && !n(e.choke, 0, 64)) ||
+        (e.globalLight !== undefined && typeof e.globalLight !== "boolean") ||
+        (e.fillKind !== undefined && !["solid", "gradient"].includes(e.fillKind)) ||
+        (e.glowSource !== undefined && !["edge", "center"].includes(e.glowSource))
+      )
+        throw Error("Invalid advanced layer style.");
+      const color = (c: unknown) => typeof c === "string" && /^#[\da-f]{6}$/i.test(c);
+      if (e.kind === "patternOverlay") {
+        const p = e.pattern;
+        if (
+          !p ||
+          Object.keys(p).some(
+            (k) => !["kind", "scale", "offsetX", "offsetY", "color2"].includes(k),
+          ) ||
+          !["checker", "stripes", "dots"].includes(p.kind) ||
+          !n(p.scale, 0.1, 32) ||
+          !n(p.offsetX, -4096, 4096) ||
+          !n(p.offsetY, -4096, 4096) ||
+          !color(p.color2)
+        )
+          throw Error("Invalid pattern texture.");
+      } else if (e.pattern !== undefined) throw Error("Pattern settings need a Pattern Overlay.");
+      if (e.kind === "bevel") {
+        const b = e.bevel;
+        if (
+          !b ||
+          Object.keys(b).some(
+            (k) =>
+              ![
+                "depth",
+                "direction",
+                "soften",
+                "elevation",
+                "highlight",
+                "shadow",
+                "highlightOpacity",
+                "shadowOpacity",
+              ].includes(k),
+          ) ||
+          !n(b.depth, 0, 10) ||
+          !["up", "down"].includes(b.direction) ||
+          !n(b.soften, 0, 32) ||
+          !n(b.elevation, 1, 89) ||
+          !color(b.highlight) ||
+          !color(b.shadow) ||
+          !n(b.highlightOpacity, 0, 1) ||
+          !n(b.shadowOpacity, 0, 1)
+        )
+          throw Error("Invalid bevel lighting.");
+      } else if (e.bevel !== undefined) throw Error("Relief settings need Bevel and Emboss.");
+    }
+    if (e.gradient?.version === 2 && e.version !== 2)
+      throw Error("Advanced gradient effects need style version2.");
     validateGradient(e.gradient);
   }
 }
@@ -75,9 +216,9 @@ export function effectExtent(effects: Effect[] = [], scale = 1) {
         .filter((e) => e.enabled)
         .map((e) =>
           e.kind === "dropShadow"
-            ? e.distance * scale + 3 * Math.ceil((e.radius * scale) / 2)
+            ? (e.distance + (e.spread ?? 0)) * scale + 3 * Math.ceil((e.radius * scale) / 2)
             : e.kind === "outerGlow"
-              ? 3 * Math.ceil((e.radius * scale) / 2)
+              ? (e.spread ?? 0) * scale + 3 * Math.ceil((e.radius * scale) / 2)
               : e.kind === "stroke" && e.position !== "inside"
                 ? e.size * scale
                 : 0,
@@ -213,7 +354,14 @@ export function effectPixels(
   h: number,
   effects: Effect[],
   scale = 1,
+  globalLight = 135,
 ) {
+  if (source.length !== w * h * 4 || !Number.isInteger(w) || !Number.isInteger(h) || w < 1 || h < 1)
+    throw Error("Invalid style pixel buffer.");
+  if (effects.some((e) => e.enabled && e.version === 2) && w * h > 4_000_000)
+    throw Error(
+      "Advanced layer styles support rendered planes up to4MP. Source resolution was not reduced.",
+    );
   if (!effects.some((e) => e.enabled)) return new Uint8ClampedArray(source);
   const alpha = new Float32Array(w * h),
     fill = new Uint8ClampedArray(source),
@@ -247,9 +395,19 @@ export function effectPixels(
         parseInt(e.color.slice(3, 5), 16),
         parseInt(e.color.slice(5, 7), 16),
       ],
+      expanded =
+        e.spread && ["dropShadow", "outerGlow"].includes(e.kind)
+          ? morphology(alpha, w, h, e.spread * scale, true)
+          : e.choke && ["innerShadow", "innerGlow"].includes(e.kind)
+            ? morphology(alpha, w, h, e.choke * scale, false)
+            : alpha,
       blur = ["dropShadow", "innerShadow", "outerGlow", "innerGlow"].includes(e.kind)
-        ? blurAlpha(alpha, w, h, e.radius * scale)
+        ? blurAlpha(expanded, w, h, e.radius * scale)
         : undefined,
+      relief =
+        e.kind === "bevel"
+          ? blurAlpha(alpha, w, h, (e.size + (e.bevel?.soften ?? 0)) * scale)
+          : undefined,
       radius = e.size * scale * (e.position === "center" ? 0.5 : 1),
       dilated =
         e.kind === "stroke" && e.position !== "inside"
@@ -259,11 +417,12 @@ export function effectPixels(
         e.kind === "stroke" && e.position !== "outside"
           ? morphology(alpha, w, h, radius, false)
           : undefined,
-      angle = (e.angle * Math.PI) / 180,
+      angle = ((e.globalLight ? globalLight : e.angle) * Math.PI) / 180,
       dx = Math.cos(angle) * e.distance * scale,
       dy = Math.sin(angle) * e.distance * scale,
       gradient =
-        e.kind === "gradientOverlay"
+        e.kind === "gradientOverlay" ||
+        (e.fillKind === "gradient" && ["stroke", "outerGlow", "innerGlow"].includes(e.kind))
           ? gradientField(e.gradient, right - left, bottom - top)
           : undefined;
     for (let y = 0; y < h; y++)
@@ -277,7 +436,8 @@ export function effectPixels(
         if (e.kind === "dropShadow") coverage = at(blur!, w, h, x - dx, y - dy);
         if (e.kind === "innerShadow") coverage = 1 - at(blur!, w, h, x - dx, y - dy);
         if (e.kind === "outerGlow") coverage = blur![p]! * (1 - a);
-        if (e.kind === "innerGlow") coverage = 1 - blur![p]!;
+        if (e.kind === "innerGlow")
+          coverage = e.glowSource === "center" ? blur![p]! : 1 - blur![p]!;
         if (e.kind === "stroke")
           coverage =
             e.position === "inside"
@@ -289,6 +449,37 @@ export function effectPixels(
           const v = gradient(x + 0.5 - left, y + 0.5 - top);
           color = v.slice(0, 3).map((n) => n * 255);
           opacity = v[3];
+        }
+        if (e.kind === "patternOverlay" && e.pattern) {
+          const pat = e.pattern,
+            tile = 16 * pat.scale * scale,
+            px = ((((x - left - pat.offsetX * scale) % tile) + tile) % tile) / tile,
+            py = ((((y - top - pat.offsetY * scale) % tile) + tile) % tile) / tile,
+            foreground =
+              pat.kind === "checker"
+                ? px < 0.5 === py < 0.5
+                : pat.kind === "stripes"
+                  ? (px + py) % 1 < 0.5
+                  : Math.hypot(px - 0.5, py - 0.5) < 0.3;
+          if (!foreground) color = [1, 3, 5].map((j) => parseInt(pat.color2.slice(j, j + 2), 16));
+        }
+        if (e.kind === "bevel" && e.bevel && relief) {
+          const b = e.bevel,
+            elevation = (b.elevation * Math.PI) / 180,
+            sign = b.direction === "up" ? 1 : -1,
+            nx = -(at(relief, w, h, x + 1, y) - at(relief, w, h, x - 1, y)) * b.depth * 8 * sign,
+            ny = -(at(relief, w, h, x, y + 1) - at(relief, w, h, x, y - 1)) * b.depth * 8 * sign,
+            norm = Math.hypot(nx, ny, 1),
+            light =
+              (nx * Math.cos(angle) * Math.cos(elevation) +
+                ny * Math.sin(angle) * Math.cos(elevation) +
+                Math.sin(elevation)) /
+                norm -
+              Math.sin(elevation),
+            hex = light >= 0 ? b.highlight : b.shadow;
+          color = [1, 3, 5].map((j) => parseInt(hex.slice(j, j + 2), 16));
+          coverage =
+            Math.min(1, Math.abs(light) * 2) * (light >= 0 ? b.highlightOpacity : b.shadowOpacity);
         }
         for (let c = 0; c < 3; c++) overlay[i + c] = color[c]!;
         overlay[i + 3] = clamp(coverage) * opacity * 255;
@@ -308,4 +499,55 @@ export function effectPixels(
     }
   }
   return overPixels(behind, fill);
+}
+
+/** Opt-in style record, retaining legacy algorithms unless new options are enabled. */
+export function advancedEffect(kind: Effect["kind"]): Effect {
+  return {
+    ...defaultEffect(kind),
+    version: 2,
+    spread: 0,
+    choke: 0,
+    globalLight: false,
+    fillKind: "solid",
+    glowSource: "edge",
+  };
+}
+
+/** Bound native style work before preview/commit, so a small preview cannot create an unexportable native document. */
+export function validateAdvancedStyleWork(d: ProDocument) {
+  const visible = (l: Layer) => {
+    if (!l.visible) return false;
+    let parent = l.parentId;
+    const seen = new Set<string>();
+    while (parent) {
+      if (seen.has(parent)) throw Error("Invalid group hierarchy.");
+      seen.add(parent);
+      const p = d.layers.find((n) => n.id === parent);
+      if (!p || !p.visible) return false;
+      parent = p.parentId;
+    }
+    return true;
+  };
+  if (!d.layers.some((l) => visible(l) && l.effects?.some((e) => e.enabled && e.version === 2)))
+    return;
+  const padding = effectPadding(d);
+  const styleCount = d.layers
+    .filter((l) => visible(l) && l.effects?.some((e) => e.enabled && e.version === 2))
+    .reduce(
+      (sum, l) => sum + (l.effects?.filter((e) => e.enabled && e.opacity > 0).length ?? 0),
+      0,
+    );
+  if (styleCount * (d.width + 2 * padding) * (d.height + 2 * padding) > 128_000_000)
+    throw Error(
+      "Visible advanced styles exceed the128M document style-pixel budget. Hide a styled layer or disable an effect; original data is unchanged.",
+    );
+  if (
+    (d.width + 2 * padding) * (d.height + 2 * padding) > 4_000_000 ||
+    d.width + 2 * padding > 16384 ||
+    d.height + 2 * padding > 16384
+  )
+    throw Error(
+      "Advanced styles support native document planes up to4MP /16384px per side including effect padding. Remove the style or use a smaller canvas; original resolution was not changed.",
+    );
 }

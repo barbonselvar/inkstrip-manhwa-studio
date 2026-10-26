@@ -1,3 +1,4 @@
+import { gradientFillHandles, gradientFromEndpoints } from "@/lib/studio/pro/gradient-tool";
 import { cloneTransformDraft } from "@/lib/studio/pro/transform-session";
 import { maskFrame, nudgeDocument } from "@/lib/studio/pro/geometry-operations";
 import { bubbleFor, updateBubble } from "@/lib/studio/dialogue/operations";
@@ -87,6 +88,7 @@ import { shapePath } from "@/lib/studio/pro/paths";
 import { RULER_SIZE, type RulerUnit } from "@/lib/studio/pro/rulers";
 import { ProRulers } from "./pro-rulers";
 export type ProTool =
+  | "gradient-fill"
   | "gradient"
   | "text-path"
   | "artboard"
@@ -770,6 +772,22 @@ export function ProCanvas({
       }
       return;
     }
+    if (tool === "gradient-fill" && selected?.kind === "gradient" && !isLocked(doc, selected.id)) {
+      const handles = gradientFillHandles(selected.gradient!, selected.width, selected.height),
+        nearest = (["from", "to"] as const)
+          .map((part) => {
+            const q = worldPoint(handles[part], selected);
+            return { part, distance: Math.hypot(q.x - p.x, q.y - p.y) * fit * view.zoom };
+          })
+          .sort((a, b) => a.distance - b.distance)[0]!;
+      gesture.current = {
+        ...base,
+        type: "gradient-fill",
+        id: selected.id,
+        part: nearest.distance <= 22 ? nearest.part : "new",
+      };
+      return;
+    }
     if (tool === "gradient" && selected && !isLocked(doc, selected.id)) {
       const index =
           selected.appearance?.findIndex((a) => a.id === appearanceId && a.paint.gradient) ?? -1,
@@ -1431,6 +1449,38 @@ export function ProCanvas({
     const l = g.doc.layers.find((x) => x.id === g.id);
     if (!l) return null;
     let next = l;
+    if (g.type === "gradient-fill" && l.gradient) {
+      const handles = gradientFillHandles(l.gradient, l.width, l.height),
+        start = localPoint(g.start, l),
+        end = localPoint(p, l),
+        delta = { x: end.x - start.x, y: end.y - start.y },
+        from =
+          g.part === "new"
+            ? start
+            : g.part === "from"
+              ? { x: handles.from.x + delta.x, y: handles.from.y + delta.y }
+              : handles.from,
+        to =
+          g.part === "new"
+            ? end
+            : g.part === "to"
+              ? { x: handles.to.x + delta.x, y: handles.to.y + delta.y }
+              : handles.to,
+        gradient = gradientFromEndpoints(l.gradient, from, to, l.width, l.height);
+      if (gradient === l.gradient) return null;
+      const candidate = {
+        ...g.doc,
+        version: 3 as const,
+        layers: g.doc.layers.map((n) => (n.id === l.id ? { ...l, gradient } : n)),
+      };
+      try {
+        validateDocument(candidate);
+        return candidate;
+      } catch (e) {
+        onError((e as Error).message);
+        return null;
+      }
+    }
     if (g.type === "gradient") {
       const a = l.appearance![g.appearanceIndex!]!,
         gradient = a.paint.gradient!,
@@ -2131,6 +2181,43 @@ export function ProCanvas({
                 </g>
               )}
 
+              {tool === "gradient-fill" &&
+                selected?.kind === "gradient" &&
+                (() => {
+                  const h = gradientFillHandles(
+                      selected.gradient!,
+                      selected.width,
+                      selected.height,
+                    ),
+                    from = worldPoint(h.from, selected),
+                    to = worldPoint(h.to, selected);
+                  return (
+                    <g className="pro-vector-gradient-handles" aria-label="Raster gradient handles">
+                      <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} />
+                      {(["from", "to"] as const).map((part) => {
+                        const p = part === "from" ? from : to;
+                        return (
+                          <g key={part} data-raster-gradient-handle={part}>
+                            <circle
+                              cx={p.x}
+                              cy={p.y}
+                              r={22 / (fit * view.zoom)}
+                              className="pro-gradient-hit"
+                            />
+                            <circle cx={p.x} cy={p.y} r={5 / (fit * view.zoom)} />
+                            <text
+                              x={p.x + 8 / (fit * view.zoom)}
+                              y={p.y - 8 / (fit * view.zoom)}
+                              fontSize={11 / (fit * view.zoom)}
+                            >
+                              {part}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </g>
+                  );
+                })()}
               {tool === "gradient" &&
                 selected &&
                 (() => {

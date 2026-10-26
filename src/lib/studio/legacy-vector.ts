@@ -9,15 +9,12 @@ import type { ProDocument } from "./pro/model";
 export const LEGACY_VECTOR_KEY = "inkstrip-legacy-vector-v1";
 export const LEGACY_VECTOR_EVENT = "inkstrip-legacy-vector";
 
-/** Content that only Vector Studio's tools and panels can edit (gradient paints in Appearance
- * stacks, vector clips, artboards). Raster Studio already edits paths, shapes, text, text
- * on a path (Typography tab), gradient layers and guides/snapping/alignment (Precision tab);
- * Dialogue layers belong to Dialogue Studio. None of those count. */
+/** Content that only Vector Studio's tools and panels can edit (artboards). Raster Studio
+ * edits paths, shapes, text, text on a path (Typography tab), gradient layers, Appearance
+ * stacks (Appearance tab), vector masks (Paths tab) and guides/snapping/alignment (Precision
+ * tab); Dialogue layers belong to Dialogue Studio. None of those count. */
 export function hasLegacyVectorContent(doc: Pick<ProDocument, "layers" | "artboards">) {
-  if (doc.artboards?.length) return true;
-  return doc.layers.some(
-    (l) => !l.dialogueRole && (!!l.appearance?.length || !!l.vectorClips?.length),
-  );
+  return !!doc.artboards?.length;
 }
 
 export function legacyVectorRequested(search: string) {

@@ -1,3 +1,11 @@
+import { ProR8Lab } from "./pro-r8-lab";
+import { advancedGradient } from "@/lib/studio/pro/gradient";
+import {
+  addGradientFill,
+  commitR8Document,
+  type R8Draft,
+  type R8Settings,
+} from "@/lib/studio/pro/r8-document";
 import {
   previewTarget,
   samePreviewTarget,
@@ -88,6 +96,14 @@ import { ProAiTab, ProAssetsTab, ProExportTab, ProHistoryTab } from "./pro-inspe
 import { ProAnchors } from "./pro-anchors";
 import { ProPathfinder } from "./pro-pathfinder";
 import type { RulerUnit } from "@/lib/studio/pro/rulers";
+import { ProPaths, type PathMaskOptions } from "./pro-paths";
+import {
+  coverageContours,
+  pathLayerFromContours,
+  pathSelectionRegion,
+  releaseVectorClip,
+  vectorClipFromPath,
+} from "@/lib/studio/pro/path-selection";
 import { PathfinderJob } from "@/lib/studio/pro/pathfinder-client";
 import type { PathfinderOperation, PathfinderOptions } from "@/lib/studio/pro/pathfinder";
 import { editAnchor } from "@/lib/studio/pro/anchor-edit";
@@ -100,6 +116,7 @@ import { validateTransform, withPivot, bounds } from "@/lib/studio/pro/transform
 import { ProGeometry } from "./pro-geometry";
 import { fullCrop, type Crop } from "@/lib/studio/pro/geometry";
 import { ProProperties, ProNumber } from "./pro-properties";
+import { ProAppearance } from "./pro-appearance";
 import {
   EMPTY_SELECTION,
   fromPanel,
@@ -245,6 +262,7 @@ export default function ProWorkspace({
     null,
   );
   const [adjustmentDraft, setAdjustmentDraft] = useState<AdjustmentDraft | null>(null);
+  const [r8Draft, setR8Draft] = useState<R8Draft | null>(null);
   const [dialoguePending, setDialoguePending] = useState(false);
   const dialoguePendingRef = useRef(false);
   dialoguePendingRef.current = dialoguePending;
@@ -325,6 +343,7 @@ export default function ProWorkspace({
       | "transform"
       | "geometry"
       | "layers"
+      | "paths"
       | "pathfinder"
       | "artboards"
       | "precision"
@@ -740,6 +759,23 @@ export default function ProWorkspace({
     },
     [setHist, maxArea],
   );
+  const applyR8Settings = (settings: R8Settings): true | string => {
+    const current = historyRef.current?.present.doc;
+    if (!current || !r8Draft || busyRef.current || transformRef.current || quickMask)
+      return "This target is unavailable. Exit Quick Mask and finish active operations first.";
+    try {
+      const next = commitR8Document(current, r8Draft, settings, maxArea);
+      if (next !== current && !commit(next, "Edit layer styles / Smart Filters / gradient"))
+        return "Layer properties were not committed. Original artwork is unchanged.";
+      setSelectedIds([r8Draft.layerId]);
+      setMaskMode(false);
+      setStatus("Editable layer properties saved. Original artwork is unchanged.");
+      return true;
+    } catch (e) {
+      return storageMessage(e);
+    }
+  };
+
   const applyPersistentAdjustment = (settings: AdjustmentLayerSettings): true | string => {
     const current = historyRef.current?.present.doc;
     if (!current || !adjustmentDraft || busyRef.current || transformRef.current)
@@ -1157,6 +1193,16 @@ export default function ProWorkspace({
     }
   };
   const quickMask = quickMaskLayer(doc);
+  useEffect(() => {
+    if (
+      r8Draft &&
+      (history?.present.doc !== r8Draft.origin ||
+        (!r8Draft.created && selectedIds[0] !== r8Draft.layerId) ||
+        mode !== "raster" ||
+        quickMask)
+    )
+      setR8Draft(null);
+  }, [r8Draft, history?.present.doc, selectedIds, mode, quickMask]);
   useEffect(() => {
     // While Quick Mask is active, painting must target only its coverage layer.
     if (quickMask && selectedIds[0] !== quickMask.id) setSelectedIds([quickMask.id]);
@@ -1880,7 +1926,7 @@ export default function ProWorkspace({
   const runPathfinder = async (operation: PathfinderOperation, options: PathfinderOptions) => {
     const d = historyRef.current?.present.doc,
       s = sessionRef.current;
-    if (!d || !s || busyRef.current || transformRef.current || mode !== "vector") return;
+    if (!d || !s || busyRef.current || transformRef.current) return;
     const run = ++operationRun.current;
     busyRef.current = true;
     setBusy(true);
@@ -1921,6 +1967,142 @@ export default function ProWorkspace({
       setCancellable(false);
       setProgress("");
     }
+  };
+  /** Raster Paths tab: synchronous path ↔ selection ↔ mask edits, one undo step each. */
+  const pathEdit = (
+    label: string,
+    edit: (d: ProDocument) => ProDocument,
+    created?: () => { id: string; status?: string } | undefined,
+  ) => {
+    const d = historyRef.current?.present.doc;
+    if (!d || busyRef.current || transformRef.current) return;
+    setError("");
+    try {
+      if (!commit(edit(d), label)) return;
+      const made = created?.();
+      if (made) {
+        setSelectedIds([made.id]);
+        setTool("direct");
+      }
+      setStatus(made?.status ?? `${label}. Undo restores the previous state.`);
+    } catch (e) {
+      setError(storageMessage(e));
+    }
+  };
+  const pathSources = (d: ProDocument) =>
+    selectedIds.filter((id) => d.layers.find((l) => l.id === id)?.kind === "shape");
+  const loadPathSelection = (mode: SelectionMode, feather: number) =>
+    pathEdit("Load path as selection", (d) => {
+      const region = pathSelectionRegion(d, pathSources(d)),
+        next = combineSelection(d.selection ?? EMPTY_SELECTION, region, mode);
+      return { ...d, selection: compactSelection({ ...next, feather }, d) };
+    });
+  const makePathFromSelection = (tolerance: number) => {
+    let made: { id: string; status?: string } | undefined;
+    pathEdit(
+      "Make path from selection",
+      (d) => {
+        if (!hasActiveSelection(d.selection)) throw Error("Make a selection first.");
+        const c = selectionCanvas({ ...d.selection!, feather: 0 }, d.width, d.height);
+        let alpha: Uint8Array;
+        try {
+          const data = c.getContext("2d")!.getImageData(0, 0, d.width, d.height).data;
+          alpha = new Uint8Array(d.width * d.height);
+          for (let i = 0; i < alpha.length; i++) alpha[i] = data[i * 4 + 3]!;
+        } finally {
+          c.width = c.height = 1;
+        }
+        const traced = coverageContours(alpha, d.width, d.height, tolerance),
+          path = pathLayerFromContours(traced.contours, {
+            name: "Path from selection",
+            stroke: brush.color === "transparent" ? "#172420" : brush.color,
+          });
+        made = {
+          id: path.id,
+          status:
+            traced.dropped || traced.tolerance > tolerance
+              ? `Path from selection: tolerance ${traced.tolerance.toFixed(2)} px${traced.dropped ? `, ${traced.dropped} tiny island(s) omitted` : ""} to stay editable.`
+              : "Path from selection created. Direct select edits its anchors.",
+        };
+        return { ...d, layers: [...d.layers, path] };
+      },
+      () => made,
+    );
+  };
+  const hideSources = (layers: Layer[], ids: string[], hide: boolean) =>
+    hide ? layers.map((l) => (ids.includes(l.id) ? { ...l, visible: false } : l)) : layers;
+  const layerMaskFromPath = ({ targetId, feather, hideSource }: PathMaskOptions) =>
+    pathEdit("Layer mask from path", (d) => {
+      const target = d.layers.find((l) => l.id === targetId),
+        ids = pathSources(d);
+      if (!target || isLocked(d, target.id)) throw Error("Choose an unlocked layer to mask.");
+      if (target.mask) throw Error("That layer already has a mask. Delete it first.");
+      const region = pathSelectionRegion(d, ids),
+        mask = maskFromSelection({ regions: [region], inverted: false, feather: 0 }, target, d);
+      return {
+        ...d,
+        layers: hideSources(
+          d.layers.map((l) => (l.id === target.id ? { ...l, mask: { ...mask, feather } } : l)),
+          ids,
+          hideSource,
+        ),
+      };
+    });
+  const vectorMaskFromPath = ({ targetId, hideSource }: PathMaskOptions) =>
+    pathEdit("Vector mask from path", (d) => {
+      const ids = pathSources(d);
+      if (ids.length !== 1) throw Error("Select exactly one path for a vector mask.");
+      const target = d.layers.find((l) => l.id === targetId);
+      if (!target || isLocked(d, target.id)) throw Error("Choose an unlocked layer to mask.");
+      const clip = vectorClipFromPath(d, target.id, ids[0]!);
+      return {
+        ...d,
+        layers: hideSources(
+          d.layers.map((l) =>
+            l.id === target.id ? { ...l, vectorClips: [...(l.vectorClips ?? []), clip] } : l,
+          ),
+          ids,
+          hideSource,
+        ),
+      };
+    });
+  const editVectorClip = (index: number, action: "toggle" | "remove" | "release") => {
+    let made: { id: string } | undefined;
+    pathEdit(
+      action === "release"
+        ? "Edit vector mask as path"
+        : action === "remove"
+          ? "Remove vector mask"
+          : "Toggle vector mask",
+      (d) => {
+        const target = d.layers.find((l) => l.id === selectedIds[0]);
+        if (!target?.vectorClips?.[index] || isLocked(d, target.id))
+          throw Error("Select an unlocked layer with that vector mask.");
+        if (action === "release") {
+          const result = releaseVectorClip(
+            d,
+            target.id,
+            index,
+            brush.color === "transparent" ? "#172420" : brush.color,
+          );
+          made = { id: result.id };
+          return result.document;
+        }
+        const clips =
+          action === "remove"
+            ? target.vectorClips.filter((_, i) => i !== index)
+            : target.vectorClips.map((c, i) => (i === index ? { ...c, enabled: !c.enabled } : c));
+        return {
+          ...d,
+          layers: d.layers.map((l) => {
+            if (l.id !== target.id) return l;
+            const { vectorClips: _previous, ...rest } = l;
+            return clips.length ? { ...rest, vectorClips: clips } : rest;
+          }),
+        };
+      },
+      () => made,
+    );
   };
   const compound = (operation: "create" | "release") => {
     if (!doc || busyRef.current || transformRef.current) return;
@@ -2099,6 +2281,22 @@ export default function ProWorkspace({
       setPanelOpen(true);
       if (active?.kind === "shape") createPathText();
       return;
+    }
+    if (id === "gradient-fill") {
+      if (
+        mode !== "raster" ||
+        quickMask ||
+        active?.kind !== "gradient" ||
+        isLocked(doc!, active.id)
+      ) {
+        setError(
+          "Choose an unlocked Gradient Fill layer and exit Quick Mask before editing its endpoints.",
+        );
+        return;
+      }
+      setTab("properties");
+      setPanelOpen(true);
+      setMaskMode(false);
     }
     if (id === "gradient") {
       setTab("appearance");
@@ -2306,7 +2504,14 @@ export default function ProWorkspace({
     /** Selection and clipboard shortcuts (raster mode). Returns true when handled. */
     selectionKey: (e: KeyboardEvent) => {
       // R6 adjustment / Color & Filters editors own the keyboard while open.
-      if (mode !== "raster" || transformRef.current || cropDraft || colorDraft || adjustmentDraft)
+      if (
+        mode !== "raster" ||
+        transformRef.current ||
+        cropDraft ||
+        colorDraft ||
+        adjustmentDraft ||
+        r8Draft
+      )
         return false;
       const k = e.key.toLowerCase(),
         mod = e.ctrlKey || e.metaKey,
@@ -3003,7 +3208,9 @@ export default function ProWorkspace({
                     busy ||
                     (id === "text-path" &&
                       (active?.kind !== "shape" || isLocked(doc!, active.id))) ||
-                    (id === "gradient" && !active?.appearance?.some((a) => a.paint.gradient))
+                    (id === "gradient" && !active?.appearance?.some((a) => a.paint.gradient)) ||
+                    (id === "gradient-fill" &&
+                      (!!quickMask || active?.kind !== "gradient" || isLocked(doc!, active.id)))
                   }
                   onClick={() => {
                     chooseTool(id);
@@ -3111,6 +3318,7 @@ export default function ProWorkspace({
                       "transform",
                       "geometry",
                       "layers",
+                      "paths",
                       "pathfinder",
                       "artboards",
                       "precision",
@@ -3135,9 +3343,11 @@ export default function ProWorkspace({
                             "assets",
                             "export",
                           ].includes(t)) &&
-                        // R9: Precision (guides, snapping, align) and Typography (text on a
-                        // path) are shared with Raster Studio.
-                        (!["pathfinder", "artboards", "appearance"].includes(t) ||
+                        // Pathfinder, masks from paths and path ↔ selection live in Raster's
+                        // Paths tab; Appearance, Precision (guides, snapping, align) and
+                        // Typography (text on a path, R9) are shared by both modes.
+                        (t !== "paths" || mode === "raster") &&
+                        (!["pathfinder", "artboards"].includes(t) ||
                           mode === "vector"),
                     )
                     .map((t) => (
@@ -3250,7 +3460,15 @@ export default function ProWorkspace({
                       }}
                     />
                   )}
-                  {tab === "appearance" && (
+                  {tab === "appearance" && !!active?.smartFilters?.length && (
+                    // R8: Smart Filters need a bounded source plane, which an Appearance stack
+                    // would extend. Say so instead of offering edits the document rejects.
+                    <p className="pro-help" role="status">
+                      This layer has Smart Filters. Remove them in Properties to edit its Appearance
+                      stack, or keep the filters and use Layer Styles.
+                    </p>
+                  )}
+                  {tab === "appearance" && !active?.smartFilters?.length && (
                     <ProVectorAppearance
                       layer={
                         active
@@ -3317,6 +3535,19 @@ export default function ProWorkspace({
                       onCommit={commit}
                       onError={setError}
                       disabled={busy || dialoguePending || !!transformDraft || !!cropDraft}
+                    />
+                  )}
+                  {tab === "paths" && mode === "raster" && doc && (
+                    <ProPaths
+                      doc={doc}
+                      ids={selectedIds}
+                      disabled={busy || dialoguePending || !!transformDraft || !!cropDraft}
+                      onPathfinder={(operation, options) => void runPathfinder(operation, options)}
+                      onLoadSelection={loadPathSelection}
+                      onMakePath={makePathFromSelection}
+                      onLayerMask={layerMaskFromPath}
+                      onVectorMask={vectorMaskFromPath}
+                      onClip={editVectorClip}
                     />
                   )}
                   {tab === "pathfinder" && mode === "vector" && doc && (
@@ -3430,7 +3661,69 @@ export default function ProWorkspace({
                           Exit Quick Mask to use color adjustments and Color &amp; Filters.
                         </p>
                       )}
+                      {mode === "raster" && !dialogue && (
+                        <Button
+                          variant="secondary"
+                          disabled={!!quickMask || !!transformDraft || !!cropDraft || busy}
+                          onClick={() => {
+                            if (!doc) return;
+                            try {
+                              const next = addGradientFill(
+                                doc,
+                                advancedGradient(),
+                                selection,
+                                active?.id,
+                              );
+                              setR8Draft({
+                                origin: doc,
+                                layerId: next.layerId,
+                                created: next.document,
+                              });
+                            } catch (e) {
+                              setError(storageMessage(e));
+                            }
+                          }}
+                        >
+                          New Gradient Fill
+                        </Button>
+                      )}
                       <ProProperties
+                        appearanceControls={
+                          mode === "raster" && !dialogue ? (
+                            <div>
+                              <Button
+                                variant="secondary"
+                                disabled={
+                                  !active ||
+                                  active.kind === "adjustment" ||
+                                  active.locked ||
+                                  !!transformDraft ||
+                                  !!quickMask ||
+                                  busy
+                                }
+                                onClick={() => {
+                                  if (doc && active && !isLocked(doc, active.id))
+                                    setR8Draft({ origin: doc, layerId: active.id });
+                                }}
+                              >
+                                Layer styles and Smart Filters
+                              </Button>
+                              <p className="pro-help">
+                                Editable styles, filters and gradients. Quick Mask and backdrop
+                                adjustments are not artwork targets.
+                              </p>
+                              {doc && doc.version !== 3 && active && !quickMask && (
+                                <ProAppearance
+                                  layer={{
+                                    ...active,
+                                    locked: isLocked(doc, active.id) || !!transformDraft,
+                                  }}
+                                  onPatch={patch}
+                                />
+                              )}
+                            </div>
+                          ) : undefined
+                        }
                         anchorControls={
                           active && doc && active.shape === "path" ? (
                             <ProAnchors
@@ -3918,6 +4211,16 @@ export default function ProWorkspace({
               <span className="pro-private-label">On this device · original-safe</span>
             )}
           </footer>
+          {r8Draft && session && (
+            <ProR8Lab
+              key={r8Draft.layerId}
+              draft={r8Draft}
+              session={session}
+              maxArea={maxArea}
+              onCancel={() => setR8Draft(null)}
+              onApply={applyR8Settings}
+            />
+          )}
           {adjustmentDraft && session && (
             <ProAdjustmentLab
               key={adjustmentDraft.layerId}

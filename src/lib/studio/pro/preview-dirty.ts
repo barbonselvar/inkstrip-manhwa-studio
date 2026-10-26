@@ -31,7 +31,11 @@ export function previewDirtyRect(
     return null;
   if (
     next.layers.some(
-      (l) => l.effects?.some((e) => e.enabled) || l.adjustments.blur || l.adjustments.sharpen,
+      (l) =>
+        l.effects?.some((e) => e.enabled) ||
+        l.smartFilters?.some((f) => f.enabled) ||
+        l.adjustments.blur ||
+        l.adjustments.sharpen,
     )
   )
     return null;

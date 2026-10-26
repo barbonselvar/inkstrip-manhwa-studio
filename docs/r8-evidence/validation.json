@@ -1,0 +1,386 @@
+{
+  "recoveredBranch": "codex/r8-layer-effects-smart-filters-gradients",
+  "recoveredHead": "244a1d6fbdf355aefa266501ad7cf4734a6f1b11",
+  "r8ApplicationHead": "130410b97f65827861a84c520a93a31d2212f202",
+  "qaFixHead": "a2c4cd7d53ecac5092b9a5fae41bb486e065a0c3",
+  "head": "2b3c30a8f3f24b67106047648edc97f2c323fb38",
+  "candidate": "1f43b387dc96466e5c68b60f4dc779e496e74adf",
+  "base": "bfcbdf99248e75bfe10d8d1df6d71bb5acd6a596",
+  "applicationTrees": {
+    "src": "a1c108247ad950a6c16b3958c7da28402046f22a",
+    "scripts": "21c39ee936ccf311c006658eac63ddddf35952af",
+    "package.json": "4f7495dcd07932fcd8c1c19f85ce5ab0e17ea722",
+    "package-lock.json": "0fb58179e5207945fb97f5eed8bf4adb959bcb70",
+    "vite.config.ts": "ee36cffc25c16d06e13300d84d4132877d38182f"
+  },
+  "installation": {
+    "exitCode": 0,
+    "log": "npm-ci.log"
+  },
+  "gates": [
+    {
+      "gate": "npm-test",
+      "command": ["npm", "test"],
+      "exitCode": 0,
+      "seconds": 21.0,
+      "log": "/workspace/r8-evidence/current-main/npm-test.log"
+    },
+    {
+      "gate": "build",
+      "command": ["npm", "run", "build"],
+      "exitCode": 0,
+      "seconds": 5.73,
+      "log": "/workspace/r8-evidence/current-main/build.log"
+    },
+    {
+      "gate": "typecheck",
+      "command": ["npm", "run", "typecheck"],
+      "exitCode": 0,
+      "seconds": 10.97,
+      "log": "/workspace/r8-evidence/current-main/typecheck.log"
+    },
+    {
+      "gate": "lint",
+      "command": ["npm", "run", "lint"],
+      "exitCode": 0,
+      "seconds": 8.47,
+      "log": "/workspace/r8-evidence/current-main/lint.log"
+    },
+    {
+      "gate": "check-build",
+      "command": ["npm", "run", "check:build"],
+      "exitCode": 0,
+      "seconds": 0.15,
+      "log": "/workspace/r8-evidence/current-main/check-build.log"
+    },
+    {
+      "gate": "check-auth",
+      "command": ["npm", "run", "check:auth"],
+      "exitCode": 0,
+      "seconds": 0.18,
+      "log": "/workspace/r8-evidence/current-main/check-auth.log"
+    }
+  ],
+  "unitTests": 1007,
+  "browserSummary": {
+    "commands": 43,
+    "browserSuites": 42,
+    "allPassed": true
+  },
+  "browserCommands": [
+    {
+      "command": "test:r3:browser",
+      "exitCode": 0,
+      "seconds": 381.01,
+      "base": "http://127.0.0.1:8083",
+      "log": "/workspace/r8-evidence/current-main/test-r3-browser.log"
+    },
+    {
+      "command": "test:studio:browser",
+      "exitCode": 0,
+      "seconds": 43.27,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-studio-browser.log"
+    },
+    {
+      "command": "test:editor:browser",
+      "exitCode": 0,
+      "seconds": 14.33,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-editor-browser.log"
+    },
+    {
+      "command": "test:adjustments:browser",
+      "exitCode": 0,
+      "seconds": 13.97,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-adjustments-browser.log"
+    },
+    {
+      "command": "test:retouch:browser",
+      "exitCode": 0,
+      "seconds": 5.06,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-retouch-browser.log"
+    },
+    {
+      "command": "test:workflow:browser",
+      "exitCode": 0,
+      "seconds": 13.27,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-workflow-browser.log"
+    },
+    {
+      "command": "test:ui:browser",
+      "exitCode": 0,
+      "seconds": 17.01,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-ui-browser.log"
+    },
+    {
+      "command": "test:pro:browser",
+      "exitCode": 0,
+      "seconds": 37.12,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-pro-browser.log"
+    },
+    {
+      "command": "test:layers:browser",
+      "exitCode": 0,
+      "seconds": 30.19,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-layers-browser.log"
+    },
+    {
+      "command": "test:repair:browser",
+      "exitCode": 0,
+      "seconds": 24.26,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-repair-browser.log"
+    },
+    {
+      "command": "test:geometry:browser",
+      "exitCode": 0,
+      "seconds": 20.68,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-geometry-browser.log"
+    },
+    {
+      "command": "test:transform:browser",
+      "exitCode": 0,
+      "seconds": 31.71,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-transform-browser.log"
+    },
+    {
+      "command": "test:color:browser",
+      "exitCode": 0,
+      "seconds": 22.87,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-color-browser.log"
+    },
+    {
+      "command": "test:r6:browser",
+      "exitCode": 0,
+      "seconds": 61.27,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-r6-browser.log"
+    },
+    {
+      "command": "test:r6:layers:browser",
+      "exitCode": 0,
+      "seconds": 99.04,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-r6-layers-browser.log"
+    },
+    {
+      "command": "test:r8:foundation:browser",
+      "exitCode": 0,
+      "seconds": 4.79,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-r8-foundation-browser.log"
+    },
+    {
+      "command": "test:r8:browser",
+      "exitCode": 0,
+      "seconds": 46.1,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-r8-browser.log"
+    },
+    {
+      "command": "test:r8:styles:browser",
+      "exitCode": 0,
+      "seconds": 25.7,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-r8-styles-browser.log"
+    },
+    {
+      "command": "test:r8:processing:browser",
+      "exitCode": 0,
+      "seconds": 1.83,
+      "base": "http://127.0.0.1:8083",
+      "log": "/workspace/r8-evidence/current-main/test-r8-processing-browser.log"
+    },
+    {
+      "command": "test:r8:gradient:browser",
+      "exitCode": 0,
+      "seconds": 40.25,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-r8-gradient-browser.log"
+    },
+    {
+      "command": "test:r8:recovery:browser",
+      "exitCode": 0,
+      "seconds": 11.78,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-r8-recovery-browser.log"
+    },
+    {
+      "command": "test:appearance:browser",
+      "exitCode": 0,
+      "seconds": 24.44,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-appearance-browser.log"
+    },
+    {
+      "command": "test:vector:browser",
+      "exitCode": 0,
+      "seconds": 25.36,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-vector-browser.log"
+    },
+    {
+      "command": "test:compound:browser",
+      "exitCode": 0,
+      "seconds": 37.77,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-compound-browser.log"
+    },
+    {
+      "command": "test:pathfinder:browser",
+      "exitCode": 0,
+      "seconds": 45.04,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-pathfinder-browser.log"
+    },
+    {
+      "command": "test:artboards:browser",
+      "exitCode": 0,
+      "seconds": 28.41,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-artboards-browser.log"
+    },
+    {
+      "command": "test:preview:browser",
+      "exitCode": 0,
+      "seconds": 13.21,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-preview-browser.log"
+    },
+    {
+      "command": "test:vector-final:browser",
+      "exitCode": 0,
+      "seconds": 62.44,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-vector-final-browser.log"
+    },
+    {
+      "command": "test:raster-refinement:browser",
+      "exitCode": 0,
+      "seconds": 48.73,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-raster-refinement-browser.log"
+    },
+    {
+      "command": "bench:raster:browser",
+      "exitCode": 0,
+      "seconds": 19.03,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/bench-raster-browser.log"
+    },
+    {
+      "command": "test:homepage:browser",
+      "exitCode": 0,
+      "seconds": 45.63,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-homepage-browser.log"
+    },
+    {
+      "command": "test:dialogue:ocr",
+      "exitCode": 0,
+      "seconds": 6.91,
+      "base": "http://127.0.0.1:8083",
+      "log": "/workspace/r8-evidence/current-main/test-dialogue-ocr.log"
+    },
+    {
+      "command": "test:dialogue:browser",
+      "exitCode": 0,
+      "seconds": 16.07,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-dialogue-browser.log"
+    },
+    {
+      "command": "test:dialogue:workflow",
+      "exitCode": 0,
+      "seconds": 9.08,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-dialogue-workflow.log"
+    },
+    {
+      "command": "test:dialogue:render",
+      "exitCode": 0,
+      "seconds": 1.64,
+      "base": "http://127.0.0.1:8083",
+      "log": "/workspace/r8-evidence/current-main/test-dialogue-render.log"
+    },
+    {
+      "command": "test:dialogue:security",
+      "exitCode": 0,
+      "seconds": 2.53,
+      "base": "http://127.0.0.1:8083",
+      "log": "/workspace/r8-evidence/current-main/test-dialogue-security.log"
+    },
+    {
+      "command": "test:chapter-import:browser",
+      "exitCode": 0,
+      "seconds": 24.74,
+      "base": "http://127.0.0.1:8083",
+      "log": "/workspace/r8-evidence/current-main/test-chapter-import-browser.log"
+    },
+    {
+      "command": "test:r2:browser",
+      "exitCode": 0,
+      "seconds": 65.18,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-r2-browser.log"
+    },
+    {
+      "command": "test:r2:gesture:browser",
+      "exitCode": 0,
+      "seconds": 8.33,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-r2-gesture-browser.log"
+    },
+    {
+      "command": "test:r5:browser",
+      "exitCode": 0,
+      "seconds": 47.92,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-r5-browser.log"
+    },
+    {
+      "command": "test:r7:browser",
+      "exitCode": 0,
+      "seconds": 189.97,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-r7-browser.log"
+    },
+    {
+      "command": "test:chapter-display:browser",
+      "exitCode": 0,
+      "seconds": 38.99,
+      "base": "http://127.0.0.1:8083",
+      "log": "/workspace/r8-evidence/current-main/test-chapter-display-browser.log"
+    },
+    {
+      "command": "test:vector-hidden:browser",
+      "exitCode": 0,
+      "seconds": 11.32,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/current-main/test-vector-hidden-browser.log"
+    }
+  ],
+  "localBuildAcceptance": {
+    "command": "local-release-acceptance",
+    "exitCode": 0,
+    "seconds": 68.39,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r8-evidence/current-main/local-release-acceptance.log"
+  },
+  "sourceCI": [40314424480, 40314424520],
+  "fullFinalMatrixWasImmutableCurrentMainCandidate": true,
+  "PR20MergedByR8Task": false,
+  "PR21Merged": false,
+  "productionDeploymentPerformed": false,
+  "finalPublishingSHA": "Recorded on Draft PR19; final report commit is documentation-only and combined application-tree identity is verified."
+}
