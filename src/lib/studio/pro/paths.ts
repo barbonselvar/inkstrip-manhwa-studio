@@ -4,11 +4,26 @@ export function shapePath(l: Layer): string {
     h = l.height;
   if (l.shape === "path") return pathData(l);
   if (l.shape === "line") return `M0 0 L${w} ${h}`;
-  if (l.shape === "rectangle" || l.shape === "caption") return `M0 0 H${w} V${h} H0 Z`;
+  if (l.shape === "rectangle" || l.shape === "caption") {
+    const r = Math.min(l.shapeOptions?.radius ?? 0, w / 2, h / 2);
+    if (l.shape === "caption" || !(r > 0)) return `M0 0 H${w} V${h} H0 Z`;
+    // Rounded rectangle: circular corner arcs (native paths convert them to cubics).
+    return `M${r} 0 H${w - r} A${r} ${r} 0 0 1 ${w} ${r} V${h - r} A${r} ${r} 0 0 1 ${w - r} ${h} H${r} A${r} ${r} 0 0 1 0 ${h - r} V${r} A${r} ${r} 0 0 1 ${r} 0 Z`;
+  }
+  if (l.shape === "star") {
+    const n = l.shapeOptions?.sides ?? 5,
+      inner = l.shapeOptions?.inner ?? 0.5,
+      points = Array.from({ length: n * 2 }, (_, i) => {
+        const a = (i / (n * 2)) * Math.PI * 2 - Math.PI / 2,
+          r = i % 2 ? inner : 1;
+        return `${w / 2 + ((Math.cos(a) * w) / 2) * r} ${h / 2 + ((Math.sin(a) * h) / 2) * r}`;
+      });
+    return `M${points.join(" L")} Z`;
+  }
   if (l.shape === "ellipse")
     return `M0 ${h / 2} A${w / 2} ${h / 2} 0 1 0 ${w} ${h / 2} A${w / 2} ${h / 2} 0 1 0 0 ${h / 2} Z`;
   if (l.shape === "polygon" || l.shape === "shout") {
-    const n = l.shape === "shout" ? 24 : 6,
+    const n = l.shape === "shout" ? 24 : (l.shapeOptions?.sides ?? 6),
       points = Array.from({ length: n }, (_, i) => {
         const a = (i / n) * Math.PI * 2 - Math.PI / 2,
           r = l.shape === "shout" && i % 2 ? 0.72 : 1;

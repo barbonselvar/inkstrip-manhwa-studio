@@ -95,6 +95,7 @@ import { RASTER_TOOL_IDS, TOOLS, VECTOR_TOOL_IDS } from "./pro-tools";
 import { ProAiTab, ProAssetsTab, ProExportTab, ProHistoryTab } from "./pro-inspector-tabs";
 import { ProAnchors } from "./pro-anchors";
 import { ProPathfinder } from "./pro-pathfinder";
+import type { RulerUnit } from "@/lib/studio/pro/rulers";
 import { ProPaths, type PathMaskOptions } from "./pro-paths";
 import {
   coverageContours,
@@ -177,6 +178,23 @@ type PixelClipboard = {
  * Its presence in the document is the state: undo/redo and reopened drafts stay consistent. */
 export const QUICK_MASK_NAME = "Quick Mask (temporary)";
 const QUICK_MASK_TINT = "#ff2a55";
+/** R9 rulers are a per-device view preference, not document data. */
+const RULERS_KEY = "inkstrip-pro-rulers-v1",
+  RULER_UNIT_KEY = "inkstrip-pro-ruler-unit-v1";
+function storedPreference(key: string) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function savePreference(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* Private mode: the preference lasts for this session only. */
+  }
+}
 const quickMaskLayer = (d: ProDocument | undefined) =>
   d?.layers.find((l) => l.kind === "paint" && l.name === QUICK_MASK_NAME);
 /** Past the native region limit, rasterize the unfeathered selection into one
@@ -271,6 +289,10 @@ export default function ProWorkspace({
     [cropDraft, setCropDraft] = useState<Crop | null>(null),
     [cropRatio, setCropRatio] = useState(0),
     [tolerance, setTolerance] = useState(32),
+    [rulers, setRulers] = useState(() => storedPreference(RULERS_KEY) === "1"),
+    [rulerUnit, setRulerUnit] = useState<RulerUnit>(() =>
+      storedPreference(RULER_UNIT_KEY) === "%" ? "%" : "px",
+    ),
     [contiguous, setContiguous] = useState(true),
     [antiAlias, setAntiAlias] = useState(true),
     [operation, setOperation] = useState<SelectionMode>("add"),
@@ -366,6 +388,14 @@ export default function ProWorkspace({
     operationRun = useRef(0);
   const project = useStudio((s) => s.projects.find((p) => p.id === projectId)),
     livePanel = useStudio((s) => s.panels.find((p) => p.id === panel.id));
+  const changeRulers = (value: boolean) => {
+    setRulers(value);
+    savePreference(RULERS_KEY, value ? "1" : "0");
+  };
+  const changeRulerUnit = (value: RulerUnit) => {
+    setRulerUnit(value);
+    savePreference(RULER_UNIT_KEY, value);
+  };
   const maxArea = browserDialogueBudget().maxArea;
   const doc = useMemo(() => {
       const current = history?.present.doc;
@@ -2610,6 +2640,15 @@ export default function ProWorkspace({
         e.preventDefault();
         return;
       }
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "r") {
+        // Rulers (Photoshop's Ctrl/⌘+R); prevent the browser reload.
+        e.preventDefault();
+        setRulers((value) => {
+          savePreference(RULERS_KEY, value ? "0" : "1");
+          return !value;
+        });
+        return;
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
         if (e.shiftKey) actions.current.redo();
@@ -2627,7 +2666,7 @@ export default function ProWorkspace({
       } else if (!e.ctrlKey && !e.metaKey) {
         const allowedTools = mode === "raster" ? RASTER_TOOL_IDS : VECTOR_TOOL_IDS;
         const t =
-          e.shiftKey && e.key.toLowerCase() === "t" && mode === "vector"
+          e.shiftKey && e.key.toLowerCase() === "t"
             ? TOOLS.find((t) => t.id === "text-path")
             : TOOLS.find(
                 (t) => allowedTools.has(t.id) && t.key.toLowerCase() === e.key.toLowerCase(),
@@ -2723,16 +2762,7 @@ export default function ProWorkspace({
                 disabled={busy || dialoguePending || !!refinePreview}
                 onClick={() => {
                   setMode("raster");
-                  if (
-                    [
-                      "dialogue",
-                      "pathfinder",
-                      "artboards",
-                      "precision",
-                      "appearance",
-                      "typography",
-                    ].includes(tab)
-                  )
+                  if (["dialogue", "pathfinder", "artboards", "appearance"].includes(tab))
                     setTab("layers");
                   onModeChange("raster");
                   if (transformRef.current) cancelTransform();
@@ -2949,6 +2979,29 @@ export default function ProWorkspace({
               />
               Snap
             </label>
+            <label
+              className="pro-check"
+              title="Rulers (Ctrl/⌘+R). Drag from a ruler to add a guide."
+            >
+              <input
+                type="checkbox"
+                aria-label="Show rulers"
+                checked={rulers}
+                onChange={(e) => changeRulers(e.target.checked)}
+              />
+              Rulers
+            </label>
+            {rulers && (
+              <select
+                className="field pro-selection-mode"
+                aria-label="Ruler units"
+                value={rulerUnit}
+                onChange={(e) => changeRulerUnit(e.target.value as RulerUnit)}
+              >
+                <option value="px">px</option>
+                <option value="%">%</option>
+              </select>
+            )}
             <label className="pro-check">
               <input
                 type="checkbox"
@@ -3197,6 +3250,8 @@ export default function ProWorkspace({
                 onSelectAnchor={selectAnchor}
                 onError={setError}
                 tool={tool}
+                rulers={rulers && !dialogue}
+                rulerUnit={rulerUnit}
                 selection={refinePreview ?? colorRangeSelection ?? selection}
                 selectionView={selectionView}
                 onSelection={setSelection}
@@ -3289,10 +3344,10 @@ export default function ProWorkspace({
                             "export",
                           ].includes(t)) &&
                         // Pathfinder, masks from paths and path ↔ selection live in Raster's
-                        // Paths tab; Appearance is shared by both modes.
+                        // Paths tab; Appearance, Precision (guides, snapping, align) and
+                        // Typography (text on a path, R9) are shared by both modes.
                         (t !== "paths" || mode === "raster") &&
-                        (!["pathfinder", "artboards", "precision", "typography"].includes(t) ||
-                          mode === "vector"),
+                        (!["pathfinder", "artboards"].includes(t) || mode === "vector"),
                     )
                     .map((t) => (
                       <button
@@ -3471,7 +3526,7 @@ export default function ProWorkspace({
                       onExport={(boards, format, scale) => void exportBoards(boards, format, scale)}
                     />
                   )}
-                  {tab === "precision" && mode === "vector" && doc && (
+                  {tab === "precision" && doc && (
                     <ProPrecision
                       doc={doc}
                       ids={selectedIds}
@@ -3683,6 +3738,18 @@ export default function ProWorkspace({
                                 commit(next, label, group);
                               }}
                               onError={setError}
+                              joinWith={(() => {
+                                const other = doc.layers.find(
+                                  (l) => l.id === selectedIds[1] && l.id !== active.id,
+                                );
+                                return other?.kind === "shape" &&
+                                  other.shape === "path" &&
+                                  !other.closed &&
+                                  !active.closed
+                                  ? other
+                                  : undefined;
+                              })()}
+                              onSelectLayers={setSelectedIds}
                             />
                           ) : undefined
                         }

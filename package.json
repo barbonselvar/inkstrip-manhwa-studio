@@ -76,7 +76,11 @@
     "test:chapter-display:browser": "node scripts/chapter-display-import-browser-check.mjs",
     "test:vector-hidden:browser": "node --experimental-strip-types scripts/vector-deactivation-browser-check.mjs",
     "test:raster-advanced:browser": "node --experimental-strip-types scripts/raster-advanced-browser-check.mjs",
-    "test:pr21-r8:browser": "node --experimental-strip-types scripts/pr21-r8-integration-browser-check.mjs"
+    "test:pr21-r8:browser": "node --experimental-strip-types scripts/pr21-r8-integration-browser-check.mjs",
+    "test:r9:browser": "node --experimental-strip-types scripts/r9-browser-check.mjs",
+    "test:r9:svg:browser": "node --experimental-strip-types scripts/r9-svg-browser-check.mjs",
+    "test:r9:integration:browser": "node --experimental-strip-types scripts/r9-integration-browser-check.mjs",
+    "bench:r9": "node --experimental-strip-types scripts/r9-benchmark.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

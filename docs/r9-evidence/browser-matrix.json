@@ -1,0 +1,302 @@
+{
+  "candidate": "7c47847664f8340a22be94c60ef523def97adaa8",
+  "main": "db78593f8b0132f8c6c6b22a19573f75d36530ce",
+  "browser": "Chromium 153.0.8010.12 headless (Playwright 1.64; sandbox build 1243 aliased as 1248)",
+  "shim": "grok.com/grok-app-builder/extensions.js (platform branding script) fulfilled with an empty script in the test browser; the sandbox egress policy denies grok.com. All other requests unmodified.",
+  "results": [
+    {
+      "suite": "test:editor:browser",
+      "result": "PASS",
+      "seconds": 25.92,
+      "server": "production build (vite preview)"
+    },
+    {
+      "suite": "test:retouch:browser",
+      "result": "PASS",
+      "seconds": 8.69,
+      "server": "production build (vite preview)"
+    },
+    {
+      "suite": "test:workflow:browser",
+      "result": "PASS",
+      "seconds": 25.588,
+      "server": "production build (vite preview)"
+    },
+    {
+      "suite": "test:ui:browser",
+      "result": "PASS",
+      "seconds": 24.984,
+      "server": "production build (vite preview)"
+    },
+    {
+      "suite": "test:homepage:browser",
+      "result": "PASS",
+      "seconds": 51.533,
+      "server": "production build (vite preview)"
+    },
+    {
+      "suite": "test:dialogue:browser",
+      "result": "PASS",
+      "seconds": 21.534,
+      "server": "production build (vite preview)"
+    },
+    {
+      "suite": "test:dialogue:workflow",
+      "result": "PASS",
+      "seconds": 21.965,
+      "server": "production build (vite preview)"
+    },
+    {
+      "suite": "test:studio:browser",
+      "result": "BLOCKED: huggingface.co denied by sandbox egress (identical on main db78593)",
+      "seconds": 5.416,
+      "server": "production build (vite preview)"
+    },
+    {
+      "suite": "test:r9:browser",
+      "result": "PASS",
+      "seconds": 52.524,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r9:svg:browser",
+      "result": "PASS",
+      "seconds": 7.856,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r9:integration:browser",
+      "result": "PASS",
+      "seconds": 36.382,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:pr21-r8:browser",
+      "result": "PASS",
+      "seconds": 24.097,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:raster-advanced:browser",
+      "result": "PASS",
+      "seconds": 28.461,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:vector-hidden:browser",
+      "result": "PASS",
+      "seconds": 19.246,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:layers:browser",
+      "result": "PASS",
+      "seconds": 46.456,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r8:foundation:browser",
+      "result": "PASS",
+      "seconds": 6.295,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r8:browser",
+      "result": "PASS",
+      "seconds": 54.462,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r8:styles:browser",
+      "result": "PASS",
+      "seconds": 29.32,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r8:processing:browser",
+      "result": "PASS",
+      "seconds": 1.88,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r8:gradient:browser",
+      "result": "PASS",
+      "seconds": 48.219,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r8:recovery:browser",
+      "result": "PASS",
+      "seconds": 16.468,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r2:browser",
+      "result": "PASS",
+      "seconds": 79.27,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r2:gesture:browser",
+      "result": "PASS",
+      "seconds": 10.224,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r5:browser",
+      "result": "PASS",
+      "seconds": 62.555,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r7:browser",
+      "result": "PASS",
+      "seconds": 212.984,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:adjustments:browser",
+      "result": "PASS",
+      "seconds": 17.825,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:pro:browser",
+      "result": "PASS",
+      "seconds": 53.991,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:repair:browser",
+      "result": "PASS",
+      "seconds": 33.574,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:geometry:browser",
+      "result": "PASS",
+      "seconds": 26.271,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:transform:browser",
+      "result": "PASS",
+      "seconds": 37.026,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:color:browser",
+      "result": "PASS",
+      "seconds": 28.438,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r6:browser",
+      "result": "PASS",
+      "seconds": 74.753,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r6:layers:browser",
+      "result": "PASS",
+      "seconds": 123.628,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:appearance:browser",
+      "result": "PASS",
+      "seconds": 29.135,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:vector:browser",
+      "result": "PASS",
+      "seconds": 30.797,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:compound:browser",
+      "result": "PASS",
+      "seconds": 46.786,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:pathfinder:browser",
+      "result": "PASS",
+      "seconds": 56.539,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:artboards:browser",
+      "result": "PASS",
+      "seconds": 35.881,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:preview:browser",
+      "result": "PASS",
+      "seconds": 14.811,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:vector-final:browser",
+      "result": "PASS",
+      "seconds": 73.186,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:raster-refinement:browser",
+      "result": "PASS",
+      "seconds": 59.418,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:dialogue:ocr",
+      "result": "PASS",
+      "seconds": 6.096,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:dialogue:render",
+      "result": "PASS",
+      "seconds": 1.992,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:dialogue:security",
+      "result": "PASS",
+      "seconds": 2.731,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:chapter-import:browser",
+      "result": "PASS",
+      "seconds": 21.999,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:chapter-display:browser",
+      "result": "PASS",
+      "seconds": 35.03,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "bench:raster:browser",
+      "result": "PASS",
+      "seconds": 19.247,
+      "server": "dev server (scripts/vite-browser-qa.config.mjs)"
+    },
+    {
+      "suite": "test:r3:browser",
+      "result": "PASS",
+      "seconds": 361,
+      "server": "dev server, run alone"
+    },
+    {
+      "suite": "test:production:browser (7c47847\u2026 --raster)",
+      "result": "PASS",
+      "seconds": 55,
+      "server": "production build"
+    }
+  ]
+}

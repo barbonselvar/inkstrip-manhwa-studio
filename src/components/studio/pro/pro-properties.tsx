@@ -330,6 +330,54 @@ export function ProProperties({
                     onChange={(n) => onPatch({ strokeWidth: n }, "stroke")}
                   />
                 </fieldset>
+                {["rectangle", "polygon", "star"].includes(selected.shape) && (
+                  <div className="pro-number-grid" aria-label="Shape options">
+                    {selected.shape === "rectangle" && (
+                      <ProNumber
+                        label="Corner radius"
+                        value={selected.shapeOptions?.radius ?? 0}
+                        min={0}
+                        max={Math.min(selected.width, selected.height) / 2}
+                        onChange={(radius) =>
+                          onPatch(
+                            { shapeOptions: { ...selected.shapeOptions, radius } },
+                            "shape-radius",
+                          )
+                        }
+                      />
+                    )}
+                    {selected.shape !== "rectangle" && (
+                      <ProNumber
+                        label={selected.shape === "star" ? "Star points" : "Polygon sides"}
+                        value={selected.shapeOptions?.sides ?? (selected.shape === "star" ? 5 : 6)}
+                        min={3}
+                        max={64}
+                        onChange={(sides) =>
+                          onPatch(
+                            {
+                              shapeOptions: { ...selected.shapeOptions, sides: Math.round(sides) },
+                            },
+                            "shape-sides",
+                          )
+                        }
+                      />
+                    )}
+                    {selected.shape === "star" && (
+                      <ProNumber
+                        label="Star inner radius %"
+                        value={(selected.shapeOptions?.inner ?? 0.5) * 100}
+                        min={5}
+                        max={95}
+                        onChange={(n) =>
+                          onPatch(
+                            { shapeOptions: { ...selected.shapeOptions, inner: n / 100 } },
+                            "shape-inner",
+                          )
+                        }
+                      />
+                    )}
+                  </div>
+                )}
                 {selected.shape === "path" && (
                   <>
                     <label className="pro-field">

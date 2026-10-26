@@ -323,6 +323,11 @@
   padding: 0.5rem;
   border-bottom: 1px solid var(--color-border);
 }
+/* Raster has 13 tabs since R9 + PR #21: fit four columns at the default panel width so the
+   bar keeps its earlier height and the panel content its space. Narrow panels keep three. */
+.pro-panel-tabs:has(> :nth-child(13)) {
+  grid-template-columns: repeat(auto-fill, minmax(4rem, 1fr));
+}
 .pro-panel-tabs button {
   min-height: 2.75rem;
   font-size: 0.6875rem;
@@ -1624,4 +1629,101 @@
 }
 .r6-lab header > button {
   flex-shrink: 0;
+}
+
+/* R9 rulers: overlay the viewport; only the ruler strips take pointer input. */
+.pro-rulers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+.pro-ruler {
+  position: absolute;
+  background: color-mix(in srgb, var(--color-bg-subtle) 92%, transparent);
+  pointer-events: auto;
+  touch-action: none;
+}
+.pro-ruler-top {
+  left: 20px;
+  right: 0;
+  top: 0;
+  height: 20px;
+  border-bottom: 1px solid var(--color-border);
+  cursor: row-resize;
+}
+.pro-ruler-left {
+  top: 20px;
+  bottom: 0;
+  left: 0;
+  width: 20px;
+  border-right: 1px solid var(--color-border);
+  cursor: col-resize;
+}
+.pro-ruler svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+.pro-ruler-top svg {
+  left: -20px;
+}
+.pro-ruler-left svg {
+  top: -20px;
+}
+.pro-ruler line {
+  stroke: var(--color-subtle);
+  stroke-width: 1px;
+  shape-rendering: crispEdges;
+}
+.pro-ruler text {
+  fill: var(--color-muted);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.pro-ruler .pro-ruler-cursor {
+  stroke: var(--color-accent);
+}
+.pro-ruler-corner {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  color: var(--color-muted);
+  background: var(--color-bg-subtle);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.pro-ruler-preview {
+  position: absolute;
+  pointer-events: none;
+  border-color: var(--color-accent);
+  border-style: dashed;
+  border-width: 0;
+}
+.pro-ruler-preview-h {
+  left: 0;
+  right: 0;
+  border-top-width: 1px;
+}
+.pro-ruler-preview-v {
+  top: 0;
+  bottom: 0;
+  border-left-width: 1px;
+}
+.pro-rulers-note {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 4;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: var(--color-bg-subtle);
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  pointer-events: none;
 }

@@ -20,7 +20,7 @@ export function ProPrecision({
   disabled: boolean;
 }) {
   const s = layout(doc),
-    [reference, setReference] = useState<"selection" | "artboard" | "key">("selection"),
+    [reference, setReference] = useState<"selection" | "artboard" | "key" | "canvas">("selection"),
     [axis, setAxis] = useState<"x" | "y">("x"),
     [position, setPosition] = useState(0),
     [keyId, setKeyId] = useState("");
@@ -151,6 +151,31 @@ export function ProPrecision({
           </Button>
         </div>
       ))}
+      {s.guides.length > 0 && (
+        <div className="pro-actions">
+          <Button
+            variant="ghost"
+            onClick={() =>
+              patch({
+                guides: s.guides.map((n) => ({ ...n, locked: !s.guides.every((g) => g.locked) })),
+              })
+            }
+          >
+            {s.guides.every((g) => g.locked) ? "Unlock all guides" : "Lock all guides"}
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={s.guides.every((g) => g.locked)}
+            onClick={() => patch({ guides: s.guides.filter((g) => g.locked) })}
+          >
+            Clear unlocked guides
+          </Button>
+        </div>
+      )}
+      <p className="pro-help">
+        Guides are saved with the document and never exported. Drag from the rulers to add one; with
+        the Move tool, drag a guide to move it or back onto its ruler to delete it.
+      </p>
       <h3>Align & distribute</h3>
       <label className="pro-field">
         Align relative to
@@ -162,6 +187,7 @@ export function ProPrecision({
         >
           <option value="selection">Selection</option>
           <option value="key">Key object</option>
+          <option value="canvas">Canvas</option>
           <option value="artboard">
             Active artboard
             {artboards(doc).find((b) => b.id === boardId)
@@ -195,7 +221,7 @@ export function ProPrecision({
             key={operation}
             title={name}
             disabled={
-              ids.length < (reference === "artboard" ? 1 : 2) ||
+              ids.length < (reference === "artboard" || reference === "canvas" ? 1 : 2) ||
               (reference === "artboard" && !artboards(doc).some((b) => b.id === boardId)) ||
               (reference === "key" && !ids.includes(keyId)) ||
               ((operation.startsWith("distribute") || operation.startsWith("space")) &&

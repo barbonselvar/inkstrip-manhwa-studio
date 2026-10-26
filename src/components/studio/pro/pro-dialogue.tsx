@@ -541,8 +541,8 @@ export function ProDialogue({
         )}
         {text?.textPath && (
           <p className="pro-help">
-            This is editable text on a path. Use the legacy Vector tools (Vector button above) and
-            their Typography panel to preserve and edit its curve layout.
+            This is editable text on a path. Edit its curve layout in Raster Studio’s Typography
+            tab.
           </p>
         )}
         {text && !text.textPath && (
