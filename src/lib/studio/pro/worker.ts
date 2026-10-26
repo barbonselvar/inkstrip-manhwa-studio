@@ -225,7 +225,7 @@ self.onmessage = async ({ data }) => {
     }
     if (type === "color-source") {
       const target = colorTarget(doc, data.layerId, data.maxArea);
-      const output = await surface({ ...target, mask: undefined }, 1, get);
+      const output = await surface({ ...target, mask: undefined, smartFilters: undefined }, 1, get);
       try {
         const blob = await output.convertToBlob({ type: "image/png" });
         if (latest !== id) throw new DOMException("Color source cancelled", "AbortError");
@@ -257,6 +257,10 @@ self.onmessage = async ({ data }) => {
         layer.locked
       )
         throw Error("Choose an unlocked raster or paint layer with an enabled mask.");
+      if (layer.smartFilters?.some((f) => f.enabled))
+        throw Error(
+          "Disable Smart Filters before baking a layer mask, to keep the filter stack editable. The mask, original artwork and filters are unchanged.",
+        );
       const output = await surface(layer, 1, get);
       try {
         const blob = await output.convertToBlob({ type: "image/png" }),

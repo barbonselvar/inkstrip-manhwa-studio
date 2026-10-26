@@ -51,6 +51,7 @@ export function ProNumber({
 }
 export function ProProperties({
   anchorControls,
+  appearanceControls,
   selected,
   documentSize,
   onPatch,
@@ -77,6 +78,7 @@ export function ProProperties({
   onApplyMask,
 }: {
   anchorControls?: ReactNode;
+  appearanceControls?: ReactNode;
   selected?: Layer;
   documentSize?: { width: number; height: number };
   onPatch: (p: Partial<Layer>, group?: string) => void;
@@ -555,7 +557,7 @@ export function ProProperties({
                 onPatch={onPatch}
               />
             )}
-            <ProAppearance layer={selected} onPatch={onPatch} />
+            {appearanceControls ?? <ProAppearance layer={selected} onPatch={onPatch} />}
             <ToolSection title="Layer mask">
               <p className="pro-help">
                 White reveals, eraser hides. The source pixels remain intact. A selection becomes a

@@ -40,6 +40,7 @@ export const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof
   { id: "patch", name: "Patch Repair", key: "", Icon: ScanLine },
   { id: "eraser", name: "Eraser", key: "E", Icon: Eraser },
   { id: "eyedropper", name: "Eyedropper", key: "I", Icon: Pipette },
+  { id: "gradient-fill", name: "Gradient Fill", key: "", Icon: ScanLine },
   { id: "fill", name: "Paint Bucket", key: "G", Icon: PaintBucket },
   { id: "select-rect", name: "Rectangle selection", key: "M", Icon: ScanLine },
   { id: "select-ellipse", name: "Ellipse selection", key: "", Icon: Circle },
@@ -56,6 +57,7 @@ export const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof
   { id: "text", name: "Text", key: "T", Icon: Type },
 ];
 export const RASTER_TOOL_IDS = new Set<ProTool>([
+  "gradient-fill",
   "fill",
   "transform",
   "crop",

@@ -1,0 +1,14 @@
+[
+  {
+    "operation": "Pathfinder",
+    "sourceFilterCount": 1,
+    "resultFilterCount": 0,
+    "filteredSourceRemoved": true
+  },
+  {
+    "operation": "Compound",
+    "sourceFilterCount": 1,
+    "resultFilterCount": 0,
+    "filteredSourceRemoved": true
+  }
+]

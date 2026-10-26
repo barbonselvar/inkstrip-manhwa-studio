@@ -1,6 +1,10 @@
 import { contours, validateDocument, type Layer, type ProDocument } from "./model.ts";
 import { isLocked } from "./operations.ts";
 function neutral(d: ProDocument, l: Layer) {
+  if (l.smartFilters?.length)
+    throw new Error(
+      "Remove Smart Filters before Pathfinder. Boolean geometry cannot preserve their editable source planes; source objects are unchanged.",
+    );
   if (
     !["shape", "group"].includes(l.kind) ||
     isLocked(d, l.id) ||

@@ -1,3 +1,11 @@
+import { ProR8Lab } from "./pro-r8-lab";
+import { advancedGradient } from "@/lib/studio/pro/gradient";
+import {
+  addGradientFill,
+  commitR8Document,
+  type R8Draft,
+  type R8Settings,
+} from "@/lib/studio/pro/r8-document";
 import {
   previewTarget,
   samePreviewTarget,
@@ -107,6 +115,7 @@ import { validateTransform, withPivot, bounds } from "@/lib/studio/pro/transform
 import { ProGeometry } from "./pro-geometry";
 import { fullCrop, type Crop } from "@/lib/studio/pro/geometry";
 import { ProProperties, ProNumber } from "./pro-properties";
+import { ProAppearance } from "./pro-appearance";
 import {
   EMPTY_SELECTION,
   fromPanel,
@@ -235,6 +244,7 @@ export default function ProWorkspace({
     null,
   );
   const [adjustmentDraft, setAdjustmentDraft] = useState<AdjustmentDraft | null>(null);
+  const [r8Draft, setR8Draft] = useState<R8Draft | null>(null);
   const [dialoguePending, setDialoguePending] = useState(false);
   const dialoguePendingRef = useRef(false);
   dialoguePendingRef.current = dialoguePending;
@@ -719,6 +729,23 @@ export default function ProWorkspace({
     },
     [setHist, maxArea],
   );
+  const applyR8Settings = (settings: R8Settings): true | string => {
+    const current = historyRef.current?.present.doc;
+    if (!current || !r8Draft || busyRef.current || transformRef.current || quickMask)
+      return "This target is unavailable. Exit Quick Mask and finish active operations first.";
+    try {
+      const next = commitR8Document(current, r8Draft, settings, maxArea);
+      if (next !== current && !commit(next, "Edit layer styles / Smart Filters / gradient"))
+        return "Layer properties were not committed. Original artwork is unchanged.";
+      setSelectedIds([r8Draft.layerId]);
+      setMaskMode(false);
+      setStatus("Editable layer properties saved. Original artwork is unchanged.");
+      return true;
+    } catch (e) {
+      return storageMessage(e);
+    }
+  };
+
   const applyPersistentAdjustment = (settings: AdjustmentLayerSettings): true | string => {
     const current = historyRef.current?.present.doc;
     if (!current || !adjustmentDraft || busyRef.current || transformRef.current)
@@ -1136,6 +1163,16 @@ export default function ProWorkspace({
     }
   };
   const quickMask = quickMaskLayer(doc);
+  useEffect(() => {
+    if (
+      r8Draft &&
+      (history?.present.doc !== r8Draft.origin ||
+        (!r8Draft.created && selectedIds[0] !== r8Draft.layerId) ||
+        mode !== "raster" ||
+        quickMask)
+    )
+      setR8Draft(null);
+  }, [r8Draft, history?.present.doc, selectedIds, mode, quickMask]);
   useEffect(() => {
     // While Quick Mask is active, painting must target only its coverage layer.
     if (quickMask && selectedIds[0] !== quickMask.id) setSelectedIds([quickMask.id]);
@@ -2215,6 +2252,22 @@ export default function ProWorkspace({
       if (active?.kind === "shape") createPathText();
       return;
     }
+    if (id === "gradient-fill") {
+      if (
+        mode !== "raster" ||
+        quickMask ||
+        active?.kind !== "gradient" ||
+        isLocked(doc!, active.id)
+      ) {
+        setError(
+          "Choose an unlocked Gradient Fill layer and exit Quick Mask before editing its endpoints.",
+        );
+        return;
+      }
+      setTab("properties");
+      setPanelOpen(true);
+      setMaskMode(false);
+    }
     if (id === "gradient") {
       setTab("appearance");
       setPanelOpen(true);
@@ -2421,7 +2474,14 @@ export default function ProWorkspace({
     /** Selection and clipboard shortcuts (raster mode). Returns true when handled. */
     selectionKey: (e: KeyboardEvent) => {
       // R6 adjustment / Color & Filters editors own the keyboard while open.
-      if (mode !== "raster" || transformRef.current || cropDraft || colorDraft || adjustmentDraft)
+      if (
+        mode !== "raster" ||
+        transformRef.current ||
+        cropDraft ||
+        colorDraft ||
+        adjustmentDraft ||
+        r8Draft
+      )
         return false;
       const k = e.key.toLowerCase(),
         mod = e.ctrlKey || e.metaKey,
@@ -3095,7 +3155,9 @@ export default function ProWorkspace({
                     busy ||
                     (id === "text-path" &&
                       (active?.kind !== "shape" || isLocked(doc!, active.id))) ||
-                    (id === "gradient" && !active?.appearance?.some((a) => a.paint.gradient))
+                    (id === "gradient" && !active?.appearance?.some((a) => a.paint.gradient)) ||
+                    (id === "gradient-fill" &&
+                      (!!quickMask || active?.kind !== "gradient" || isLocked(doc!, active.id)))
                   }
                   onClick={() => {
                     chooseTool(id);
@@ -3535,7 +3597,69 @@ export default function ProWorkspace({
                           Exit Quick Mask to use color adjustments and Color &amp; Filters.
                         </p>
                       )}
+                      {mode === "raster" && !dialogue && (
+                        <Button
+                          variant="secondary"
+                          disabled={!!quickMask || !!transformDraft || !!cropDraft || busy}
+                          onClick={() => {
+                            if (!doc) return;
+                            try {
+                              const next = addGradientFill(
+                                doc,
+                                advancedGradient(),
+                                selection,
+                                active?.id,
+                              );
+                              setR8Draft({
+                                origin: doc,
+                                layerId: next.layerId,
+                                created: next.document,
+                              });
+                            } catch (e) {
+                              setError(storageMessage(e));
+                            }
+                          }}
+                        >
+                          New Gradient Fill
+                        </Button>
+                      )}
                       <ProProperties
+                        appearanceControls={
+                          mode === "raster" && !dialogue ? (
+                            <div>
+                              <Button
+                                variant="secondary"
+                                disabled={
+                                  !active ||
+                                  active.kind === "adjustment" ||
+                                  active.locked ||
+                                  !!transformDraft ||
+                                  !!quickMask ||
+                                  busy
+                                }
+                                onClick={() => {
+                                  if (doc && active && !isLocked(doc, active.id))
+                                    setR8Draft({ origin: doc, layerId: active.id });
+                                }}
+                              >
+                                Layer styles and Smart Filters
+                              </Button>
+                              <p className="pro-help">
+                                Editable styles, filters and gradients. Quick Mask and backdrop
+                                adjustments are not artwork targets.
+                              </p>
+                              {doc && doc.version !== 3 && active && !quickMask && (
+                                <ProAppearance
+                                  layer={{
+                                    ...active,
+                                    locked: isLocked(doc, active.id) || !!transformDraft,
+                                  }}
+                                  onPatch={patch}
+                                />
+                              )}
+                            </div>
+                          ) : undefined
+                        }
                         anchorControls={
                           active && doc && active.shape === "path" ? (
                             <ProAnchors
@@ -4011,6 +4135,16 @@ export default function ProWorkspace({
               <span className="pro-private-label">On this device · original-safe</span>
             )}
           </footer>
+          {r8Draft && session && (
+            <ProR8Lab
+              key={r8Draft.layerId}
+              draft={r8Draft}
+              session={session}
+              maxArea={maxArea}
+              onCancel={() => setR8Draft(null)}
+              onApply={applyR8Settings}
+            />
+          )}
           {adjustmentDraft && session && (
             <ProAdjustmentLab
               key={adjustmentDraft.layerId}

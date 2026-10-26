@@ -15,7 +15,7 @@ export type AdjustmentDraft = {
 /** An explicit schema1→2 metadata migration; all prior layer/source identities survive. */
 export function upgradeAdjustmentDocument(doc: ProDocument): ProDocument {
   validateDocument(doc);
-  return doc.version === 2 ? doc : { ...doc, version: 2 };
+  return doc.version >= 2 ? doc : { ...doc, version: 2 };
 }
 export function createAdjustmentDraft(
   doc: ProDocument,
