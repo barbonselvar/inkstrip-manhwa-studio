@@ -1,6 +1,7 @@
 # Vector → Raster Studio migration plan
 
-Status: **step 1–3 migrated** (see §5). Vector Studio is hidden from the interface
+Status: **steps 1–2 and the Appearance part of step 3 migrated** (see §5); gradients are
+deferred to R8. Vector Studio is hidden from the interface
 (homepage, Chapter workspace, image menu and the Pro mode switch). Its code, its editing
 mode and all saved documents are unchanged.
 
@@ -174,8 +175,8 @@ reachable only through the hidden Vector mode; _Shared_ = engine used by both.
 
 ### 2.9 Gradients and Appearance stacks
 
-1. **Status:** _Raster_ (§5): Gradient tool (Shift+G) with on-canvas handles and presets, and
-   the Appearance tab. Previously mixed:
+1. **Status:** Appearance tab: _Raster_ (§5). Raster gradient creation/editing tools are
+   **deferred to R8** (Gradient Fill, §5.1). Previously mixed:
    - _Raster:_ editable **gradient layers** (Layers → Gradient layer: linear/radial, angle,
      scale, center, color and opacity stops, presets) and the Gradient Overlay layer effect are
      already in Raster Properties (`pro-appearance.tsx`).
@@ -258,21 +259,35 @@ dedicated mode at the same time.
 Each item reuses the existing engine; every edit is one undo step, saves in the existing
 native format and works on desktop and touch.
 
-| Capability                                                                     | Where in Raster                     | Reused                                                  | New code                                                             |
-| ------------------------------------------------------------------------------ | ----------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------- |
-| Pathfinder Unite / Subtract / Intersect / Exclude / Divide (+ Trim, Merge)     | Paths tab                           | `pathfinder.ts`, worker, `ProPathfinder`                | Tab exposure; Raster guard removed                                   |
-| Path → selection (new / add / subtract / intersect, feather)                   | Paths tab                           | `combineSelection`, `coverageRegion`, selection feather | `path-selection.ts` scan converter (fill rules, Béziers, transforms) |
-| Selection → path                                                               | Paths tab                           | Direct select / anchor editor                           | Marching squares + RDP tracer within native path limits              |
-| Layer mask from path                                                           | Paths tab                           | `maskFromSelection`, mask feather                       | Path coverage as mask source; optional source hiding                 |
-| Vector mask from path; enable, remove, edit as path                            | Paths tab                           | `VectorClip` model + renderer                           | `vectorClipFromPath`, `releaseVectorClip`                            |
-| Gradient tool: linear/radial, handles, color + opacity stops, presets, reverse | Toolbar (Shift+G), tool options     | Gradient layers, `GradientStops`, renderer              | `raster-gradient.ts`; optional `radialShape: "circle"`               |
-| Multiple fills/strokes, stroke alignment, opacity, blend, gradients            | Appearance tab                      | `ProVectorAppearance`                                   | Tab shown in Raster                                                  |
-| Non-destructive layer effects                                                  | Properties → Editable layer effects | Existing (unchanged)                                    | None                                                                 |
+| Capability                                                                 | Where in Raster                     | Reused                                                  | New code                                                             |
+| -------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------- |
+| Pathfinder Unite / Subtract / Intersect / Exclude / Divide (+ Trim, Merge) | Paths tab                           | `pathfinder.ts`, worker, `ProPathfinder`                | Tab exposure; Raster guard removed                                   |
+| Path → selection (new / add / subtract / intersect, feather)               | Paths tab                           | `combineSelection`, `coverageRegion`, selection feather | `path-selection.ts` scan converter (fill rules, Béziers, transforms) |
+| Selection → path                                                           | Paths tab                           | Direct select / anchor editor                           | Marching squares + RDP tracer within native path limits              |
+| Layer mask from path                                                       | Paths tab                           | `maskFromSelection`, mask feather                       | Path coverage as mask source; optional source hiding                 |
+| Vector mask from path; enable, remove, edit as path                        | Paths tab                           | `VectorClip` model + renderer                           | `vectorClipFromPath`, `releaseVectorClip`                            |
+| Multiple fills/strokes, stroke alignment, opacity, blend, gradients        | Appearance tab                      | `ProVectorAppearance`                                   | Tab shown in Raster                                                  |
+| Non-destructive layer effects                                              | Properties → Editable layer effects | Existing (unchanged)                                    | None                                                                 |
 
-**Format.** The only addition is the optional `gradient.radialShape` ("ellipse" by
-default, so older documents render exactly as before). No migration runs.
-
-**Shortcuts.** The Paint Bucket keeps **G**; the Raster Gradient tool is **Shift+G**. In
-Vector mode **G** still selects the Vector Gradient tool.
+**Format.** No document format change. No migration runs.
 
 **Remaining vector-only:** Text on Path / Typography and Artboards / Precision (§2.10, §2.11).
+
+### 5.1 Gradients: deferred to R8
+
+R8 (PR #19, `codex/r8-layer-effects-smart-filters-gradients`) is the authoritative gradient
+implementation: v2 gradient model, Gradient Fill layers and the `gradient-fill` tool. A
+separate Raster Gradient tool was prototyped here and removed before merge to avoid a
+duplicate tool, a duplicate document field and silent pixel changes. Gradient layers,
+their editor (Properties) and renderer stay exactly as on `main`.
+
+Deferred, to be built on R8's native gradient model after R8 lands:
+
+- **Circular radial gradients** (today radial gradients fill the layer box as an ellipse).
+  Add as an R8 v2 option so R8 validates and renders it.
+- **Shift+G shortcut** for Gradient Fill; the Paint Bucket keeps **G**.
+- **Drag-to-create** a new selection-masked gradient layer directly on the canvas, in one
+  gesture (R8 creates via "New Gradient Fill", then edits endpoints).
+- **A center handle** to move a linear gradient without changing its length or angle.
+- **Tool presets** with opacity stops (Foreground to transparent, White glow, …) and a
+  one-click stop reversal, if R8's presets do not already cover them.

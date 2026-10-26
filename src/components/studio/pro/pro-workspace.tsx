@@ -95,8 +95,6 @@ import {
   releaseVectorClip,
   vectorClipFromPath,
 } from "@/lib/studio/pro/path-selection";
-import { gradientToolPresets, reverseStops } from "@/lib/studio/pro/raster-gradient";
-import type { Gradient } from "@/lib/studio/pro/gradient";
 import { PathfinderJob } from "@/lib/studio/pro/pathfinder-client";
 import type { PathfinderOperation, PathfinderOptions } from "@/lib/studio/pro/pathfinder";
 import { editAnchor } from "@/lib/studio/pro/anchor-edit";
@@ -263,9 +261,6 @@ export default function ProWorkspace({
     [cropDraft, setCropDraft] = useState<Crop | null>(null),
     [cropRatio, setCropRatio] = useState(0),
     [tolerance, setTolerance] = useState(32),
-    [gradientKind, setGradientKind] = useState<Gradient["kind"]>("linear"),
-    [gradientPreset, setGradientPreset] = useState("Foreground to transparent"),
-    [gradientReverse, setGradientReverse] = useState(false),
     [contiguous, setContiguous] = useState(true),
     [antiAlias, setAntiAlias] = useState(true),
     [operation, setOperation] = useState<SelectionMode>("add"),
@@ -371,16 +366,6 @@ export default function ProWorkspace({
     // pointer preview. Otherwise a concurrent property edit can publish it.
     previewDoc = transient ?? doc,
     selection = doc?.selection ?? EMPTY_SELECTION,
-    gradientPresets = gradientToolPresets(brush.color),
-    gradientStops = gradientPresets[gradientPreset] ?? gradientPresets["Black to white"]!,
-    gradientBase: Gradient = {
-      kind: gradientKind,
-      angle: 0,
-      scale: 1,
-      center: { x: 0.5, y: 0.5 },
-      stops: gradientReverse ? reverseStops(gradientStops) : gradientStops,
-      ...(gradientKind === "radial" ? { radialShape: "circle" as const } : {}),
-    },
     active = doc?.layers.find((l) => l.id === selectedIds[0]);
   useEffect(() => {
     // Mask targeting is UI state, not part of document history. Undo/import can
@@ -2584,11 +2569,9 @@ export default function ProWorkspace({
         const t =
           e.shiftKey && e.key.toLowerCase() === "t" && mode === "vector"
             ? TOOLS.find((t) => t.id === "text-path")
-            : e.shiftKey && e.key.toLowerCase() === "g" && mode === "raster"
-              ? TOOLS.find((t) => t.id === "layer-gradient")
-              : TOOLS.find(
-                  (t) => allowedTools.has(t.id) && t.key.toLowerCase() === e.key.toLowerCase(),
-                );
+            : TOOLS.find(
+                (t) => allowedTools.has(t.id) && t.key.toLowerCase() === e.key.toLowerCase(),
+              );
         if (t) {
           e.preventDefault();
           actions.current.selectTool(t.id);
@@ -2943,38 +2926,6 @@ export default function ProWorkspace({
                 <option value={9 / 16}>9:16 (portrait)</option>
               </select>
             )}
-            {tool === "layer-gradient" && (
-              <>
-                <select
-                  className="field pro-selection-mode"
-                  aria-label="Gradient type"
-                  value={gradientKind}
-                  onChange={(e) => setGradientKind(e.target.value as Gradient["kind"])}
-                >
-                  <option value="linear">Linear</option>
-                  <option value="radial">Radial</option>
-                </select>
-                <select
-                  className="field pro-selection-mode"
-                  aria-label="Gradient tool preset"
-                  value={gradientPreset}
-                  onChange={(e) => setGradientPreset(e.target.value)}
-                >
-                  {Object.keys(gradientPresets).map((name) => (
-                    <option key={name}>{name}</option>
-                  ))}
-                </select>
-                <label className="pro-check">
-                  <input
-                    type="checkbox"
-                    aria-label="Reverse gradient"
-                    checked={gradientReverse}
-                    onChange={(e) => setGradientReverse(e.target.checked)}
-                  />
-                  Reverse
-                </label>
-              </>
-            )}
             {(tool === "wand" || tool === "color-range" || tool === "fill") && (
               <>
                 <ProNumber
@@ -3184,7 +3135,6 @@ export default function ProWorkspace({
                 onSelectAnchor={selectAnchor}
                 onError={setError}
                 tool={tool}
-                gradientTool={gradientBase}
                 selection={refinePreview ?? colorRangeSelection ?? selection}
                 selectionView={selectionView}
                 onSelection={setSelection}
@@ -3411,9 +3361,7 @@ export default function ProWorkspace({
                       onPatch={patch}
                       clipboard={appearanceClipboard}
                       onCopy={setAppearanceClipboard}
-                      onGradient={() =>
-                        chooseTool(mode === "raster" ? "layer-gradient" : "gradient")
-                      }
+                      onGradient={() => chooseTool("gradient")}
                     />
                   )}
                   {tab === "typography" && (

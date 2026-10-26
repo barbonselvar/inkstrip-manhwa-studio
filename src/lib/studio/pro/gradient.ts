@@ -5,9 +5,6 @@ export type Gradient = {
   scale: number;
   center: { x: number; y: number };
   stops: GradientStop[];
-  /** Radial gradients fill the layer box as an ellipse unless "circle" (Raster Gradient
-   * tool). Omitted in older documents, which keep the elliptical shape. */
-  radialShape?: "ellipse" | "circle";
 };
 export const defaultGradient = (): Gradient => ({
   kind: "linear",
@@ -26,8 +23,7 @@ export function validateGradient(g: Gradient) {
     !n(g.scale, 0.01, 10) ||
     !g.center ||
     !n(g.center.x, -2, 3) ||
-    !n(g.center.y, -2, 3) ||
-    (g.radialShape !== undefined && !["ellipse", "circle"].includes(g.radialShape))
+    !n(g.center.y, -2, 3)
   )
     throw new Error("Invalid gradient geometry.");
   validateStops(g.stops);
@@ -46,8 +42,7 @@ export function gradientField(g: Gradient, width: number, height: number) {
     return sample(
       g.kind === "linear"
         ? 0.5 + u / (span * g.scale)
-        : Math.hypot(u / (width / 2), v / ((g.radialShape === "circle" ? width : height) / 2)) /
-            g.scale,
+        : Math.hypot(u / (width / 2), v / (height / 2)) / g.scale,
     );
   };
 }

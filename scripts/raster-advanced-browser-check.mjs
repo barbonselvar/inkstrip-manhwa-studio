@@ -1,7 +1,8 @@
 /** Raster Studio advanced tools: Pathfinder, path ↔ selection, masks from paths, vector
- * masks, the Gradient tool and Appearance in Raster mode. Every check reads real data:
- * exported PNG pixels, selection coverage from the native file, and documents after
- * save/close/reopen. Desktop (1440) and mobile (390, touch) run the same flow. */
+ * masks and Appearance in Raster mode. Gradients stay with R8's Gradient Fill; this suite
+ * checks no duplicate gradient tool exists. Every check reads real data: exported PNG
+ * pixels, selection coverage from the native file, and documents after save/close/reopen.
+ * Desktop (1440) and mobile (390, touch-enabled context) run the same flow. */
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
@@ -110,45 +111,6 @@ for (const view of [
   const undo = () => p.getByRole("button", { name: "Pro undo", exact: true }).click();
   const redo = () => p.getByRole("button", { name: "Pro redo", exact: true }).click();
   const statusText = (text) => p.getByText(text, { exact: false }).first().waitFor();
-  /** Screen position of a 128 × 96 document point through zoom, pan and view rotation. */
-  const point = (x, y) =>
-    p.locator(".pro-artboard").evaluate(
-      (el, { x, y }) => {
-        const v = el.parentElement.getBoundingClientRect(),
-          s = getComputedStyle(el),
-          w = parseFloat(s.width),
-          h = parseFloat(s.height);
-        const q = new DOMPoint((x / 128 - 0.5) * w, (y / 96 - 0.5) * h).matrixTransform(
-          new DOMMatrix(s.transform),
-        );
-        return { x: v.left + v.width / 2 + w / 2 + q.x, y: v.top + v.height / 2 + h / 2 + q.y };
-      },
-      { x, y },
-    );
-  const drag = async (from, to) => {
-    await panel(false);
-    await fx.artboardBounds(p);
-    const a = await point(...from),
-      b = await point(...to);
-    if (view.mobile) {
-      const cdp = await context.newCDPSession(p);
-      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [a] });
-      for (let i = 1; i <= 8; i++)
-        await cdp.send("Input.dispatchTouchEvent", {
-          type: "touchMove",
-          touchPoints: [{ x: a.x + ((b.x - a.x) * i) / 8, y: a.y + ((b.y - a.y) * i) / 8 }],
-        });
-      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-      await cdp.detach();
-    } else {
-      await p.mouse.move(a.x, a.y);
-      await p.mouse.down();
-      await p.mouse.move(b.x, b.y, { steps: 8 });
-      await p.mouse.up();
-    }
-    await fx.preview(p);
-  };
-
   const source = await fx.start(p);
   await fx.open(p, "Raster");
   await fx.load(p, document(), source);
@@ -279,55 +241,22 @@ for (const view of [
   assert.equal(await modes.getByRole("button", { name: "Vector", exact: true }).count(), 0);
   checks.appearance = true;
 
-  // 8. Gradient tool: Shift+G (Paint Bucket keeps G), linear drag, handle edit, radial
-  //    with a selection mask.
+  // 8. No duplicate gradient tool: R8's Gradient Fill will own Raster gradients. G stays
+  //    the Paint Bucket and existing gradient layers keep editing as on main.
   await panel(false);
-  await p.keyboard.press("Control+d"); // Deselect: the first gradient fills the whole canvas.
   await p.keyboard.press("g");
-  assert.equal(
-    await p
-      .getByRole("button", { name: "Paint Bucket tool", exact: true })
-      .getAttribute("aria-pressed"),
-    "true",
-  );
+  const bucket = p.getByRole("button", { name: "Paint Bucket tool", exact: true });
+  assert.equal(await bucket.getAttribute("aria-pressed"), "true");
+  assert.equal(await p.getByRole("button", { name: "Gradient tool", exact: true }).count(), 0);
   await p.keyboard.press("Shift+G");
-  const gradientTool = p.getByRole("button", { name: "Gradient tool", exact: true });
-  assert.equal(await gradientTool.getAttribute("aria-pressed"), "true");
-  await p.getByLabel("Gradient type", { exact: true }).selectOption("linear");
-  await p.getByLabel("Gradient tool preset", { exact: true }).selectOption("Black to white");
-  await drag([10, 48], [118, 48]);
+  assert.equal(await bucket.getAttribute("aria-pressed"), "true");
+  await select("Magenta");
+  await tab("Properties");
+  await p.getByLabel("Gradient angle", { exact: true }).fill("30");
   doc = await native();
-  const linear = doc.layers.at(-1);
-  assert.equal(linear.kind, "gradient");
-  near(linear.gradient.angle, 0, 0.5, "angle");
-  assert.equal(linear.mask, undefined);
-  image = await png();
-  assert.ok(at(image, 6, 48)[0] < 8, "start is black");
-  assert.ok(at(image, 122, 48)[0] > 247, "end is white");
-  near(at(image, 64, 48)[0], 128, 10, "midpoint gray");
-  // Drag the end handle down-left: the angle follows the handle.
-  await drag([118, 48], [64, 96]);
-  doc = await native();
-  near(doc.layers.at(-1).gradient.angle, (Math.atan2(48, 54) * 180) / Math.PI, 2, "edited angle");
-  assert.equal(doc.layers.filter((l) => l.kind === "gradient").length, 2);
-  // Radial gradient limited to a selection.
-  await select("Cutter");
-  await tab("Paths");
-  await p.getByRole("button", { name: "New selection from path", exact: true }).click();
-  await panel(false);
-  await p.getByLabel("Gradient type", { exact: true }).selectOption("radial");
-  await p.getByLabel("Gradient tool preset", { exact: true }).selectOption("White glow");
-  await gradientTool.click();
-  // A gradient layer is selected: start the new drag away from its handles.
-  await select("Card");
-  await panel(false);
-  await drag([95, 30], [108, 30]);
-  doc = await native();
-  const radial = doc.layers.at(-1);
-  assert.equal(radial.kind, "gradient");
-  assert.equal(radial.gradient.kind, "radial");
-  assert.equal(radial.gradient.radialShape, "circle");
-  assert.equal(radial.mask.enabled, true);
+  assert.equal(named(doc, "Magenta").gradient.angle, 30);
+  for (const l of doc.layers.filter((l) => l.gradient))
+    assert.deepEqual(Object.keys(l.gradient).sort(), ["angle", "center", "kind", "scale", "stops"]);
   checks.gradient = true;
 
   // 9. Save, close, reopen: every new structure survives; export is unchanged.

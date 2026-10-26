@@ -6,14 +6,6 @@ import { maskPaintPoint, maskWorld, maskLocal } from "@/lib/studio/pro/masks";
 import { brushCursor } from "@/lib/studio/pro/brush-cursor";
 import { clipPath } from "@/lib/studio/pro/vector-clip";
 import { gradientHandles, moveGradientHandle } from "@/lib/studio/pro/vector-appearance";
-import {
-  addGradientLayer,
-  gradientFromDrag,
-  gradientLayerHandles,
-  moveGradientLayerHandle,
-  type GradientHandle,
-} from "@/lib/studio/pro/raster-gradient";
-import type { Gradient } from "@/lib/studio/pro/gradient";
 import { measureTextPath } from "@/lib/studio/pro/text-path";
 import {
   artboards,
@@ -94,7 +86,6 @@ import { selectionCanvas } from "@/lib/studio/pro/render";
 import { shapePath } from "@/lib/studio/pro/paths";
 export type ProTool =
   | "gradient"
-  | "layer-gradient"
   | "text-path"
   | "artboard"
   | "transform"
@@ -187,7 +178,6 @@ export function ProCanvas({
   onSelectAnchor,
   onError,
   tool,
-  gradientTool,
   selection,
   selectionView = "overlay",
   onSelection,
@@ -243,8 +233,6 @@ export function ProCanvas({
   onSelectAnchor: (index: number, contour?: number) => void;
   onError: (message: string) => void;
   tool: ProTool;
-  /** Raster Gradient tool settings for new gradient layers. */
-  gradientTool?: Gradient;
   selection: Selection;
   selectionView?: "overlay" | "mask" | "ants";
   onSelection: (s: Selection, expected?: ProDocument) => void;
@@ -774,90 +762,38 @@ export function ProCanvas({
       }
       return;
     }
-    if (
-      (tool === "gradient" || tool === "layer-gradient") &&
-      selected &&
-      !isLocked(doc, selected.id)
-    ) {
+    if (tool === "gradient" && selected && !isLocked(doc, selected.id)) {
       const index =
           selected.appearance?.findIndex((a) => a.id === appearanceId && a.paint.gradient) ?? -1,
         chosen =
           index >= 0 ? index : (selected.appearance?.findIndex((a) => a.paint.gradient) ?? -1);
       const g = selected.appearance?.[chosen]?.paint.gradient;
-      // Gradient paints of the selected shape: drag their handles. The Raster Gradient
-      // tool falls through to gradient layers when no paint handle is hit.
-      if (g) {
-        const handles = gradientHandles(g, selected),
-          entries =
-            g.kind === "linear"
-              ? ([
-                  ["from", handles.from],
-                  ["to", handles.to],
-                ] as const)
-              : ([
-                  ["center", handles.center],
-                  ["radius", handles.to],
-                  ["from", handles.from],
-                ] as const);
-        const stopHandles = handles.stops.slice(1, -1).map((p, i) => [`stop:${i + 1}`, p] as const);
-        const nearest = [...entries, ...stopHandles]
-          .map(([part, q]) => ({ part, q: worldPoint(q, selected) }))
-          .map((h) => ({ ...h, distance: Math.hypot(h.q.x - p.x, h.q.y - p.y) * fit * view.zoom }))
-          .sort((a, b) => a.distance - b.distance)[0];
-        if (nearest && nearest.distance <= 22) {
-          gesture.current = {
-            ...base,
-            type: "gradient",
-            id: selected.id,
-            part: nearest.part,
-            appearanceIndex: chosen,
-          };
-          return;
-        }
-      }
-      if (tool === "gradient") return;
-    }
-    if (tool === "layer-gradient") {
-      // Drag a handle of the selected gradient layer, or drag anywhere to add a new
-      // editable gradient layer (masked by the active selection).
-      if (maskMode) {
-        onError("Leave mask editing to add a gradient layer.");
-        return;
-      }
-      if (selected?.kind === "gradient" && !isLocked(doc, selected.id)) {
-        const h = gradientLayerHandles(selected.gradient!, selected.width, selected.height),
-          entries: Array<[GradientHandle, Point]> =
-            selected.gradient!.kind === "linear"
-              ? [
-                  ["start", h.start],
-                  ["end", h.end],
-                  ["center", h.center],
-                ]
-              : [
-                  ["center", h.center],
-                  ["end", h.end],
-                ];
-        const nearest = entries
-          .map(([part, q]) => ({ part, q: worldPoint(q, selected) }))
-          .map((n) => ({ ...n, distance: Math.hypot(n.q.x - p.x, n.q.y - p.y) * fit * view.zoom }))
-          .sort((a, b) => a.distance - b.distance)[0];
-        if (nearest && nearest.distance <= 22) {
-          gesture.current = {
-            ...base,
-            type: "gradient-handle",
-            id: selected.id,
-            part: nearest.part,
-          };
-          return;
-        }
-      }
-      if (!gradientTool) return;
-      try {
-        const result = addGradientLayer(doc, gradientTool, selection);
-        gesture.current = { ...base, type: "gradient-new", id: result.id, doc: result.document };
-      } catch (e) {
-        onError((e as Error).message);
-      }
+      if (!g) return;
+      const handles = gradientHandles(g, selected),
+        entries =
+          g.kind === "linear"
+            ? ([
+                ["from", handles.from],
+                ["to", handles.to],
+              ] as const)
+            : ([
+                ["center", handles.center],
+                ["radius", handles.to],
+                ["from", handles.from],
+              ] as const);
+      const stopHandles = handles.stops.slice(1, -1).map((p, i) => [`stop:${i + 1}`, p] as const);
+      const nearest = [...entries, ...stopHandles]
+        .map(([part, q]) => ({ part, q: worldPoint(q, selected) }))
+        .map((h) => ({ ...h, distance: Math.hypot(h.q.x - p.x, h.q.y - p.y) * fit * view.zoom }))
+        .sort((a, b) => a.distance - b.distance)[0];
+      if (nearest && nearest.distance <= 22)
+        gesture.current = {
+          ...base,
+          type: "gradient",
+          id: selected.id,
+          part: nearest.part,
+          appearanceIndex: chosen,
+        };
       return;
     }
     if (tool === "transform" && transformDraft && selected) {
@@ -1487,30 +1423,6 @@ export function ProCanvas({
     const l = g.doc.layers.find((x) => x.id === g.id);
     if (!l) return null;
     let next = l;
-    if ((g.type === "gradient-new" || g.type === "gradient-handle") && l.gradient) {
-      let gradient: Gradient | null;
-      if (g.type === "gradient-new")
-        gradient = gradientFromDrag(
-          l.gradient,
-          localPoint(g.start, l),
-          localPoint(p, l),
-          l.width,
-          l.height,
-        );
-      else {
-        const h = gradientLayerHandles(l.gradient, l.width, l.height),
-          world = worldPoint(h[g.part as GradientHandle], l);
-        gradient = moveGradientLayerHandle(
-          l.gradient,
-          l.width,
-          l.height,
-          g.part as GradientHandle,
-          localPoint({ x: world.x + p.x - g.start.x, y: world.y + p.y - g.start.y }, l),
-        );
-      }
-      if (!gradient) return null;
-      next = { ...l, gradient };
-    }
     if (g.type === "gradient") {
       const a = l.appearance![g.appearanceIndex!]!,
         gradient = a.paint.gradient!,
@@ -1814,14 +1726,9 @@ export function ProCanvas({
                   : "Brush stroke"
             : g.type === "pen"
               ? "Add Bézier anchor"
-              : g.type === "gradient-new"
-                ? "Gradient"
-                : g.type === "gradient-handle"
-                  ? "Edit gradient handles"
-                  : `Edit ${g.type}`,
+              : `Edit ${g.type}`,
           g.origin,
         );
-      if (next && g.type === "gradient-new" && g.id) onSelect(g.id);
       if (g.type === "paint" && g.stroke?.clone && cloneSource?.aligned) {
         const layer = g.doc.layers.find((l) => l.id === g.id);
         if (layer) {
@@ -2176,63 +2083,7 @@ export function ProCanvas({
                 </g>
               )}
 
-              {tool === "layer-gradient" &&
-                selected?.kind === "gradient" &&
-                !selected.appearance?.some((a) => a.paint.gradient) &&
-                (() => {
-                  const g = selected.gradient!,
-                    h = gradientLayerHandles(g, selected.width, selected.height),
-                    points = (
-                      g.kind === "linear"
-                        ? [
-                            ["start", h.start],
-                            ["end", h.end],
-                            ["center", h.center],
-                          ]
-                        : [
-                            ["center", h.center],
-                            ["end", h.end],
-                          ]
-                    ).map(([name, q]) => ({
-                      name: name as string,
-                      p: worldPoint(q as Point, selected),
-                    })),
-                    unit = 1 / (fit * view.zoom),
-                    [a, b] = [points[0]!, points[1]!];
-                  return (
-                    <g className="pro-vector-gradient-handles" aria-label="Gradient handles">
-                      <line x1={a.p.x} y1={a.p.y} x2={b.p.x} y2={b.p.y} />
-                      {g.kind === "radial" && (
-                        <circle
-                          cx={a.p.x}
-                          cy={a.p.y}
-                          r={Math.hypot(b.p.x - a.p.x, b.p.y - a.p.y)}
-                          className="pro-gradient-radius"
-                          strokeDasharray={`${4 * unit} ${4 * unit}`}
-                        />
-                      )}
-                      {points.map((n, i) => (
-                        <g key={n.name}>
-                          <circle
-                            cx={n.p.x}
-                            cy={n.p.y}
-                            r={22 * unit}
-                            className="pro-gradient-hit"
-                          />
-                          <circle cx={n.p.x} cy={n.p.y} r={(n.name === "center" ? 4 : 6) * unit} />
-                          <text
-                            x={n.p.x + 8 * unit}
-                            y={n.p.y + (i % 2 ? 16 : -8) * unit}
-                            fontSize={11 * unit}
-                          >
-                            {n.name}
-                          </text>
-                        </g>
-                      ))}
-                    </g>
-                  );
-                })()}
-              {(tool === "gradient" || tool === "layer-gradient") &&
+              {tool === "gradient" &&
                 selected &&
                 (() => {
                   const a =
