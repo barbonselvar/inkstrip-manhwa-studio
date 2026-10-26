@@ -1,0 +1,441 @@
+{
+  "originalCandidate": {
+    "head": "244a1d6fbdf355aefa266501ad7cf4734a6f1b11",
+    "candidate": "ac5c9e26e49cf641c0c0256d3ad2388f761f555f",
+    "base": "02eb697450a7eeeadbd53d73cea5931905c5b2f2",
+    "tree": "c7e01d95e7e0201b8ce29bb2e425f4a91ea30711",
+    "applicationTrees": {
+      "src": "73c5ef5bf6d8588ec4fb91172263de0e726cc21c",
+      "scripts": "4a1511c6f871841923bcef040ff0abb0b5b0cd62",
+      "package.json": "0b04d1ae456fa56c4aea365fa71c5a8dd226ee81",
+      "package-lock.json": "0fb58179e5207945fb97f5eed8bf4adb959bcb70",
+      "vite.config.ts": "ee36cffc25c16d06e13300d84d4132877d38182f"
+    }
+  },
+  "originalMatrix": [
+    {
+      "command": "test:r3:browser",
+      "exitCode": 0,
+      "seconds": 375.91,
+      "base": "http://127.0.0.1:8083",
+      "log": "/workspace/r8-evidence/final/test-r3-browser.log"
+    },
+    {
+      "command": "test:studio:browser",
+      "exitCode": 0,
+      "seconds": 42.02,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-studio-browser.log"
+    },
+    {
+      "command": "test:editor:browser",
+      "exitCode": 0,
+      "seconds": 14.46,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-editor-browser.log"
+    },
+    {
+      "command": "test:adjustments:browser",
+      "exitCode": 0,
+      "seconds": 14.33,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-adjustments-browser.log"
+    },
+    {
+      "command": "test:retouch:browser",
+      "exitCode": 0,
+      "seconds": 4.64,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-retouch-browser.log"
+    },
+    {
+      "command": "test:workflow:browser",
+      "exitCode": 0,
+      "seconds": 12.69,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-workflow-browser.log"
+    },
+    {
+      "command": "test:ui:browser",
+      "exitCode": 0,
+      "seconds": 18.09,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-ui-browser.log"
+    },
+    {
+      "command": "test:pro:browser",
+      "exitCode": 0,
+      "seconds": 37.35,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-pro-browser.log"
+    },
+    {
+      "command": "test:layers:browser",
+      "exitCode": 0,
+      "seconds": 29.77,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-layers-browser.log"
+    },
+    {
+      "command": "test:repair:browser",
+      "exitCode": 0,
+      "seconds": 23.56,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-repair-browser.log"
+    },
+    {
+      "command": "test:geometry:browser",
+      "exitCode": 0,
+      "seconds": 20.56,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-geometry-browser.log"
+    },
+    {
+      "command": "test:transform:browser",
+      "exitCode": 0,
+      "seconds": 30.42,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-transform-browser.log"
+    },
+    {
+      "command": "test:color:browser",
+      "exitCode": 0,
+      "seconds": 23.11,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-color-browser.log"
+    },
+    {
+      "command": "test:r6:browser",
+      "exitCode": 0,
+      "seconds": 60.49,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-r6-browser.log"
+    },
+    {
+      "command": "test:r6:layers:browser",
+      "exitCode": 0,
+      "seconds": 97.75,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-r6-layers-browser.log"
+    },
+    {
+      "command": "test:r8:foundation:browser",
+      "exitCode": 0,
+      "seconds": 4.76,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-r8-foundation-browser.log"
+    },
+    {
+      "command": "test:r8:browser",
+      "exitCode": 0,
+      "seconds": 45.45,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-r8-browser.log"
+    },
+    {
+      "command": "test:r8:styles:browser",
+      "exitCode": 0,
+      "seconds": 25.87,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-r8-styles-browser.log"
+    },
+    {
+      "command": "test:r8:processing:browser",
+      "exitCode": 0,
+      "seconds": 1.59,
+      "base": "http://127.0.0.1:8083",
+      "log": "/workspace/r8-evidence/final/test-r8-processing-browser.log"
+    },
+    {
+      "command": "test:r8:gradient:browser",
+      "exitCode": 0,
+      "seconds": 39.37,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-r8-gradient-browser.log"
+    },
+    {
+      "command": "test:r8:recovery:browser",
+      "exitCode": 0,
+      "seconds": 12.12,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-r8-recovery-browser.log"
+    },
+    {
+      "command": "test:appearance:browser",
+      "exitCode": 0,
+      "seconds": 23.6,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-appearance-browser.log"
+    },
+    {
+      "command": "test:vector:browser",
+      "exitCode": 0,
+      "seconds": 24.95,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-vector-browser.log"
+    },
+    {
+      "command": "test:compound:browser",
+      "exitCode": 0,
+      "seconds": 37.32,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-compound-browser.log"
+    },
+    {
+      "command": "test:pathfinder:browser",
+      "exitCode": 0,
+      "seconds": 44.71,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-pathfinder-browser.log"
+    },
+    {
+      "command": "test:artboards:browser",
+      "exitCode": 0,
+      "seconds": 29.09,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-artboards-browser.log"
+    },
+    {
+      "command": "test:preview:browser",
+      "exitCode": 0,
+      "seconds": 11.86,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-preview-browser.log"
+    },
+    {
+      "command": "test:vector-final:browser",
+      "exitCode": 0,
+      "seconds": 60.43,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-vector-final-browser.log"
+    },
+    {
+      "command": "test:raster-refinement:browser",
+      "exitCode": 0,
+      "seconds": 47.7,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-raster-refinement-browser.log"
+    },
+    {
+      "command": "bench:raster:browser",
+      "exitCode": 0,
+      "seconds": 18.38,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/bench-raster-browser.log"
+    },
+    {
+      "command": "test:homepage:browser",
+      "exitCode": 0,
+      "seconds": 45.04,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-homepage-browser.log"
+    },
+    {
+      "command": "test:dialogue:ocr",
+      "exitCode": 0,
+      "seconds": 7.75,
+      "base": "http://127.0.0.1:8085",
+      "log": "/workspace/r8-evidence/final/ocr-prebundle-cold-test.log",
+      "initialization": "scripts/vite-browser-qa.config.mjs, fresh dependency cache, no warmup/retry"
+    },
+    {
+      "command": "test:dialogue:browser",
+      "exitCode": 0,
+      "seconds": 16.08,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-dialogue-browser.log"
+    },
+    {
+      "command": "test:dialogue:workflow",
+      "exitCode": 0,
+      "seconds": 9.02,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-dialogue-workflow.log"
+    },
+    {
+      "command": "test:dialogue:render",
+      "exitCode": 0,
+      "seconds": 2.2,
+      "base": "http://127.0.0.1:8085",
+      "log": "/workspace/r8-evidence/final/test-dialogue-render.log"
+    },
+    {
+      "command": "test:dialogue:security",
+      "exitCode": 0,
+      "seconds": 2.14,
+      "base": "http://127.0.0.1:8085",
+      "log": "/workspace/r8-evidence/final/test-dialogue-security.log"
+    },
+    {
+      "command": "test:chapter-import:browser",
+      "exitCode": 0,
+      "seconds": 24.39,
+      "base": "http://127.0.0.1:8085",
+      "log": "/workspace/r8-evidence/final/test-chapter-import-browser.log"
+    },
+    {
+      "command": "test:r2:browser",
+      "exitCode": 0,
+      "seconds": 64.38,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-r2-browser.log"
+    },
+    {
+      "command": "test:r2:gesture:browser",
+      "exitCode": 0,
+      "seconds": 8.11,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-r2-gesture-browser.log"
+    },
+    {
+      "command": "test:r5:browser",
+      "exitCode": 0,
+      "seconds": 45.15,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-r5-browser.log"
+    },
+    {
+      "command": "test:r7:browser",
+      "exitCode": 0,
+      "seconds": 185.9,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/final/test-r7-browser.log"
+    },
+    {
+      "command": "test:chapter-display:browser",
+      "exitCode": 0,
+      "seconds": 41.29,
+      "base": "http://127.0.0.1:8085",
+      "log": "/workspace/r8-evidence/final/test-chapter-display-browser.log"
+    }
+  ],
+  "postFixCandidate": {
+    "head": "130410b97f65827861a84c520a93a31d2212f202",
+    "candidate": "04a4b10ceb77a81588172990d081735f8819a04c",
+    "base": "02eb697450a7eeeadbd53d73cea5931905c5b2f2",
+    "applicationTrees": {
+      "src": "923e986253432e84034baa27bbfea43844a443a7",
+      "scripts": "c2b6f08431a43eeaf1157c120f06f7facc0331d3",
+      "package.json": "0b04d1ae456fa56c4aea365fa71c5a8dd226ee81",
+      "package-lock.json": "0fb58179e5207945fb97f5eed8bf4adb959bcb70",
+      "vite.config.ts": "ee36cffc25c16d06e13300d84d4132877d38182f"
+    }
+  },
+  "postFixGates": [
+    {
+      "gate": "npm-test",
+      "command": ["npm", "test"],
+      "exitCode": 0,
+      "seconds": 20.85,
+      "log": "/workspace/r8-evidence/post-guard/npm-test.log"
+    },
+    {
+      "gate": "build",
+      "command": ["npm", "run", "build"],
+      "exitCode": 0,
+      "seconds": 5.59,
+      "log": "/workspace/r8-evidence/post-guard/build.log"
+    },
+    {
+      "gate": "typecheck",
+      "command": ["npm", "run", "typecheck"],
+      "exitCode": 0,
+      "seconds": 10.31,
+      "log": "/workspace/r8-evidence/post-guard/typecheck.log"
+    },
+    {
+      "gate": "lint",
+      "command": ["npm", "run", "lint"],
+      "exitCode": 0,
+      "seconds": 7.96,
+      "log": "/workspace/r8-evidence/post-guard/lint.log"
+    },
+    {
+      "gate": "check-build",
+      "command": ["npm", "run", "check:build"],
+      "exitCode": 0,
+      "seconds": 0.16,
+      "log": "/workspace/r8-evidence/post-guard/check-build.log"
+    },
+    {
+      "gate": "check-auth",
+      "command": ["npm", "run", "check:auth"],
+      "exitCode": 0,
+      "seconds": 0.19,
+      "log": "/workspace/r8-evidence/post-guard/check-auth.log"
+    }
+  ],
+  "postFixBrowsers": [
+    {
+      "command": "test:dialogue:ocr",
+      "exitCode": 0,
+      "seconds": 5.93,
+      "base": "http://127.0.0.1:8083",
+      "log": "/workspace/r8-evidence/post-guard/test-dialogue-ocr.log"
+    },
+    {
+      "command": "test:compound:browser",
+      "exitCode": 0,
+      "seconds": 35.55,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/post-guard/test-compound-browser.log"
+    },
+    {
+      "command": "test:pathfinder:browser",
+      "exitCode": 0,
+      "seconds": 45.82,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/post-guard/test-pathfinder-browser.log"
+    },
+    {
+      "command": "test:r8:foundation:browser",
+      "exitCode": 0,
+      "seconds": 4.52,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/post-guard/test-r8-foundation-browser.log"
+    },
+    {
+      "command": "test:r8:browser",
+      "exitCode": 0,
+      "seconds": 45.5,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/post-guard/test-r8-browser.log"
+    },
+    {
+      "command": "test:r8:styles:browser",
+      "exitCode": 0,
+      "seconds": 25.59,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/post-guard/test-r8-styles-browser.log"
+    },
+    {
+      "command": "test:r8:processing:browser",
+      "exitCode": 0,
+      "seconds": 2.08,
+      "base": "http://127.0.0.1:8083",
+      "log": "/workspace/r8-evidence/post-guard/test-r8-processing-browser.log"
+    },
+    {
+      "command": "test:r8:gradient:browser",
+      "exitCode": 0,
+      "seconds": 40.49,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/post-guard/test-r8-gradient-browser.log"
+    },
+    {
+      "command": "test:r8:recovery:browser",
+      "exitCode": 0,
+      "seconds": 12.27,
+      "base": "http://127.0.0.1:8082",
+      "log": "/workspace/r8-evidence/post-guard/test-r8-recovery-browser.log"
+    }
+  ],
+  "postFixBuildAcceptance": {
+    "command": "local-build-acceptance",
+    "exitCode": 0,
+    "seconds": 63.11,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r8-evidence/post-guard/local-build-acceptance.log"
+  },
+  "note": "Historical passes preserved. After PR20 merged externally, the complete current-main matrix was rerun separately."
+}

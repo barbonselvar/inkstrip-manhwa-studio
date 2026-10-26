@@ -1,54 +1,101 @@
 # R8 test report
 
-Status: R8.1–R8.4 and targeted hardening tests pass. Full frozen-candidate regression and final CI remain pending. Historical audit/results below record actual implementation stages.
+**PASS: 1,007 unit tests, 42 registered browser suites, existing raster browser benchmark, R8 worker benchmark and local production-build acceptance on current main's immutable test-merge candidate.** Exact-candidate source CI is green. PR19 stays Draft; R8 did not merge or deploy production.
 
-Baseline is main `02eb697450a7eeeadbd53d73cea5931905c5b2f2`. Dependency installation and the existing full unit suite were run in the isolated worktree; raw logs are retained under `/workspace/r8-evidence/`. Final totals, new pixel/security tests, browser results, exact-head CI and measured performance will be added after execution.
+## Revision and recovery record
 
-Existing zero-tolerance R6 recovery/export and Artboards readiness checks must remain unchanged. The previously confirmed cold Vite dependency optimization reload is an environment concern for source-module browser probes: capture and diagnose it, never hide it with arbitrary sleeps or weaker assertions. UI tests use existing Playwright infrastructure if the documented agent-browser CLI remains unavailable. Chromium mobile emulation is not physical Android testing.
+Recovered branch `codex/r8-layer-effects-smart-filters-gradients` at `244a1d6` without uncommitted source changes. All completed R8 functionality was retained. The interruption was an OCR/Vite initialization failure, not a lost implementation.
 
-## R8.1 foundation results
+Final full matrix candidate: `1f43b387dc96466e5c68b60f4dc779e496e74adf`, with independently verified parents current main `bfcbdf99248e75bfe10d8d1df6d71bb5acd6a596` and branch `2b3c30a8f3f24b67106047648edc97f2c323fb38`. Final R8 code is `130410b`; its following commits document integration. This candidate includes PR20's externally merged changes without merging them into the R8 branch. All application trees are recorded in [validation.json](r8-evidence/validation.json); final documentation-only publication is checked against those same combined tree IDs. Exact publishing SHA and final CI links are on [Draft PR19](https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/19).
 
-- Baseline:942 tests pass (200 scripts +59 app/auth +105 Studio +578 Pro).
-- Foundation:971 tests pass (200+59+105+607),0 failures/skips. Includes27 new tests and two additional existing effect-family cases. Typecheck passes.
-- New worker browser test passes schema3/envelope9 native round trip, Smart Filter order, real color overlay, R7 selection mask, R6 invert adjustment, unchanged original asset/settings and zero-tolerance preview/PNG/reopen equivalence.
-- Initial new tests found an explicit undefined parent field in new fill metadata; production creation now omits it. A Surface Blur fixture initially placed its noise impulse within the tested edge kernel; it now separates the noise and edge regions, retaining exact numeric edge assertions.
-- The first browser invocation preceded dev-server readiness and failed connection establishment. After the server answered, the unchanged test passed; both logs are retained. No image tolerance/delay or existing test assertion changed.
-- Full R8 UI/mobile/performance/recovery/CI validation remains pending.
+[Configuration CI40314424480](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/40314424480) and [Build CI40314424520](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/40314424520) check out that exact candidate. Final publishing-head CI is independently verified before delivery.
 
-## Transactional properties and initial hardening
+## Local gates
 
-The new properties workflow passes1440/768/390/360/320px: creation Cancel adds no layer/history, Apply commits one entry, styles modify real pixels, filter reorder changes output, custom presets save, edit Cancel restores exact settings/assets and native/PNG reopen matches at zero tolerance. Layout was refined after screenshot review to keep the preview/header/transaction controls visible while the controls column scrolls.
+Fresh npm ci passed; lock/dependencies are unchanged. Unit totals: 200 repository scripts + 59 app/auth + 108 Studio + 640 Pro = 1007; 0 failures/skips. The original main had 942; PR20 adds three cases and R8 adds 62. The final candidate's complete checks ran locally and in CI.
 
-An early workspace hook referenced Quick Mask before initialization; typecheck/UI caught it and the hook was moved below that initialization. The gradient pointer harness initially exported while its inspector remained hidden; it now reopens the inspector through the actual UI. These were diagnosed, not hidden with sleeps or looser pixels.
+| Command               | Result | Elapsed |
+| --------------------- | ------ | ------- |
+| `npm test`            | PASS   | 21.00s  |
+| `npm run build`       | PASS   | 5.73s   |
+| `npm run typecheck`   | PASS   | 10.97s  |
+| `npm run lint`        | PASS   | 8.47s   |
+| `npm run check:build` | PASS   | 0.15s   |
+| `npm run check:auth`  | PASS   | 0.18s   |
 
-Current working implementation passes988 full unit tests (200+59+105+624), typecheck and lint with0 warnings. Targeted gradient/filtered-painting suite passes all five widths with zero-tolerance native/reopen/PNG comparisons. Its tests found R6 blur preserved coverage by design; Smart Gaussian/Motion use an explicit premultiplied coverage-blur mode in the shared kernels, while the original R6 default stays unchanged. Original R6 tests pass unchanged. Remaining recovery/performance/full-browser/final-HEAD CI work is pending.
+## Full final browser matrix
 
-## R8.3 worker integration
+R3 dense-stroke stress ran alone before built-server work. Source-module tests use the immutable dev server with `scripts/vite-browser-qa.config.mjs`; other suites use that candidate's actual production build. The existing QA transport preserves bytes and production WebAssembly MIME behavior for the local built server. Production configuration/assertions are unchanged. There are no arbitrary test delays, model mocks or skipped required suites.
 
-`r8-processing-browser-check.mjs` passes actual worker/filter-selection-mask/layer-mask staging, neutral R6 color-source replacement without double filtering, native reopen, whole-layer transforms, hidden-layer exclusion and explicit mask-bake/selected-pixel guards. All deterministic pixels use tolerance0. Its first fixture attempted OffscreenCanvas encoding before creating a rendering context; creating the actual2D context fixes the fixture, with no production/tolerance change.
+| Command                          | Result | Elapsed |
+| -------------------------------- | ------ | ------- |
+| `test:r3:browser`                | PASS   | 381.01s |
+| `test:studio:browser`            | PASS   | 43.27s  |
+| `test:editor:browser`            | PASS   | 14.33s  |
+| `test:adjustments:browser`       | PASS   | 13.97s  |
+| `test:retouch:browser`           | PASS   | 5.06s   |
+| `test:workflow:browser`          | PASS   | 13.27s  |
+| `test:ui:browser`                | PASS   | 17.01s  |
+| `test:pro:browser`               | PASS   | 37.12s  |
+| `test:layers:browser`            | PASS   | 30.19s  |
+| `test:repair:browser`            | PASS   | 24.26s  |
+| `test:geometry:browser`          | PASS   | 20.68s  |
+| `test:transform:browser`         | PASS   | 31.71s  |
+| `test:color:browser`             | PASS   | 22.87s  |
+| `test:r6:browser`                | PASS   | 61.27s  |
+| `test:r6:layers:browser`         | PASS   | 99.04s  |
+| `test:r8:foundation:browser`     | PASS   | 4.79s   |
+| `test:r8:browser`                | PASS   | 46.10s  |
+| `test:r8:styles:browser`         | PASS   | 25.70s  |
+| `test:r8:processing:browser`     | PASS   | 1.83s   |
+| `test:r8:gradient:browser`       | PASS   | 40.25s  |
+| `test:r8:recovery:browser`       | PASS   | 11.78s  |
+| `test:appearance:browser`        | PASS   | 24.44s  |
+| `test:vector:browser`            | PASS   | 25.36s  |
+| `test:compound:browser`          | PASS   | 37.77s  |
+| `test:pathfinder:browser`        | PASS   | 45.04s  |
+| `test:artboards:browser`         | PASS   | 28.41s  |
+| `test:preview:browser`           | PASS   | 13.21s  |
+| `test:vector-final:browser`      | PASS   | 62.44s  |
+| `test:raster-refinement:browser` | PASS   | 48.73s  |
+| `bench:raster:browser`           | PASS   | 19.03s  |
+| `test:homepage:browser`          | PASS   | 45.63s  |
+| `test:dialogue:ocr`              | PASS   | 6.91s   |
+| `test:dialogue:browser`          | PASS   | 16.07s  |
+| `test:dialogue:workflow`         | PASS   | 9.08s   |
+| `test:dialogue:render`           | PASS   | 1.64s   |
+| `test:dialogue:security`         | PASS   | 2.53s   |
+| `test:chapter-import:browser`    | PASS   | 24.74s  |
+| `test:r2:browser`                | PASS   | 65.18s  |
+| `test:r2:gesture:browser`        | PASS   | 8.33s   |
+| `test:r5:browser`                | PASS   | 47.92s  |
+| `test:r7:browser`                | PASS   | 189.97s |
+| `test:chapter-display:browser`   | PASS   | 38.99s  |
+| `test:vector-hidden:browser`     | PASS   | 11.32s  |
 
-The filtered-painting regression initially found Gaussian output still had original brush alpha. Diagnosis confirmed the shared R6 filter intentionally preserved coverage. The R8 Smart path now opts into alpha blur in the same kernels; original R6 tests remain unchanged. The strict brush-halo assertion, preview/PNG equality and native reopen pass after the implementation fix.
+The separate R8 real-worker benchmark and unchanged local `production-vector-check` with candidate SHA/`--raster --ai` also pass. This is local candidate acceptance, not live production deployment verification. Dev/built desktop/mobile smoke pass with clean consoles, visible content, no horizontal overflow or baseline divergence; required screenshots were visually inspected.
 
-## R8.4 targeted results
+## R8 unit/pixel/browser coverage
 
-The expanded properties suite passes1440/768/390/360/320 including actual touch stop reordering, preservation of midpoint records, before/after pixels, rapid seed changes, one-entry Apply, source-asset equality, native/PNG equivalence and no horizontal overflow. The Raster gradient tool suite passes the same five widths: source-local endpoint dragging, Escape/touch cancellation, retained R7 mask, exact Undo/Redo/export/native reopen and blurred-paint preview invalidation. Pointer coordinate assertions account for browser input quantization; all image comparisons remain tolerance0.
+- Nine real style families; spread/choke, gradient stroke, repeat/offset, relief direction/depth, alpha/order, enable/disable exact source, copy/paste/duplicate/remove/history and Quick Mask exclusion.
+- Filter kernels/parameter validation, seeded noise, alpha-aware blur, order, filter-selection masks plus layer masks, R6 pre-stack source/no double filtering, native reopen, hidden layers and R5 transforms.
+- Five gradient types,128 stops/midpoints, RGB/OKLab, opacity/smoothness/reverse, actual touch stop reordering and source-local endpoint gestures; Escape/pointer cancellation, R7 masks and exact history/export.
+- Properties at1440/768/390/360/320: legacy access, no duplicate controls after upgrade, creation Cancel/no history, one-entry Apply, before/after and rapid parameter jobs.
+- Native3/envelope9/store5, actual old-reader rejection/old-writer VersionError, autosave reload, blocked-write close/latest changed settings and390px fresh-context Chapter recovery. Complex style/filter masks/groups/clipping/R6/R7/R3/R5 metadata and source bytes survive. PNG/JPEG/WebP per-format decoded recovery comparisons use tolerance 0.
+- Untrusted data: future/mismatched schema/types/keys, invalid numeric/curve/stop/mask records, huge dimensions/work, prototype keys and corrupt JSON reject before embedded image decoding. Presets and aggregate visible-work limits are tested.
+- Boolean/compound regression: either filtered operand, enabled or disabled, rejects before losing a stack; all source geometry/settings stay exact. Existing unfiltered operations retain functionality.
 
-Focused gradient/style tests68 pass; typecheck and lint pass with0 warnings. Gradient midpoint exponents are precompiled once per stop instead of recomputed per pixel, retaining the same interpolation formula. Full R8.5 recovery/performance/final CI remain pending.
+## Diagnosed failures preserved
 
-## R8.5 targeted security, recovery and performance
+1. The first candidate `44c36b7` timed out waiting for legacy `Gradient type`. R8's launcher had replaced legacy controls. The implementation restores schema1/2 direct controls and keeps schema3 transactional. Original Appearance assertions and new transition checks pass.
+2. At source `244a1d6`, the original OCR test failed because Vite first optimized Tesseract/idb-keyval during worker inference. Original main `02eb697` failed identically; logs are retained. The facade-only warmup was incomplete; an import-only runtime warmup can also return before a scheduled reload. Test-only eager startup pre-bundling removes the race. An empty-cache original-test run passed in 7.75s with zero reloads, and final full-matrix OCR passes again. Models, production OCR and test assertions are unchanged. Diagnostic wrong-root/aborted warmup experiments are retained separately and never counted as passes.
+3. Inspection found actual filter metadata loss in Boolean/compound operations: one source stack became zero output records while the filtered operand disappeared. Two new tests fail before and pass after the fix; 38 focused geometry tests, final 1,007 tests and full browser matrix pass. The original failure evidence is committed.
+4. Strict halo tests exposed the R6 coverage-preserving default differing from Smart blur requirements. The implementation uses an explicit shared premultiplied coverage mode and full preview invalidation; original R6 defaults/assertions remain unchanged. Initial new fixture/context/typing mistakes were corrected before counting results or measurements.
 
-- Full working suite1002 passes (200 scripts +59 app/auth +105 Studio +638 Pro). Typecheck, lint0 warnings, production build, check:build and check:auth pass after correcting the new traversal's explicit parent-ID type. Final frozen candidate runs remain pending.
-- Recovery browser passes native9/schema3/store5, actual old-writer VersionError, autosave reload, a real blocked-write close with changed gradient settings, durable latest native record and fresh-context Chapter backup restore at390px. Complex styles/filter masks/groups/clipping/R6 adjustment/R7 mask/selection/R3 strokes/R5 metadata persist with source-asset equality and pixelTolerance0.
-- The actual pre-R8 main reader (02eb697) rejects native9 and internal3, while its legacy native file opens in R8 with unchanged source bytes.
-- Untrusted metadata tests reject future versions/filter/style types, malformed gradients/masks, giant dimensions, prototype keys and corrupt JSON before any atob/embedded-image decode. Visible filter work cannot be multiplied beyond128M by adding layers; hidden originals do not consume render work.
-- All nine style families alter real browser pixels and disable back to exact source. Copy/paste, duplicate presets, removal Undo/Redo and Quick Mask exclusion pass1440/320. Pure tests cover spread/choke, gradient stroke geometry, pattern repeat/offset, relief direction/depth, alpha, style order and invalid records.
-- Worker benchmarks cover512²,1024²,2000² filtered/masked/styled cases and4096²/128-stop gradient-only. RGBA/source hashes remain exact after native round trip; every12-edit burst sends2 physical preview jobs. Raw timing/RSS observations are in the implementation report and evidence JSON.
-- Initial benchmark fixture used an invalid Array.from callback argument; it failed before measurements and was corrected. Both logs are preserved; no benchmark values were invented or extrapolated.
+The recovered/resumed original-base matrix and nine-suite post-fix rerun were already green. PR20 then merged externally, so the entire final matrix was repeated against current main rather than representing stale CI/results as current-base validation. [Historical evidence](r8-evidence/recovery-validation-history.json).
 
-Remaining final gates: frozen-source install/unit/type/lint/build/config/auth, all41 browser suites plus raster benchmark/local production-build acceptance, final CI, read-only concurrent PR20 integration analysis and final reports. No phase-complete/merge/deployment claim is made yet.
+## Performance, compatibility and limitations
 
-The complex recovery suite additionally verifies PNG, JPEG and WebP before/after fresh-context recovery with per-format decoded-pixel tolerance0. Actual pre-R8 reader compatibility and new format rejection results are committed under docs/r8-evidence. All six R8 suites are registered; the complete matrix is41 suites plus the existing raster browser benchmark.
+[Worker measurements](r8-evidence/render-benchmark.json) cover512²/1024²/2000² filtered/masked/styled and4096² gradient-only. Exact native RGBA/source hashes and12-request→2-job coalescing pass. Actual timings/RSS and retained4MP/128M work limits are in the [implementation report](R8_IMPLEMENTATION_REPORT.md). No downscaling or device extrapolation is claimed.
 
-## Full-regression finding: legacy appearance controls
-
-The first frozen candidate (`44c36b7`, source `3ce5ddc`) passed the first21 registered browser suites, then the unchanged Appearance suite timed out waiting for `Gradient type`. R8's Raster properties slot replaced the existing direct `ProAppearance` controls, so legacy gradient/effect workflows lost their interface. Rendering and saved pixels were not the cause. The workspace now retains the existing controls for schema1/2 documents, excludes temporary Quick Mask, and uses the transactional R8 editor after schema3 opt-in. The new UI test explicitly checks legacy access and absence of duplicate controls after upgrade. The original Appearance suite passes unchanged, including all seven legacy styles, gradient history/native/PNG/JPEG/WebP, independent adjustments and320px touch. The targeted R8 properties workflow, typecheck and lint pass after the fix. Final frozen regression is being restarted; the original failure log is preserved.
+Current main's PR20 legacy access/deactivation is included in all final regressions, including its new suite. PR21 remains unmerged/untested in combination and has three actual Git conflicts plus documented native/UI semantics requiring integration. See [parallel analysis](R8_PARALLEL_INTEGRATION.md). Physical Android/stylus, custom pattern asset import, independent filter-mask brush, larger tiled/GPU processing and ICC/16-bit editing are not claimed. No confirmed release blocker remains against the tested main; merging/deploying still requires explicit user authorization.

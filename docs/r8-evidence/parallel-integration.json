@@ -2,7 +2,7 @@
   "r8ApplicationHead": "130410b97f65827861a84c520a93a31d2212f202",
   "originalTestBase": "02eb697450a7eeeadbd53d73cea5931905c5b2f2",
   "currentMain": "bfcbdf99248e75bfe10d8d1df6d71bb5acd6a596",
-  "currentMainValidation": "pending",
+  "currentMainValidation": "passed",
   "entries": [
     {
       "pr": 20,
@@ -11,7 +11,7 @@
       "actualGitConflicts": [],
       "simulationTree": "3186e24e8fe1fc1d24d94bead912b4c98ed3e93b",
       "mergedByR8Task": false,
-      "behavioralCombinedTestsRun": false
+      "behavioralCombinedTestsRun": true
     },
     {
       "pr": 21,
@@ -26,5 +26,6 @@
       "mergedByR8Task": false,
       "behavioralCombinedTestsRun": false
     }
-  ]
+  ],
+  "testedMergeCandidate": "1f43b387dc96466e5c68b60f4dc779e496e74adf"
 }

@@ -5,10 +5,10 @@
       "height": 512,
       "spatial": true,
       "shadow": true,
-      "initMs": 89.9,
-      "firstExportMs": 358.5,
-      "nativeRoundtripMs": 8.3,
-      "reopenedExportMs": 328.2,
+      "initMs": 118,
+      "firstExportMs": 384.4,
+      "nativeRoundtripMs": 7.4,
+      "reopenedExportMs": 337.3,
       "pngBytes": 210783,
       "nativeBytes": 12951,
       "gradientStops": 4,
@@ -20,19 +20,19 @@
         "physicalJobs": 2,
         "fulfilled": 1,
         "rejected": 11,
-        "ms": 538.5
+        "ms": 607
       },
-      "sampledNodeBrowserTreePeakRssMiB": 776.9
+      "sampledNodeBrowserTreePeakRssMiB": 781.6
     },
     {
       "width": 1024,
       "height": 1024,
       "spatial": true,
       "shadow": true,
-      "initMs": 46.4,
-      "firstExportMs": 1005.6,
-      "nativeRoundtripMs": 5.7,
-      "reopenedExportMs": 1154.2,
+      "initMs": 65.1,
+      "firstExportMs": 1064.3,
+      "nativeRoundtripMs": 5.8,
+      "reopenedExportMs": 1241.7,
       "pngBytes": 757201,
       "nativeBytes": 36375,
       "gradientStops": 4,
@@ -44,19 +44,19 @@
         "physicalJobs": 2,
         "fulfilled": 1,
         "rejected": 11,
-        "ms": 2070.39999999851
+        "ms": 2273.5999999996275
       },
-      "sampledNodeBrowserTreePeakRssMiB": 788.4
+      "sampledNodeBrowserTreePeakRssMiB": 789.5
     },
     {
       "width": 2000,
       "height": 2000,
       "spatial": true,
       "shadow": false,
-      "initMs": 53.8,
-      "firstExportMs": 3216.6,
-      "nativeRoundtripMs": 15.2,
-      "reopenedExportMs": 3299.5,
+      "initMs": 76.5,
+      "firstExportMs": 3328.4,
+      "nativeRoundtripMs": 22.5,
+      "reopenedExportMs": 3449.8,
       "pngBytes": 2654456,
       "nativeBytes": 115802,
       "gradientStops": 4,
@@ -68,19 +68,19 @@
         "physicalJobs": 2,
         "fulfilled": 1,
         "rejected": 11,
-        "ms": 3610.8000000044703
+        "ms": 3553.2999999988824
       },
-      "sampledNodeBrowserTreePeakRssMiB": 877.8
+      "sampledNodeBrowserTreePeakRssMiB": 876.6
     },
     {
       "width": 4096,
       "height": 4096,
       "spatial": false,
       "shadow": false,
-      "initMs": 58,
-      "firstExportMs": 2636.9,
-      "nativeRoundtripMs": 36.8,
-      "reopenedExportMs": 2758.7,
+      "initMs": 52.1,
+      "firstExportMs": 2616.2,
+      "nativeRoundtripMs": 41.1,
+      "reopenedExportMs": 2878.6,
       "pngBytes": 349024,
       "nativeBytes": 452780,
       "gradientStops": 128,
@@ -92,9 +92,9 @@
         "physicalJobs": 2,
         "fulfilled": 1,
         "rejected": 11,
-        "ms": 684.1999999955297
+        "ms": 732.3000000007451
       },
-      "sampledNodeBrowserTreePeakRssMiB": 934.6
+      "sampledNodeBrowserTreePeakRssMiB": 922.2
     }
   ],
   "errors": [],

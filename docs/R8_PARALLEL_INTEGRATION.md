@@ -4,16 +4,17 @@ Read-only inspection; this R8 task has not merged or changed an upstream branch.
 `02eb697450a7eeeadbd53d73cea5931905c5b2f2`. PR20 was merged externally at
 11:13:57 UTC on 2026-10-26; current main is
 `bfcbdf99248e75bfe10d8d1df6d71bb5acd6a596`. R8 did not merge it.
-Current-main validation is being run separately; earlier results are not
-represented as validation of this new base. R8 application/QA HEAD is
+Current-main validation passes on immutable candidate `1f43b387dc96466e5c68b60f4dc779e496e74adf`;
+all 1,007 tests and 42 browser suites reran on this new base. Earlier results remain
+separately recorded. R8 application/QA HEAD is
 `130410b97f65827861a84c520a93a31d2212f202`.
 
 ## Actual Git results
 
-| Branch | Inspected HEAD | Actual content conflicts |
-| --- | --- | --- |
-| PR20, externally merged Vector deactivation | `2d46f490eceec8371ca8cc48d80deaf1e9d5f5b4` | None |
-| Draft PR21, Raster advanced tools | `516267f1b24b397b5094f9178a62fe5facd3aa82` | `src/components/studio/pro/pro-appearance.tsx`, `src/components/studio/pro/pro-canvas.tsx`, `src/lib/studio/pro/gradient.ts` |
+| Branch                                      | Inspected HEAD                             | Actual content conflicts                                                                                                     |
+| ------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| PR20, externally merged Vector deactivation | `2d46f490eceec8371ca8cc48d80deaf1e9d5f5b4` | None                                                                                                                         |
+| Draft PR21, Raster advanced tools           | `516267f1b24b397b5094f9178a62fe5facd3aa82` | `src/components/studio/pro/pro-appearance.tsx`, `src/components/studio/pro/pro-canvas.tsx`, `src/lib/studio/pro/gradient.ts` |
 
 PR21 contains the inspected PR20 commit. Do not separately apply both streams or
 cherry-pick their overlapping work. `git merge-tree --write-tree` writes only a
@@ -63,7 +64,7 @@ rendering. gradient.ts conflicts are the stop type and radial field branch.
 
 ## Safest future sequence
 
-PR20 is already on main through an external merge. R8 is being tested against
+PR20 is already on main through an external merge. R8 has been tested against
 that updated base without merging it into the development branch. Keep PR21
 separate. Revalidate legacy navigation, native fixtures and R8 workflows before
 reviewing a release against current main. Establish R8's
@@ -76,6 +77,6 @@ either order.
 Then run both branches' complete regressions, including circular versus elliptical
 radials in non-square layers, five R8 gradient kinds/128 stops, midpoint reverse,
 non-destructive filter/appearance rejection, path/selection/mask conversion,
-Boolean guards, native/recovery/export at tolerance0, R3/R5/R6/R7 and all five
+Boolean guards, native/recovery/export at tolerance 0, R3/R5/R6/R7 and all five
 screen widths. Recheck current PR heads and Git conflicts before that work. This
 analysis is not authorization to merge, deploy or change Claude's branches.
