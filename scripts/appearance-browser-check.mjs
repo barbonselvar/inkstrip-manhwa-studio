@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 import { fromPanel, layer } from "../src/lib/studio/pro/model.ts";
 import { TRANSFORM } from "../src/lib/studio/pro/model.ts";
 import { defaultEffect } from "../src/lib/studio/pro/effects.ts";
+import { legacyVector } from "./pro-browser-fixtures.mjs";
 
 const base = process.argv[2] ?? "http://127.0.0.1:8080";
 assert.ok(
@@ -473,6 +474,7 @@ try {
   }, chapter.original.blobId);
   assert.equal(Buffer.from(originalBytes).toString("base64"), source);
   await p.getByRole("button", { name: "Back to chapter from Pro Studio", exact: true }).click();
+  await legacyVector(p);
   await p.getByRole("button", { name: "Open in Vector Studio", exact: true }).waitFor();
   await open(p, "Vector");
   same(await raster(p), final);

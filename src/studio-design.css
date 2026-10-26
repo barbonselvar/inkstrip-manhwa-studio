@@ -1364,6 +1364,13 @@ body .upload-action:hover {
   gap: 0.5rem;
   margin-top: 0.5rem;
 }
+.studio-launch-grid[data-single] {
+  grid-template-columns: 1fr;
+}
+.studio-launch-hint {
+  margin-top: 0.35rem;
+  line-height: 1.5;
+}
 .studio-launch-grid .studio-button {
   min-height: 3rem;
   justify-content: center;

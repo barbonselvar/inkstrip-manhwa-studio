@@ -14,6 +14,11 @@ import { Button, buttonClass } from "@/components/ui/button";
 import { ConfirmButton, InlineTitle, Segment, Wordmark } from "@/components/studio/chrome";
 import { FORMAT_HINT, IMAGE_ACCEPT } from "@/lib/studio/images";
 import { extensionFor, selectedIds, stripFreshness, useStudio } from "@/lib/studio/store";
+import {
+  enableLegacyVector,
+  legacyVectorRequested,
+  useLegacyVector,
+} from "@/lib/studio/legacy-vector";
 import { PAGE_WIDTHS, SEAMS, type StripFormat } from "@/lib/studio/types";
 import { cn, countLabel, slugify } from "@/lib/utils";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -73,6 +78,11 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const [dialogueQuick, setDialogueQuick] = useState(true);
   const [workspaceTab, setWorkspaceTab] = useState<"images" | "dialogue">("images");
   const [studioMode, setStudioMode] = useState<"raster" | "vector">("raster");
+  const legacyVector = useLegacyVector();
+  useEffect(() => {
+    // `?vector=legacy` keeps old Vector Studio links usable; remember it on this device.
+    if (legacyVectorRequested(window.location.search)) enableLegacyVector();
+  }, []);
   const [editorPanel, setEditorPanel] = useState<Panel | null>(null);
   const [enhancePanels, setEnhancePanels] = useState<Panel[] | null>(null);
   const [pane, setPane] = useState<"panels" | "page">("panels");
@@ -410,7 +420,11 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                     </div>
                   </div>
                 ) : null}
-                <div className="studio-launch-grid" aria-label="Open selected image in an editor">
+                <div
+                  className="studio-launch-grid"
+                  data-single={!legacyVector || undefined}
+                  aria-label="Open selected image in an editor"
+                >
                   <Button
                     variant="secondary"
                     disabled={busy || !checked.length}
@@ -422,18 +436,24 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                   >
                     <Paintbrush className="size-4" /> Open in Raster Studio
                   </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={busy || !checked.length}
-                    onClick={() => {
-                      setStudioMode("vector");
-                      setDialogueMode(false);
-                      setProPanel(list.find((p) => checkedSet.has(p.id)) ?? null);
-                    }}
-                  >
-                    <PenTool className="size-4" /> Open in Vector Studio
-                  </Button>
+                  {legacyVector && (
+                    <Button
+                      variant="secondary"
+                      disabled={busy || !checked.length}
+                      onClick={() => {
+                        setStudioMode("vector");
+                        setDialogueMode(false);
+                        setProPanel(list.find((p) => checkedSet.has(p.id)) ?? null);
+                      }}
+                    >
+                      <PenTool className="size-4" /> Open in Vector Studio
+                    </Button>
+                  )}
                 </div>
+                <p className="studio-launch-hint text-xs text-muted">
+                  Raster Studio is the main editor: professional brushes, selections and masks,
+                  non-destructive adjustment layers, transforms, shapes and text.
+                </p>
                 <div className="chapter-tool-grid">
                   <Button
                     intent="ai"

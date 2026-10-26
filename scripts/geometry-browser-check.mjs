@@ -4,6 +4,7 @@ import { readFile, mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
 import { fromPanel, layer } from "../src/lib/studio/pro/model.ts";
 import { resample } from "../src/lib/studio/pro/resample.ts";
+import { legacyVector } from "./pro-browser-fixtures.mjs";
 const base = process.argv[2] ?? "http://127.0.0.1:8080";
 assert.ok(["localhost", "127.0.0.1"].includes(new URL(base).hostname));
 await mkdir("/workspace/screenshots", { recursive: true });
@@ -484,6 +485,8 @@ try {
       }),
       p = await mobile.newPage();
     await start(p);
+    assert.equal(await p.getByRole("button", { name: "Open in Vector Studio" }).count(), 0);
+    await legacyVector(p);
     assert.ok(
       await p.getByRole("button", { name: "Open in Vector Studio", exact: true }).isVisible(),
     );
