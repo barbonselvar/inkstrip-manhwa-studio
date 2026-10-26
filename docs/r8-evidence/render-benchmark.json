@@ -1,0 +1,104 @@
+{
+  "results": [
+    {
+      "width": 512,
+      "height": 512,
+      "spatial": true,
+      "shadow": true,
+      "initMs": 118,
+      "firstExportMs": 384.4,
+      "nativeRoundtripMs": 7.4,
+      "reopenedExportMs": 337.3,
+      "pngBytes": 210783,
+      "nativeBytes": 12951,
+      "gradientStops": 4,
+      "rgbaSha256": "fe3a25a65af2387fd74038e90ef766808ceceb598e7690753d56ae431d08d335",
+      "pixelExact": true,
+      "sourceBytesExact": true,
+      "burst": {
+        "requests": 12,
+        "physicalJobs": 2,
+        "fulfilled": 1,
+        "rejected": 11,
+        "ms": 607
+      },
+      "sampledNodeBrowserTreePeakRssMiB": 781.6
+    },
+    {
+      "width": 1024,
+      "height": 1024,
+      "spatial": true,
+      "shadow": true,
+      "initMs": 65.1,
+      "firstExportMs": 1064.3,
+      "nativeRoundtripMs": 5.8,
+      "reopenedExportMs": 1241.7,
+      "pngBytes": 757201,
+      "nativeBytes": 36375,
+      "gradientStops": 4,
+      "rgbaSha256": "b0a6e38a1b12e8b70e2b9a3a17846f85f375bea2e0823b6a041fa6c60b3e5848",
+      "pixelExact": true,
+      "sourceBytesExact": true,
+      "burst": {
+        "requests": 12,
+        "physicalJobs": 2,
+        "fulfilled": 1,
+        "rejected": 11,
+        "ms": 2273.5999999996275
+      },
+      "sampledNodeBrowserTreePeakRssMiB": 789.5
+    },
+    {
+      "width": 2000,
+      "height": 2000,
+      "spatial": true,
+      "shadow": false,
+      "initMs": 76.5,
+      "firstExportMs": 3328.4,
+      "nativeRoundtripMs": 22.5,
+      "reopenedExportMs": 3449.8,
+      "pngBytes": 2654456,
+      "nativeBytes": 115802,
+      "gradientStops": 4,
+      "rgbaSha256": "b39e2ac9a6b0ff3bdf46f8049256ca910ad58539c2e502a3f50b4f2e35a82d1c",
+      "pixelExact": true,
+      "sourceBytesExact": true,
+      "burst": {
+        "requests": 12,
+        "physicalJobs": 2,
+        "fulfilled": 1,
+        "rejected": 11,
+        "ms": 3553.2999999988824
+      },
+      "sampledNodeBrowserTreePeakRssMiB": 876.6
+    },
+    {
+      "width": 4096,
+      "height": 4096,
+      "spatial": false,
+      "shadow": false,
+      "initMs": 52.1,
+      "firstExportMs": 2616.2,
+      "nativeRoundtripMs": 41.1,
+      "reopenedExportMs": 2878.6,
+      "pngBytes": 349024,
+      "nativeBytes": 452780,
+      "gradientStops": 128,
+      "rgbaSha256": "d1a66745934d551a0a2b0a248d3c53809b682e13ac7f2948cf000c4a18ce6a23",
+      "pixelExact": true,
+      "sourceBytesExact": true,
+      "burst": {
+        "requests": 12,
+        "physicalJobs": 2,
+        "fulfilled": 1,
+        "rejected": 11,
+        "ms": 732.3000000007451
+      },
+      "sampledNodeBrowserTreePeakRssMiB": 922.2
+    }
+  ],
+  "errors": [],
+  "chromium": "156.0.8078.4",
+  "sampleIntervalMs": 250,
+  "notes": "Shared executor CPU/Chromium timings and sampled Node/browser process-tree RSS, not physical mobile/device guarantees. Existing4MP spatial/style and16.8MP document limits retained."
+}

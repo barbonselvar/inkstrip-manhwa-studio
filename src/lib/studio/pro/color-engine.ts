@@ -371,7 +371,13 @@ export function histogram(data: Uint8ClampedArray) {
   return result;
 }
 /** Clamp borders; convolve premultiplied color and coverage, then normalize. Keep source alpha. */
-function gaussian(input: Uint8ClampedArray, w: number, h: number, sigma: number) {
+function gaussian(
+  input: Uint8ClampedArray,
+  w: number,
+  h: number,
+  sigma: number,
+  blurCoverage = false,
+) {
   const radius = Math.ceil(3 * sigma),
     kernel = Array.from({ length: radius * 2 + 1 }, (_, i) =>
       Math.exp(-((i - radius) ** 2) / (2 * sigma * sigma)),
@@ -394,7 +400,7 @@ function gaussian(input: Uint8ClampedArray, w: number, h: number, sigma: number)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
       const p = (y * w + x) * 4;
-      if (!input[p + 3]) continue;
+      if (!blurCoverage && !input[p + 3]) continue;
       let a = 0;
       const sum = [0, 0, 0];
       for (let k = -radius; k <= radius; k++) {
@@ -404,6 +410,10 @@ function gaussian(input: Uint8ClampedArray, w: number, h: number, sigma: number)
         a += temp[q + 3]! * weight;
       }
       if (a) for (let c = 0; c < 3; c++) out[p + c] = sum[c]! / a;
+      if (blurCoverage) {
+        out[p + 3] = a * 255;
+        if (!a) out[p] = out[p + 1] = out[p + 2] = 0;
+      }
     }
   return out;
 }
@@ -412,6 +422,7 @@ function neighborhood(
   w: number,
   h: number,
   a: Extract<ColorOperation, { kind: "motion" | "median" }>,
+  blurCoverage = false,
 ) {
   const out = input.slice(),
     r = a.kind === "median" ? a.radius : Math.floor(a.length / 2),
@@ -419,7 +430,7 @@ function neighborhood(
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
       const p = (y * w + x) * 4;
-      if (!input[p + 3]) continue;
+      if (!blurCoverage && !input[p + 3]) continue;
       const rows: { rgb: RGB; alpha: number }[] = [];
       const add = (dx: number, dy: number) => {
         const q = (clamp(y + dy, 0, h - 1) * w + clamp(x + dx, 0, w - 1)) * 4,
@@ -434,6 +445,7 @@ function neighborhood(
           add(Math.round(Math.cos(theta) * t), Math.round(Math.sin(theta) * t));
         }
       const total = rows.reduce((n, v) => n + v.alpha, 0);
+      if (blurCoverage && a.kind === "motion") out[p + 3] = (total / a.length) * 255;
       for (let c = 0; c < 3; c++)
         if (a.kind === "motion")
           out[p + c] = rows.reduce((n, v) => n + v.rgb[c]! * v.alpha, 0) / total;
@@ -458,13 +470,14 @@ export function processColor(
   h: number,
   a: ColorOperation,
   coverage?: Uint8ClampedArray,
+  alphaMode: "preserve" | "blur" = "preserve",
 ) {
   validateColorWork(w, h, a);
   if (input.length !== w * h * 4 || (coverage && coverage.length !== w * h))
     throw Error("Invalid color pixel buffer.");
   let out = input.slice();
   if (a.kind === "gaussian" || a.kind === "unsharp" || a.kind === "highPass") {
-    const low = gaussian(input, w, h, a.radius);
+    const low = gaussian(input, w, h, a.radius, a.kind === "gaussian" && alphaMode === "blur");
     if (a.kind === "gaussian") out = low;
     else
       for (let p = 0; p < out.length; p += 4)
@@ -479,7 +492,8 @@ export function processColor(
   } else if (a.kind === "box") out = blurPixels(input, w, h, a.radius);
   else if (a.kind === "denoise")
     out = applyAdjustments(input, w, h, { ...NEUTRAL, noise: a.amount });
-  else if (a.kind === "motion" || a.kind === "median") out = neighborhood(input, w, h, a);
+  else if (a.kind === "motion" || a.kind === "median")
+    out = neighborhood(input, w, h, a, a.kind === "motion" && alphaMode === "blur");
   else if (a.kind === "sharpen" || a.kind === "edges") {
     for (let y = 0; y < h; y++)
       for (let x = 0; x < w; x++) {

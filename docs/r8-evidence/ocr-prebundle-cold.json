@@ -1,0 +1,9 @@
+{
+  "exitCode": 0,
+  "seconds": 7.75,
+  "emptyCacheAtStartup": true,
+  "ocrFacadeWarmup": false,
+  "assertionsChanged": false,
+  "prebundledDependencies": ["idb-keyval", "tesseract.js"],
+  "optimizerChangedReload": false
+}

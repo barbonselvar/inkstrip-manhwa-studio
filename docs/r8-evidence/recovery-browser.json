@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "schema": 3,
+  "envelope": 9,
+  "storage": 5,
+  "legacyWriterRejected": true,
+  "autosaveReloadExact": true,
+  "interruptedCloseBarrier": true,
+  "newSettingsDurable": true,
+  "freshContextBackupRecoveryExact": true,
+  "styles": true,
+  "filterMask": true,
+  "gradientEditable": true,
+  "r6Adjustment": true,
+  "r7SelectionMask": true,
+  "r3Paint": true,
+  "r5TransformedLayer": true,
+  "sourceAssetsExact": true,
+  "jpegWebpRecoveryExact": true,
+  "pixelTolerance": 0,
+  "errors": []
+}
