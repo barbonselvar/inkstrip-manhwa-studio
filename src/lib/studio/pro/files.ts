@@ -59,53 +59,55 @@ export async function nativeFile(s: ProSession): Promise<Blob> {
     ]),
   ].some((s) => s?.frame?.matrix !== undefined);
   const version =
-    s.document.version === 2
-      ? 8
-      : s.document.dialogue ||
-          s.document.layers.some((l) => l.bubble || l.lettering || l.dialogueRole)
-        ? 7
-        : matrixSelection ||
-            s.document.brushSettings !== undefined ||
-            s.document.savedSelections !== undefined ||
-            s.document.layers.some(
-              (l) =>
-                (l.kind === "group" && !!l.mask) ||
-                l.mask?.placement !== undefined ||
-                l.mask?.linked !== undefined ||
-                l.mask?.width !== undefined ||
-                l.mask?.density !== undefined ||
-                l.mask?.feather !== undefined ||
-                l.strokes.some((s) => s.dynamics !== undefined) ||
-                l.mask?.strokes.some((s) => s.dynamics !== undefined),
-            )
-          ? 5
-          : s.document.layers.some(
+    s.document.version === 3
+      ? 9
+      : s.document.version === 2
+        ? 8
+        : s.document.dialogue ||
+            s.document.layers.some((l) => l.bubble || l.lettering || l.dialogueRole)
+          ? 7
+          : matrixSelection ||
+              s.document.brushSettings !== undefined ||
+              s.document.savedSelections !== undefined ||
+              s.document.layers.some(
                 (l) =>
-                  l.appearance !== undefined ||
-                  l.textPath !== undefined ||
-                  l.vectorClips !== undefined,
+                  (l.kind === "group" && !!l.mask) ||
+                  l.mask?.placement !== undefined ||
+                  l.mask?.linked !== undefined ||
+                  l.mask?.width !== undefined ||
+                  l.mask?.density !== undefined ||
+                  l.mask?.feather !== undefined ||
+                  l.strokes.some((s) => s.dynamics !== undefined) ||
+                  l.mask?.strokes.some((s) => s.dynamics !== undefined),
               )
-            ? 4
-            : s.document.artboards !== undefined || s.document.layout !== undefined
-              ? 3
-              : s.document.layers.some(
-                    (l) =>
-                      l.subpaths?.length ||
-                      l.vectorOverflow ||
-                      l.fillRule === "evenodd" ||
-                      l.lineCap !== undefined ||
-                      l.lineJoin !== undefined ||
-                      l.miterLimit !== undefined ||
-                      l.dash !== undefined ||
-                      l.dashOffset !== undefined ||
-                      l.fillOpacity !== undefined ||
-                      l.strokeOpacity !== undefined,
-                  )
-                ? 2
-                : 1;
+            ? 5
+            : s.document.layers.some(
+                  (l) =>
+                    l.appearance !== undefined ||
+                    l.textPath !== undefined ||
+                    l.vectorClips !== undefined,
+                )
+              ? 4
+              : s.document.artboards !== undefined || s.document.layout !== undefined
+                ? 3
+                : s.document.layers.some(
+                      (l) =>
+                        l.subpaths?.length ||
+                        l.vectorOverflow ||
+                        l.fillRule === "evenodd" ||
+                        l.lineCap !== undefined ||
+                        l.lineJoin !== undefined ||
+                        l.miterLimit !== undefined ||
+                        l.dash !== undefined ||
+                        l.dashOffset !== undefined ||
+                        l.fillOpacity !== undefined ||
+                        l.strokeOpacity !== undefined,
+                    )
+                  ? 2
+                  : 1;
   const file = new Blob(
     [
-      (version === 8 ? canonicalNative : JSON.stringify)({
+      (version >= 8 ? canonicalNative : JSON.stringify)({
         format: "inkstrip-pro",
         version,
         document: s.document,
@@ -131,26 +133,30 @@ export async function readNative(
   if (
     !value ||
     value.format !== "inkstrip-pro" ||
-    ![1, 2, 3, 4, 5, 7, 8].includes(value.version) ||
+    ![1, 2, 3, 4, 5, 7, 8, 9].includes(value.version) ||
     !value.assets ||
     typeof value.assets !== "object" ||
     Array.isArray(value.assets)
   )
     throw new Error(
-      "Unsupported native document. This editor supports native versions 1–5, Dialogue7 and R6 version8. Unreleased AI version 6 must be opened in its AI Studio branch.",
+      "Unsupported native document. This editor supports native versions 1–5, Dialogue7 and R6 version8 and R8 version9. Unreleased AI version 6 must be opened in its AI Studio branch.",
     );
   if (
     !value.document ||
-    (value.version === 8 ? value.document.version !== 2 : value.document.version !== 1)
+    (value.version === 9
+      ? value.document.version !== 3
+      : value.version === 8
+        ? value.document.version !== 2
+        : value.document.version !== 1)
   )
     throw Error("Native envelope and document schema versions do not match.");
   if (
-    value.version === 8 &&
+    value.version >= 8 &&
     Object.keys(value).some((k) => !["format", "version", "document", "assets"].includes(k))
   )
     throw Error("Unknown native version8 field.");
   validateDocument({ ...value.document, panelId });
-  if (value.version === 8) documentSources({ ...value.document, panelId }, 16_777_216);
+  if (value.version >= 8) documentSources({ ...value.document, panelId }, 16_777_216);
   if (Object.keys(value.assets).length > 64)
     throw Error("Native documents support at most64 embedded assets. Nothing was imported.");
   const assets: Record<string, Blob> = Object.create(null);
@@ -159,7 +165,7 @@ export async function readNative(
     const a = entry as { mime: string; data: string };
     if (
       !a ||
-      (value.version === 8 &&
+      (value.version >= 8 &&
         (Object.keys(a).some((k) => !["mime", "data"].includes(k)) ||
           typeof a.data !== "string" ||
           a.data.length > MAX_ASSET_BYTES * 1.34 ||
@@ -192,7 +198,11 @@ export function vectorSvg(d: ProDocument, board?: Artboard): string {
   const definitions: string[] = [];
   if (
     d.layers.some(
-      (l) => l.kind === "gradient" || l.kind === "adjustment" || l.effects?.some((e) => e.enabled),
+      (l) =>
+        l.kind === "gradient" ||
+        l.kind === "adjustment" ||
+        l.effects?.some((e) => e.enabled) ||
+        l.smartFilters?.some((f) => f.enabled),
     )
   )
     throw new Error(

@@ -1,0 +1,11 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: Execution context was destroyed, most likely because of a navigation.
+    at /workspace/inkstrip-r8-validation/scripts/dialogue-ocr-browser-check.mjs:32:31 {
+  log: [],
+  name: 'Error'
+}
+
+Node.js v24.19.0

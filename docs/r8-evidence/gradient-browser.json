@@ -1,0 +1,62 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "touch": false,
+      "gradientDrag": true,
+      "cancelExact": true,
+      "maskRetained": true,
+      "undoRedoExact": true,
+      "exportExact": true,
+      "filteredPaintingDirtyRegion": true,
+      "nativeReopenExact": true
+    },
+    {
+      "width": 768,
+      "touch": true,
+      "gradientDrag": true,
+      "cancelExact": true,
+      "maskRetained": true,
+      "undoRedoExact": true,
+      "exportExact": true,
+      "filteredPaintingDirtyRegion": true,
+      "nativeReopenExact": true
+    },
+    {
+      "width": 390,
+      "touch": true,
+      "gradientDrag": true,
+      "cancelExact": true,
+      "maskRetained": true,
+      "undoRedoExact": true,
+      "exportExact": true,
+      "filteredPaintingDirtyRegion": true,
+      "nativeReopenExact": true
+    },
+    {
+      "width": 360,
+      "touch": true,
+      "gradientDrag": true,
+      "cancelExact": true,
+      "maskRetained": true,
+      "undoRedoExact": true,
+      "exportExact": true,
+      "filteredPaintingDirtyRegion": true,
+      "nativeReopenExact": true
+    },
+    {
+      "width": 320,
+      "touch": true,
+      "gradientDrag": true,
+      "cancelExact": true,
+      "maskRetained": true,
+      "undoRedoExact": true,
+      "exportExact": true,
+      "filteredPaintingDirtyRegion": true,
+      "nativeReopenExact": true
+    }
+  ],
+  "errors": [],
+  "pixelTolerance": 0,
+  "physicalAndroid": false
+}

@@ -26,10 +26,11 @@ export function selectionTransformTarget(doc: ProDocument, id: string, maxArea =
     target.linkId ||
     target.clipped ||
     target.effects?.some((e) => e.enabled) ||
+    target.smartFilters?.some((f) => f.enabled) ||
     doc.layers.some((l) => l.parentId === target.parentId && l.clipped)
   )
     throw Error(
-      "Selected-pixel staging requires affine artwork without linked layers, clipping stacks or enabled effects. Original artwork is unchanged.",
+      "Selected-pixel staging requires affine artwork without linked layers, clipping stacks, enabled effects or Smart Filters. Disable Smart Filters first; whole-layer transforms remain available. Original artwork is unchanged.",
     );
   return target;
 }

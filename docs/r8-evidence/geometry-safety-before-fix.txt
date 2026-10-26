@@ -1,0 +1,56 @@
+✖ Pathfinder cannot discard or rebase Smart Filters from either operand (12.185968ms)
+✖ Compound cannot discard or rebase Smart Filters from either operand (1.472732ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 257.246038
+
+✖ failing tests:
+
+test at src/lib/studio/pro/r8-geometry-safety.test.ts:26:3
+✖ Pathfinder cannot discard or rebase Smart Filters from either operand (12.185968ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception: Pathfinder: operand 0, enabled=true
+      at TestContext.<anonymous> (file:///workspace/inkstrip-r8/src/lib/studio/pro/r8-geometry-safety.test.ts:32:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /Remove Smart Filters/,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at src/lib/studio/pro/r8-geometry-safety.test.ts:26:3
+✖ Compound cannot discard or rebase Smart Filters from either operand (1.472732ms)
+  AssertionError [ERR_ASSERTION]: Compound: operand 0, enabled=true
+      at TestContext.<anonymous> (file:///workspace/inkstrip-r8/src/lib/studio/pro/r8-geometry-safety.test.ts:32:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: Error: Smart Filters need a bounded source plane. Rasterize extended vector appearance/path text first, or keep it editable without filters.
+        at validateDocument (file:///workspace/inkstrip-r8/src/lib/studio/pro/model.ts:627:15)
+        at createCompound (file:///workspace/inkstrip-r8/src/lib/studio/pro/compound.ts:244:3)
+        at file:///workspace/inkstrip-r8/src/lib/studio/pro/r8-geometry-safety.test.ts:36:17
+        at getActual (node:assert:611:5)
+        at strict.throws (node:assert:759:24)
+        at TestContext.<anonymous> (file:///workspace/inkstrip-r8/src/lib/studio/pro/r8-geometry-safety.test.ts:32:16)
+        at Test.runInAsyncScope (node:async_hooks:227:14)
+        at Test.run (node:internal/test_runner/test:1382:25)
+        at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+        at Test.postRun (node:internal/test_runner/test:1522:19),
+    expected: /Remove Smart Filters/,
+    operator: 'throws',
+    diff: 'simple'
+  }
