@@ -3404,7 +3404,15 @@ export default function ProWorkspace({
                       }}
                     />
                   )}
-                  {tab === "appearance" && (
+                  {tab === "appearance" && !!active?.smartFilters?.length && (
+                    // R8: Smart Filters need a bounded source plane, which an Appearance stack
+                    // would extend. Say so instead of offering edits the document rejects.
+                    <p className="pro-help" role="status">
+                      This layer has Smart Filters. Remove them in Properties to edit its Appearance
+                      stack, or keep the filters and use Layer Styles.
+                    </p>
+                  )}
+                  {tab === "appearance" && !active?.smartFilters?.length && (
                     <ProVectorAppearance
                       layer={
                         active
