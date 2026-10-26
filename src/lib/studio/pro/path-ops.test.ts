@@ -4,6 +4,7 @@ import { fromPanel, layer, contours, type Anchor, type Layer, type Point } from 
 import { anchorCurve, cubicPoint } from "./bezier.ts";
 import { affine, applyMatrix } from "./transform.ts";
 import { joinPaths, simplifyPath, smoothPath, splitPathAt } from "./path-ops.ts";
+import { defaultSmartOperation } from "./smart-filters.ts";
 
 const doc = () => fromPanel({ id: "p", name: "p", width: 200, height: 200 });
 function path(anchors: Anchor[], closed: boolean, x = 0, y = 0): Layer {
@@ -98,6 +99,20 @@ test("join merges coincident endpoints across transforms and bridges gaps", () =
   const closed = path(pts([0, 0], [10, 0], [10, 10]), true);
   d.layers.push(closed);
   assert.throws(() => joinPaths(d, left.id, closed.id), /open paths/);
+});
+
+test("join cannot discard an R8 Smart Filter stack from either path", () => {
+  for (const filtered of [0, 1]) {
+    const d = { ...doc(), version: 3 as const, source: undefined },
+      paths = [path(pts([0, 0], [20, 0]), false), path(pts([20, 0], [40, 0]), false)];
+    paths[filtered]!.smartFilters = [
+      { id: "grain", enabled: true, operation: defaultSmartOperation("grain") },
+    ];
+    d.layers.push(...paths);
+    const before = structuredClone(d);
+    assert.throws(() => joinPaths(d, paths[0]!.id, paths[1]!.id), /Remove Smart Filters/);
+    assert.deepEqual(d, before);
+  }
 });
 
 test("smooth adds collinear handles; endpoints of open paths get one handle", () => {

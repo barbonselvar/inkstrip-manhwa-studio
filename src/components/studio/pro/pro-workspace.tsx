@@ -3347,8 +3347,7 @@ export default function ProWorkspace({
                         // Paths tab; Appearance, Precision (guides, snapping, align) and
                         // Typography (text on a path, R9) are shared by both modes.
                         (t !== "paths" || mode === "raster") &&
-                        (!["pathfinder", "artboards"].includes(t) ||
-                          mode === "vector"),
+                        (!["pathfinder", "artboards"].includes(t) || mode === "vector"),
                     )
                     .map((t) => (
                       <button

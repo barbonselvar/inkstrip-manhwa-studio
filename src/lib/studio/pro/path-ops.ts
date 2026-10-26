@@ -104,6 +104,10 @@ export function joinPaths(doc: ProDocument, firstId: string, secondId: string, m
   if (firstId === secondId) throw Error("Choose two different paths to join.");
   const a = nativePathLayer(doc, firstId),
     b = nativePathLayer(doc, secondId);
+  if (a.smartFilters?.length || b.smartFilters?.length)
+    throw Error(
+      "Remove Smart Filters before joining paths. Joined geometry cannot preserve their editable source planes; source objects are unchanged.",
+    );
   if (a.subpaths?.length || b.subpaths?.length || a.closed || b.closed)
     throw Error("Join needs two open paths with a single contour each.");
   if (a.transform.deform || b.transform.deform)
