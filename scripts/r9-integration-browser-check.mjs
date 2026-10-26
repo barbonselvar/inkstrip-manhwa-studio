@@ -291,6 +291,10 @@ for (const view of [
   await dragScreen(await point(20, horizontal.position), await point(20, 70));
   doc = await native();
   near(doc.layout.guides.find((g) => g.id === horizontal.id).position, 48, 1, "locked guide");
+  // A locked guide is not grabbed: the drag moved the Gradient Fill under the pointer instead.
+  near(named(doc, "Fill").transform.y, 22, 1, "artwork moved instead of the locked guide");
+  await undo();
+  assert.equal(named(await native(), "Fill").transform.y, 0);
   await tab("Precision");
   await p.getByRole("button", { name: "Clear unlocked guides", exact: true }).click();
   doc = await native();

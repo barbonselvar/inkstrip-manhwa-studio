@@ -1,5 +1,16 @@
 # Inkstrip release changelog
 
+## R9 — precision vector editing in Raster Studio (PR #22)
+
+- Path operations in Properties: split at an anchor, join two open paths, smooth, simplify
+  within a tolerance (900 anchors in about 0.1 s, tolerance held against the source curve).
+- Text on Path (Shift+T) and the Typography tab in Raster; rulers (Ctrl/⌘+R, px or %) with
+  draggable, lockable guides; align to canvas; Star tool, rounded corners, polygon sides.
+- Integrated with R8 and PR #21: Join refuses Smart-Filtered paths like Pathfinder; the
+  Raster inspector keeps its tab-bar height with 13 tabs. No native format change.
+- [Implementation](R9_IMPLEMENTATION_REPORT.md), [architecture](R9_ARCHITECTURE.md),
+  [tests](R9_TEST_REPORT.md).
+
 ## Phase E — Raster refinement (PR #4)
 
 - Native-resolution Select and Mask with local color matting, morphology, cleanup,
@@ -74,7 +85,6 @@ Previous milestones are retained: selection and advanced layers, traditional
 repair and pressure/smoothing, non-destructive crop/resampling, affine group and
 individual projective/warp transforms, seven per-layer color operators, Chapter
 integration, existing AI workflows and 3D homepage.
-
 
 ## Dialogue Studio release candidate
 

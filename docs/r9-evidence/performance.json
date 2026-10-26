@@ -1,0 +1,59 @@
+{
+  "machine": "4-core sandbox, Node v22.22.0; not a device guarantee",
+  "benchR9": {
+    "page": "800\u00d716000",
+    "node": "v22.22.0",
+    "milliseconds": {
+      "validateDocument (42 vector layers, 64 guides)": 0.317,
+      "buildSnapIndex (pointer-down)": 3.384,
+      "snapGeometry per pointer move": 0.009,
+      "smoothPath (900 anchors)": 1.032,
+      "splitPathAt (900 anchors)": 1.619,
+      "joinPaths (900 + 2 anchors)": 1.468,
+      "simplifyPath (900 anchors, 2 px)": 84.275,
+      "rulerTicks (both rulers, 16000 px page)": 0.006
+    },
+    "simplifyRemoved": 792
+  },
+  "simplifyCurrent_7c47847": [
+    {
+      "tolerance": 0.5,
+      "ms": 105.7,
+      "anchors": "900 \u2192 490",
+      "removed": 410,
+      "maxDeviationPx": 0.484,
+      "withinTolerance": true,
+      "endpointsKept": true
+    },
+    {
+      "tolerance": 2,
+      "ms": 75,
+      "anchors": "900 \u2192 108",
+      "removed": 792,
+      "maxDeviationPx": 1.58,
+      "withinTolerance": true,
+      "endpointsKept": true
+    },
+    {
+      "tolerance": 8,
+      "ms": 79.1,
+      "anchors": "900 \u2192 96",
+      "removed": 804,
+      "maxDeviationPx": 4.705,
+      "withinTolerance": true,
+      "endpointsKept": true
+    }
+  ],
+  "simplifyBefore_47b6d4f": [
+    {
+      "tolerance": 2,
+      "ms": 44106.9,
+      "anchors": "900 \u2192 105",
+      "removed": 795,
+      "maxDeviationPx": 2.238,
+      "withinTolerance": false,
+      "endpointsKept": true
+    }
+  ],
+  "method": "900-anchor open path from bench:r9; deviation = max distance from original samples (32/segment) to the simplified curve sampled every <=0.05 px"
+}
