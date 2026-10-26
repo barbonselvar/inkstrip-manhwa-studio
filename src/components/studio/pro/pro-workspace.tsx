@@ -95,6 +95,14 @@ import { RASTER_TOOL_IDS, TOOLS, VECTOR_TOOL_IDS } from "./pro-tools";
 import { ProAiTab, ProAssetsTab, ProExportTab, ProHistoryTab } from "./pro-inspector-tabs";
 import { ProAnchors } from "./pro-anchors";
 import { ProPathfinder } from "./pro-pathfinder";
+import { ProPaths, type PathMaskOptions } from "./pro-paths";
+import {
+  coverageContours,
+  pathLayerFromContours,
+  pathSelectionRegion,
+  releaseVectorClip,
+  vectorClipFromPath,
+} from "@/lib/studio/pro/path-selection";
 import { PathfinderJob } from "@/lib/studio/pro/pathfinder-client";
 import type { PathfinderOperation, PathfinderOptions } from "@/lib/studio/pro/pathfinder";
 import { editAnchor } from "@/lib/studio/pro/anchor-edit";
@@ -313,6 +321,7 @@ export default function ProWorkspace({
       | "transform"
       | "geometry"
       | "layers"
+      | "paths"
       | "pathfinder"
       | "artboards"
       | "precision"
@@ -1887,7 +1896,7 @@ export default function ProWorkspace({
   const runPathfinder = async (operation: PathfinderOperation, options: PathfinderOptions) => {
     const d = historyRef.current?.present.doc,
       s = sessionRef.current;
-    if (!d || !s || busyRef.current || transformRef.current || mode !== "vector") return;
+    if (!d || !s || busyRef.current || transformRef.current) return;
     const run = ++operationRun.current;
     busyRef.current = true;
     setBusy(true);
@@ -1928,6 +1937,142 @@ export default function ProWorkspace({
       setCancellable(false);
       setProgress("");
     }
+  };
+  /** Raster Paths tab: synchronous path ↔ selection ↔ mask edits, one undo step each. */
+  const pathEdit = (
+    label: string,
+    edit: (d: ProDocument) => ProDocument,
+    created?: () => { id: string; status?: string } | undefined,
+  ) => {
+    const d = historyRef.current?.present.doc;
+    if (!d || busyRef.current || transformRef.current) return;
+    setError("");
+    try {
+      if (!commit(edit(d), label)) return;
+      const made = created?.();
+      if (made) {
+        setSelectedIds([made.id]);
+        setTool("direct");
+      }
+      setStatus(made?.status ?? `${label}. Undo restores the previous state.`);
+    } catch (e) {
+      setError(storageMessage(e));
+    }
+  };
+  const pathSources = (d: ProDocument) =>
+    selectedIds.filter((id) => d.layers.find((l) => l.id === id)?.kind === "shape");
+  const loadPathSelection = (mode: SelectionMode, feather: number) =>
+    pathEdit("Load path as selection", (d) => {
+      const region = pathSelectionRegion(d, pathSources(d)),
+        next = combineSelection(d.selection ?? EMPTY_SELECTION, region, mode);
+      return { ...d, selection: compactSelection({ ...next, feather }, d) };
+    });
+  const makePathFromSelection = (tolerance: number) => {
+    let made: { id: string; status?: string } | undefined;
+    pathEdit(
+      "Make path from selection",
+      (d) => {
+        if (!hasActiveSelection(d.selection)) throw Error("Make a selection first.");
+        const c = selectionCanvas({ ...d.selection!, feather: 0 }, d.width, d.height);
+        let alpha: Uint8Array;
+        try {
+          const data = c.getContext("2d")!.getImageData(0, 0, d.width, d.height).data;
+          alpha = new Uint8Array(d.width * d.height);
+          for (let i = 0; i < alpha.length; i++) alpha[i] = data[i * 4 + 3]!;
+        } finally {
+          c.width = c.height = 1;
+        }
+        const traced = coverageContours(alpha, d.width, d.height, tolerance),
+          path = pathLayerFromContours(traced.contours, {
+            name: "Path from selection",
+            stroke: brush.color === "transparent" ? "#172420" : brush.color,
+          });
+        made = {
+          id: path.id,
+          status:
+            traced.dropped || traced.tolerance > tolerance
+              ? `Path from selection: tolerance ${traced.tolerance.toFixed(2)} px${traced.dropped ? `, ${traced.dropped} tiny island(s) omitted` : ""} to stay editable.`
+              : "Path from selection created. Direct select edits its anchors.",
+        };
+        return { ...d, layers: [...d.layers, path] };
+      },
+      () => made,
+    );
+  };
+  const hideSources = (layers: Layer[], ids: string[], hide: boolean) =>
+    hide ? layers.map((l) => (ids.includes(l.id) ? { ...l, visible: false } : l)) : layers;
+  const layerMaskFromPath = ({ targetId, feather, hideSource }: PathMaskOptions) =>
+    pathEdit("Layer mask from path", (d) => {
+      const target = d.layers.find((l) => l.id === targetId),
+        ids = pathSources(d);
+      if (!target || isLocked(d, target.id)) throw Error("Choose an unlocked layer to mask.");
+      if (target.mask) throw Error("That layer already has a mask. Delete it first.");
+      const region = pathSelectionRegion(d, ids),
+        mask = maskFromSelection({ regions: [region], inverted: false, feather: 0 }, target, d);
+      return {
+        ...d,
+        layers: hideSources(
+          d.layers.map((l) => (l.id === target.id ? { ...l, mask: { ...mask, feather } } : l)),
+          ids,
+          hideSource,
+        ),
+      };
+    });
+  const vectorMaskFromPath = ({ targetId, hideSource }: PathMaskOptions) =>
+    pathEdit("Vector mask from path", (d) => {
+      const ids = pathSources(d);
+      if (ids.length !== 1) throw Error("Select exactly one path for a vector mask.");
+      const target = d.layers.find((l) => l.id === targetId);
+      if (!target || isLocked(d, target.id)) throw Error("Choose an unlocked layer to mask.");
+      const clip = vectorClipFromPath(d, target.id, ids[0]!);
+      return {
+        ...d,
+        layers: hideSources(
+          d.layers.map((l) =>
+            l.id === target.id ? { ...l, vectorClips: [...(l.vectorClips ?? []), clip] } : l,
+          ),
+          ids,
+          hideSource,
+        ),
+      };
+    });
+  const editVectorClip = (index: number, action: "toggle" | "remove" | "release") => {
+    let made: { id: string } | undefined;
+    pathEdit(
+      action === "release"
+        ? "Edit vector mask as path"
+        : action === "remove"
+          ? "Remove vector mask"
+          : "Toggle vector mask",
+      (d) => {
+        const target = d.layers.find((l) => l.id === selectedIds[0]);
+        if (!target?.vectorClips?.[index] || isLocked(d, target.id))
+          throw Error("Select an unlocked layer with that vector mask.");
+        if (action === "release") {
+          const result = releaseVectorClip(
+            d,
+            target.id,
+            index,
+            brush.color === "transparent" ? "#172420" : brush.color,
+          );
+          made = { id: result.id };
+          return result.document;
+        }
+        const clips =
+          action === "remove"
+            ? target.vectorClips.filter((_, i) => i !== index)
+            : target.vectorClips.map((c, i) => (i === index ? { ...c, enabled: !c.enabled } : c));
+        return {
+          ...d,
+          layers: d.layers.map((l) => {
+            if (l.id !== target.id) return l;
+            const { vectorClips: _previous, ...rest } = l;
+            return clips.length ? { ...rest, vectorClips: clips } : rest;
+          }),
+        };
+      },
+      () => made,
+    );
   };
   const compound = (operation: "create" | "release") => {
     if (!doc || busyRef.current || transformRef.current) return;
@@ -3118,6 +3263,7 @@ export default function ProWorkspace({
                       "transform",
                       "geometry",
                       "layers",
+                      "paths",
                       "pathfinder",
                       "artboards",
                       "precision",
@@ -3142,13 +3288,10 @@ export default function ProWorkspace({
                             "assets",
                             "export",
                           ].includes(t)) &&
-                        (![
-                          "pathfinder",
-                          "artboards",
-                          "precision",
-                          "appearance",
-                          "typography",
-                        ].includes(t) ||
+                        // Pathfinder, masks from paths and path ↔ selection live in Raster's
+                        // Paths tab; Appearance is shared by both modes.
+                        (t !== "paths" || mode === "raster") &&
+                        (!["pathfinder", "artboards", "precision", "typography"].includes(t) ||
                           mode === "vector"),
                     )
                     .map((t) => (
@@ -3261,7 +3404,15 @@ export default function ProWorkspace({
                       }}
                     />
                   )}
-                  {tab === "appearance" && (
+                  {tab === "appearance" && !!active?.smartFilters?.length && (
+                    // R8: Smart Filters need a bounded source plane, which an Appearance stack
+                    // would extend. Say so instead of offering edits the document rejects.
+                    <p className="pro-help" role="status">
+                      This layer has Smart Filters. Remove them in Properties to edit its Appearance
+                      stack, or keep the filters and use Layer Styles.
+                    </p>
+                  )}
+                  {tab === "appearance" && !active?.smartFilters?.length && (
                     <ProVectorAppearance
                       layer={
                         active
@@ -3328,6 +3479,19 @@ export default function ProWorkspace({
                       onCommit={commit}
                       onError={setError}
                       disabled={busy || dialoguePending || !!transformDraft || !!cropDraft}
+                    />
+                  )}
+                  {tab === "paths" && mode === "raster" && doc && (
+                    <ProPaths
+                      doc={doc}
+                      ids={selectedIds}
+                      disabled={busy || dialoguePending || !!transformDraft || !!cropDraft}
+                      onPathfinder={(operation, options) => void runPathfinder(operation, options)}
+                      onLoadSelection={loadPathSelection}
+                      onMakePath={makePathFromSelection}
+                      onLayerMask={layerMaskFromPath}
+                      onVectorMask={vectorMaskFromPath}
+                      onClip={editVectorClip}
                     />
                   )}
                   {tab === "pathfinder" && mode === "vector" && doc && (
