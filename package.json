@@ -67,7 +67,8 @@
     "bench:r5": "node scripts/r5-benchmark.mjs",
     "test:r7:browser": "node --experimental-strip-types scripts/r7-selection-browser-check.mjs",
     "test:chapter-display:browser": "node scripts/chapter-display-import-browser-check.mjs",
-    "test:vector-hidden:browser": "node --experimental-strip-types scripts/vector-deactivation-browser-check.mjs"
+    "test:vector-hidden:browser": "node --experimental-strip-types scripts/vector-deactivation-browser-check.mjs",
+    "test:r9:browser": "node --experimental-strip-types scripts/r9-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

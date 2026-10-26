@@ -12,10 +12,11 @@ test("raster work, shared layout settings and Dialogue layers do not reveal Vect
     text = layer("text", 64, 48),
     paint = layer("paint", 64, 48),
     adjustment = layer("adjustment", 64, 48),
-    // Raster Studio's Layers panel adds and edits gradient layers itself.
+    // Raster Studio adds gradient layers and (R9) edits text on a path itself.
     gradient = layer("gradient", 64, 48),
+    pathText = { ...layer("text", 64, 48), textPath: {} as never },
     bubble = { ...layer("text", 64, 48), dialogueRole: "text" as const, textPath: undefined };
-  d.layers.push(shape, text, paint, adjustment, gradient, bubble);
+  d.layers.push(shape, text, paint, adjustment, gradient, pathText, bubble);
   assert.equal(hasLegacyVectorContent(d), false);
   // Grid, snapping and guides are shared Raster settings, not vector content.
   d.layout = { ...structuredClone(DEFAULT_LAYOUT), grid: true, snapping: true };
@@ -34,9 +35,6 @@ test("vector-only content keeps legacy Vector Studio access", () => {
   const withClip = doc();
   withClip.layers.push({ ...layer("shape", 64, 48), vectorClips: [{} as never] });
   assert.equal(hasLegacyVectorContent(withClip), true);
-  const withTextPath = doc();
-  withTextPath.layers.push({ ...layer("text", 64, 48), textPath: {} as never });
-  assert.equal(hasLegacyVectorContent(withTextPath), true);
 });
 
 test("only ?vector=legacy requests the legacy entry points", () => {

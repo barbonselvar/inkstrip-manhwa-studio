@@ -16,6 +16,7 @@ import {
   parameterAtLength,
   splitAnchorSegment,
 } from "@/lib/studio/pro/bezier";
+import { joinPaths, simplifyPath, smoothPath, splitPathAt } from "@/lib/studio/pro/path-ops";
 import { ProNumber } from "./pro-properties";
 
 export function ProAnchors({
@@ -27,6 +28,8 @@ export function ProAnchors({
   onSelect,
   onChange,
   onError,
+  joinWith,
+  onSelectLayers,
 }: {
   doc: ProDocument;
   layer: Layer;
@@ -36,9 +39,13 @@ export function ProAnchors({
   onSelect: (index: number) => void;
   onChange: (d: ProDocument, label: string, group?: string) => void;
   onError: (message: string) => void;
+  /** Second selected open path, offered for Join. */
+  joinWith?: Layer;
+  onSelectLayers?: (ids: string[]) => void;
 }) {
   const layer = { ...sourceLayer, ...contourAt(sourceLayer, contour) };
   const [parameter, setParameter] = useState(50),
+    [tolerance, setTolerance] = useState(1),
     [measure, setMeasure] = useState("parameter"),
     a = layer.anchors[index],
     segment = Math.min(index, layer.anchors.length - (layer.closed ? 1 : 2));
@@ -306,6 +313,88 @@ export function ProAnchors({
           Reverse path direction
         </Button>
       </div>
+      <h4>Path operations</h4>
+      <div className="pro-actions">
+        <Button
+          variant="secondary"
+          disabled={!layer.closed && (index === 0 || index === layer.anchors.length - 1)}
+          title={
+            layer.closed
+              ? "Open the closed path at this anchor."
+              : "Cut the open path into two paths at this anchor."
+          }
+          onClick={() => {
+            let ids: string[] = [];
+            if (
+              run(() => {
+                const result = splitPathAt(doc, layer.id, index, contour);
+                ids = result.ids;
+                return result.document;
+              }, "Split path at anchor")
+            ) {
+              onSelectLayers?.(ids);
+              onSelect(0);
+            }
+          }}
+        >
+          Split path at anchor
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={!joinWith}
+          title={
+            joinWith
+              ? `Join with ${joinWith.name} at the nearest endpoints.`
+              : "Select a second open path in Layers to join."
+          }
+          onClick={() => {
+            if (joinWith && run(() => joinPaths(doc, layer.id, joinWith.id).document, "Join paths"))
+              onSelectLayers?.([layer.id]);
+          }}
+        >
+          {joinWith ? `Join with ${joinWith.name}` : "Join paths"}
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => run(() => smoothPath(doc, layer.id, contour, [index]), "Smooth anchor")}
+        >
+          Smooth anchor
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => run(() => smoothPath(doc, layer.id, contour), "Smooth path")}
+        >
+          Smooth all anchors
+        </Button>
+      </div>
+      <ProNumber
+        label="Simplify tolerance (px)"
+        value={tolerance}
+        min={0.1}
+        max={100}
+        step={0.1}
+        onChange={setTolerance}
+      />
+      <Button
+        variant="secondary"
+        onClick={() => {
+          if (
+            run(() => {
+              const result = simplifyPath(doc, layer.id, tolerance, contour);
+              if (!result.removed)
+                throw new Error("No anchor can be removed within this tolerance.");
+              return result.document;
+            }, "Simplify path")
+          )
+            onSelect(0);
+        }}
+      >
+        Simplify path
+      </Button>
+      <p className="pro-help">
+        Split, Join, Smooth and Simplify keep editable Bézier geometry; each is one Undo step.
+        Simplify removes anchors only where the curve stays within the tolerance.
+      </p>
     </section>
   );
 }

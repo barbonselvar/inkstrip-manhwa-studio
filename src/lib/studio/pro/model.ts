@@ -123,12 +123,24 @@ export type Shape =
   | "ellipse"
   | "line"
   | "polygon"
+  | "star"
   | "path"
   | "bubble"
   | "thought"
   | "shout"
   | "caption";
+/** R9 parametric shape settings. Omitted values keep the pre-R9 geometry (sharp
+ * rectangles, hexagons), so older documents render unchanged. */
+export type ShapeOptions = {
+  /** Rectangle corner radius in source px, clamped to half the shorter side. */
+  radius?: number;
+  /** Polygon or star point count. */
+  sides?: number;
+  /** Star inner radius as a fraction of the outer radius. */
+  inner?: number;
+};
 export type Layer = {
+  shapeOptions?: ShapeOptions;
   bubble?: BubbleSpec;
   lettering?: Lettering;
   dialogueRole?: "bubble" | "text" | "cleanup" | "group";
@@ -544,7 +556,7 @@ export function validateDocument(d: ProDocument) {
       throw new Error("Invalid or oversized layer.");
     if (d.version === 2) {
       const allowed =
-        "bubble lettering dialogueRole appearance vectorClips textPath id name kind parentId clipped linkId visible locked opacity blend width height transform mask gradient effects assetId strokes adjustmentLayer adjustments color colorSelection hue black white gamma curve shape fill stroke strokeWidth anchors closed subpaths vectorOverflow fillRule lineCap lineJoin miterLimit dash dashOffset fillOpacity strokeOpacity pathData tail text fontFamily fontSize fontWeight lineHeight letterSpacing align".split(
+        "shapeOptions bubble lettering dialogueRole appearance vectorClips textPath id name kind parentId clipped linkId visible locked opacity blend width height transform mask gradient effects assetId strokes adjustmentLayer adjustments color colorSelection hue black white gamma curve shape fill stroke strokeWidth anchors closed subpaths vectorOverflow fillRule lineCap lineJoin miterLimit dash dashOffset fillOpacity strokeOpacity pathData tail text fontFamily fontSize fontWeight lineHeight letterSpacing align".split(
           " ",
         );
       if (Object.keys(l).some((k) => !allowed.includes(k)))
@@ -736,6 +748,7 @@ export function validateDocument(d: ProDocument) {
         "ellipse",
         "line",
         "polygon",
+        "star",
         "path",
         "bubble",
         "thought",
@@ -765,6 +778,21 @@ export function validateDocument(d: ProDocument) {
           !/^[MmLlHhVvCcSsQqTtAaZz0-9eE.,+\s-]*$/.test(l.pathData)))
     )
       throw new Error("Invalid vector geometry.");
+    if (l.shapeOptions !== undefined) {
+      const o = l.shapeOptions;
+      if (
+        l.kind !== "shape" ||
+        !["rectangle", "polygon", "star"].includes(l.shape) ||
+        !o ||
+        typeof o !== "object" ||
+        Object.keys(o).some((k) => !["radius", "sides", "inner"].includes(k)) ||
+        (o.radius !== undefined && (l.shape !== "rectangle" || !finite(o.radius, 0, 100000))) ||
+        (o.sides !== undefined &&
+          (l.shape === "rectangle" || !Number.isInteger(o.sides) || !finite(o.sides, 3, 64))) ||
+        (o.inner !== undefined && (l.shape !== "star" || !finite(o.inner, 0.05, 0.95)))
+      )
+        throw new Error("Invalid shape options.");
+    }
     if (
       typeof l.text !== "string" ||
       l.text.length > 5000 ||

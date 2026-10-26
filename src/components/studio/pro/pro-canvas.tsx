@@ -84,6 +84,8 @@ import { translationIds, visibleLayerIds } from "@/lib/studio/pro/layers";
 import { isLocked } from "@/lib/studio/pro/operations";
 import { selectionCanvas } from "@/lib/studio/pro/render";
 import { shapePath } from "@/lib/studio/pro/paths";
+import { RULER_SIZE, type RulerUnit } from "@/lib/studio/pro/rulers";
+import { ProRulers } from "./pro-rulers";
 export type ProTool =
   | "gradient"
   | "text-path"
@@ -104,6 +106,7 @@ export type ProTool =
   | "ellipse"
   | "line"
   | "polygon"
+  | "star"
   | "pen"
   | "direct"
   | "text"
@@ -187,6 +190,8 @@ export function ProCanvas({
   maskMode,
   snapping,
   grid,
+  rulers = false,
+  rulerUnit = "px",
   before,
   canvasRef,
   renderVersion,
@@ -243,6 +248,9 @@ export function ProCanvas({
   maskMode: boolean;
   snapping: boolean;
   grid: boolean;
+  /** R9: show rulers; drag from them to create guides. */
+  rulers?: boolean;
+  rulerUnit?: RulerUnit;
   before: boolean;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   renderVersion: number;
@@ -732,7 +740,7 @@ export function ProCanvas({
       return;
     }
     const guideHit = (e.target as Element).closest("[data-guide-id]");
-    if (guideHit && tool === "artboard") {
+    if (guideHit && (tool === "artboard" || tool === "move")) {
       const id = guideHit.getAttribute("data-guide-id")!,
         guide = layout(doc).guides.find((g) => g.id === id);
       if (guide && !guide.locked) gesture.current = { ...base, type: "guide", guideId: id };
@@ -1136,7 +1144,7 @@ export function ProCanvas({
       onTransient(next);
       return;
     }
-    if (["rectangle", "ellipse", "line", "polygon", "text"].includes(tool)) {
+    if (["rectangle", "ellipse", "line", "polygon", "star", "text"].includes(tool)) {
       const object = layer(
         tool === "text" ? "text" : "shape",
         Math.max(1, Math.min(280, doc.width * 0.6)),
@@ -1642,6 +1650,29 @@ export function ProCanvas({
       onTransient(next);
     }
   };
+  const viewportRect = (e: { clientX: number; clientY: number }) => {
+    const r = viewport.current?.getBoundingClientRect();
+    return r ? { x: e.clientX - r.left, y: e.clientY - r.top } : null;
+  };
+  const addGuide = (axis: "x" | "y", position: number) => {
+    const s = layout(doc);
+    if (s.guides.length >= 128) {
+      onError("A document supports at most 128 guides.");
+      return;
+    }
+    onCommit(
+      {
+        ...doc,
+        layout: {
+          ...s,
+          guidesVisible: true,
+          guides: [...s.guides, { id: crypto.randomUUID(), axis, position, locked: false }],
+        },
+      },
+      axis === "x" ? "Add vertical guide" : "Add horizontal guide",
+      documentBase,
+    );
+  };
   const end = (e: ReactPointer<HTMLDivElement>, cancel = false) => {
     pointers.current.delete(e.pointerId);
     setSnapGuides([]);
@@ -1710,6 +1741,23 @@ export function ProCanvas({
           },
         });
         setPatchDestination(null);
+      }
+      const ruler = rulers && g.type === "guide" && g.guideId && viewportRect(e);
+      if (ruler && next) {
+        // Dropping a guide back onto a ruler deletes it (Photoshop behaviour).
+        const s = layout(next),
+          guide = s.guides.find((n) => n.id === g.guideId);
+        if (guide && (guide.axis === "y" ? ruler.y : ruler.x) <= RULER_SIZE) {
+          onCommit(
+            { ...next, layout: { ...s, guides: s.guides.filter((n) => n.id !== guide.id) } },
+            "Delete guide",
+            g.origin,
+          );
+          setSelectionDraft(null);
+          gesture.current = null;
+          onTransient(null);
+          return;
+        }
       }
       if (next)
         onCommit(
@@ -2055,7 +2103,7 @@ export function ProCanvas({
                       x2={g.axis === "x" ? g.position : viewportFrame.x + viewportFrame.width}
                       y2={g.axis === "y" ? g.position : viewportFrame.y + viewportFrame.height}
                     />
-                    {tool === "artboard" && !g.locked && (
+                    {(tool === "artboard" || tool === "move") && !g.locked && (
                       <line
                         data-guide-id={g.id}
                         className="pro-guide-hit"
@@ -2495,6 +2543,18 @@ export function ProCanvas({
             </svg>
           )}
         </div>
+        {rulers && (
+          <ProRulers
+            viewport={size}
+            frame={viewportFrame}
+            fit={fit}
+            view={view}
+            doc={doc}
+            unit={rulerUnit}
+            cursor={cursor}
+            onGuide={addGuide}
+          />
+        )}
       </div>
       <div className="pro-canvas-foot">
         <span>

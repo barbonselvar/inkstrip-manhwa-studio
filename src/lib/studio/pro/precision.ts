@@ -234,7 +234,7 @@ export function alignObjects(
   d: ProDocument,
   ids: string[],
   operation: AlignOperation,
-  reference: "selection" | "artboard" | "key",
+  reference: "selection" | "artboard" | "key" | "canvas",
   boardId?: string,
   keyId?: string,
 ) {
@@ -251,7 +251,7 @@ export function alignObjects(
       "space-x",
       "space-y",
     ].includes(operation) ||
-    !["selection", "key", "artboard"].includes(reference)
+    !["selection", "key", "artboard", "canvas"].includes(reference)
   )
     throw Error("Invalid alignment operation.");
   const roots = selectedRoots(d, ids),
@@ -260,7 +260,8 @@ export function alignObjects(
       box: objectBounds(d, l.id)!,
       members: translationIds(d, [l.id]),
     }));
-  if (groups.length < (reference === "artboard" ? 1 : 2) || groups.some((g) => !g.box))
+  const single = reference === "artboard" || reference === "canvas";
+  if (groups.length < (single ? 1 : 2) || groups.some((g) => !g.box))
     throw Error("Select enough non-empty objects to align.");
   const owner = new Set<string>();
   for (const g of groups)
@@ -276,11 +277,13 @@ export function alignObjects(
       owner.add(id);
     }
   const target =
-    reference === "artboard"
-      ? artboards(d).find((b) => b.id === boardId)
-      : reference === "key"
-        ? groups.find((g) => g.id === keyId)?.box
-        : unionFrames(groups.map((g) => g.box));
+    reference === "canvas"
+      ? { x: 0, y: 0, width: d.width, height: d.height }
+      : reference === "artboard"
+        ? artboards(d).find((b) => b.id === boardId)
+        : reference === "key"
+          ? groups.find((g) => g.id === keyId)?.box
+          : unionFrames(groups.map((g) => g.box));
   if (!target) throw Error("Select an active artboard or key object.");
   const a = ["left", "center-x", "right", "distribute-x", "space-x"].includes(operation)
       ? "x"

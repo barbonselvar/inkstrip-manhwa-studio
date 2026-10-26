@@ -18,6 +18,7 @@ import {
   ScanLine,
   Square,
   Stamp,
+  Star,
   Type,
   Wand,
 } from "lucide-react";
@@ -51,11 +52,13 @@ export const TOOLS: Array<{ id: ProTool; name: string; key: string; Icon: typeof
   { id: "ellipse", name: "Ellipse", key: "O", Icon: Circle },
   { id: "line", name: "Line", key: "", Icon: Minus },
   { id: "polygon", name: "Polygon", key: "", Icon: Hexagon },
+  { id: "star", name: "Star", key: "", Icon: Star },
   { id: "pen", name: "Pen", key: "P", Icon: PenTool },
   { id: "direct", name: "Direct select", key: "A", Icon: MousePointer },
   { id: "text", name: "Text", key: "T", Icon: Type },
 ];
 export const RASTER_TOOL_IDS = new Set<ProTool>([
+  "text-path",
   "fill",
   "transform",
   "crop",
@@ -79,6 +82,7 @@ export const RASTER_TOOL_IDS = new Set<ProTool>([
   "ellipse",
   "line",
   "polygon",
+  "star",
   "pen",
   "direct",
   "text",
@@ -96,6 +100,7 @@ export const VECTOR_TOOL_IDS = new Set<ProTool>([
   "ellipse",
   "line",
   "polygon",
+  "star",
   "pen",
   "direct",
   "text",
