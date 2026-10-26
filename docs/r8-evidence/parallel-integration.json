@@ -1,0 +1,30 @@
+{
+  "r8ApplicationHead": "130410b97f65827861a84c520a93a31d2212f202",
+  "originalTestBase": "02eb697450a7eeeadbd53d73cea5931905c5b2f2",
+  "currentMain": "bfcbdf99248e75bfe10d8d1df6d71bb5acd6a596",
+  "currentMainValidation": "pending",
+  "entries": [
+    {
+      "pr": 20,
+      "head": "2d46f490eceec8371ca8cc48d80deaf1e9d5f5b4",
+      "state": "merged externally",
+      "actualGitConflicts": [],
+      "simulationTree": "3186e24e8fe1fc1d24d94bead912b4c98ed3e93b",
+      "mergedByR8Task": false,
+      "behavioralCombinedTestsRun": false
+    },
+    {
+      "pr": 21,
+      "head": "516267f1b24b397b5094f9178a62fe5facd3aa82",
+      "state": "Draft/open",
+      "actualGitConflicts": [
+        "src/components/studio/pro/pro-appearance.tsx",
+        "src/components/studio/pro/pro-canvas.tsx",
+        "src/lib/studio/pro/gradient.ts"
+      ],
+      "simulationTree": "8d1762f2c9f32a22e8a23e2e4c2b880de682667a",
+      "mergedByR8Task": false,
+      "behavioralCombinedTestsRun": false
+    }
+  ]
+}
