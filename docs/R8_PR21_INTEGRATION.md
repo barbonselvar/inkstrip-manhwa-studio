@@ -1,8 +1,14 @@
 # PR #21 (Raster advanced tools) × R8 (layer effects, Smart Filters, gradients)
 
-Read-only assessment of `codex/r8-layer-effects-smart-filters-gradients` at `244a1d6`
-against PR #21 at `3d17b06`. Nothing on the R8 branch was modified; the merge trials
-ran in a detached scratch worktree.
+Read-only assessment of `codex/r8-layer-effects-smart-filters-gradients` against PR #21
+(`3d17b06`, retargeted to `main` after PR #20 merged as `bfcbdf9`). First run at R8 `244a1d6`,
+re-verified at R8 `27d9366` with identical results. Nothing on the R8 branch was modified;
+the merge trials ran in a detached scratch worktree.
+
+R8's own `docs/R8_PARALLEL_INTEGRATION.md` (R8 `2b3c30a`) independently lists the same two
+risks: duplicate gradient tools and the `radialShape` semantics. R8 `130410b` also guards
+Pathfinder/compound paths against discarding Smart Filter stacks; PR #21 reuses that same
+Pathfinder entry point, so the guard applies to Raster Pathfinder too.
 
 ## Merge trials
 
