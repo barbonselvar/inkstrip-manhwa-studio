@@ -1,71 +1,92 @@
-# PR #21 (Raster advanced tools) × R8 (layer effects, Smart Filters, gradients)
+# PR #21 (Raster advanced tools) × R8 (PR #19)
 
-Read-only assessment of `codex/r8-layer-effects-smart-filters-gradients` against PR #21
-(`3d17b06`, retargeted to `main` after PR #20 merged as `bfcbdf9`). First run at R8 `244a1d6`,
-re-verified at R8 `27d9366` with identical results. Nothing on the R8 branch was modified;
-the merge trials ran in a detached scratch worktree.
+R8 (`codex/r8-layer-effects-smart-filters-gradients`, PR #19) is the authoritative
+implementation for advanced gradients and Gradient Fill layers. PR #21 was split
+accordingly: its duplicate Raster Gradient tool was removed (`3ff3e4e`). Nothing on the
+R8 branch was modified.
 
-R8's own `docs/R8_PARALLEL_INTEGRATION.md` (R8 `2b3c30a`) independently lists the same two
-risks: duplicate gradient tools and the `radialShape` semantics. R8 `130410b` also guards
-Pathfinder/compound paths against discarding Smart Filter stacks; PR #21 reuses that same
-Pathfinder entry point, so the guard applies to Raster Pathfinder too.
+## 1. What changed in PR #21
 
-## Merge trials
+**Removed** (duplicated R8):
 
-| Combination                 | Result                                                                         |
-| --------------------------- | ------------------------------------------------------------------------------ |
-| `main` (PR #20 merged) + R8 | Clean. R8's `3ce5ddc` already avoids the PR #20 hook conflict.                 |
-| `main` + PR #21 + R8        | **3 conflicting files:** `gradient.ts`, `pro-canvas.tsx`, `pro-appearance.tsx` |
+- `raster-gradient.ts` and its tests: the `layer-gradient` tool, drag geometry, handles and
+  tool presets.
+- The `radialShape` gradient field: `gradient.ts` is identical to `main`.
+- The Shift+G shortcut and the gradient tool options.
+- PR #21's edits to `pro-canvas.tsx`, `pro-tools.ts`, `pro-appearance.tsx` and
+  `pro-studio.css`: all four files are identical to `main`.
 
-## Shared files
+**Kept:**
 
-| File                                           | PR #21                                                                   | R8                                                                                                               | Merge                                           |
-| ---------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `src/lib/studio/pro/gradient.ts`               | optional `radialShape` on `Gradient`; circular radial in `gradientField` | gradient v2: `version`, angular/reflected/diamond, interpolation, reverse, smoothness, midpoints, strict v2 keys | **Conflict** (type and `gradientField`)         |
-| `src/components/studio/pro/pro-canvas.tsx`     | `layer-gradient` tool: new layer on drag, start/end/center handles       | `gradient-fill` tool: endpoint handles on an existing Gradient Fill layer                                        | **Conflict** (pointer-down and update branches) |
-| `src/components/studio/pro/pro-appearance.tsx` | radial-shape select and "Reverse stops" in `GradientFields`              | v2 gradient editor (interpolation, smoothness, reverse, advanced stops), advanced effects                        | **Conflict**                                    |
-| `src/components/studio/pro/pro-tools.ts`       | `layer-gradient` ("Gradient", Shift+G)                                   | `gradient-fill` ("Gradient Fill", no key)                                                                        | Auto-merges, but leaves **two gradient tools**  |
-| `src/components/studio/pro/pro-workspace.tsx`  | Paths tab, path handlers, gradient tool options, Shift+G                 | R8 lab/drafts, "New Gradient Fill", `gradient-fill` gating                                                       | Auto-merges                                     |
-| `src/components/studio/pro/pro-properties.tsx` | help-text line                                                           | `appearanceControls` slot                                                                                        | Auto-merges                                     |
-| `package.json`                                 | `test:raster-advanced:browser`                                           | `test:r8:*` scripts                                                                                              | Auto-merges                                     |
+- Paths tab: Pathfinder in Raster, path → selection, selection → path, layer mask from
+  path, vector mask from path, vector-mask enable/remove/edit-as-path.
+- Appearance tab in Raster: multiple fills and strokes, alignment, opacity, blend.
+- The legacy Vector rule update.
+- Unit and browser tests for all of the above.
 
-## Overlapping features
+Gradient layers, their Properties editor and renderer are unchanged from `main`. PR #21
+no longer adds or changes any gradient document field.
 
-- **Gradient creation and editing (duplicate).** Both add a Raster gradient tool that
-  creates a selection-masked gradient layer and edits its endpoints. R8's version is
-  more complete (v2 kinds, OKLab, midpoints, smoothness, R8 drafts and presets).
-- **Gradient stop editing.** PR #21 adds "Reverse stops"; R8 adds a v2 `reverse` flag and
-  an advanced stop editor.
-- **No overlap:** PR #21's Paths tab (Pathfinder in Raster, path ↔ selection, layer and
-  vector masks from paths, vector-mask editing), the Appearance tab in Raster and the
-  legacy-Vector rule change. R8 does not touch `legacy-vector.ts`, `path-selection.ts`,
-  `pro-paths.tsx` or the vector-clip model.
+## 2. Integration check: main + R8 + PR #21
 
-## Native document compatibility risk (verified)
+Local temporary branch `tmp/pr21-r8-integration`, never pushed:
 
-A PR #21 document with a circular radial gradient (`radialShape: "circle"`, v1 gradient):
+- base: `main` `bfcbdf9`;
+- plus R8 `27d9366`, the PR #19 head;
+- plus PR #21 `3ff3e4e`.
 
-- **Opens in R8 without error** (R8 does not check unknown v1 gradient keys).
-- **Renders differently in R8.** R8's `gradientField` ignores `radialShape`. At 20 px
-  below the center of a 200 × 100 layer with scale 0.4, PR #21 renders 0.500 and R8
-  renders 1.000, so the circle becomes an ellipse.
-- **Cannot be upgraded to R8 v2 as is.** R8's strict v2 keys reject `radialShape`
-  ("Invalid advanced gradient options.").
+- **Merge:** no textual conflicts (previously three).
+- **Integration-specific fix (on that branch only):** R8 rejects Smart Filters on layers
+  with extended vector appearance. The Appearance tab now explains this on Smart-Filtered
+  layers instead of offering edits the document would refuse. Apply this once both PRs
+  are on `main` (see §4).
+- **Unit tests:** 1,015 pass (R8's 1,007 plus PR #21's 8). Typecheck, lint, production
+  build, `check:build` and `check:auth` pass.
+- **Browser regression:** 46 of 47 runs pass, covering:
+  - all 43 registered suites, including the 6 R8 suites (foundation, UI, styles,
+    processing, gradient, recovery), Pathfinder, vector, appearance, Dialogue, R2–R7;
+  - `pr21-r8-integration` and `raster-advanced`, each on the dev server and on the
+    production build.
+  - The one failure is `test:studio:browser`, which cannot reach `huggingface.co` from
+    the sandbox (environment).
+- **New `scripts/pr21-r8-integration-browser-check.mjs`** (on the integration branch),
+  at 1440 and 390 px, using one schema 3 document with an R8 colour-overlay style, a
+  Smart Filter and an advanced Gradient Fill. It verifies:
+  - one gradient tool only (R8's Gradient Fill), and G stays the Paint Bucket;
+  - Pathfinder Unite next to R8 layers, with pixels, undo and redo;
+  - path → selection coverage and selection → path;
+  - a vector mask on an R8-styled shape clips the styled result, with pixels and undo/redo;
+  - a layer mask from a path on a Smart-Filtered layer keeps the filter stack, with pixels;
+  - Appearance is blocked with an explanation on filtered layers and works elsewhere;
+  - save, close and reopen: layers identical, PNG export and preview pixel-identical
+    (tolerance 0).
 
-If PR #21 ships before R8 and users save circular radial gradients, merging R8 later
-would silently change how those documents look.
+## 3. Remaining integration risks
 
-## Recommendation
+- **Integration fix not yet in either PR:** the Appearance message for Smart-Filtered
+  layers (§2) depends on R8's `smartFilters` field, so it can only land after R8. Without
+  it, editing Appearance on a filtered shape fails safely with R8's validation error.
+- **R8's Smart Filter rule** also applies to paths created by PR #21 (selection → path,
+  released vector masks, Pathfinder results), because they draw beyond their bounds.
+  They can carry layer styles, not Smart Filters, until rasterized. This is the same as
+  Pathfinder results today.
+- **Shared files** both PRs edit: `pro-workspace.tsx`, `pro-properties.tsx`,
+  `package.json`. They auto-merge today; later edits on either side may need rebasing.
 
-1. **Do not merge PR #21 in its current form ahead of R8.**
-2. **Preferred:** split PR #21.
-   - Merge the non-overlapping part first: Paths tab, path/selection/mask tools,
-     Appearance tab and the legacy-rule update.
-   - Drop PR #21's Gradient tool and `radialShape`, and let R8's Gradient Fill be
-     the single Raster gradient tool.
-   - After R8 lands, add only what R8 lacks (e.g. a circular radial option as an R8 v2
-     field, a keyboard shortcut that keeps the Paint Bucket on G), on top of R8's model.
-3. **Alternative:** merge R8 first, then rebase PR #21's gradient work onto R8's v2 model,
-   replacing `layer-gradient` with R8's `gradient-fill` plus any missing handles.
-4. Either way, coordinate with the R8 owner before touching the R8 branch; this
-   assessment made no changes to it.
+## 4. Recommended merge order
+
+1. **R8 (PR #19) first.** It owns the gradient model and the schema 3 native format.
+2. **Then PR #21**, updated with `main` (which then includes R8), plus the §2 Appearance
+   message and the integration browser check.
+3. **Before each merge,** re-run the full regression, including the R8 suites and
+   `pr21-r8-integration`.
+
+## 5. Deferred to R8's gradient model
+
+To be built later on R8's native v2 gradients, never as a separate engine:
+
+- **Circular radial gradients:** an R8 v2 option, so R8 validates and renders it.
+- **Shift+G** for Gradient Fill; the Paint Bucket keeps **G**.
+- **Drag-to-create** a selection-masked Gradient Fill in one canvas gesture.
+- **A center handle** to move a linear gradient without changing its length or angle.
+- **Tool presets** with opacity stops, and one-click stop reversal, where R8 lacks them.
