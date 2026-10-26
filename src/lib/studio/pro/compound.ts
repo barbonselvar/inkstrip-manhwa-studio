@@ -120,6 +120,10 @@ export function fitVectorFrame(doc: ProDocument, id: string): ProDocument {
   return result;
 }
 function neutral(d: ProDocument, l: Layer) {
+  if (l.smartFilters?.length)
+    throw new Error(
+      "Remove Smart Filters before compound operations. Combined geometry cannot preserve their editable source planes; source objects are unchanged.",
+    );
   if (
     l.kind !== "shape" ||
     isLocked(d, l.id) ||
