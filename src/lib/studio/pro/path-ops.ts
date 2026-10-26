@@ -209,15 +209,17 @@ const unit = (v: Point) => {
   const n = Math.hypot(v.x, v.y);
   return n < 1e-12 ? undefined : { x: v.x / n, y: v.y / n };
 };
-function samples(curves: Cubic[], perCurve = 24) {
-  const pts: Point[] = [];
-  for (const c of curves)
-    for (let i = pts.length ? 1 : 0; i <= perCurve; i++) pts.push(cubicPoint(c, i / perCurve));
-  return pts;
+const SAMPLES_PER_SEGMENT = 12;
+/** Original-geometry samples of one segment, excluding its start point. */
+function segmentSamples(c: Cubic) {
+  const out: Point[] = [];
+  for (let i = 1; i <= SAMPLES_PER_SEGMENT; i++) out.push(cubicPoint(c, i / SAMPLES_PER_SEGMENT));
+  return out;
 }
-/** One cubic from p0 to p3 with fixed tangent directions, least-squares handle lengths
- * (Schneider), fitted to sample points with chord-length parameters. */
-function fitCubic(points: Point[], t1: Point, t2: Point): Cubic | undefined {
+/** One cubic from p0 to p3 with fixed tangent directions and least-squares handle
+ * lengths (Schneider), at chord-length parameters. Returns the fit and its maximum
+ * residual |B(uᵢ) − pᵢ|, which bounds the distance to the original samples. */
+function fitCubic(points: Point[], t1: Point, t2: Point) {
   const p0 = points[0]!,
     p3 = points.at(-1)!,
     d: number[] = [0];
@@ -232,12 +234,12 @@ function fitCubic(points: Point[], t1: Point, t2: Point): Cubic | undefined {
     c11 = 0,
     x0 = 0,
     x1 = 0;
+  const basis = d.map((di) => {
+    const u = di / total;
+    return [(1 - u) ** 3, 3 * u * (1 - u) ** 2, 3 * u * u * (1 - u), u ** 3] as const;
+  });
   for (let i = 0; i < points.length; i++) {
-    const u = d[i]! / total,
-      b0 = (1 - u) ** 3,
-      b1 = 3 * u * (1 - u) ** 2,
-      b2 = 3 * u * u * (1 - u),
-      b3 = u ** 3,
+    const [b0, b1, b2, b3] = basis[i]!,
       a1 = { x: t1.x * b1, y: t1.y * b1 },
       a2 = { x: t2.x * b2, y: t2.y * b2 },
       tmp = sub(points[i]!, {
@@ -251,93 +253,118 @@ function fitCubic(points: Point[], t1: Point, t2: Point): Cubic | undefined {
     x1 += dot(a2, tmp);
   }
   const det = c00 * c11 - c01 * c01;
-  let alpha1: number, alpha2: number;
+  let alpha1 = total / 3,
+    alpha2 = total / 3;
   if (Math.abs(det) > 1e-12) {
-    alpha1 = (x0 * c11 - x1 * c01) / det;
-    alpha2 = (c00 * x1 - c01 * x0) / det;
-  } else alpha1 = alpha2 = total / 3;
-  if (!(alpha1 > 1e-6) || !(alpha2 > 1e-6)) alpha1 = alpha2 = total / 3;
-  return [
+    const s1 = (x0 * c11 - x1 * c01) / det,
+      s2 = (c00 * x1 - c01 * x0) / det;
+    if (s1 > 1e-6 && s2 > 1e-6) {
+      alpha1 = s1;
+      alpha2 = s2;
+    }
+  }
+  const curve: Cubic = [
     p0,
     { x: p0.x + t1.x * alpha1, y: p0.y + t1.y * alpha1 },
     { x: p3.x + t2.x * alpha2, y: p3.y + t2.y * alpha2 },
     p3,
   ];
-}
-function maxDeviation(points: Point[], c: Cubic) {
-  const curve = samples([c], 64);
-  let worst = 0;
-  for (const p of points) {
-    let best = Infinity;
-    for (let i = 1; i < curve.length; i++) {
-      const a = curve[i - 1]!,
-        b = curve[i]!,
-        ab = sub(b, a),
-        len = dot(ab, ab),
-        t = len ? Math.max(0, Math.min(1, dot(sub(p, a), ab) / len)) : 0;
-      best = Math.min(best, Math.hypot(p.x - a.x - ab.x * t, p.y - a.y - ab.y * t));
-    }
-    worst = Math.max(worst, best);
+  let error = 0;
+  for (let i = 0; i < points.length; i++) {
+    const [b0, b1, b2, b3] = basis[i]!,
+      x = curve[0].x * b0 + curve[1].x * b1 + curve[2].x * b2 + curve[3].x * b3,
+      y = curve[0].y * b0 + curve[1].y * b1 + curve[2].y * b2 + curve[3].y * b3;
+    error = Math.max(error, Math.hypot(points[i]!.x - x, points[i]!.y - y));
   }
-  return worst;
+  return { curve, error };
 }
 /** Remove anchors whose two adjacent segments can be replaced by one cubic within
- * `tolerance` source px. Greedy, least-error first; endpoints of open paths are kept. */
+ * `tolerance` source px of the ORIGINAL geometry (errors never accumulate). Greedy,
+ * least-error first, with cached candidates so only the two neighbours of a removed
+ * anchor are re-fitted. Endpoints of open paths are kept; straight fits stay lines. */
 export function simplifyPath(doc: ProDocument, id: string, tolerance: number, contour = 0) {
   if (!(tolerance > 0 && tolerance <= 100)) throw Error("Use a tolerance between 0 and 100 px.");
   const l = nativePathLayer(doc, id),
-    c = contourAt(l, contour);
-  let anchors = c.anchors.map(copy),
-    removed = 0;
-  const minimum = c.closed ? 3 : 2;
-  for (;;) {
-    const n = anchors.length;
-    if (n <= minimum) break;
-    let best: { index: number; error: number; curve: Cubic } | undefined;
-    for (let i = c.closed ? 0 : 1; i < (c.closed ? n : n - 1); i++) {
-      const prev = anchors[(i - 1 + n) % n]!,
-        a = anchors[i]!,
-        next = anchors[(i + 1) % n]!,
-        left = anchorCurve(prev, a),
-        right = anchorCurve(a, next),
+    c = contourAt(l, contour),
+    count = c.anchors.length,
+    minimum = c.closed ? 3 : 2;
+  // Linked list over anchors; samples[i] = original samples of the segment leaving i.
+  const anchors = c.anchors.map(copy),
+    prev = anchors.map((_, i) => (i > 0 ? i - 1 : c.closed ? count - 1 : -1)),
+    next = anchors.map((_, i) => (i + 1 < count ? i + 1 : c.closed ? 0 : -1)),
+    alive = anchors.map(() => true),
+    samples: Point[][] = anchors.map((a, i) =>
+      next[i]! >= 0 ? segmentSamples(anchorCurve(a, anchors[next[i]!]!)) : [],
+    ),
+    cache = new Map<number, { error: number; curve: Cubic } | null>();
+  let remaining = count;
+  const candidate = (i: number) => {
+    if (cache.has(i)) return cache.get(i)!;
+    let result: { error: number; curve: Cubic } | null = null;
+    const p = prev[i]!,
+      n = next[i]!;
+    if (p >= 0 && n >= 0 && p !== n) {
+      const a = anchors[p]!,
+        b = anchors[n]!,
+        left = anchorCurve(a, anchors[i]!),
+        right = anchorCurve(anchors[i]!, b),
         t1 =
           unit(sub(left[1], left[0])) ?? unit(sub(left[2], left[0])) ?? unit(sub(left[3], left[0])),
         t2 =
           unit(sub(right[2], right[3])) ??
           unit(sub(right[1], right[3])) ??
-          unit(sub(right[0], right[3]));
-      if (!t1 || !t2) continue;
-      const points = samples([left, right]),
-        curve = fitCubic(points, t1, t2);
-      if (!curve) continue;
-      const error = maxDeviation(points, curve);
-      if (error <= tolerance && (!best || error < best.error)) best = { index: i, error, curve };
+          unit(sub(right[0], right[3])),
+        points = [{ x: a.x, y: a.y }, ...samples[p]!, ...samples[i]!];
+      if (t1 && t2) {
+        const fit = fitCubic(points, t1, t2);
+        if (fit && fit.error <= tolerance) result = fit;
+      }
     }
-    if (!best) break;
-    const i = best.index,
-      prevIndex = (i - 1 + n) % n,
-      nextIndex = (i + 1) % n,
-      straight = (p: Point, q: Point) => Math.hypot(p.x - q.x, p.y - q.y) < 1e-9;
-    const prev = { ...anchors[prevIndex]! },
-      next = { ...anchors[nextIndex]! };
-    // A straight fit stays a line segment (no handles), so polygons stay polygons.
-    const isLine =
-      maxDeviation(samples([best.curve], 16), [prev, prev, next, next] as Cubic) < 1e-6;
-    if (isLine) {
-      delete prev.outgoing;
-      delete next.incoming;
+    cache.set(i, result);
+    return result;
+  };
+  let removed = 0;
+  while (remaining > minimum) {
+    let best = -1,
+      bestError = Infinity;
+    for (let i = 0; i < count; i++) {
+      if (!alive[i]) continue;
+      const fit = candidate(i);
+      if (fit && fit.error < bestError) {
+        bestError = fit.error;
+        best = i;
+      }
+    }
+    if (best < 0) break;
+    const fit = cache.get(best)!,
+      p = prev[best]!,
+      n = next[best]!,
+      a = anchors[p]!,
+      b = anchors[n]!;
+    // A straight fit (handles on the chord) stays a line segment, so polygons stay polygons.
+    const chord = sub(b, a),
+      length = Math.hypot(chord.x, chord.y),
+      offChord = (q: Point) =>
+        length ? Math.abs((q.x - a.x) * chord.y - (q.y - a.y) * chord.x) / length : 0;
+    if (offChord(fit.curve[1]) < 1e-6 && offChord(fit.curve[2]) < 1e-6) {
+      delete a.outgoing;
+      delete b.incoming;
     } else {
-      prev.outgoing = best.curve[1];
-      next.incoming = best.curve[2];
+      a.outgoing = fit.curve[1];
+      b.incoming = fit.curve[2];
     }
-    if (straight(prev, next)) break;
-    anchors[prevIndex] = prev;
-    anchors[nextIndex] = next;
-    anchors = anchors.filter((_, k) => k !== i);
+    samples[p] = [...samples[p]!, ...samples[best]!];
+    next[p] = n;
+    prev[n] = p;
+    alive[best] = false;
+    remaining--;
     removed++;
+    for (const k of [p, n, prev[p]!, next[n]!]) if (k >= 0) cache.delete(k);
   }
+  const result: Anchor[] = [];
+  for (let i = 0; i < count; i++) if (alive[i]) result.push(anchors[i]!);
   return {
-    document: commit(doc, replaceLayer(doc, withContour(l, contour, { ...c, anchors }))),
+    document: commit(doc, replaceLayer(doc, withContour(l, contour, { ...c, anchors: result }))),
     removed,
   };
 }
