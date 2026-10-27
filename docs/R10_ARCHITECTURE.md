@@ -69,3 +69,7 @@ Undo/Redo, transaction, render and checkpoint document roots, including hidden
 layers and Clone Stamp/mask sources. Checkpoints own separate native asset copies.
 The immutable primary pool is retained because all UI clone-source and worker
 leases cannot yet be enumerated. Only bounded checkpoint versions are pruned.
+
+## C1 continuation checkpoint
+
+C1 reuses R3 clippedStroke and R7 selectionCanvas/coverageRegion. Draft strokes use the existing generic History; native masks use existing FilterMask.selection row-RLE. Source assets and document schema3/envelope9 are unchanged. Selection capture includes the source layer transform. Composite preview updates on stroke completion; grayscale draft preview updates during input. Native plane4MP, local50 strokes and64M estimated work caps fail closed.

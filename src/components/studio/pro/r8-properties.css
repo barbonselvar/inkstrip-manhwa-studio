@@ -133,3 +133,13 @@
     min-height: 44px;
   }
 }
+
+.r8-mask-paint-canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  touch-action: none;
+  user-select: none;
+  border: 1px solid var(--border);
+  cursor: crosshair;
+}

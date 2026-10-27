@@ -84,3 +84,7 @@ regression passes twice on dev and again on the production build.
 Evidence: [b-recovery-browser.json](r10-evidence/b-recovery-browser.json),
 [b-retention-before-fix.log](r10-evidence/b-retention-before-fix.log). The final
 phase-wide matrix and final-HEAD GitHub checks remain pending later milestones.
+
+## C1 continuation checkpoint
+
+C1:1055 unit tests (200 scripts,59 app/auth,116 Studio,680 Pro), typecheck, lint and production build pass. New mask UI suite passes dev and production bundles at1440/768/390/360/320 with zero pixel tolerance, real touch, local/document history, selection clipping, transformed capture, source retention, native/import and autosave reload. Unchanged r8-ui-browser-check passes five widths. Evidence: c1-mask-browser.json, c1-r8-ui.log. No physical Android claim. Initial transformed-capture test revealed full-document fields accidentally spread into a selection frame; explicit width/height bounds fixed this before commit. Assertions were preserved.

@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { ProFilterMaskPaint } from "./pro-filter-mask-paint";
+import type { Selection } from "@/lib/studio/pro/model";
 import { Button } from "@/components/ui/button";
 import { ProNumber } from "./pro-properties";
 import { ColorOperationFields } from "./pro-color-lab";
@@ -186,14 +189,40 @@ export function ProSmartFilters({
   onChange,
   captureMask,
   disabledReason,
+  maskSize,
+  maskClip,
+  onEditingChange,
 }: {
   value: SmartFilter[];
   onChange: (v: SmartFilter[]) => void;
   captureMask: () => FilterMask;
   disabledReason?: string;
+  maskSize: { width: number; height: number };
+  maskClip?: Selection;
+  onEditingChange: (editing: boolean) => void;
 }) {
+  const [editing, setEditing] = useState<{ id: string; mask: FilterMask | undefined } | null>(null);
+  useEffect(() => () => onEditingChange(false), [onEditingChange]);
   const patch = (id: string, p: Partial<SmartFilter>) =>
     onChange(value.map((f) => (f.id === id ? { ...f, ...p } : f)));
+  if (editing)
+    return (
+      <ProFilterMaskPaint
+        width={maskSize.width}
+        height={maskSize.height}
+        initial={editing.mask}
+        clip={maskClip}
+        onPreview={(mask) => patch(editing.id, { mask })}
+        onFinish={() => {
+          setEditing(null);
+          onEditingChange(false);
+        }}
+        onCancel={() => {
+          setEditing(null);
+          onEditingChange(false);
+        }}
+      />
+    );
   return (
     <section aria-label="Smart Filter stack">
       <h3>Smart Filters</h3>
@@ -278,6 +307,15 @@ export function ProSmartFilters({
               </div>
               <Button variant="secondary" onClick={() => patch(f.id, { mask: captureMask() })}>
                 Use selection as filter mask
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setEditing({ id: f.id, mask: f.mask ? structuredClone(f.mask) : undefined });
+                  onEditingChange(true);
+                }}
+              >
+                Paint filter mask
               </Button>
               {f.mask && (
                 <>

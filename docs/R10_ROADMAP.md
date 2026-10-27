@@ -24,3 +24,7 @@ A is verified and published as `ad9809966fe79746a91cd4e17b2ad8c1aeb3be3c`
 and validated. Asset deletion is deferred under the handoff's explicit
 analysis-first fallback. Next: paintable filter masks and bitmap patterns, using
 the existing R8 architecture. No release authorization is implied.
+
+## C1 continuation checkpoint
+
+C1 paintable filter masks are implemented and verified. Continue with C2 bitmap patterns, C3 inspector, C4 shaped-text prototype, then D/E/F. No merge or deploy authorization.

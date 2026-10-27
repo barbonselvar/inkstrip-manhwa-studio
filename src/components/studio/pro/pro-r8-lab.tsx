@@ -18,8 +18,7 @@ import {
   validateR8Presets,
   type R8Preset,
 } from "@/lib/studio/pro/r8-presets";
-import { maskFromSelection } from "@/lib/studio/pro/masks";
-import { EMPTY_SELECTION, type ProSession } from "@/lib/studio/pro/model";
+import { EMPTY_SELECTION, toLocalSelection, type ProSession } from "@/lib/studio/pro/model";
 import "./r8-properties.css";
 const PRESETS = "inkstrip-r8-presets-v1",
   CLIPBOARD = "inkstrip-r8-style-clipboard-v1";
@@ -49,6 +48,7 @@ export function ProR8Lab({
     [displayed, setDisplayed] = useState(""),
     [message, setMessage] = useState(""),
     [name, setName] = useState("");
+  const [maskEditing, setMaskEditing] = useState(false);
   const [saved, setSaved] = useState<R8Preset[]>(() => {
     try {
       return readR8Presets(localStorage.getItem(PRESETS));
@@ -230,7 +230,7 @@ export function ProR8Lab({
                     type="button"
                     role="tab"
                     aria-selected={tab === id}
-                    disabled={id === "gradient" && base.layer.kind !== "gradient"}
+                    disabled={maskEditing || (id === "gradient" && base.layer.kind !== "gradient")}
                     onClick={() => setTab(id!)}
                   >
                     {label}
@@ -311,12 +311,24 @@ export function ProR8Lab({
                     setBefore(false);
                   }}
                   disabledReason={disabledReason}
+                  maskSize={{ width: base.layer.width, height: base.layer.height }}
+                  maskClip={
+                    draft.origin.selection?.regions.length || draft.origin.selection?.inverted
+                      ? toLocalSelection(draft.origin.selection, base.layer, {
+                          width: draft.origin.width,
+                          height: draft.origin.height,
+                        })
+                      : undefined
+                  }
+                  onEditingChange={setMaskEditing}
                   captureMask={() => ({
-                    selection: maskFromSelection(
-                      draft.origin.selection ?? EMPTY_SELECTION,
+                    selection: toLocalSelection(
+                      draft.origin.selection?.regions.length || draft.origin.selection?.inverted
+                        ? draft.origin.selection
+                        : { ...EMPTY_SELECTION, inverted: true },
                       base.layer,
-                      draft.origin,
-                    ).selection,
+                      { width: draft.origin.width, height: draft.origin.height },
+                    ),
                     enabled: true,
                     inverted: false,
                     density: 1,
@@ -334,7 +346,7 @@ export function ProR8Lab({
                   }}
                 />
               )}
-              <details className="r8-presets">
+              <details className="r8-presets" hidden={maskEditing}>
                 <summary>Reusable presets</summary>
                 <label className="pro-field">
                   Layer property preset
@@ -439,6 +451,7 @@ export function ProR8Lab({
           <footer>
             <Button
               variant="secondary"
+              disabled={maskEditing}
               onClick={() => {
                 setSettings(structuredClone(base.settings));
                 setBefore(false);
@@ -447,7 +460,7 @@ export function ProR8Lab({
               Reset layer properties
             </Button>
             <Button
-              disabled={waiting || before || !!error || !!proposed.error}
+              disabled={maskEditing || waiting || before || !!error || !!proposed.error}
               onClick={() => {
                 if (displayed !== latest.current) return;
                 const result = onApply(settings);

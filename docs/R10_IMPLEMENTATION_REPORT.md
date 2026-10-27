@@ -19,7 +19,7 @@ The persistence design in the user's handoff is being continued after source ins
 | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | A: six audit defects                            | Verified: six recovered fixes plus completed device-area preflight; baseline matrix and post-fix native/mobile checks pass |
 | B: checkpoints, save status, asset reachability | B1/B2 implemented and verified; B3 analysis verified, asset deletion deferred                                              |
-| C: professional Raster improvements             | Pending                                                                                                                    |
+| C: professional Raster improvements             | C1 implemented and verified; C2–C4 pending                                                                                                                    |
 | D: long-page capabilities and tiled processing  | Pending                                                                                                                    |
 | E: mobile improvements                          | Pending                                                                                                                    |
 | F: regression, security and performance         | Recovered full matrix passed; continuation verification ongoing                                                            |
@@ -77,3 +77,27 @@ native download for import into a separate document. The damaged primary is
 retained. Checkpoints share browser storage/eviction risk; portable backups remain
 necessary. A failed checkpoint never turns an acknowledged primary save into a
 false failure or silently overwrites another revision.
+
+## Milestone C1: paintable Smart Filter masks
+
+The existing R8 transactional properties editor now includes an independent mask
+canvas with R3 brush size, hardness and opacity, reveal/hide painting, R7 selection
+clipping, local Undo/Redo, Reset, Finish and exact Cancel. Parent Apply and section
+changes are disabled while a mask edit is active. Finished settings commit once
+through the existing document history. The real composite updates after each
+stroke; the grayscale mask updates while dragging. Existing enable, inversion and
+density controls remain available after Finish.
+
+Masks persist as existing native row-RLE selection coverage: no schema/DB bump
+and no raster replacement. Painting is bounded to native 4MP source planes, 50
+local strokes and 64M estimated brush/selection work; overflow retains the previous
+valid draft and offers Undo/Cancel. The UI canvas alone is reduced to at most512px.
+A translated-layer regression exposed the old selection-capture omission of the
+layer transform; capture now uses the existing source-local selection mapping.
+
+Dev and production-bundle five-width tests pass (1440/768/390/360/320), including
+real touch events, soft opacity, clipping, exact Cancel, Undo/Redo, one document
+history entry, unchanged source assets, native reopen, autosave reload and
+zero-tolerance preview/PNG equivalence. The unchanged five-width R8 UI suite also
+passes. Full unit tests:1055; typecheck, lint and production build pass. Physical
+Android has not been tested. C2–C4 and D–F remain unfinished.
