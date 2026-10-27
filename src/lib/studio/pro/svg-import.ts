@@ -1,4 +1,5 @@
 import { svgGradient, svgNumber, localReference, svgInherited } from "./svg-paint.ts";
+import { SVG_ELEMENTS } from "./svg-capabilities.ts";
 import {
   appearance,
   appearanceItem,
@@ -88,28 +89,7 @@ export function importSvg(text: string): {
     );
   const xml = new DOMParser().parseFromString(text, "image/svg+xml"),
     root = xml.documentElement,
-    allowed = new Set([
-      "svg",
-      "g",
-      "rect",
-      "circle",
-      "ellipse",
-      "line",
-      "polygon",
-      "polyline",
-      "path",
-      "text",
-      "title",
-      "desc",
-      "defs",
-      "linearGradient",
-      "radialGradient",
-      "stop",
-      "clipPath",
-      "mask",
-      "textPath",
-      "tspan",
-    ]),
+    allowed = new Set<string>(SVG_ELEMENTS),
     attrs = new Set([
       "xmlns",
       "version",

@@ -7,6 +7,7 @@ import { outputSize } from "@/lib/studio/pro/geometry";
 import type { History } from "@/lib/studio/editor/history";
 import type { ProDocument } from "@/lib/studio/pro/model";
 import type { CharacterProfile } from "@/lib/studio/characters/types";
+import { svgImportHelp } from "@/lib/studio/pro/svg-capabilities";
 
 /** Self-contained inspector tabs of the Pro workspace. State stays in ProWorkspace. */
 
@@ -103,9 +104,7 @@ export function ProAssetsTab({
         />
       </label>
       <p className="pro-help">
-        SVG imports editable paths, compound contours, affine transforms, nested groups and basic
-        text. Gradients, clipping paths, masks and other unsafe or unsupported markup are rejected.
-        Native import replaces this draft; Chapter artwork is retained.
+        {svgImportHelp()} Native import replaces this draft; Chapter artwork is retained.
       </p>
       {characters?.length ? (
         characters.map((c) => (
