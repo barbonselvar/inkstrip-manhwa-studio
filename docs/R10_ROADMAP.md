@@ -40,3 +40,7 @@ C3 implemented and verified. C4 prototype and concrete shaping-service proposal 
 ## Milestone D continuation
 
 D1/D3 verified within existing budgets. D2 local filter tiling implemented/verified; nonlocal filters and the document compositor retain full-plane paths. No4MP/16.8MP/16384px cap was raised. C4 production shaping remains deferred by the documented prototype/proposal fallback. Continue E narrow-row/touch cleanup and F full regressions, measurements and exact-HEAD CI.
+
+## Milestone E continuation
+
+E implemented and verified on emulated1440/768/390/360/320 layouts. Continue F final full matrix, benchmarks, security/config checks and exact-HEAD GitHub validation. C4 production shaping and complete tiled document compositing remain explicitly deferred; no release authorization.

@@ -1998,7 +1998,7 @@ html[data-transparency="solid"] .chapter-display-action {
   backdrop-filter: none;
   background: var(--color-bg-elevated);
 }
-@media (max-width: 47.99rem) {
+@media (max-width: 47.99rem), (pointer: coarse) {
   .editor-shell [data-order-panel] {
     display: grid;
     grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem 2.75rem 2.75rem;
@@ -2625,4 +2625,51 @@ html[data-studio-motion="quiet"] .depth-surface:hover > .project-shelf-card.proj
 }
 .gallery-dialogue:lang(ja) {
   font-family: "Inkstrip Gallery Japanese", sans-serif;
+}
+
+/* R10: retain complete selection/options actions while giving narrow image rows
+   a separate full-width artwork/name row. Desktop geometry stays unchanged. */
+@media (pointer: coarse) {
+  .editor-shell [data-order-panel] > .reorder-handle,
+  .editor-shell [data-order-panel] > .panel-check,
+  .editor-shell [data-order-panel] > .panel-row-end > button {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+@media (max-width: 22.5rem) {
+  .editor-shell [data-order-panel] {
+    grid-template-rows: minmax(4rem, auto) 2.75rem 2.75rem;
+  }
+  .editor-shell [data-order-panel] > .panel-image-target {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+  }
+  .editor-shell [data-order-panel] > .reorder-handle {
+    grid-row: 2;
+  }
+  .editor-shell [data-order-panel] > .panel-check {
+    grid-row: 3;
+  }
+  .editor-shell [data-order-panel] > .panel-quick-actions,
+  .editor-shell [data-order-panel] > .panel-order-actions,
+  .editor-shell [data-order-panel] > .panel-row-end {
+    grid-row: 2 / 4;
+  }
+  .editor-shell .panel-image-info {
+    flex: 1;
+  }
+  .editor-shell .panel-image-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+.editor-shell .panel-image-target {
+  scroll-margin-block: 6rem;
 }

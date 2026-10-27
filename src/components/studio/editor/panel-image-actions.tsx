@@ -152,8 +152,10 @@ export function PanelImageActions({
           ) : (
             <span className="h-16 w-12 shrink-0 rounded-sm bg-paper" />
           )}
-          <span className="min-w-0">
-            <span className="block truncate text-sm text-fg">{panel.name}</span>
+          <span className="panel-image-info min-w-0">
+            <span className="panel-image-name block truncate text-sm text-fg" title={panel.name}>
+              {panel.name}
+            </span>
             <span className="mt-1 block text-xs text-subtle tabular-nums">
               {panel.width} × {panel.height}
               {panel.edit ? " · edited" : ""}

@@ -1,0 +1,471 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "geometry": {
+        "target": {
+          "x": 105.796875,
+          "y": 703.234375,
+          "width": 107.40625,
+          "height": 64
+        },
+        "name": {
+          "x": 161.796875,
+          "y": 718.65625,
+          "width": 51.40625,
+          "height": 17.140625
+        },
+        "options": {
+          "x": 325.203125,
+          "y": 691.234375,
+          "width": 32,
+          "height": 88
+        },
+        "row": {
+          "x": 16,
+          "y": 681.4375,
+          "width": 351,
+          "height": 107.59375
+        },
+        "buttons": [
+          {
+            "x": 25.796875,
+            "y": 711.234375,
+            "width": 32,
+            "height": 48
+          },
+          {
+            "x": 65.796875,
+            "y": 713.234375,
+            "width": 32,
+            "height": 44
+          },
+          {
+            "x": 105.796875,
+            "y": 703.234375,
+            "width": 107.40625,
+            "height": 64
+          },
+          {
+            "x": 221.203125,
+            "y": 691.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 221.203125,
+            "y": 735.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 273.203125,
+            "y": 691.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 273.203125,
+            "y": 735.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 325.203125,
+            "y": 691.234375,
+            "width": 32,
+            "height": 44
+          },
+          {
+            "x": 325.203125,
+            "y": 735.234375,
+            "width": 32,
+            "height": 44
+          }
+        ],
+        "whiteSpace": "nowrap"
+      },
+      "readableNarrowFilename": true,
+      "selection": true,
+      "options": true,
+      "shiftF10": true,
+      "saveVisible": true,
+      "recoveryVisible": true,
+      "noOverflow": true
+    },
+    {
+      "width": 768,
+      "geometry": {
+        "target": {
+          "x": 77.796875,
+          "y": 699.234375,
+          "width": 123.40625,
+          "height": 64
+        },
+        "name": {
+          "x": 133.796875,
+          "y": 714.65625,
+          "width": 67.40625,
+          "height": 17.140625
+        },
+        "options": {
+          "x": 313.203125,
+          "y": 687.234375,
+          "width": 44,
+          "height": 88
+        },
+        "row": {
+          "x": 16,
+          "y": 673.4375,
+          "width": 351,
+          "height": 115.59375
+        },
+        "buttons": [
+          {
+            "x": 25.796875,
+            "y": 683.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 25.796875,
+            "y": 735.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 77.796875,
+            "y": 699.234375,
+            "width": 123.40625,
+            "height": 64
+          },
+          {
+            "x": 209.203125,
+            "y": 687.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 209.203125,
+            "y": 731.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 261.203125,
+            "y": 687.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 261.203125,
+            "y": 731.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 313.203125,
+            "y": 687.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 313.203125,
+            "y": 731.234375,
+            "width": 44,
+            "height": 44
+          }
+        ],
+        "whiteSpace": "nowrap"
+      },
+      "readableNarrowFilename": true,
+      "selection": true,
+      "options": true,
+      "shiftF10": true,
+      "saveVisible": true,
+      "recoveryVisible": true,
+      "noOverflow": true
+    },
+    {
+      "width": 390,
+      "geometry": {
+        "target": {
+          "x": 77.796875,
+          "y": 699.234375,
+          "width": 130.40625,
+          "height": 64
+        },
+        "name": {
+          "x": 121.796875,
+          "y": 714.65625,
+          "width": 86.40625,
+          "height": 17.140625
+        },
+        "options": {
+          "x": 320.203125,
+          "y": 687.234375,
+          "width": 44,
+          "height": 88
+        },
+        "row": {
+          "x": 16,
+          "y": 673.4375,
+          "width": 358,
+          "height": 115.59375
+        },
+        "buttons": [
+          {
+            "x": 25.796875,
+            "y": 683.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 25.796875,
+            "y": 735.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 77.796875,
+            "y": 699.234375,
+            "width": 130.40625,
+            "height": 64
+          },
+          {
+            "x": 216.203125,
+            "y": 687.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 216.203125,
+            "y": 731.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 268.203125,
+            "y": 687.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 268.203125,
+            "y": 731.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 320.203125,
+            "y": 687.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 320.203125,
+            "y": 731.234375,
+            "width": 44,
+            "height": 44
+          }
+        ],
+        "whiteSpace": "nowrap"
+      },
+      "readableNarrowFilename": true,
+      "selection": true,
+      "options": true,
+      "shiftF10": true,
+      "saveVisible": true,
+      "recoveryVisible": true,
+      "noOverflow": true
+    },
+    {
+      "width": 360,
+      "geometry": {
+        "target": {
+          "x": 25.796875,
+          "y": 611.234375,
+          "width": 308.40625,
+          "height": 64
+        },
+        "name": {
+          "x": 69.796875,
+          "y": 618.09375,
+          "width": 264.40625,
+          "height": 34.28125
+        },
+        "options": {
+          "x": 290.203125,
+          "y": 687.234375,
+          "width": 44,
+          "height": 88
+        },
+        "row": {
+          "x": 16,
+          "y": 601.4375,
+          "width": 328,
+          "height": 187.59375
+        },
+        "buttons": [
+          {
+            "x": 25.796875,
+            "y": 683.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 25.796875,
+            "y": 735.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 25.796875,
+            "y": 611.234375,
+            "width": 308.40625,
+            "height": 64
+          },
+          {
+            "x": 186.203125,
+            "y": 687.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 186.203125,
+            "y": 731.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 238.203125,
+            "y": 687.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 238.203125,
+            "y": 731.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 290.203125,
+            "y": 687.234375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 290.203125,
+            "y": 731.234375,
+            "width": 44,
+            "height": 44
+          }
+        ],
+        "whiteSpace": "normal"
+      },
+      "readableNarrowFilename": true,
+      "selection": true,
+      "options": true,
+      "shiftF10": true,
+      "saveVisible": true,
+      "recoveryVisible": true,
+      "noOverflow": true
+    },
+    {
+      "width": 320,
+      "geometry": {
+        "target": {
+          "x": 25.796875,
+          "y": 595.609375,
+          "width": 268.40625,
+          "height": 64
+        },
+        "name": {
+          "x": 69.796875,
+          "y": 602.46875,
+          "width": 224.40625,
+          "height": 34.28125
+        },
+        "options": {
+          "x": 250.203125,
+          "y": 671.609375,
+          "width": 44,
+          "height": 88
+        },
+        "row": {
+          "x": 16,
+          "y": 585.8125,
+          "width": 288,
+          "height": 187.59375
+        },
+        "buttons": [
+          {
+            "x": 25.796875,
+            "y": 667.609375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 25.796875,
+            "y": 719.609375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 25.796875,
+            "y": 595.609375,
+            "width": 268.40625,
+            "height": 64
+          },
+          {
+            "x": 146.203125,
+            "y": 671.609375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 146.203125,
+            "y": 715.609375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 198.203125,
+            "y": 671.609375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 198.203125,
+            "y": 715.609375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 250.203125,
+            "y": 671.609375,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "x": 250.203125,
+            "y": 715.609375,
+            "width": 44,
+            "height": 44
+          }
+        ],
+        "whiteSpace": "normal"
+      },
+      "readableNarrowFilename": true,
+      "selection": true,
+      "options": true,
+      "shiftF10": true,
+      "saveVisible": true,
+      "recoveryVisible": true,
+      "noOverflow": true
+    }
+  ],
+  "errors": [],
+  "physicalAndroid": false
+}
