@@ -1,0 +1,165 @@
+{
+  "results": [
+    {
+      "viewport": 1440,
+      "height": 1920,
+      "chapterImport": true,
+      "raster": true,
+      "zoomFit": true,
+      "pan": true,
+      "brush": true,
+      "tiledFilter": true,
+      "filterOver4MPRefused": false,
+      "saveReopen": true,
+      "sourceBytes": true,
+      "exportTolerance": 0,
+      "importMs": 224.57043900000008,
+      "openMs": 1589.598645,
+      "brushMs": 384.4220179999993,
+      "exportMs": 812.5210619999998,
+      "encodedBytes": 723080,
+      "nativeRgbaBytes": 8294400,
+      "memory": {
+        "Nodes": 2421,
+        "JSHeapUsedSize": 15452556,
+        "JSHeapTotalSize": 50741248
+      }
+    },
+    {
+      "viewport": 1440,
+      "height": 5000,
+      "chapterImport": true,
+      "raster": true,
+      "zoomFit": true,
+      "pan": true,
+      "brush": true,
+      "tiledFilter": false,
+      "filterOver4MPRefused": true,
+      "saveReopen": true,
+      "sourceBytes": true,
+      "exportTolerance": 0,
+      "importMs": 298.73175999999876,
+      "openMs": 1118.3874520000027,
+      "brushMs": 99.89708400000018,
+      "exportMs": 288.0042219999996,
+      "encodedBytes": 1882860,
+      "nativeRgbaBytes": 21600000,
+      "memory": {
+        "Nodes": 2510,
+        "JSHeapUsedSize": 39336980,
+        "JSHeapTotalSize": 93487104
+      }
+    },
+    {
+      "viewport": 1440,
+      "height": 10000,
+      "chapterImport": true,
+      "raster": true,
+      "zoomFit": true,
+      "pan": true,
+      "brush": true,
+      "tiledFilter": false,
+      "filterOver4MPRefused": true,
+      "saveReopen": true,
+      "sourceBytes": true,
+      "exportTolerance": 0,
+      "importMs": 468.72553499999776,
+      "openMs": 1192.2814480000015,
+      "brushMs": 101.20043900000019,
+      "exportMs": 494.02521900000283,
+      "encodedBytes": 3765653,
+      "nativeRgbaBytes": 43200000,
+      "memory": {
+        "Nodes": 972,
+        "JSHeapUsedSize": 48494940,
+        "JSHeapTotalSize": 99708928
+      }
+    },
+    {
+      "viewport": 1440,
+      "height": 20000,
+      "chapterImport": true,
+      "raster": "safely refused",
+      "sourceDimensionsRetained": true,
+      "importMs": 1442.0320490000013,
+      "openMs": 1361.5811450000037,
+      "memory": {
+        "Nodes": 939,
+        "JSHeapUsedSize": 107262624,
+        "JSHeapTotalSize": 151703552
+      }
+    },
+    {
+      "viewport": 390,
+      "height": 1920,
+      "chapterImport": true,
+      "raster": true,
+      "zoomFit": true,
+      "pan": true,
+      "brush": true,
+      "tiledFilter": true,
+      "filterOver4MPRefused": false,
+      "saveReopen": true,
+      "sourceBytes": true,
+      "exportTolerance": 0,
+      "importMs": 168.49484200000006,
+      "openMs": 1124.2748299999948,
+      "brushMs": 382.9313209999964,
+      "exportMs": 624.2341520000045,
+      "encodedBytes": 723080,
+      "nativeRgbaBytes": 8294400,
+      "memory": {
+        "Nodes": 4418,
+        "JSHeapUsedSize": 11239412,
+        "JSHeapTotalSize": 55721984
+      }
+    },
+    {
+      "viewport": 390,
+      "height": 5000,
+      "chapterImport": true,
+      "raster": "safely refused",
+      "sourceDimensionsRetained": true,
+      "importMs": 288.03105399999185,
+      "openMs": 823.9965499999962,
+      "memory": {
+        "Nodes": 1409,
+        "JSHeapUsedSize": 13019436,
+        "JSHeapTotalSize": 29323264
+      }
+    },
+    {
+      "viewport": 390,
+      "height": 10000,
+      "chapterImport": true,
+      "raster": "safely refused",
+      "sourceDimensionsRetained": true,
+      "importMs": 884.4687379999959,
+      "openMs": 899.7476429999952,
+      "memory": {
+        "Nodes": 928,
+        "JSHeapUsedSize": 15150936,
+        "JSHeapTotalSize": 46514176
+      }
+    },
+    {
+      "viewport": 390,
+      "height": 20000,
+      "chapterImport": true,
+      "raster": "safely refused",
+      "sourceDimensionsRetained": true,
+      "importMs": 1017.8637690000032,
+      "openMs": 833.2660179999948,
+      "memory": {
+        "Nodes": 928,
+        "JSHeapUsedSize": 20042820,
+        "JSHeapTotalSize": 81420288
+      }
+    }
+  ],
+  "errors": [],
+  "pixelTolerance": 0,
+  "physicalAndroid": false,
+  "timingScope": "Playwright-observed UI readiness, import and export; no full-preview pixel-array transport included",
+  "memoryMeasurement": "sampled Chromium JS heap, not GPU/process peak"
+}

@@ -1,3 +1,4 @@
+import { ImageCapabilityNotice } from "./image-capability-notice";
 import { DialogueChapterExport } from "./dialogue-chapter-export";
 import { AppearanceButton } from "./design/preferences";
 import { ToolSection } from "./design/tool-section";
@@ -365,6 +366,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                     }}
                   />
                 </label>
+                <ImageCapabilityNotice />
                 <p className="upload-hint text-sm text-muted">
                   Your panels, at their original quality. Drop, paste, or choose files.
                   <span className="sr-only">{FORMAT_HINT}</span>

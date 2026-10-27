@@ -1,3 +1,4 @@
+import { RASTER_MAX_AREA } from "../raster-limits.ts";
 import { validateAssets, type ProSession } from "./model.ts";
 import { documentSources } from "./raster-budget.ts";
 
@@ -5,7 +6,7 @@ import { documentSources } from "./raster-budget.ts";
  * history/autosave. A globally valid native document can still be too large for
  * this device. Refusal leaves both the accepted artwork and existing draft intact. */
 export function validateOpeningSession(session: ProSession, maxArea: number) {
-  if (!Number.isSafeInteger(maxArea) || maxArea < 1 || maxArea > 16_777_216)
+  if (!Number.isSafeInteger(maxArea) || maxArea < 1 || maxArea > RASTER_MAX_AREA)
     throw Error("Invalid Raster device pixel budget.");
   validateAssets(session);
   const doc = session.document;

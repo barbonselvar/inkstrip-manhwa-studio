@@ -1,3 +1,4 @@
+import { ImageCapabilityNotice } from "../image-capability-notice";
 import { useImageUrl } from "@/lib/studio/use-image-url";
 import { Download, Folder, Redo2, Save, Sparkles, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -72,11 +73,13 @@ function ReferenceImage({
 }
 
 export function ProAssetsTab({
+  size,
   disabled,
   characters,
   onImport,
   onPlace,
 }: {
+  size?: { width: number; height: number };
   disabled: boolean;
   characters: CharacterProfile[] | undefined;
   onImport: (file: File | undefined) => void;
@@ -85,6 +88,7 @@ export function ProAssetsTab({
   return (
     <>
       <h3>Assets & characters</h3>
+      <ImageCapabilityNotice {...size} />
       <p className="pro-help">
         References belong to this project. Placing one creates a separate raster layer; no identity
         matching or upload occurs.

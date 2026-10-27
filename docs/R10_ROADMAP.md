@@ -36,3 +36,7 @@ C2 bitmap Pattern Overlay is implemented and verified. Continue C3 inspector, C4
 ## C3 continuation checkpoint
 
 C3 implemented and verified. C4 prototype and concrete shaping-service proposal are documented in R10_RTL_PATH_PROPOSAL.md; production support remains deferred, with strict diagnostic failures retained. Continue D/E/F.
+
+## Milestone D continuation
+
+D1/D3 verified within existing budgets. D2 local filter tiling implemented/verified; nonlocal filters and the document compositor retain full-plane paths. No4MP/16.8MP/16384px cap was raised. C4 production shaping remains deferred by the documented prototype/proposal fallback. Continue E narrow-row/touch cleanup and F full regressions, measurements and exact-HEAD CI.

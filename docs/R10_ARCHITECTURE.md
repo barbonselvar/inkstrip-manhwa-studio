@@ -77,3 +77,7 @@ C1 reuses R3 clippedStroke and R7 selectionCanvas/coverageRegion. Draft strokes 
 ## C2 continuation checkpoint
 
 Bitmap Pattern Overlay extends only the strict effect record to version3. Document schema3/envelope9 and existing DB versions stay unchanged. The old reader rejects the unsupported effect version. Immutable asset references are included by the shared export/reachability traversal and remapped on native import. Imports are staged and bounded; texture interpolation is bilinear in premultiplied alpha. Procedural effects retain their version2 record and algorithm. Document-owned bitmap assets are prohibited in global presets/clipboard.
+
+## Milestone D continuation
+
+D2 immutable input/output planes remain full-resolution. Temporary neighborhood planes are bounded by256px tiles plus the exact kernel halo, clamped at true image edges. Gaussian-family uses ceil(3×sigma), Median/Surface use radius, and edge filters use1px. Fractional/global-coordinate/seeded algorithms use unchanged whole-plane processing. The scaled filter stack accounts for halo work inside128M taps, reverting to the existing path when overhead would exceed it. No native/schema change and no silently reduced resolution. General tiled compositing remains outside this safe extension.

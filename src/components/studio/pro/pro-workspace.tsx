@@ -1693,7 +1693,7 @@ export default function ProWorkspace({
         );
       setCancellable(true);
       const result = await renderer.current.export(d, maxArea, "image/png", 1, (n, t) =>
-        setProgress(`Rendering layer ${n} / ${t}`),
+        setProgress(`Rendering artwork · ${Math.round((n / Math.max(1, t)) * 100)}%`),
       );
       if (run !== operationRun.current) throw new DOMException("Cancelled", "AbortError");
       setCancellable(false);
@@ -1940,7 +1940,7 @@ export default function ProWorkspace({
       ++generation.current;
       setCancellable(true);
       const r = await renderer.current!.export(doc, maxArea, mime, quality, (n, t) =>
-        setProgress(`Exporting layer ${n} / ${t}`),
+        setProgress(`Exporting artwork · ${Math.round((n / Math.max(1, t)) * 100)}%`),
       );
       if (r.blob) {
         download(r.blob, `${doc.name}-composite.${mime.split("/")[1]}`);
@@ -4421,6 +4421,7 @@ export default function ProWorkspace({
                   )}
                   {tab === "assets" && (
                     <ProAssetsTab
+                      size={doc ? { width: doc.width, height: doc.height } : undefined}
                       disabled={busy || dialoguePending || !!transformDraft}
                       characters={project?.characters}
                       onImport={(file) => void importFile(file)}

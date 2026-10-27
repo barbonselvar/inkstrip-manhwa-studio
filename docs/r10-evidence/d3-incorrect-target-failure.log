@@ -1,0 +1,28 @@
+
+> test:r10:long-pages:browser
+> node --experimental-strip-types scripts/r10-long-page-browser-check.mjs http://127.0.0.1:8080 --quick
+
+Long page 1440px / 1920: start
+Long page 1440px / 1920: imported
+Long page 1440px / 1920: initial export
+Long page 1440px / 1920: brush exported
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: tiled native renderer equals original whole-plane algorithm exactly
++ actual - expected
+
++ '01f294605d97d26831d630e6e7d8373ff1245ca88e0a4c2a9243cb28cd9b91b1'
+- '69ff88cdf6fa52ca12eb0e8ed37ed9ca08e4ff86ecceeff156a40b2f32112398'
+
+    at file:///workspace/inkstrip-r10/scripts/r10-long-page-browser-check.mjs:176:16 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: '01f294605d97d26831d630e6e7d8373ff1245ca88e0a4c2a9243cb28cd9b91b1',
+  expected: '69ff88cdf6fa52ca12eb0e8ed37ed9ca08e4ff86ecceeff156a40b2f32112398',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0
