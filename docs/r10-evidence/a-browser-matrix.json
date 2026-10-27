@@ -1,0 +1,345 @@
+[
+  {
+    "suite": "test:r10:audit:browser",
+    "exitCode": 0,
+    "seconds": 21.04,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r10-audit-browser.log"
+  },
+  {
+    "suite": "test:r3:browser",
+    "exitCode": 0,
+    "seconds": 388.75,
+    "base": "http://127.0.0.1:8083",
+    "log": "/workspace/r10-evidence/a-test-r3-browser.log"
+  },
+  {
+    "suite": "test:studio:browser",
+    "exitCode": 0,
+    "seconds": 41.13,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-studio-browser.log"
+  },
+  {
+    "suite": "test:editor:browser",
+    "exitCode": 0,
+    "seconds": 14.45,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-editor-browser.log"
+  },
+  {
+    "suite": "test:adjustments:browser",
+    "exitCode": 0,
+    "seconds": 14.31,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-adjustments-browser.log"
+  },
+  {
+    "suite": "test:retouch:browser",
+    "exitCode": 0,
+    "seconds": 4.66,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-retouch-browser.log"
+  },
+  {
+    "suite": "test:workflow:browser",
+    "exitCode": 0,
+    "seconds": 12.96,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-workflow-browser.log"
+  },
+  {
+    "suite": "test:ui:browser",
+    "exitCode": 0,
+    "seconds": 16.61,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-ui-browser.log"
+  },
+  {
+    "suite": "test:pro:browser",
+    "exitCode": 0,
+    "seconds": 36.16,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-pro-browser.log"
+  },
+  {
+    "suite": "test:layers:browser",
+    "exitCode": 0,
+    "seconds": 29.76,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-layers-browser.log"
+  },
+  {
+    "suite": "test:repair:browser",
+    "exitCode": 0,
+    "seconds": 23.36,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-repair-browser.log"
+  },
+  {
+    "suite": "test:geometry:browser",
+    "exitCode": 0,
+    "seconds": 21.71,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-geometry-browser.log"
+  },
+  {
+    "suite": "test:transform:browser",
+    "exitCode": 0,
+    "seconds": 41.47,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-transform-browser.log"
+  },
+  {
+    "suite": "test:color:browser",
+    "exitCode": 0,
+    "seconds": 22.8,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-color-browser.log"
+  },
+  {
+    "suite": "test:r6:browser",
+    "exitCode": 0,
+    "seconds": 60.21,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r6-browser.log"
+  },
+  {
+    "suite": "test:r6:layers:browser",
+    "exitCode": 0,
+    "seconds": 98.77,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r6-layers-browser.log"
+  },
+  {
+    "suite": "test:r8:foundation:browser",
+    "exitCode": 0,
+    "seconds": 4.71,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r8-foundation-browser.log"
+  },
+  {
+    "suite": "test:r8:browser",
+    "exitCode": 0,
+    "seconds": 48.22,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r8-browser.log"
+  },
+  {
+    "suite": "test:r8:styles:browser",
+    "exitCode": 0,
+    "seconds": 26.88,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r8-styles-browser.log"
+  },
+  {
+    "suite": "test:r8:processing:browser",
+    "exitCode": 0,
+    "seconds": 1.91,
+    "base": "http://127.0.0.1:8083",
+    "log": "/workspace/r10-evidence/a-test-r8-processing-browser.log"
+  },
+  {
+    "suite": "test:r8:gradient:browser",
+    "exitCode": 0,
+    "seconds": 39.4,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r8-gradient-browser.log"
+  },
+  {
+    "suite": "test:r8:recovery:browser",
+    "exitCode": 0,
+    "seconds": 12.0,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r8-recovery-browser.log"
+  },
+  {
+    "suite": "test:appearance:browser",
+    "exitCode": 0,
+    "seconds": 24.73,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-appearance-browser.log"
+  },
+  {
+    "suite": "test:vector:browser",
+    "exitCode": 0,
+    "seconds": 25.12,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-vector-browser.log"
+  },
+  {
+    "suite": "test:compound:browser",
+    "exitCode": 0,
+    "seconds": 36.54,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-compound-browser.log"
+  },
+  {
+    "suite": "test:pathfinder:browser",
+    "exitCode": 0,
+    "seconds": 43.88,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-pathfinder-browser.log"
+  },
+  {
+    "suite": "test:artboards:browser",
+    "exitCode": 0,
+    "seconds": 27.8,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-artboards-browser.log"
+  },
+  {
+    "suite": "test:preview:browser",
+    "exitCode": 0,
+    "seconds": 12.5,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-preview-browser.log"
+  },
+  {
+    "suite": "test:vector-final:browser",
+    "exitCode": 0,
+    "seconds": 68.8,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-vector-final-browser.log"
+  },
+  {
+    "suite": "test:raster-refinement:browser",
+    "exitCode": 0,
+    "seconds": 64.37,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-raster-refinement-browser.log"
+  },
+  {
+    "suite": "bench:raster:browser",
+    "exitCode": 0,
+    "seconds": 17.43,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-bench-raster-browser.log"
+  },
+  {
+    "suite": "test:homepage:browser",
+    "exitCode": 0,
+    "seconds": 45.34,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-homepage-browser.log"
+  },
+  {
+    "suite": "test:dialogue:ocr",
+    "exitCode": 0,
+    "seconds": 7.03,
+    "base": "http://127.0.0.1:8083",
+    "log": "/workspace/r10-evidence/a-test-dialogue-ocr.log"
+  },
+  {
+    "suite": "test:dialogue:browser",
+    "exitCode": 0,
+    "seconds": 15.69,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-dialogue-browser.log"
+  },
+  {
+    "suite": "test:dialogue:workflow",
+    "exitCode": 0,
+    "seconds": 9.02,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-dialogue-workflow.log"
+  },
+  {
+    "suite": "test:dialogue:render",
+    "exitCode": 0,
+    "seconds": 1.69,
+    "base": "http://127.0.0.1:8083",
+    "log": "/workspace/r10-evidence/a-test-dialogue-render.log"
+  },
+  {
+    "suite": "test:dialogue:security",
+    "exitCode": 0,
+    "seconds": 2.05,
+    "base": "http://127.0.0.1:8083",
+    "log": "/workspace/r10-evidence/a-test-dialogue-security.log"
+  },
+  {
+    "suite": "test:chapter-import:browser",
+    "exitCode": 0,
+    "seconds": 25.41,
+    "base": "http://127.0.0.1:8083",
+    "log": "/workspace/r10-evidence/a-test-chapter-import-browser.log"
+  },
+  {
+    "suite": "test:r2:browser",
+    "exitCode": 0,
+    "seconds": 67.08,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r2-browser.log"
+  },
+  {
+    "suite": "test:r2:gesture:browser",
+    "exitCode": 0,
+    "seconds": 8.58,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r2-gesture-browser.log"
+  },
+  {
+    "suite": "test:r5:browser",
+    "exitCode": 0,
+    "seconds": 54.12,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r5-browser.log"
+  },
+  {
+    "suite": "test:r7:browser",
+    "exitCode": 0,
+    "seconds": 197.34,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r7-browser.log"
+  },
+  {
+    "suite": "test:chapter-display:browser",
+    "exitCode": 0,
+    "seconds": 42.34,
+    "base": "http://127.0.0.1:8083",
+    "log": "/workspace/r10-evidence/a-test-chapter-display-browser.log"
+  },
+  {
+    "suite": "test:vector-hidden:browser",
+    "exitCode": 0,
+    "seconds": 10.82,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-vector-hidden-browser.log"
+  },
+  {
+    "suite": "test:raster-advanced:browser",
+    "exitCode": 0,
+    "seconds": 19.13,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-raster-advanced-browser.log"
+  },
+  {
+    "suite": "test:pr21-r8:browser",
+    "exitCode": 0,
+    "seconds": 17.89,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-pr21-r8-browser.log"
+  },
+  {
+    "suite": "test:r9:browser",
+    "exitCode": 0,
+    "seconds": 29.75,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r9-browser.log"
+  },
+  {
+    "suite": "test:r9:svg:browser",
+    "exitCode": 0,
+    "seconds": 4.96,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r9-svg-browser.log"
+  },
+  {
+    "suite": "test:r9:integration:browser",
+    "exitCode": 0,
+    "seconds": 26.52,
+    "base": "http://127.0.0.1:8082",
+    "log": "/workspace/r10-evidence/a-test-r9-integration-browser.log"
+  }
+]

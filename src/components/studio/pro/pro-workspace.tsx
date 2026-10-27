@@ -31,6 +31,7 @@ import { ProDialogue } from "./pro-dialogue";
 import { cleanView } from "@/lib/studio/dialogue/operations";
 import { reconcileDialogue } from "@/lib/studio/dialogue/operations";
 import { validateNativeImages, validateRasterInput } from "@/lib/studio/pro/native-images";
+import { validateOpeningSession } from "@/lib/studio/pro/opening";
 import { previewDirtyRect } from "@/lib/studio/pro/preview-dirty";
 import { budgetHistory } from "@/lib/studio/pro/history-budget";
 import { copyLayerMask, maskFromSelection } from "@/lib/studio/pro/masks";
@@ -485,6 +486,7 @@ export default function ProWorkspace({
     void (async () => {
       const recovered = await loadSession(panel.id);
       if (recovered) {
+        validateOpeningSession(recovered, maxArea);
         if (active) {
           install(recovered, "Recovered Pro draft");
           setLoad({ state: "ready" });
@@ -507,7 +509,7 @@ export default function ProWorkspace({
         acceptedBlobId: panel.blobId,
         updatedAt: Date.now(),
       };
-      validateAssets(s);
+      validateOpeningSession(s, maxArea);
       if (active) {
         install(s, "Imported accepted image");
         setLoad({ state: "ready" });
@@ -523,7 +525,7 @@ export default function ProWorkspace({
       alive.current = false;
       renderer.current?.dispose();
     };
-  }, [panel, openAttempt]);
+  }, [panel, openAttempt, maxArea]);
   const persist = useCallback((document: ProDocument) => {
     pendingSaves.current++;
     if (alive.current) setSaved(false);

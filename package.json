@@ -82,7 +82,8 @@
     "test:r9:browser": "node --experimental-strip-types scripts/r9-browser-check.mjs",
     "test:r9:svg:browser": "node --experimental-strip-types scripts/r9-svg-browser-check.mjs",
     "test:r9:integration:browser": "node --experimental-strip-types scripts/r9-integration-browser-check.mjs",
-    "bench:r9": "node --experimental-strip-types scripts/r9-benchmark.mjs"
+    "bench:r9": "node --experimental-strip-types scripts/r9-benchmark.mjs",
+    "test:r10:opening:browser": "node --experimental-strip-types scripts/r10-open-limits-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

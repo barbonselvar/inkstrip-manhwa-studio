@@ -1,0 +1,10 @@
+{
+  "width": 390,
+  "coarse": true,
+  "terminalLoadFailure": false,
+  "artboardExists": true,
+  "saveState": "Unsaved draft",
+  "alert": [
+    "A layer exceeds this device’s memory budget. Export a native backup or use a smaller source.×"
+  ]
+}
