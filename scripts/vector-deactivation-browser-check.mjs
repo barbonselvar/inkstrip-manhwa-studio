@@ -48,7 +48,7 @@ try {
     assert.equal(await p.getByRole("button", { name: "Open in Vector Studio" }).count(), 0);
     await p.getByText("Raster Studio is the main editor", { exact: false }).waitFor();
     await p
-      .getByRole("button", { name: "Image options for geometry.png", exact: true })
+      .getByRole("button", { name: "Select image geometry.png", exact: true })
       .click({ button: "right" });
     await p.getByRole("button", { name: "Open in Raster Studio", exact: true }).last().waitFor();
     assert.equal(await p.getByRole("button", { name: "Open in Vector Studio" }).count(), 0);

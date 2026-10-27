@@ -6,7 +6,7 @@ import { getBlob } from "@/lib/studio/db";
 import { ReorderHandle, type DragPosition } from "./reorder-handle";
 import { FaceQueue } from "./retouch/face-queue";
 import { ImageEditor } from "./editor/image-editor";
-import { PanelImageActions } from "./editor/panel-image-actions";
+import { PanelImageActions, PanelOptionsButton } from "./editor/panel-image-actions";
 import { EnhanceDialog } from "@/components/studio/enhance-dialog";
 import { ReaderHeader } from "@/components/studio/reader-header";
 import type { Panel } from "@/lib/studio/types";
@@ -74,6 +74,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const [batchTargets, setBatchTargets] = useState<Panel[] | null>(null);
   const [faceTargets, setFaceTargets] = useState<Panel[] | null>(null);
   const [proPanel, setProPanel] = useState<Panel | null>(null);
+  const [menuPanel, setMenuPanel] = useState<string | null>(null);
   const [dialogueMode, setDialogueMode] = useState(false);
   const [dialogueQuick, setDialogueQuick] = useState(true);
   const [workspaceTab, setWorkspaceTab] = useState<"images" | "dialogue">("images");
@@ -650,7 +651,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                           aria-label={on ? `Uncheck ${panel.name}` : `Check ${panel.name}`}
                           onClick={() => toggleSelected(chapter.id, panel.id)}
                           className={cn(
-                            "focus-ring grid size-11 shrink-0 place-items-center rounded-sm border text-sm tabular-nums",
+                            "panel-check focus-ring grid size-11 shrink-0 place-items-center rounded-sm border text-sm tabular-nums",
                             on
                               ? "border-accent bg-accent text-accent-fg"
                               : "border-border text-muted",
@@ -662,6 +663,9 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                           panel={panel}
                           thumb={thumbs[panel.id]}
                           disabled={busy}
+                          selected={on}
+                          menu={menuPanel === panel.id}
+                          onMenu={(open) => setMenuPanel(open ? panel.id : null)}
                           onToggle={() => toggleSelected(chapter.id, panel.id)}
                           onEdit={() => setEditorPanel(panel)}
                           onStudio={(mode) => {
@@ -691,15 +695,23 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                             <ChevronDown className="size-4" />
                           </button>
                         </div>
-                        <button
-                          type="button"
-                          className="panel-remove focus-ring grid size-11 place-items-center text-subtle hover:text-danger"
-                          aria-label={`Remove ${panel.name}`}
-                          disabled={busy}
-                          onClick={() => void removePanel(panel.id)}
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
+                        <div className="panel-row-end flex shrink-0 flex-col">
+                          <PanelOptionsButton
+                            name={panel.name}
+                            open={menuPanel === panel.id}
+                            disabled={busy}
+                            onOpen={() => setMenuPanel(panel.id)}
+                          />
+                          <button
+                            type="button"
+                            className="panel-remove focus-ring grid size-11 place-items-center text-subtle hover:text-danger"
+                            aria-label={`Remove ${panel.name}`}
+                            disabled={busy}
+                            onClick={() => void removePanel(panel.id)}
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
                       </li>
                     );
                   })}

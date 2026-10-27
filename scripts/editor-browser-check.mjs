@@ -148,17 +148,15 @@ try {
   const original = (await records(page)).panels[0];
   console.log("Desktop: context menu, double-click, keyboard, transforms and crop…");
   await page
-    .getByRole("button", { name: "Image options for quadrants.png", exact: true })
+    .getByRole("button", { name: "Select image quadrants.png", exact: true })
     .click({ button: "right" });
   await page.getByRole("button", { name: "Edit Image", exact: true }).click();
   await page.getByLabel("Output width", { exact: true }).waitFor();
   await cancel(page);
-  await page
-    .getByRole("button", { name: "Image options for quadrants.png", exact: true })
-    .dblclick();
+  await page.getByRole("button", { name: "Select image quadrants.png", exact: true }).dblclick();
   await page.getByLabel("Output width", { exact: true }).waitFor();
   await cancel(page);
-  await page.getByRole("button", { name: "Image options for quadrants.png", exact: true }).focus();
+  await page.getByRole("button", { name: "Select image quadrants.png", exact: true }).focus();
   await page.keyboard.press("e");
   await page.getByLabel("Output width", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Rotate right", exact: true }).click();
@@ -313,7 +311,7 @@ try {
   });
   const { page: phone } = await setup(mobile);
   const target = phone.getByRole("button", {
-    name: "Image options for quadrants.png",
+    name: "Select image quadrants.png",
     exact: true,
   });
   await target.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "instant" }));
