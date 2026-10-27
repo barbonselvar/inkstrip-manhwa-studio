@@ -1,0 +1,35 @@
+{
+  "prototypeOnly": true,
+  "workerDecodeError": "page.evaluate: InvalidStateError: The source image could not be decoded.",
+  "windowExportPixelExact": true,
+  "productionGuardPreserved": true,
+  "metrics": [
+    {
+      "text": "السلام عليكم",
+      "pathLength": 178.015625,
+      "ordinaryLength": 178.015625,
+      "wholeRun": 178.001953125,
+      "isolatedLetters": 258.001953125
+    },
+    {
+      "text": "مَرْحَبًا بالعالم",
+      "pathLength": 172.015625,
+      "ordinaryLength": 172.015625,
+      "wholeRun": 172.001953125,
+      "isolatedLetters": 247.001953125
+    },
+    {
+      "text": "الفصل 12 — Inkstrip Studio",
+      "pathLength": 430.34375,
+      "ordinaryLength": 430.203125,
+      "wholeRun": 430.16015625,
+      "isolatedLetters": 475.16015625
+    }
+  ],
+  "pixelTolerance": 0,
+  "errors": [],
+  "font": "Arial with system Arabic fallback",
+  "portableEmbeddedFonts": false,
+  "workerFontParityUnverified": true,
+  "metricsParityVerified": false
+}
