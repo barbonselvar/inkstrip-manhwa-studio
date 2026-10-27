@@ -16,3 +16,11 @@ Continue the existing branch and Draft PR #23. Do not merge or deploy.
 Milestone status must distinguish implemented/verified, partial, deferred and
 blocked. Preserving original data takes precedence over unproven cleanup or
 shaping shortcuts. Existing Claude implementation commits remain unchanged.
+
+## Continuation checkpoint
+
+A is verified and published as `ad9809966fe79746a91cd4e17b2ad8c1aeb3be3c`
+(both GitHub workflows green). B1/B2 and B3 conservative analysis are implemented
+and validated. Asset deletion is deferred under the handoff's explicit
+analysis-first fallback. Next: paintable filter masks and bitmap patterns, using
+the existing R8 architecture. No release authorization is implied.

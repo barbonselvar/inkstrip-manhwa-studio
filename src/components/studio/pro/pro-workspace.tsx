@@ -32,6 +32,19 @@ import { cleanView } from "@/lib/studio/dialogue/operations";
 import { reconcileDialogue } from "@/lib/studio/dialogue/operations";
 import { validateNativeImages, validateRasterInput } from "@/lib/studio/pro/native-images";
 import { validateOpeningSession } from "@/lib/studio/pro/opening";
+import { ProRecovery } from "./pro-recovery";
+import { listCheckpoints, readCheckpoint, type CheckpointHeader } from "@/lib/studio/pro/recovery";
+import {
+  subscribeRecovery,
+  flushCheckpoints,
+  type RecoveryStatus,
+} from "@/lib/studio/pro/recovery-client";
+import {
+  acknowledgeDraft,
+  draftSaveStatus,
+  saveFailure,
+  type SaveFailure,
+} from "@/lib/studio/pro/save-status";
 import { previewDirtyRect } from "@/lib/studio/pro/preview-dirty";
 import { budgetHistory } from "@/lib/studio/pro/history-budget";
 import { copyLayerMask, maskFromSelection } from "@/lib/studio/pro/masks";
@@ -89,6 +102,7 @@ import {
   MessageCircle,
   PanelRightClose,
   PanelRightOpen,
+  ArchiveRestore,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProCanvas, type ProTool } from "./pro-canvas";
@@ -365,6 +379,9 @@ export default function ProWorkspace({
     }),
     [openAttempt, setOpenAttempt] = useState(0),
     [saved, setSaved] = useState(false),
+    [saving, setSaving] = useState(0),
+    [saveError, setSaveError] = useState<SaveFailure | null>(null),
+    [recovery, setRecovery] = useState<RecoveryStatus>({ state: "idle" }),
     [saveAcknowledgment, setSaveAcknowledgment] = useState(0),
     [assetEpoch, setAssetEpoch] = useState(0),
     [ready, setReady] = useState(0),
@@ -388,6 +405,7 @@ export default function ProWorkspace({
     closeInProgress = useRef(false),
     saveTail = useRef<Promise<unknown>>(Promise.resolve()),
     pendingSaves = useRef(0),
+    lastSaveFailure = useRef<{ panelId: string; message: string } | null>(null),
     lastSaved = useRef(""),
     generation = useRef(0),
     busyRef = useRef(false),
@@ -403,6 +421,31 @@ export default function ProWorkspace({
     savePreference(RULER_UNIT_KEY, value);
   };
   const maxArea = browserDialogueBudget().maxArea;
+  const durability = draftSaveStatus(load.state === "ready", saving, saved, saveError);
+  useEffect(() => {
+    let active = true;
+    const unsubscribe = subscribeRecovery(panel.id, (status) => {
+      if (active) setRecovery(status);
+    });
+    void listCheckpoints(panel.id).then(
+      (result) => {
+        if (active && result.entries[0])
+          setRecovery((current) =>
+            current.state === "idle" ? { state: "available", header: result.entries[0] } : current,
+          );
+      },
+      (e) => {
+        if (active)
+          setRecovery((current) =>
+            current.state === "idle" ? { state: "failed", error: (e as Error).message } : current,
+          );
+      },
+    );
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [panel.id]);
   const doc = useMemo(() => {
       const current = history?.present.doc;
       if (!current || !transformDraft || transformDraft.origin !== current) return current;
@@ -492,6 +535,7 @@ export default function ProWorkspace({
           setLoad({ state: "ready" });
           lastSaved.current = JSON.stringify(recovered.document);
           setSaved(true);
+          setSaveError(null);
           setStatus("Recovered editable Pro document. Chapter unchanged.");
         }
         return;
@@ -528,22 +572,34 @@ export default function ProWorkspace({
   }, [panel, openAttempt, maxArea]);
   const persist = useCallback((document: ProDocument) => {
     pendingSaves.current++;
-    if (alive.current) setSaved(false);
+    if (alive.current) {
+      setSaved(false);
+      setSaveError(null);
+      setSaving(pendingSaves.current);
+    }
     const task = saveTail.current
       .catch(() => {})
       .then(async () => {
         const current = sessionRef.current;
         if (!current) throw new Error("The document has not loaded.");
+        if (current.document.panelId !== document.panelId)
+          throw new Error(
+            "This save belongs to a different document. No document was overwritten.",
+          );
         const next = await saveSession({ ...current, document }, current.revision);
         // A file import can append immutable assets while this transaction is pending.
         // A save acknowledgement must never replace that newer in-memory asset pool.
         const live = sessionRef.current ?? next;
-        const currentSession = {
-          ...next,
-          document: historyRef.current?.present.doc ?? document,
-          assets: { ...next.assets, ...live.assets },
-          acceptedBlobId: live.acceptedBlobId,
-        };
+        const currentSession = acknowledgeDraft(
+          next,
+          live,
+          historyRef.current?.present.doc ?? document,
+        );
+        if (
+          currentSession === live &&
+          (live.document.panelId !== next.document.panelId || live.recoveryId !== next.recoveryId)
+        )
+          return next;
         sessionRef.current = currentSession;
         if (alive.current) {
           setSession(currentSession);
@@ -555,6 +611,12 @@ export default function ProWorkspace({
         (next) => {
           pendingSaves.current--;
           if (alive.current) {
+            setSaving(pendingSaves.current);
+            const failed = lastSaveFailure.current;
+            if (failed?.panelId === document.panelId) {
+              setError((current) => (current === failed.message ? "" : current));
+              lastSaveFailure.current = null;
+            }
             setSaved(
               pendingSaves.current === 0 &&
                 JSON.stringify(historyRef.current?.present.doc) === lastSaved.current,
@@ -567,6 +629,14 @@ export default function ProWorkspace({
         },
         (error) => {
           pendingSaves.current--;
+          if (alive.current) {
+            setSaving(pendingSaves.current);
+            if (sessionRef.current?.document.panelId === document.panelId) {
+              const failure = saveFailure(error);
+              setSaveError(failure);
+              lastSaveFailure.current = { panelId: document.panelId, message: failure.message };
+            }
+          }
           throw error;
         },
       );
@@ -578,12 +648,13 @@ export default function ProWorkspace({
     const signature = JSON.stringify(history.present.doc);
     const durable = signature === lastSaved.current && pendingSaves.current === 0;
     setSaved(durable);
+    if (durable) setSaveError(null);
     if (durable || pendingSaves.current > 0) return;
     const timer = setTimeout(() => {
       if (closeInProgress.current || busyRef.current) return;
       void persist(history.present.doc).catch((e) => {
-        if (alive.current) {
-          setError(storageMessage(e));
+        if (alive.current && sessionRef.current?.document.panelId === history.present.doc.panelId) {
+          setError(saveFailure(e).message);
           setStatus("Draft not saved. Export a native backup.");
         }
       });
@@ -1557,6 +1628,7 @@ export default function ProWorkspace({
     closeInProgress.current = true;
     try {
       if (historyRef.current) await persist(historyRef.current.present.doc);
+      await flushCheckpoints();
       onClose();
     } catch (e) {
       closeInProgress.current = false;
@@ -1664,6 +1736,7 @@ export default function ProWorkspace({
       );
       lastSaved.current = JSON.stringify(document);
       setSaved(true);
+      setSaveError(null);
       setSelectedIds([base.id]);
       setMaskMode(false);
       setBefore(false);
@@ -1686,6 +1759,65 @@ export default function ProWorkspace({
     a.download = name.replace(/[\\/:*?"<>|]/g, "-");
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
+  };
+  const restoreCheckpoint = async (header: CheckpointHeader) => {
+    const origin = historyRef.current?.present.doc;
+    if (
+      !origin ||
+      !sessionRef.current ||
+      busyRef.current ||
+      transformRef.current ||
+      dialoguePendingRef.current ||
+      transient ||
+      header.panelId !== origin.panelId
+    )
+      throw Error("Finish the active operation before restoring this page's checkpoint.");
+    const run = ++operationRun.current;
+    busyRef.current = true;
+    setBusy(true);
+    setProgress("Verifying recovery checkpoint…");
+    ++generation.current;
+    try {
+      await saveTail.current;
+      const checkpoint = await readCheckpoint(header.id, origin.panelId);
+      if (checkpoint.header.integritySha256 !== header.integritySha256)
+        throw Error(
+          "The selected checkpoint changed. Refresh recovery checkpoints before restoring.",
+        );
+      validateOpeningSession(checkpoint.session, maxArea);
+      await validateNativeImages(checkpoint.session, maxArea);
+      if (
+        !alive.current ||
+        run !== operationRun.current ||
+        historyRef.current?.present.doc !== origin ||
+        sessionRef.current?.document.panelId !== origin.panelId
+      )
+        throw Error(
+          "The document changed while recovery was being verified. Nothing was restored.",
+        );
+      const next = mergeNativeSession(sessionRef.current, checkpoint.session);
+      validateOpeningSession(next, maxArea);
+      sessionRef.current = next;
+      setSession(next);
+      setHist(
+        record(historyRef.current!, {
+          doc: next.document,
+          label: `Restore checkpoint revision ${header.revision}`,
+        }),
+      );
+      setSaved(false);
+      setSaveError(null);
+      setAssetEpoch((n) => n + 1);
+      setStatus(
+        "Checkpoint restored as one undoable action. Original artwork and previous layers remain recoverable.",
+      );
+    } finally {
+      busyRef.current = false;
+      if (alive.current) {
+        setBusy(false);
+        setProgress("");
+      }
+    }
   };
   const exportBoards = async (boards: Artboard[], format: string, scale: number) => {
     if (!doc || busyRef.current || !boards.length || !renderer.current) return;
@@ -2833,19 +2965,41 @@ export default function ProWorkspace({
                 </Button>
               )}
             </div>
-            <span className="pro-save-state" role="status">
-              {!doc
-                ? load.state === "failed"
-                  ? "Not opened"
-                  : "Opening…"
-                : busy
-                  ? progress
-                  : rendering
-                    ? "Rendering preview…"
-                    : saved
-                      ? "Draft saved"
-                      : "Unsaved draft"}
+            <span
+              className="pro-save-state"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              data-save-state={load.state === "failed" ? "not-opened" : durability.state}
+              title={saveError?.message}
+            >
+              {!doc ? (load.state === "failed" ? "Not opened" : "Opening…") : durability.label}
             </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Recovery checkpoints"
+              className="pro-recovery-button"
+              disabled={load.state === "loading" || busy || dialoguePending}
+              title={
+                recovery.header
+                  ? "Recovery available · open checkpoints"
+                  : "Open recovery checkpoints"
+              }
+              data-recovery-state={recovery.state}
+              onClick={() => {
+                if (load.state === "failed") {
+                  root.current
+                    ?.querySelector(".pro-load-failed .pro-recovery-panel")
+                    ?.scrollIntoView({ block: "nearest" });
+                  return;
+                }
+                setTab("history");
+                setPanelOpen(true);
+              }}
+            >
+              <ArchiveRestore />
+            </Button>
             <div className="pro-history-buttons">
               <Button
                 variant="ghost"
@@ -2869,11 +3023,12 @@ export default function ProWorkspace({
             <Button
               variant="secondary"
               className="pro-save-button"
+              aria-label="Save draft"
               disabled={!doc || busy || dialoguePending || !!transformDraft}
-              onClick={() => void saveNow().catch((e) => setError(storageMessage(e)))}
+              onClick={() => void saveNow().catch((e) => setError(saveFailure(e).message))}
             >
               <Save />
-              Save draft
+              <span>Save draft</span>
             </Button>
             <Button
               intent="save"
@@ -3329,10 +3484,27 @@ export default function ProWorkspace({
                 </p>
                 <div className="pro-actions">
                   <Button onClick={onClose}>Return to chapter</Button>
-                  <Button variant="secondary" onClick={() => setOpenAttempt((n) => n + 1)}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      // Clear the previous failure in the same UI transaction as
+                      // the retry request, before asynchronous storage starts.
+                      setLoad({ state: "loading" });
+                      setStatus("Opening layered document…");
+                      setOpenAttempt((n) => n + 1);
+                    }}
+                  >
                     Try again
                   </Button>
                 </div>
+                <ProRecovery
+                  panelId={panel.id}
+                  revision={undefined}
+                  epoch={saveAcknowledgment}
+                  status={recovery}
+                  disabled={busy}
+                  onDownload={download}
+                />
               </div>
             ) : (
               <div className="pro-loading" aria-busy="true">
@@ -4158,11 +4330,22 @@ export default function ProWorkspace({
                     />
                   )}
                   {tab === "history" && history && (
-                    <ProHistoryTab
-                      history={history}
-                      onUndo={() => actions.current.undo()}
-                      onRedo={() => actions.current.redo()}
-                    />
+                    <>
+                      <ProHistoryTab
+                        history={history}
+                        onUndo={() => actions.current.undo()}
+                        onRedo={() => actions.current.redo()}
+                      />
+                      <ProRecovery
+                        panelId={panel.id}
+                        revision={session?.revision}
+                        epoch={saveAcknowledgment}
+                        status={recovery}
+                        disabled={busy || dialoguePending || !!transformDraft || !!transient}
+                        onRestore={restoreCheckpoint}
+                        onDownload={download}
+                      />
+                    </>
                   )}
                   {tab === "assets" && (
                     <ProAssetsTab
@@ -4234,7 +4417,7 @@ export default function ProWorkspace({
             )}
           </div>
           <footer className="pro-footer">
-            <span role="status">{status}</span>
+            <span role="status">{busy ? progress : status}</span>
             {busy ? (
               <Button variant="danger" disabled={!cancellable} onClick={cancel}>
                 Cancel rendering

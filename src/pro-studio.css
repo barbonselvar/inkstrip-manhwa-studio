@@ -1741,3 +1741,86 @@
   font-size: 0.75rem;
   pointer-events: none;
 }
+
+/* R10 durability feedback is visible independently of preview rendering. */
+.pro-save-state[data-save-state="failed"],
+.pro-save-state[data-save-state="unavailable"] {
+  color: var(--color-danger);
+}
+.pro-header [data-recovery-state="available"] {
+  color: var(--color-accent);
+}
+.pro-recovery-panel {
+  width: 100%;
+  min-width: 0;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  text-align: start;
+}
+.pro-checkpoint-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.pro-checkpoint-list > li {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-subtle);
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+}
+.pro-checkpoint-list time {
+  color: var(--color-muted);
+}
+.pro-checkpoint-list .pro-actions {
+  flex-wrap: wrap;
+}
+.pro-load-failed {
+  overflow-y: auto;
+}
+@media (max-width: 900px) {
+  .pro-header .pro-save-state {
+    display: block;
+    margin-inline: 0.25rem;
+  }
+}
+@media (max-width: 640px) {
+  .pro-header .pro-save-state {
+    order: 4;
+    flex-basis: 100%;
+    font-size: 0.6875rem;
+    padding-block: 0.125rem;
+  }
+  .pro-header .pro-save-button {
+    display: inline-flex;
+    width: 2.75rem;
+    padding: 0;
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .pro-header .pro-recovery-button {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+  }
+  .pro-header .pro-mode-switch {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    justify-self: start;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  .pro-header .pro-save-button > span {
+    display: none;
+  }
+  .pro-recovery-panel .studio-button {
+    white-space: normal;
+    height: auto;
+    min-height: 2.75rem;
+  }
+}

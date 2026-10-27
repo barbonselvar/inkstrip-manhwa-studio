@@ -42,3 +42,45 @@ Main geometry comparison: [a-row-geometry.json](r10-evidence/a-row-geometry.json
 Real Swin2SR and local OCR succeeded; there was no external inference block in
 this environment. Dev/built smoke passed with matching visible content, no console
 or page errors and no horizontal overflow. Screenshots were visually inspected.
+
+## Milestone B verified scope
+
+**1,052 unit tests pass** (200 scripts +59 app/auth +116 Studio +677 Pro), including
+ten checkpoint/ordering/status/reachability tests. Typecheck, lint, formatting,
+production build, build configuration and auth configuration pass.
+
+`test:r10:recovery:browser` runs real transaction/security probes on the source
+server and the same positive UI/pixel assertions against the production bundle at
+1440/768/390/360/320px. Confirmed: atomic quota/interruption rejection; corrupted
+bytes/index metadata, missing assets, wrong identity/page, unknown native/header/DB
+versions; primary revision conflict; groups/clipping/layer and filter masks;
+explicit restore/Cancel; Undo/Redo; primary quota/unavailability and retry; corrupt
+checkpoint refusal through the UI; exact native save/reopen and PNG/preview output.
+Every pixel comparison uses **tolerance0**. Header buttons have **zero overlapping
+rectangles**. Desktop and 320px screenshots were visually inspected.
+
+The unchanged R8 recovery suite passes (including fresh-context Chapter restore,
+R3/R5 integration, exact source bytes and JPEG/WebP recovery), and the opening
+regression passes twice on dev and again on the production build.
+
+### Failures investigated during B development
+
+- Visual review found the recovery button overlapping the mobile studio switcher.
+  Both now have explicit grid placement; an overlap assertion was added.
+- Retry exposed a gap between the request and its Loading state. The click now
+  changes both atomically; the original terminal-state assertion is unchanged.
+- A new ordering regression failed before the fix: late workers could evict newer
+  checkpoints. Per-page revision ordering fixes it without weakening the test.
+- A handler named `useCheckpoint` triggered the hook lint rule; it was renamed.
+  A strip-only Node test rejected constructor parameter properties; the queue
+  now uses ordinary erasable field declarations. No lint/test rules changed.
+- A test waiter used an async predicate that this Playwright version treated as
+  immediately truthy. Condition polling now checks actual committed records.
+- A dev run started before Vite finished a source update and was reloaded. Another
+  probe imported a second HMR-timestamped recorder singleton. The final test
+  observes the durable checkpoint revision instead of an unrelated queue instance.
+  Original logs are retained; no arbitrary delay, tolerance change or skip was used.
+
+Evidence: [b-recovery-browser.json](r10-evidence/b-recovery-browser.json),
+[b-retention-before-fix.log](r10-evidence/b-retention-before-fix.log). The final
+phase-wide matrix and final-HEAD GitHub checks remain pending later milestones.

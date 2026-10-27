@@ -1,4 +1,5 @@
 import { openDb } from "../db";
+import { checkpointAfterConfirmedSave } from "./recovery-client";
 import { validateAssets, type ProSession } from "./model";
 /** Storage version5 fences schema3 drafts from older native readers.
  * Independent, self-contained blobs: old chapter garbage collection cannot remove Pro assets. */
@@ -134,6 +135,10 @@ export async function saveSession(
     };
     tx.oncomplete = () => {
       db.close();
+      // Snapshot the acknowledged transaction, never a newer in-memory preview.
+      // This independent worker/database cannot turn a durable primary save into
+      // a failed save, or let an interrupted checkpoint replace that draft.
+      checkpointAfterConfirmedSave(next);
       resolve(next);
       if (next.recoveryId)
         void clearRecovery(next.document.panelId, next.recoveryId).catch(() => {

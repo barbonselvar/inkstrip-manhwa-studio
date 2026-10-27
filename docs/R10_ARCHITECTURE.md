@@ -10,7 +10,7 @@ acknowledged document with current history before reporting durability. Native
 document schema 3/envelope 9, legacy readers/migrations, R6/R8 rendering, R3 brush
 gestures and R5 transform transactions remain the baseline.
 
-## Milestone B plan retained from the handoff
+## Milestone B implementation (continuing the handoff design)
 
 - Separate, versioned checkpoint database; no unnecessary Pro database upgrade.
 - Snapshots originate only from confirmed saves. Reuse `nativeFile`/`readNative`
@@ -37,3 +37,35 @@ Arabic text on a path requires shaped glyph runs and bidi ordering; the current
 per-grapheme layout guard must remain until a faithful replacement is demonstrated.
 Tiled processing must preserve existing limits until halo/border correctness,
 bounded memory and cancellation have measured validation.
+
+### Checkpoint trust and ordering
+
+Checkpoint headers have schema1, UUID/identity fields, primary revision, accepted
+source identity, optional restore lineage, saved/created timestamps, native byte
+length, native SHA-256 and canonical-header SHA-256. Structural limits precede
+asset serialization. Digests detect corruption; they are not authentication.
+Native parsing remains the existing strict trust boundary, followed by real image
+preflight/decoding before restoring into the open workspace.
+
+Header and native Blob stores commit/prune in one recovery transaction. Digest
+work runs outside the transaction. A metadata snapshot is verified, then compared
+again under the write transaction; changes fail closed. Per-page candidate
+selection uses primary revisions, independent of delayed worker completion.
+Checkpoints are immutable by ID. The queue receives exactly `saveSession`'s
+transaction-complete snapshot, preserving the existing optimistic primary revision
+and recovery-lineage checks. A late acknowledgement cannot cross page/lineage.
+
+A working-document restore freezes active edits, verifies identity and resource
+budgets, namespaces immutable assets using `mergeNativeSession`, and adds one
+existing history step. The normal autosave then performs optimistic persistence.
+No competing save/Undo engine, primary-store migration or flattened recovery PNG
+was introduced. Unreadable-primary recovery is portable export/import rather than
+automatic replacement of a damaged record.
+
+### Reachability boundary
+
+`documentAssetIds` is shared with native export. The analysis API accepts current,
+Undo/Redo, transaction, render and checkpoint document roots, including hidden
+layers and Clone Stamp/mask sources. Checkpoints own separate native asset copies.
+The immutable primary pool is retained because all UI clone-source and worker
+leases cannot yet be enumerated. Only bounded checkpoint versions are pruned.

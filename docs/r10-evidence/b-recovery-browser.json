@@ -1,0 +1,96 @@
+{
+  "apiBase": "http://127.0.0.1:8080",
+  "uiBase": "http://127.0.0.1:8082",
+  "results": [
+    {
+      "storageTransactions": true,
+      "failures": {
+        "quota": "QuotaExceededError:Injected full storage",
+        "interrupted": "Error:Recovery checkpoint write was interrupted; previous checkpoints remain intact.",
+        "corrupt-bytes": "Recovery checkpoint integrity verification failed. Existing artwork is unchanged.",
+        "missing-asset": "The original Pro source is missing.",
+        "future-native": "Unsupported native document. This editor supports native versions 1–5, Dialogue7 and R6 version8 and R8 version9. Unreleased AI version 6 must be opened in its AI Studio branch.",
+        "future-checkpoint": "Unsupported or corrupted recovery checkpoint metadata. Saved artwork was not changed.",
+        "wrong-document": "Recovery checkpoint document identity does not match its metadata.",
+        "wrongPage": "Recovery checkpoint is missing or belongs to another page.",
+        "corruptIndex": "Recovery index integrity verification failed. Existing checkpoints were retained.",
+        "conflict": "Another tab saved this Pro document. Export your document before reopening; no changes were overwritten.",
+        "futureCheckpointDatabase": "VersionError"
+      },
+      "currentName": "Newer valid revision",
+      "currentRevision": 2,
+      "expectedRevision": 2,
+      "checkpointRevisions": [2, 1, 1],
+      "schema": 1,
+      "checkpointDatabaseVersion": 1,
+      "primaryDatabaseVersion": 5
+    },
+    {
+      "width": 1440,
+      "persistentEditableCheckpoint": true,
+      "explicitConfirmAndCancel": true,
+      "undoRedo": true,
+      "pixelTolerance": 0,
+      "storageUnavailableAndRetry": true,
+      "primaryQuotaAndRetry": true,
+      "corruptedCheckpointRefused": true,
+      "groupsClippingAndFilterMasks": true,
+      "saveReopen": true,
+      "mobileSaveVisible": true
+    },
+    {
+      "width": 768,
+      "persistentEditableCheckpoint": true,
+      "explicitConfirmAndCancel": true,
+      "undoRedo": true,
+      "pixelTolerance": 0,
+      "storageUnavailableAndRetry": true,
+      "primaryQuotaAndRetry": true,
+      "corruptedCheckpointRefused": true,
+      "groupsClippingAndFilterMasks": true,
+      "saveReopen": true,
+      "mobileSaveVisible": true
+    },
+    {
+      "width": 390,
+      "persistentEditableCheckpoint": true,
+      "explicitConfirmAndCancel": true,
+      "undoRedo": true,
+      "pixelTolerance": 0,
+      "storageUnavailableAndRetry": true,
+      "primaryQuotaAndRetry": true,
+      "corruptedCheckpointRefused": true,
+      "groupsClippingAndFilterMasks": true,
+      "saveReopen": true,
+      "mobileSaveVisible": true
+    },
+    {
+      "width": 360,
+      "persistentEditableCheckpoint": true,
+      "explicitConfirmAndCancel": true,
+      "undoRedo": true,
+      "pixelTolerance": 0,
+      "storageUnavailableAndRetry": true,
+      "primaryQuotaAndRetry": true,
+      "corruptedCheckpointRefused": true,
+      "groupsClippingAndFilterMasks": true,
+      "saveReopen": true,
+      "mobileSaveVisible": true
+    },
+    {
+      "width": 320,
+      "persistentEditableCheckpoint": true,
+      "explicitConfirmAndCancel": true,
+      "undoRedo": true,
+      "pixelTolerance": 0,
+      "storageUnavailableAndRetry": true,
+      "primaryQuotaAndRetry": true,
+      "corruptedCheckpointRefused": true,
+      "groupsClippingAndFilterMasks": true,
+      "saveReopen": true,
+      "mobileSaveVisible": true
+    }
+  ],
+  "errors": [],
+  "pixelTolerance": 0
+}
