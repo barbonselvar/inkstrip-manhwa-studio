@@ -1,0 +1,129 @@
+{
+  "source": "Project backup exported by production 5f9c537 (2026-10-26 audit QA project, synthetic artwork). Metadata records only; image bytes are not included.",
+  "project": {
+    "id": "124f75b9-7e7e-48f5-851e-b9cfc47bdb29",
+    "title": "AUDIT-2026-10-26 \u2014 disposable QA",
+    "createdAt": 1793044452335,
+    "updatedAt": 1793045840545
+  },
+  "chapters": [
+    {
+      "id": "f3a1a593-113d-415a-b372-f100fa062960",
+      "projectId": "124f75b9-7e7e-48f5-851e-b9cfc47bdb29",
+      "title": "Chapter 1",
+      "createdAt": 1793044452335,
+      "updatedAt": 1793045840545,
+      "width": 800,
+      "seam": 0,
+      "format": "image/jpeg",
+      "strip": {
+        "mediaRevisions": {
+          "8d0479f4-68f7-4889-9ac8-8fc6ebba10c3": "f055d6f0-5e05-4680-b940-e498b3f1e970",
+          "19b5182d-a3af-493f-8a2c-99459cd90b03": "2c316d21-6a4d-40e1-8993-31d07c1b90a7",
+          "13427853-4267-4896-81c6-90623dd8e78e": "7212e814-0366-49e9-9dc7-6e0d2b42ed8b",
+          "4178b1c8-1206-4bea-80a3-17382f61b119": "075111a8-1c85-4829-8ad4-11933e817c12"
+        },
+        "width": 800,
+        "totalHeight": 27348,
+        "parts": [
+          {
+            "blobId": "a17ff086-7afd-4c99-885d-bb0b1bb282af",
+            "height": 12533
+          },
+          {
+            "blobId": "167c541c-6052-4d21-a592-bb3a4a0d7f9b",
+            "height": 14815
+          }
+        ],
+        "panelIds": [
+          "8d0479f4-68f7-4889-9ac8-8fc6ebba10c3",
+          "19b5182d-a3af-493f-8a2c-99459cd90b03",
+          "13427853-4267-4896-81c6-90623dd8e78e",
+          "4178b1c8-1206-4bea-80a3-17382f61b119"
+        ],
+        "widthSetting": 800,
+        "seam": 0,
+        "format": "image/jpeg",
+        "createdAt": 1793045626849
+      }
+    }
+  ],
+  "panels": [
+    {
+      "id": "0ba164a6-d936-46e7-b34a-6ab04534c37c",
+      "chapterId": "f3a1a593-113d-415a-b372-f100fa062960",
+      "name": "alpha-red.png",
+      "mime": "image/png",
+      "width": 128,
+      "height": 128,
+      "blobId": "c1ccfeff-d2de-4dda-a84c-24f7e2a8da76",
+      "thumbId": "4a9de631-9694-418b-9b10-588b78bb0be5",
+      "order": 4,
+      "createdAt": 1793045710711,
+      "original": {
+        "blobId": "8827cbc2-ed68-4387-9264-f8a0498a639c",
+        "thumbId": "38a4cf8a-8d3d-4e50-85b1-6b0de5173696",
+        "mime": "image/png",
+        "width": 64,
+        "height": 64
+      },
+      "mediaUpdatedAt": 1793045840545
+    },
+    {
+      "id": "13427853-4267-4896-81c6-90623dd8e78e",
+      "chapterId": "f3a1a593-113d-415a-b372-f100fa062960",
+      "name": "manhwa-1080x10000.png",
+      "mime": "image/png",
+      "width": 1080,
+      "height": 10000,
+      "blobId": "7212e814-0366-49e9-9dc7-6e0d2b42ed8b",
+      "thumbId": "faf74142-96e4-4ede-a0cc-5c32f78b2fd5",
+      "order": 2,
+      "createdAt": 1793045405026
+    },
+    {
+      "id": "19b5182d-a3af-493f-8a2c-99459cd90b03",
+      "chapterId": "f3a1a593-113d-415a-b372-f100fa062960",
+      "name": "manhwa-1080x5000.png",
+      "mime": "image/png",
+      "width": 1080,
+      "height": 5000,
+      "blobId": "2c316d21-6a4d-40e1-8993-31d07c1b90a7",
+      "thumbId": "63d3128e-6ace-4817-afc6-50a6ec81d4db",
+      "order": 1,
+      "createdAt": 1793045404853
+    },
+    {
+      "id": "4178b1c8-1206-4bea-80a3-17382f61b119",
+      "chapterId": "f3a1a593-113d-415a-b372-f100fa062960",
+      "name": "manhwa-1080x20000.png",
+      "mime": "image/png",
+      "width": 1080,
+      "height": 20000,
+      "blobId": "075111a8-1c85-4829-8ad4-11933e817c12",
+      "thumbId": "f93c02f2-8ef1-4c19-93b9-8e9b238ae3da",
+      "order": 3,
+      "createdAt": 1793045405266
+    },
+    {
+      "id": "8d0479f4-68f7-4889-9ac8-8fc6ebba10c3",
+      "chapterId": "f3a1a593-113d-415a-b372-f100fa062960",
+      "name": "manhwa-1080x1920.png",
+      "mime": "image/png",
+      "width": 1080,
+      "height": 1920,
+      "blobId": "f055d6f0-5e05-4680-b940-e498b3f1e970",
+      "thumbId": "d787910d-e21a-4155-852b-96c8ad40f06a",
+      "order": 0,
+      "createdAt": 1793044527619,
+      "original": {
+        "blobId": "fb71c768-0a31-4070-9517-a2978c0e0fc4",
+        "thumbId": "95c9f14f-251a-402d-84af-c8601418450b",
+        "mime": "image/png",
+        "width": 1080,
+        "height": 1920
+      },
+      "mediaUpdatedAt": 1793045358570
+    }
+  ]
+}

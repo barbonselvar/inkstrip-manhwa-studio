@@ -1,8 +1,14 @@
 import { validateDialogue } from "./dialogue/types.ts";
 import { validateAssets, type ProSession } from "./pro/model.ts";
 import type { Chapter, Panel, Project } from "./types.ts";
-import type { CharacterProfile } from "./characters/types.ts";
+import { validateCharacters, type CharacterProfile } from "./characters/types.ts";
 import { mediaIds } from "./editor/references.ts";
+import {
+  RecordError,
+  validateChapterRecord,
+  validatePanelRecord,
+  validateProjectRecord,
+} from "./records.ts";
 
 /**
  * Single-file project backup.
@@ -118,6 +124,30 @@ export function encodeBackup(data: ProjectData, exportedAt = Date.now()): Blob {
   return new Blob([MAGIC, length, json, ...parts], { type: "application/octet-stream" });
 }
 
+/** Character references are stored as blob references in the header; their profiles are
+ * fully validated after the references resolve to images. */
+function validateStoredCharacters(value: unknown) {
+  if (!Array.isArray(value) || value.length > 32)
+    throw new RecordError("Invalid character profiles.");
+  for (const profile of value as StoredCharacter[])
+    if (
+      !profile ||
+      typeof profile !== "object" ||
+      !Array.isArray(profile.references) ||
+      profile.references.length > 6 ||
+      profile.references.some(
+        (r) =>
+          !r ||
+          typeof r !== "object" ||
+          !isString(r.id) ||
+          typeof r.angle !== "string" ||
+          !isString(r.blobRef) ||
+          Object.keys(r).some((k) => !["id", "angle", "blobRef"].includes(k)),
+      )
+    )
+      throw new RecordError("Invalid character profiles.");
+}
+
 const fail = (): never => {
   throw new Error("This file is not a valid Inkstrip backup.");
 };
@@ -145,10 +175,21 @@ export async function decodeBackup(file: Blob): Promise<ProjectData> {
   if (![1, 2].includes(header.version))
     throw new Error("This backup was made by a newer Inkstrip version.");
   const { project, chapters, panels, blobs: entries } = header;
-  if (project?.dialoguePresets)
-    validateDialogue({ version: 1, regions: [], presets: project.dialoguePresets });
-  if (!isString(project?.id) || !Array.isArray(chapters) || !Array.isArray(panels)) fail();
-  if (!Array.isArray(entries)) fail();
+  if (!Array.isArray(chapters) || !Array.isArray(panels) || !Array.isArray(entries)) fail();
+  // Every record is checked before anything is returned, so a malformed backup is
+  // rejected as a whole and nothing reaches storage or the Library (INK-AUD-001).
+  try {
+    validateProjectRecord(project, { characters: false });
+    if (project.characters !== undefined) validateStoredCharacters(project.characters);
+    chapters.forEach(validateChapterRecord);
+    panels.forEach(validatePanelRecord);
+  } catch (error) {
+    if (error instanceof RecordError)
+      throw new Error(
+        `This backup has invalid project metadata (${error.message.replace(/\.$/, "")}). Nothing was restored; existing projects are unchanged.`,
+      );
+    throw error;
+  }
 
   const blobs = new Map<string, Blob>();
   let offset = prefixLength + headerLength;
@@ -219,6 +260,7 @@ export async function decodeBackup(file: Blob): Promise<ProjectData> {
       return { id, angle, blob };
     }),
   }));
+  if (characters) validateCharacters(characters);
   return {
     project: { ...project, ...(characters ? { characters } : {}) } as Project,
     chapters,

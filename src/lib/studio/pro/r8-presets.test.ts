@@ -169,7 +169,7 @@ test("Chapter backup recovery keeps schema3 filter/gradient/style metadata and o
           strip: null,
           createdAt: 1,
           updatedAt: 1,
-          width: 128,
+          width: 800,
           seam: 0,
           format: "image/png",
         },

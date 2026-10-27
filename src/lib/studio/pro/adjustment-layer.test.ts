@@ -409,7 +409,7 @@ test("Chapter project backup round-trips schema2 sessions without flattening or 
           strip: null,
           createdAt: 1,
           updatedAt: 1,
-          width: 128,
+          width: 800,
           seam: 0,
           format: "image/png",
         },
