@@ -662,6 +662,20 @@
   font-size: 0.8125rem;
   color: var(--color-muted);
 }
+.pro-load-failed {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 1rem;
+  text-align: center;
+}
+.pro-load-failed h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-fg);
+}
+.pro-load-failed p {
+  margin: 0;
+}
 .pro-mode-switch {
   display: flex;
   align-items: center;

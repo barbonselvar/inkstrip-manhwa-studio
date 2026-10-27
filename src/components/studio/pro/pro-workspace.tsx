@@ -358,6 +358,11 @@ export default function ProWorkspace({
     [panelWidth, setPanelWidth] = useState(300),
     [error, setError] = useState(""),
     [status, setStatus] = useState("Opening layered document…"),
+    /** Initial open: explicit loading → ready | failed, never a stale "Opening…" (INK-AUD-005). */
+    [load, setLoad] = useState<{ state: "loading" | "ready" | "failed"; error?: string }>({
+      state: "loading",
+    }),
+    [openAttempt, setOpenAttempt] = useState(0),
     [saved, setSaved] = useState(false),
     [saveAcknowledgment, setSaveAcknowledgment] = useState(0),
     [assetEpoch, setAssetEpoch] = useState(0),
@@ -475,11 +480,14 @@ export default function ProWorkspace({
   useEffect(() => {
     alive.current = true;
     let active = true;
+    setLoad({ state: "loading" });
+    setStatus("Opening layered document…");
     void (async () => {
       const recovered = await loadSession(panel.id);
       if (recovered) {
         if (active) {
           install(recovered, "Recovered Pro draft");
+          setLoad({ state: "ready" });
           lastSaved.current = JSON.stringify(recovered.document);
           setSaved(true);
           setStatus("Recovered editable Pro document. Chapter unchanged.");
@@ -502,17 +510,20 @@ export default function ProWorkspace({
       validateAssets(s);
       if (active) {
         install(s, "Imported accepted image");
+        setLoad({ state: "ready" });
         setStatus("New layered document. Original artwork remains in your chapter.");
       }
     })().catch((e) => {
-      if (active) setError(storageMessage(e));
+      if (!active) return;
+      setLoad({ state: "failed", error: storageMessage(e) });
+      setStatus("Not opened. Chapter artwork is unchanged.");
     });
     return () => {
       active = false;
       alive.current = false;
       renderer.current?.dispose();
     };
-  }, [panel]);
+  }, [panel, openAttempt]);
   const persist = useCallback((document: ProDocument) => {
     pendingSaves.current++;
     if (alive.current) setSaved(false);
@@ -2821,13 +2832,17 @@ export default function ProWorkspace({
               )}
             </div>
             <span className="pro-save-state" role="status">
-              {busy
-                ? progress
-                : rendering
-                  ? "Rendering preview…"
-                  : saved
-                    ? "Draft saved"
-                    : "Unsaved draft"}
+              {!doc
+                ? load.state === "failed"
+                  ? "Not opened"
+                  : "Opening…"
+                : busy
+                  ? progress
+                  : rendering
+                    ? "Rendering preview…"
+                    : saved
+                      ? "Draft saved"
+                      : "Unsaved draft"}
             </span>
             <div className="pro-history-buttons">
               <Button
@@ -3300,11 +3315,27 @@ export default function ProWorkspace({
                   )
                 }
               />
+            ) : load.state === "failed" ? (
+              <div className="pro-loading pro-load-failed" role="alert">
+                <Layers3 />
+                <h3>This image could not be opened in Raster Studio</h3>
+                <p>{load.error}</p>
+                <p className="pro-help">
+                  Raster Studio opens images up to 16,384 px per side and{" "}
+                  {(maxArea / 1_000_000).toFixed(1)} megapixels on this device. Your original stays
+                  unchanged in the chapter; nothing was saved.
+                </p>
+                <div className="pro-actions">
+                  <Button onClick={onClose}>Return to chapter</Button>
+                  <Button variant="secondary" onClick={() => setOpenAttempt((n) => n + 1)}>
+                    Try again
+                  </Button>
+                </div>
+              </div>
             ) : (
-              <div className="pro-loading">
+              <div className="pro-loading" aria-busy="true">
                 <Layers3 />
                 <p>{status}</p>
-                {error && <Button onClick={onClose}>Return to chapter</Button>}
               </div>
             )}
             {panelOpen && (
