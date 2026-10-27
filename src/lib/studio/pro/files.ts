@@ -288,6 +288,15 @@ export function mergeNativeSession(current: ProSession, incoming: ProSession): P
     layers: incoming.document.layers.map((l) => ({
       ...l,
       ...(l.assetId ? { assetId: mapping.get(l.assetId)! } : {}),
+      ...(l.effects
+        ? {
+            effects: l.effects.map((e) =>
+              e.pattern?.kind === "bitmap"
+                ? { ...e, pattern: { ...e.pattern, assetId: mapping.get(e.pattern.assetId!)! } }
+                : e,
+            ),
+          }
+        : {}),
       strokes: l.strokes.map((stroke) =>
         stroke.clone
           ? { ...stroke, clone: { ...stroke.clone, assetId: mapping.get(stroke.clone.assetId)! } }

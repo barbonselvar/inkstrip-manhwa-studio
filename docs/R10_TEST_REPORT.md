@@ -88,3 +88,7 @@ phase-wide matrix and final-HEAD GitHub checks remain pending later milestones.
 ## C1 continuation checkpoint
 
 C1:1055 unit tests (200 scripts,59 app/auth,116 Studio,680 Pro), typecheck, lint and production build pass. New mask UI suite passes dev and production bundles at1440/768/390/360/320 with zero pixel tolerance, real touch, local/document history, selection clipping, transformed capture, source retention, native/import and autosave reload. Unchanged r8-ui-browser-check passes five widths. Evidence: c1-mask-browser.json, c1-r8-ui.log. No physical Android claim. Initial transformed-capture test revealed full-document fields accidentally spread into a selection frame; explicit width/height bounds fixed this before commit. Assertions were preserved.
+
+## C2 continuation checkpoint
+
+C2:1059 tests (200+59+116+684), typecheck, lint and build pass. Five-width pattern suites pass on dev and built code, plus unchanged R8 UI. Resume rechecks of type/lint,4 pattern unit tests and desktop browser all pass. Pixel tolerance0 covers preview/export/reopen, source bytes, transparent edges, repeat seams, opacity/scale/offset, Cancel isolation, Undo/Redo and actual autosave reload. Missing assets, corrupt input, malformed records and predecode dimension mismatch have coverage. The actual401e925 legacy native reader rejects bitmap-v3 and accepts procedural-v2. No assertions weakened. Evidence: c2-pattern-browser.json, c2-old-reader.json and c2-r8-ui.log.

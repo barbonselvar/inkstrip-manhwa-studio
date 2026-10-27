@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "originalBytes": true,
+      "malformedInputRefused": true,
+      "cancelNoAssetLeak": true,
+      "premultipliedTexture": true,
+      "scalePositionOpacity": true,
+      "undoRedo": true,
+      "nativeRemap": true,
+      "autosaveReload": true,
+      "exportTolerance": 0,
+      "proceduralPreserved": true
+    }
+  ],
+  "errors": [],
+  "pixelTolerance": 0,
+  "physicalAndroid": false
+}

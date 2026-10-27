@@ -1,3 +1,5 @@
+import { importPatternBitmap } from "@/lib/studio/pro/pattern-assets";
+import { validateAssets } from "@/lib/studio/pro/model";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -33,7 +35,7 @@ export function ProR8Lab({
   session: ProSession;
   maxArea: number;
   onCancel: () => void;
-  onApply: (s: R8Settings) => true | string;
+  onApply: (s: R8Settings, assets?: Record<string, Blob>) => true | string;
 }) {
   const [base] = useState(() => {
     const layer = (draft.created ?? draft.origin).layers.find((l) => l.id === draft.layerId)!;
@@ -48,6 +50,12 @@ export function ProR8Lab({
     [displayed, setDisplayed] = useState(""),
     [message, setMessage] = useState(""),
     [name, setName] = useState("");
+  const [stagedAssets, setStagedAssets] = useState<Record<string, Blob>>({});
+  const [readyAssets, setReadyAssets] = useState<Record<string, Blob> | null>(null);
+  const [importing, setImporting] = useState(false);
+  const importRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => importRequest.current?.abort(), []);
+  const assets = useMemo(() => ({ ...base.session.assets, ...stagedAssets }), [base, stagedAssets]);
   const [maskEditing, setMaskEditing] = useState(false);
   const [saved, setSaved] = useState<R8Preset[]>(() => {
     try {
@@ -73,6 +81,7 @@ export function ProR8Lab({
   }, [key]);
   useEffect(() => {
     let active = true;
+    setReady(false);
     let renderer: ProRenderer;
     try {
       renderer = new ProRenderer();
@@ -82,9 +91,12 @@ export function ProR8Lab({
     }
     worker.current = renderer;
     void renderer
-      .init({ ...base.session, document: draft.origin }, maxArea)
+      .init({ ...base.session, assets, document: draft.origin }, maxArea)
       .then(() => {
-        if (active) setReady(true);
+        if (active) {
+          setReady(true);
+          setReadyAssets(assets);
+        }
       })
       .catch((e) => {
         if (active) setError(e.message);
@@ -94,9 +106,9 @@ export function ProR8Lab({
       renderer.dispose();
       worker.current = null;
     };
-  }, [base, draft, maxArea]);
+  }, [base, assets, draft, maxArea]);
   useEffect(() => {
-    if (!ready || proposed.error) return;
+    if (!ready || readyAssets !== assets || proposed.error) return;
     const id = ++generation.current,
       renderer = worker.current!;
     let active = true;
@@ -131,8 +143,8 @@ export function ProR8Lab({
       active = false;
       clearTimeout(timer);
     };
-  }, [ready, proposed, before, draft, maxArea, key]);
-  const waiting = !ready || processing || displayed !== key,
+  }, [ready, readyAssets, assets, proposed, before, draft, maxArea, key]);
+  const waiting = !ready || readyAssets !== assets || importing || processing || displayed !== key,
     target = proposed.document.layers.find((l) => l.id === draft.layerId) ?? base.layer;
   const disabledReason =
     base.layer.kind === "group"
@@ -144,6 +156,10 @@ export function ProR8Lab({
           : undefined;
   const save = (next: R8Preset[]) => {
     try {
+      if (next.some((p) => p.settings.effects?.some((e) => e.pattern?.kind === "bitmap")))
+        throw Error(
+          "Bitmap patterns stay in native documents. Global presets cannot store document-owned asset references; duplicate the styled layer instead.",
+        );
       validateR8Presets(next);
       const raw = JSON.stringify(next);
       if (raw.length > 1_000_000) throw Error("Preset storage exceeds1MB.");
@@ -219,228 +235,284 @@ export function ProR8Lab({
               </p>
             </div>
             <div className="r6-controls">
-              <div className="r8-tabs" role="tablist" aria-label="Layer property sections">
-                {[
-                  ["styles", "Layer Styles"],
-                  ["filters", "Smart Filters"],
-                  ["gradient", "Gradient"],
-                ].map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === id}
-                    disabled={maskEditing || (id === "gradient" && base.layer.kind !== "gradient")}
-                    onClick={() => setTab(id!)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              {tab === "styles" && (
-                <>
-                  <ProNumber
-                    label="Shared light angle"
-                    min={-360}
-                    max={360}
-                    value={settings.light ?? 135}
-                    onChange={(light) => {
-                      setSettings((s) => ({ ...s, light }));
+              <fieldset disabled={importing} className="r8-control-fields">
+                <div className="r8-tabs" role="tablist" aria-label="Layer property sections">
+                  {[
+                    ["styles", "Layer Styles"],
+                    ["filters", "Smart Filters"],
+                    ["gradient", "Gradient"],
+                  ].map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="tab"
+                      aria-selected={tab === id}
+                      disabled={
+                        maskEditing || (id === "gradient" && base.layer.kind !== "gradient")
+                      }
+                      onClick={() => setTab(id!)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {tab === "styles" && (
+                  <>
+                    <ProNumber
+                      label="Shared light angle"
+                      min={-360}
+                      max={360}
+                      value={settings.light ?? 135}
+                      onChange={(light) => {
+                        setSettings((s) => ({ ...s, light }));
+                        setBefore(false);
+                      }}
+                    />
+                    <ProAppearance
+                      advanced
+                      showGradient={false}
+                      onPatternImport={(file) => {
+                        importRequest.current?.abort();
+                        const controller = new AbortController();
+                        importRequest.current = controller;
+                        setImporting(true);
+                        setMessage("Validating bitmap pattern…");
+                        void importPatternBitmap(file, controller.signal)
+                          .then((result) => {
+                            if (controller.signal.aborted) return;
+                            const id = crypto.randomUUID(),
+                              pattern = {
+                                kind: "bitmap" as const,
+                                assetId: id,
+                                width: result.width,
+                                height: result.height,
+                                scale: 1,
+                                offsetX: 0,
+                                offsetY: 0,
+                                color2: "#ffffff",
+                              };
+                            const next = {
+                                ...settings,
+                                effects: settings.effects?.map((e) =>
+                                  e.kind === "patternOverlay"
+                                    ? { ...e, version: 3 as const, pattern }
+                                    : e,
+                                ),
+                              },
+                              document = r8Document(draft, next, maxArea);
+                            validateAssets({
+                              ...base.session,
+                              assets: { ...base.session.assets, [id]: result.blob },
+                              document,
+                            });
+                            setStagedAssets({ [id]: result.blob });
+                            setSettings(next);
+                            setBefore(false);
+                            setMessage(
+                              "Bitmap pattern imported into this editable draft. Apply to save it.",
+                            );
+                          })
+                          .catch((e) => {
+                            if (!controller.signal.aborted) setMessage(e.message);
+                          })
+                          .finally(() => {
+                            if (importRequest.current === controller) setImporting(false);
+                          });
+                      }}
+                      layer={target}
+                      onPatch={(p) => {
+                        setSettings((s) => ({ ...s, effects: p.effects }));
+                        setBefore(false);
+                      }}
+                    />
+                    <div className="pro-actions">
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          try {
+                            if (settings.effects?.some((e) => e.pattern?.kind === "bitmap"))
+                              throw Error(
+                                "Bitmap styles carry document-owned assets. Duplicate the layer to copy them safely; the global style clipboard supports procedural styles.",
+                              );
+                            localStorage.setItem(
+                              CLIPBOARD,
+                              JSON.stringify([
+                                {
+                                  version: 1,
+                                  name: "Clipboard",
+                                  settings: { effects: settings.effects ?? [] },
+                                },
+                              ]),
+                            );
+                            setMessage("Layer style copied.");
+                          } catch (e) {
+                            setMessage((e as Error).message);
+                          }
+                        }}
+                      >
+                        Copy layer style
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          try {
+                            const p = readR8Presets(localStorage.getItem(CLIPBOARD))[0];
+                            if (!p) throw Error("Copy a layer style first.");
+                            setSettings((s) => ({
+                              ...s,
+                              effects: structuredClone(p.settings.effects),
+                            }));
+                            setBefore(false);
+                            setMessage("Layer style pasted into this draft.");
+                          } catch (e) {
+                            setMessage((e as Error).message);
+                          }
+                        }}
+                      >
+                        Paste layer style
+                      </Button>
+                    </div>
+                  </>
+                )}
+                {tab === "filters" && (
+                  <ProSmartFilters
+                    value={settings.smartFilters ?? []}
+                    onChange={(smartFilters) => {
+                      setSettings((s) => ({ ...s, smartFilters }));
                       setBefore(false);
                     }}
+                    disabledReason={disabledReason}
+                    maskSize={{ width: base.layer.width, height: base.layer.height }}
+                    maskClip={
+                      draft.origin.selection?.regions.length || draft.origin.selection?.inverted
+                        ? toLocalSelection(draft.origin.selection, base.layer, {
+                            width: draft.origin.width,
+                            height: draft.origin.height,
+                          })
+                        : undefined
+                    }
+                    onEditingChange={setMaskEditing}
+                    captureMask={() => ({
+                      selection: toLocalSelection(
+                        draft.origin.selection?.regions.length || draft.origin.selection?.inverted
+                          ? draft.origin.selection
+                          : { ...EMPTY_SELECTION, inverted: true },
+                        base.layer,
+                        { width: draft.origin.width, height: draft.origin.height },
+                      ),
+                      enabled: true,
+                      inverted: false,
+                      density: 1,
+                    })}
                   />
+                )}
+                {tab === "gradient" && (
                   <ProAppearance
                     advanced
-                    showGradient={false}
+                    showEffects={false}
                     layer={target}
                     onPatch={(p) => {
-                      setSettings((s) => ({ ...s, effects: p.effects }));
+                      setSettings((s) => ({ ...s, gradient: p.gradient }));
                       setBefore(false);
                     }}
                   />
+                )}
+                <details className="r8-presets" hidden={maskEditing}>
+                  <summary>Reusable presets</summary>
+                  <label className="pro-field">
+                    Layer property preset
+                    <select
+                      className="field"
+                      aria-label="Layer property preset"
+                      value=""
+                      onChange={(e) => {
+                        const p = [...factoryR8Presets(), ...saved].find(
+                          (p) => p.name === e.target.value,
+                        );
+                        if (p) {
+                          setSettings((s) => ({ ...s, ...structuredClone(p.settings) }));
+                          setBefore(false);
+                          setName(p.name);
+                        }
+                      }}
+                    >
+                      <option value="" disabled>
+                        Choose a preset
+                      </option>
+                      {[...factoryR8Presets(), ...saved].map((p) => (
+                        <option
+                          key={p.name}
+                          value={p.name}
+                          disabled={
+                            (!!p.settings.gradient && base.layer.kind !== "gradient") ||
+                            (!!p.settings.smartFilters?.length && !!disabledReason)
+                          }
+                        >
+                          {p.name}
+                          {p.settings.gradient && base.layer.kind !== "gradient"
+                            ? " (Gradient Fill only)"
+                            : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="pro-field">
+                    Preset name
+                    <input
+                      className="field"
+                      aria-label="Layer property preset name"
+                      maxLength={80}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                  </label>
                   <div className="pro-actions">
                     <Button
                       variant="secondary"
                       onClick={() => {
-                        try {
-                          localStorage.setItem(
-                            CLIPBOARD,
-                            JSON.stringify([
-                              {
-                                version: 1,
-                                name: "Clipboard",
-                                settings: { effects: settings.effects ?? [] },
-                              },
-                            ]),
-                          );
-                          setMessage("Layer style copied.");
-                        } catch (e) {
-                          setMessage((e as Error).message);
+                        if ([...factoryR8Presets(), ...saved].some((p) => p.name === name.trim())) {
+                          setMessage("A preset with that name already exists.");
+                          return;
                         }
+                        save([
+                          ...saved,
+                          { version: 1, name: name.trim(), settings: structuredClone(settings) },
+                        ]);
                       }}
                     >
-                      Copy layer style
+                      Save layer property preset
                     </Button>
                     <Button
-                      variant="secondary"
+                      variant="ghost"
                       onClick={() => {
-                        try {
-                          const p = readR8Presets(localStorage.getItem(CLIPBOARD))[0];
-                          if (!p) throw Error("Copy a layer style first.");
-                          setSettings((s) => ({
-                            ...s,
-                            effects: structuredClone(p.settings.effects),
-                          }));
-                          setBefore(false);
-                          setMessage("Layer style pasted into this draft.");
-                        } catch (e) {
-                          setMessage((e as Error).message);
-                        }
+                        let next = (name.trim() || "Layer style").slice(0, 65) + " copy",
+                          i = 2;
+                        while ([...factoryR8Presets(), ...saved].some((p) => p.name === next))
+                          next = (name.trim() || "Layer style").slice(0, 65) + ` copy${i++}`;
+                        save([
+                          ...saved,
+                          { version: 1, name: next, settings: structuredClone(settings) },
+                        ]);
+                        setName(next);
                       }}
                     >
-                      Paste layer style
+                      Duplicate style preset
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={!saved.some((p) => p.name === name)}
+                      onClick={() => save(saved.filter((p) => p.name !== name))}
+                    >
+                      Delete layer property preset
                     </Button>
                   </div>
-                </>
-              )}
-              {tab === "filters" && (
-                <ProSmartFilters
-                  value={settings.smartFilters ?? []}
-                  onChange={(smartFilters) => {
-                    setSettings((s) => ({ ...s, smartFilters }));
-                    setBefore(false);
-                  }}
-                  disabledReason={disabledReason}
-                  maskSize={{ width: base.layer.width, height: base.layer.height }}
-                  maskClip={
-                    draft.origin.selection?.regions.length || draft.origin.selection?.inverted
-                      ? toLocalSelection(draft.origin.selection, base.layer, {
-                          width: draft.origin.width,
-                          height: draft.origin.height,
-                        })
-                      : undefined
-                  }
-                  onEditingChange={setMaskEditing}
-                  captureMask={() => ({
-                    selection: toLocalSelection(
-                      draft.origin.selection?.regions.length || draft.origin.selection?.inverted
-                        ? draft.origin.selection
-                        : { ...EMPTY_SELECTION, inverted: true },
-                      base.layer,
-                      { width: draft.origin.width, height: draft.origin.height },
-                    ),
-                    enabled: true,
-                    inverted: false,
-                    density: 1,
-                  })}
-                />
-              )}
-              {tab === "gradient" && (
-                <ProAppearance
-                  advanced
-                  showEffects={false}
-                  layer={target}
-                  onPatch={(p) => {
-                    setSettings((s) => ({ ...s, gradient: p.gradient }));
-                    setBefore(false);
-                  }}
-                />
-              )}
-              <details className="r8-presets" hidden={maskEditing}>
-                <summary>Reusable presets</summary>
-                <label className="pro-field">
-                  Layer property preset
-                  <select
-                    className="field"
-                    aria-label="Layer property preset"
-                    value=""
-                    onChange={(e) => {
-                      const p = [...factoryR8Presets(), ...saved].find(
-                        (p) => p.name === e.target.value,
-                      );
-                      if (p) {
-                        setSettings((s) => ({ ...s, ...structuredClone(p.settings) }));
-                        setBefore(false);
-                        setName(p.name);
-                      }
-                    }}
-                  >
-                    <option value="" disabled>
-                      Choose a preset
-                    </option>
-                    {[...factoryR8Presets(), ...saved].map((p) => (
-                      <option
-                        key={p.name}
-                        value={p.name}
-                        disabled={
-                          (!!p.settings.gradient && base.layer.kind !== "gradient") ||
-                          (!!p.settings.smartFilters?.length && !!disabledReason)
-                        }
-                      >
-                        {p.name}
-                        {p.settings.gradient && base.layer.kind !== "gradient"
-                          ? " (Gradient Fill only)"
-                          : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="pro-field">
-                  Preset name
-                  <input
-                    className="field"
-                    aria-label="Layer property preset name"
-                    maxLength={80}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </label>
-                <div className="pro-actions">
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      if ([...factoryR8Presets(), ...saved].some((p) => p.name === name.trim())) {
-                        setMessage("A preset with that name already exists.");
-                        return;
-                      }
-                      save([
-                        ...saved,
-                        { version: 1, name: name.trim(), settings: structuredClone(settings) },
-                      ]);
-                    }}
-                  >
-                    Save layer property preset
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      let next = (name.trim() || "Layer style").slice(0, 65) + " copy",
-                        i = 2;
-                      while ([...factoryR8Presets(), ...saved].some((p) => p.name === next))
-                        next = (name.trim() || "Layer style").slice(0, 65) + ` copy${i++}`;
-                      save([
-                        ...saved,
-                        { version: 1, name: next, settings: structuredClone(settings) },
-                      ]);
-                      setName(next);
-                    }}
-                  >
-                    Duplicate style preset
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    disabled={!saved.some((p) => p.name === name)}
-                    onClick={() => save(saved.filter((p) => p.name !== name))}
-                  >
-                    Delete layer property preset
-                  </Button>
-                </div>
-              </details>
-              {message && (
-                <p className="pro-help" role="status">
-                  {message}
-                </p>
-              )}
+                </details>
+                {message && (
+                  <p className="pro-help" role="status">
+                    {message}
+                  </p>
+                )}
+              </fieldset>
             </div>
           </div>
           {(error || proposed.error) && (
@@ -451,7 +523,7 @@ export function ProR8Lab({
           <footer>
             <Button
               variant="secondary"
-              disabled={maskEditing}
+              disabled={maskEditing || importing}
               onClick={() => {
                 setSettings(structuredClone(base.settings));
                 setBefore(false);
@@ -463,7 +535,14 @@ export function ProR8Lab({
               disabled={maskEditing || waiting || before || !!error || !!proposed.error}
               onClick={() => {
                 if (displayed !== latest.current) return;
-                const result = onApply(settings);
+                const retained = Object.fromEntries(
+                  Object.entries(stagedAssets).filter(([id]) =>
+                    settings.effects?.some(
+                      (e) => e.pattern?.kind === "bitmap" && e.pattern.assetId === id,
+                    ),
+                  ),
+                );
+                const result = onApply(settings, retained);
                 if (result === true) onCancel();
                 else setError(result);
               }}

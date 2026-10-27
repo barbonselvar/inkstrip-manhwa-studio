@@ -843,14 +843,28 @@ export default function ProWorkspace({
     },
     [setHist, maxArea],
   );
-  const applyR8Settings = (settings: R8Settings): true | string => {
+  const applyR8Settings = (
+    settings: R8Settings,
+    addedAssets: Record<string, Blob> = {},
+  ): true | string => {
     const current = historyRef.current?.present.doc;
     if (!current || !r8Draft || busyRef.current || transformRef.current || quickMask)
       return "This target is unavailable. Exit Quick Mask and finish active operations first.";
     try {
       const next = commitR8Document(current, r8Draft, settings, maxArea);
+      const nextSession = {
+        ...sessionRef.current!,
+        document: next,
+        assets: { ...sessionRef.current!.assets, ...addedAssets },
+      };
+      validateAssets(nextSession);
       if (next !== current && !commit(next, "Edit layer styles / Smart Filters / gradient"))
         return "Layer properties were not committed. Original artwork is unchanged.";
+      if (Object.keys(addedAssets).length) {
+        sessionRef.current = nextSession;
+        setSession(nextSession);
+        setAssetEpoch((n) => n + 1);
+      }
       setSelectedIds([r8Draft.layerId]);
       setMaskMode(false);
       setStatus("Editable layer properties saved. Original artwork is unchanged.");

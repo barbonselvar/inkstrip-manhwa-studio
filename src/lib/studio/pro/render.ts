@@ -632,7 +632,7 @@ export async function composite(
     );
   if (
     d.layers.some(
-      (l) => visible.has(l.id) && l.effects?.some((e) => e.enabled && e.version === 2),
+      (l) => visible.has(l.id) && l.effects?.some((e) => e.enabled && e.version !== undefined),
     ) &&
     outputWidth * outputHeight > 4_000_000
   )
@@ -770,10 +770,39 @@ export async function composite(
           release(bitmap);
           bitmap = full;
         }
+        const textures = new Map<
+          string,
+          { width: number; height: number; data: Uint8ClampedArray }
+        >();
+        for (const effect of l.effects)
+          if (effect.enabled && effect.pattern?.kind === "bitmap") {
+            const p = effect.pattern,
+              texture = await asset(p.assetId!, 1);
+            if (texture.width !== p.width || texture.height !== p.height)
+              throw Error("Bitmap pattern dimensions do not match its immutable source.");
+            const tile = canvas(texture.width, texture.height),
+              ctx = tile.getContext("2d")!;
+            ctx.drawImage(texture, 0, 0);
+            textures.set(p.assetId!, {
+              width: tile.width,
+              height: tile.height,
+              data: ctx.getImageData(0, 0, tile.width, tile.height).data,
+            });
+            release(tile);
+            if (cancel()) throw new DOMException("Rendering cancelled.", "AbortError");
+          }
         const ctx = bitmap.getContext("2d")!,
           image = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
         image.data.set(
-          effectPixels(image.data, bitmap.width, bitmap.height, l.effects, scale, d.styleLight),
+          effectPixels(
+            image.data,
+            bitmap.width,
+            bitmap.height,
+            l.effects,
+            scale,
+            d.styleLight,
+            textures,
+          ),
         );
         ctx.putImageData(image, 0, 0);
       }

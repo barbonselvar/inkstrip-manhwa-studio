@@ -39,6 +39,10 @@ export function validateR8Presets(p: R8Preset[]) {
       throw Error("Invalid layer-property preset.");
     names.add(v.name);
     validateR8Settings(v.settings);
+    if (v.settings.effects?.some((e) => e.pattern?.kind === "bitmap"))
+      throw Error(
+        "Global presets cannot contain document-owned bitmap assets. Duplicate the layer or save a native document instead.",
+      );
   }
 }
 export function readR8Presets(raw: string | null): R8Preset[] {

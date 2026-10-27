@@ -73,3 +73,7 @@ leases cannot yet be enumerated. Only bounded checkpoint versions are pruned.
 ## C1 continuation checkpoint
 
 C1 reuses R3 clippedStroke and R7 selectionCanvas/coverageRegion. Draft strokes use the existing generic History; native masks use existing FilterMask.selection row-RLE. Source assets and document schema3/envelope9 are unchanged. Selection capture includes the source layer transform. Composite preview updates on stroke completion; grayscale draft preview updates during input. Native plane4MP, local50 strokes and64M estimated work caps fail closed.
+
+## C2 continuation checkpoint
+
+Bitmap Pattern Overlay extends only the strict effect record to version3. Document schema3/envelope9 and existing DB versions stay unchanged. The old reader rejects the unsupported effect version. Immutable asset references are included by the shared export/reachability traversal and remapped on native import. Imports are staged and bounded; texture interpolation is bilinear in premultiplied alpha. Procedural effects retain their version2 record and algorithm. Document-owned bitmap assets are prohibited in global presets/clipboard.

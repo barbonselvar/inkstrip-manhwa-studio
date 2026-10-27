@@ -85,8 +85,16 @@ export async function validateNativeImages(
   decode?: typeof createImageBitmap,
 ) {
   documentSources(session.document, maxArea);
-  for (const blob of Object.values(session.assets)) {
+  for (const [id, blob] of Object.entries(session.assets)) {
     const size = await validateRasterInput(blob, maxArea);
+    for (const l of session.document.layers)
+      for (const e of l.effects ?? [])
+        if (
+          e.pattern?.kind === "bitmap" &&
+          e.pattern.assetId === id &&
+          (size.width !== e.pattern.width || size.height !== e.pattern.height)
+        )
+          throw Error("Bitmap pattern dimensions disagree with its validated header.");
     let image: ImageBitmap | undefined;
     try {
       image = decode
@@ -98,6 +106,14 @@ export async function validateNativeImages(
       // swaps JPEG axes but preserves the preflight pixel/side budgets.
       const orientedJpeg =
         blob.type === "image/jpeg" && image.width === size.height && image.height === size.width;
+      for (const l of session.document.layers)
+        for (const e of l.effects ?? [])
+          if (
+            e.pattern?.kind === "bitmap" &&
+            e.pattern.assetId === id &&
+            (image.width !== e.pattern.width || image.height !== e.pattern.height)
+          )
+            throw Error("Bitmap pattern dimensions disagree with its decoded source.");
       if (!orientedJpeg && (image.width !== size.width || image.height !== size.height))
         throw Error("Embedded image dimensions disagree with its header.");
     } catch {

@@ -28,3 +28,7 @@ the existing R8 architecture. No release authorization is implied.
 ## C1 continuation checkpoint
 
 C1 paintable filter masks are implemented and verified. Continue with C2 bitmap patterns, C3 inspector, C4 shaped-text prototype, then D/E/F. No merge or deploy authorization.
+
+## C2 continuation checkpoint
+
+C2 bitmap Pattern Overlay is implemented and verified. Continue C3 inspector, C4 shaped-text prototype/proposal, D/E/F. An isolated RTL diagnostic currently fails a curved-versus-straight advance assertion and has not changed production text behavior.

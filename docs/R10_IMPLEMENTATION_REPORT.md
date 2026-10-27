@@ -19,7 +19,7 @@ The persistence design in the user's handoff is being continued after source ins
 | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | A: six audit defects                            | Verified: six recovered fixes plus completed device-area preflight; baseline matrix and post-fix native/mobile checks pass |
 | B: checkpoints, save status, asset reachability | B1/B2 implemented and verified; B3 analysis verified, asset deletion deferred                                              |
-| C: professional Raster improvements             | C1 implemented and verified; C2–C4 pending                                                                                                                    |
+| C: professional Raster improvements             | C1/C2 implemented and verified; C3/C4 pending                                                                                                                    |
 | D: long-page capabilities and tiled processing  | Pending                                                                                                                    |
 | E: mobile improvements                          | Pending                                                                                                                    |
 | F: regression, security and performance         | Recovered full matrix passed; continuation verification ongoing                                                            |
@@ -101,3 +101,31 @@ history entry, unchanged source assets, native reopen, autosave reload and
 zero-tolerance preview/PNG equivalence. The unchanged five-width R8 UI suite also
 passes. Full unit tests:1055; typecheck, lint and production build pass. Physical
 Android has not been tested. C2–C4 and D–F remain unfinished.
+
+## Milestone C2: custom bitmap Pattern Overlay
+
+PNG/JPEG/WebP bitmap patterns now use immutable document assets, with a version3
+Pattern Overlay record (asset ID, width/height, scale and offsets). The document
+remains schema3, envelope9, Pro DB5, recovery DB1. Procedural style version2
+records and all existing rendering paths remain supported. The actual R9 main
+native reader rejects bitmap style version3, accepts procedural version2, and
+cannot silently flatten this extension.
+
+Imports preflight complete headers before decoding, capped at512px per side,
+2MB and one frame. Source bytes are preserved. Rotated JPEG axes are refused with
+a PNG-normalization explanation. Missing/mismatched/unsafe references fail closed;
+serialized dimension mismatches are rejected before decoding. Existing64-asset,
+48MB pool and4MP style/render-work limits remain enforced.
+
+Repeat sampling uses premultiplied bilinear interpolation across seams. Alpha,
+blend and style opacity remain in the existing compositor. Draft assets are
+isolated until Apply, Cancel leaks no assets, and asynchronous imports are aborted
+when the editor closes. Preview workers are reinitialized for each staged pool
+and stale replies cannot become the committed preview. Native export, remapping,
+recovery and reachability traversal include pattern references. Undo retains the
+original artwork and pattern assets. Global presets/clipboard refuse document-
+owned bitmap references; duplicate the layer or save the native document instead.
+
+Tests:1059 unit tests, typecheck, lint, production build; five-width dev and
+production pattern suites and unchanged five-width R8 UI all pass. PNG preview
+comparison remains tolerance0. Desktop/mobile screenshots were inspected.

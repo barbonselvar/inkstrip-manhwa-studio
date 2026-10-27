@@ -646,7 +646,7 @@ export function validateDocument(d: ProDocument) {
     if (
       d.version !== 3 &&
       (l.gradient?.version === 2 ||
-        l.effects?.some((e) => e.version === 2 || e.gradient?.version === 2))
+        l.effects?.some((e) => e.version !== undefined || e.gradient?.version === 2))
     )
       throw Error("Advanced styles and gradients require document schema3.");
     if (l.kind === "adjustment" && l.effects?.length)
@@ -926,6 +926,14 @@ export function validateAssets(session: ProSession) {
         !(session.assets[l.assetId] instanceof Blob))
     )
       throw new Error("A raster source is missing; existing artwork is unchanged.");
+  for (const l of session.document.layers)
+    for (const e of l.effects ?? [])
+      if (
+        e.pattern?.kind === "bitmap" &&
+        (!Object.hasOwn(session.assets, e.pattern.assetId!) ||
+          !(session.assets[e.pattern.assetId!] instanceof Blob))
+      )
+        throw Error("A bitmap Pattern Overlay source is missing; existing artwork is unchanged.");
   for (const l of session.document.layers)
     for (const stroke of [...l.strokes, ...(l.mask?.strokes ?? [])])
       if (stroke.clone && !Object.hasOwn(session.assets, stroke.clone.assetId))

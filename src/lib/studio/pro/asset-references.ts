@@ -9,6 +9,8 @@ export function documentAssetIds(document: ProDocument): Set<string> {
   if (original) ids.add(original.assetId);
   for (const layer of document.layers) {
     if (layer.assetId) ids.add(layer.assetId);
+    for (const e of layer.effects ?? [])
+      if (e.pattern?.kind === "bitmap") ids.add(e.pattern.assetId!);
     for (const stroke of [...layer.strokes, ...(layer.mask?.strokes ?? [])])
       if (stroke.clone) ids.add(stroke.clone.assetId);
   }
