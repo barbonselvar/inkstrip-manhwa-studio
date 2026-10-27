@@ -89,7 +89,10 @@
     "test:r10:patterns:browser": "node --experimental-strip-types scripts/r10-pattern-browser-check.mjs",
     "test:r10:inspector:browser": "node --experimental-strip-types scripts/r10-inspector-browser-check.mjs",
     "test:r10:long-pages:browser": "node --experimental-strip-types scripts/r10-long-page-browser-check.mjs",
-    "test:r10:mobile:browser": "node scripts/r10-mobile-browser-check.mjs"
+    "test:r10:mobile:browser": "node scripts/r10-mobile-browser-check.mjs",
+    "test:r10:matrix": "node scripts/r10-regression-matrix.mjs",
+    "bench:r10:tiles": "node --experimental-strip-types scripts/r10-tiles-benchmark.mjs",
+    "bench:r10:recovery": "node scripts/r10-recovery-benchmark.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
