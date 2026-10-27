@@ -152,6 +152,19 @@ try {
     assert.ok(edge > center && edge < 255, "hardness yields soft coverage");
     await d.getByRole("button", { name: "Finish filter mask", exact: true }).click();
     const committed = await preview(p);
+    await d.getByLabel("Filter mask 1 enabled", { exact: true }).uncheck();
+    fx.same(await preview(p), filtered, 0);
+    await d.getByLabel("Filter mask 1 enabled", { exact: true }).check();
+    fx.same(await preview(p), committed, 0);
+    await d.getByLabel("Invert filter mask 1", { exact: true }).check();
+    assert.notDeepEqual(
+      (await preview(p)).pixels,
+      committed.pixels,
+      "mask inversion changes the real composite",
+    );
+    await d.getByLabel("Invert filter mask 1", { exact: true }).uncheck();
+    fx.same(await preview(p), committed, 0);
+
     await p.screenshot({ path: `/workspace/screenshots/r10-mask-${width}.png` });
     await d.getByRole("button", { name: "Apply layer properties", exact: true }).click();
     await d.waitFor({ state: "hidden" });
@@ -201,6 +214,28 @@ try {
     await fx.open(p);
     fx.same(await fx.preview(p), await fx.raster(p), 0);
     assert.deepEqual((await fx.native(p)).value.document.layers, translated.document.layers);
+    // No selection means full source coverage, even outside the current canvas.
+    const unselected = structuredClone(doc);
+    unselected.selection = { regions: [], inverted: false, feather: 0 };
+    unselected.layers[0].transform.x = 12;
+    await fx.load(p, unselected, source);
+    await fx.tab(p, "Properties");
+    await p.getByRole("button", { name: "Layer styles and Smart Filters", exact: true }).click();
+    await ready(p);
+    await d.getByRole("tab", { name: "Smart Filters", exact: true }).click();
+    await d.getByRole("button", { name: "Use selection as filter mask", exact: true }).click();
+    await ready(p);
+    await d.getByRole("button", { name: "Apply layer properties", exact: true }).click();
+    await d.waitFor({ state: "hidden" });
+    const whole = (await fx.native(p)).value;
+    assert.deepEqual(
+      whole.document.layers[0].smartFilters[0].mask.selection,
+      { regions: [], inverted: true, feather: 0 },
+      "no selection must capture the full native source, not a document frame",
+    );
+    whole.document.layers[0].transform.x = 0;
+    await fx.load(p, whole.document, source, whole.assets);
+    fx.same(await fx.raster(p), filtered, 0);
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     results.push({
       width,
@@ -215,6 +250,8 @@ try {
       exportTolerance: 0,
       transformedCapture: true,
       autosaveReload: true,
+      noSelectionFullSource: true,
+      maskEnableInvert: true,
     });
     await context.close();
   }

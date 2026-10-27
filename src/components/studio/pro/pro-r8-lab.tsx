@@ -1,3 +1,4 @@
+import { captureFilterMask } from "@/lib/studio/pro/filter-mask-capture";
 import { importPatternBitmap } from "@/lib/studio/pro/pattern-assets";
 import { validateAssets } from "@/lib/studio/pro/model";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -20,7 +21,7 @@ import {
   validateR8Presets,
   type R8Preset,
 } from "@/lib/studio/pro/r8-presets";
-import { EMPTY_SELECTION, toLocalSelection, type ProSession } from "@/lib/studio/pro/model";
+import { toLocalSelection, type ProSession } from "@/lib/studio/pro/model";
 import "./r8-properties.css";
 const PRESETS = "inkstrip-r8-presets-v1",
   CLIPBOARD = "inkstrip-r8-style-clipboard-v1";
@@ -392,18 +393,9 @@ export function ProR8Lab({
                         : undefined
                     }
                     onEditingChange={setMaskEditing}
-                    captureMask={() => ({
-                      selection: toLocalSelection(
-                        draft.origin.selection?.regions.length || draft.origin.selection?.inverted
-                          ? draft.origin.selection
-                          : { ...EMPTY_SELECTION, inverted: true },
-                        base.layer,
-                        { width: draft.origin.width, height: draft.origin.height },
-                      ),
-                      enabled: true,
-                      inverted: false,
-                      density: 1,
-                    })}
+                    captureMask={() =>
+                      captureFilterMask(draft.origin.selection, base.layer, draft.origin)
+                    }
                   />
                 )}
                 {tab === "gradient" && (

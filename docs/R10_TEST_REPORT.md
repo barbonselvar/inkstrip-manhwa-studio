@@ -104,3 +104,7 @@ D:1073 unit tests pass (200 scripts+59 app/auth+118 Studio+696 Pro), typecheck/l
 ## Milestone E continuation
 
 E: five-width dev and built mobile/row checks pass. The new regression exposed32px selection/options/delete targets at768px before the coarse-pointer grid fix. Narrow filenames now receive at least120px measurable width and wrap instead of collapsing beside the48px thumbnail. Touch selection is tested after centering the actual target and verifying elementFromPoint, avoiding the toast/fixed footer overlay; no timing sleep or tolerance change is used. Existing selection/options behavior and audit assertions remain unchanged.1073 unit tests, type/lint/build pass.
+
+## Final-review capture correction
+
+No-selection capture fix:2 additional unit tests plus expanded five-width mask browser coverage. The new assertion fails before the fix on the f4b0f91 production bundle and passes afterward, including zero-tolerance output after moving the layer back and enabling/inverting its mask.1075 tests now pass (200+59+118+698), static/build gates pass. An unchanged R8 UI run was started concurrently with preview restart and missed homepage initialization; its log is retained and the original script is rerun after server readiness. No assertion/tolerance change. Full matrix restarts after this fix.

@@ -37,3 +37,7 @@ sources and canvas/crop/output. Five-width browser checks cover fresh and retain
 drafts, retries and returning to valid artwork; no original assertion was weakened.
 
 Post-fix production-build opening and unchanged audit suites pass, as do R8 native/fresh-context recovery at zero pixel tolerance and R9 integration. Milestone A is verified; the final phase-wide matrix will run again after later milestone changes.
+
+## Final-review capture correction
+
+Additional Codex regression R10-CAP-001: C1 framed the no-selection fallback in document bounds, while the original affine capture semantics covered the whole source. A translated off-canvas layer could later expose filtered pixels that the mask had hidden. The focused full-source fallback restores intended behavior; explicit selections retain R5 framing. Source assets, native versions and committed audit fixes are unchanged. Before/after browser and unit evidence are retained.

@@ -1,0 +1,47 @@
+
+> test:r10:masks:browser
+> node --experimental-strip-types scripts/r10-mask-browser-check.mjs http://127.0.0.1:8082 --quick
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: no selection must capture the full native source, not a document frame
++ actual - expected
+
+  {
+    feather: 0,
++   frame: {
++     height: 96,
++     transform: {
++       rotation: 0,
++       scaleX: 1,
++       scaleY: 1,
++       x: 12,
++       y: 0
++     },
++     width: 128
++   },
+    inverted: true,
+    regions: []
+  }
+
+    at file:///workspace/inkstrip-r10/scripts/r10-mask-browser-check.mjs:218:12 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: {
+    feather: 0,
+    frame: {
+      height: 96,
+      transform: { rotation: 0, scaleX: 1, scaleY: 1, x: 12, y: 0 },
+      width: 128
+    },
+    inverted: true,
+    regions: []
+  },
+  expected: { regions: [], inverted: true, feather: 0 },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0
