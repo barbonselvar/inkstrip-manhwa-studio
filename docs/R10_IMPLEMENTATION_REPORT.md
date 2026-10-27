@@ -129,3 +129,7 @@ owned bitmap references; duplicate the layer or save the native document instead
 Tests:1059 unit tests, typecheck, lint, production build; five-width dev and
 production pattern suites and unchanged five-width R8 UI all pass. PNG preview
 comparison remains tolerance0. Desktop/mobile screenshots were inspected.
+
+## C3 continuation checkpoint
+
+C3 adds keyboard ArrowLeft/Right/Home/End panel navigation and a contextual Tool settings jump into the existing inspector. Brush and text groups can be opened/focused without duplicate controls. Missing contextual sections fall back to panel top. Source artwork is unchanged by navigation. Five-width dev/built browser checks pass, including hidden-panel reopening, closed brush disclosure, focus,44px tab targets and no horizontal overflow. Existing R9×R8 desktop/mobile integration passes. Typecheck, lint, build and all workspace1071 unit tests pass (1061 committed tests plus10 pending tile tests).

@@ -1,0 +1,57 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "arrowNavigation": true,
+      "wrapHomeEnd": true,
+      "noArtworkNudge": true,
+      "contextualBrushJump": true,
+      "closedPanelOpened": true,
+      "controlsPreserved": true,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "arrowNavigation": true,
+      "wrapHomeEnd": true,
+      "noArtworkNudge": true,
+      "contextualBrushJump": true,
+      "closedPanelOpened": true,
+      "controlsPreserved": true,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "arrowNavigation": true,
+      "wrapHomeEnd": true,
+      "noArtworkNudge": true,
+      "contextualBrushJump": true,
+      "closedPanelOpened": true,
+      "controlsPreserved": true,
+      "overflow": false
+    },
+    {
+      "width": 360,
+      "arrowNavigation": true,
+      "wrapHomeEnd": true,
+      "noArtworkNudge": true,
+      "contextualBrushJump": true,
+      "closedPanelOpened": true,
+      "controlsPreserved": true,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "arrowNavigation": true,
+      "wrapHomeEnd": true,
+      "noArtworkNudge": true,
+      "contextualBrushJump": true,
+      "closedPanelOpened": true,
+      "controlsPreserved": true,
+      "overflow": false
+    }
+  ],
+  "errors": [],
+  "pixelTolerance": 0,
+  "physicalAndroid": false
+}

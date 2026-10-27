@@ -1,3 +1,4 @@
+import { contextualInspector, inspectorKeyIndex } from "@/lib/studio/pro/inspector";
 import { ProR8Lab } from "./pro-r8-lab";
 import { advancedGradient } from "@/lib/studio/pro/gradient";
 import {
@@ -421,6 +422,28 @@ export default function ProWorkspace({
     savePreference(RULER_UNIT_KEY, value);
   };
   const maxArea = browserDialogueBudget().maxArea;
+  const [inspectorTarget, setInspectorTarget] = useState<ReturnType<
+    typeof contextualInspector
+  > | null>(null);
+  useEffect(() => {
+    if (!inspectorTarget || !panelOpen || tab !== inspectorTarget.panel) return;
+    const content = document.querySelector<HTMLElement>(".pro-panel-content");
+    const target =
+      (inspectorTarget.section ? document.getElementById(inspectorTarget.section) : content) ??
+      content;
+    if (!content || !target) return;
+    for (
+      let parent: HTMLElement | null = target;
+      parent && parent !== content;
+      parent = parent.parentElement
+    )
+      if (parent instanceof HTMLDetailsElement) parent.open = true;
+    if (!inspectorTarget.section) content.scrollTop = 0;
+    target.scrollIntoView({ block: "nearest", inline: "nearest" });
+    target.focus({ preventScroll: true });
+    setInspectorTarget(null);
+  }, [inspectorTarget, panelOpen, tab]);
+
   const durability = draftSaveStatus(load.state === "ready", saving, saved, saveError);
   useEffect(() => {
     let active = true;
@@ -3137,6 +3160,18 @@ export default function ProWorkspace({
               </div>
             )}
             <span>{TOOLS.find((t) => t.id === tool)?.name ?? "Move"}</span>
+            <Button
+              variant="ghost"
+              className="pro-tool-settings"
+              onClick={() => {
+                const target = contextualInspector(tool, mode, dialogue);
+                setPanelOpen(true);
+                setTab(target.panel);
+                setInspectorTarget(target);
+              }}
+            >
+              Tool settings
+            </Button>
             <label className="pro-check">
               <input
                 type="checkbox"
@@ -3528,7 +3563,30 @@ export default function ProWorkspace({
             )}
             {panelOpen && (
               <aside className="pro-inspector" aria-label="Pro inspector">
-                <nav className="pro-panel-tabs" aria-label="Pro panels">
+                <nav
+                  className="pro-panel-tabs"
+                  aria-label="Pro panels"
+                  onKeyDown={(event) => {
+                    if (!(event.target instanceof HTMLButtonElement)) return;
+                    const buttons = [
+                        ...event.currentTarget.querySelectorAll<HTMLButtonElement>(
+                          "button:not(:disabled)",
+                        ),
+                      ],
+                      index = inspectorKeyIndex(
+                        event.key,
+                        buttons.indexOf(event.target),
+                        buttons.length,
+                      );
+                    if (index === undefined) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const button = buttons[index]!;
+                    button.click();
+                    button.focus();
+                    button.scrollIntoView({ block: "nearest", inline: "nearest" });
+                  }}
+                >
                   {(
                     [
                       "dialogue",
@@ -3579,7 +3637,7 @@ export default function ProWorkspace({
                       </button>
                     ))}
                 </nav>
-                <div className="pro-panel-content">
+                <div className="pro-panel-content" tabIndex={-1}>
                   {tab === "dialogue" && history && (
                     <ProDialogue
                       document={history.present.doc}

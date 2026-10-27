@@ -86,7 +86,8 @@
     "test:r10:opening:browser": "node --experimental-strip-types scripts/r10-open-limits-browser-check.mjs",
     "test:r10:recovery:browser": "node --experimental-strip-types scripts/r10-recovery-browser-check.mjs",
     "test:r10:masks:browser": "node --experimental-strip-types scripts/r10-mask-browser-check.mjs",
-    "test:r10:patterns:browser": "node --experimental-strip-types scripts/r10-pattern-browser-check.mjs"
+    "test:r10:patterns:browser": "node --experimental-strip-types scripts/r10-pattern-browser-check.mjs",
+    "test:r10:inspector:browser": "node --experimental-strip-types scripts/r10-inspector-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

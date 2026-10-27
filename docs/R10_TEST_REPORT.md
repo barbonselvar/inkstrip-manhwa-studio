@@ -92,3 +92,7 @@ C1:1055 unit tests (200 scripts,59 app/auth,116 Studio,680 Pro), typecheck, lint
 ## C2 continuation checkpoint
 
 C2:1059 tests (200+59+116+684), typecheck, lint and build pass. Five-width pattern suites pass on dev and built code, plus unchanged R8 UI. Resume rechecks of type/lint,4 pattern unit tests and desktop browser all pass. Pixel tolerance0 covers preview/export/reopen, source bytes, transparent edges, repeat seams, opacity/scale/offset, Cancel isolation, Undo/Redo and actual autosave reload. Missing assets, corrupt input, malformed records and predecode dimension mismatch have coverage. The actual401e925 legacy native reader rejects bitmap-v3 and accepts procedural-v2. No assertions weakened. Evidence: c2-pattern-browser.json, c2-old-reader.json and c2-r8-ui.log.
+
+## C3 continuation checkpoint
+
+C3 five-width dev and built suites pass at1440/768/390/360/320, including keyboard wrap/Home/End, no artwork nudge, contextual focus and open/closed panel/disclosure behavior. R9×R8 integration passes1440/390. Static/build gates and1061 committed tests pass;10 uncommitted tiled-kernel tests also passed. The first new browser probe used incorrect pre-existing tool labels (Brush/Text instead of Brush tool/Text tool); corrected only the locators, retaining assertions. Screenshot desktop/320 inspected.

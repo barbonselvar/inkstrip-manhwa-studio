@@ -32,3 +32,7 @@ C1 paintable filter masks are implemented and verified. Continue with C2 bitmap 
 ## C2 continuation checkpoint
 
 C2 bitmap Pattern Overlay is implemented and verified. Continue C3 inspector, C4 shaped-text prototype/proposal, D/E/F. An isolated RTL diagnostic currently fails a curved-versus-straight advance assertion and has not changed production text behavior.
+
+## C3 continuation checkpoint
+
+C3 implemented and verified. C4 prototype and concrete shaping-service proposal are documented in R10_RTL_PATH_PROPOSAL.md; production support remains deferred, with strict diagnostic failures retained. Continue D/E/F.
