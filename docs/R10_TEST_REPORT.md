@@ -108,3 +108,60 @@ E: five-width dev and built mobile/row checks pass. The new regression exposed32
 ## Final-review capture correction
 
 No-selection capture fix:2 additional unit tests plus expanded five-width mask browser coverage. The new assertion fails before the fix on the f4b0f91 production bundle and passes afterward, including zero-tolerance output after moving the layer back and enabling/inverting its mask.1075 tests now pass (200+59+118+698), static/build gates pass. An unchanged R8 UI run was started concurrently with preview restart and missed homepage initialization; its log is retained and the original script is rerun after server readiness. No assertion/tolerance change. Full matrix restarts after this fix.
+
+## Final validation (workspace recovery continuation)
+
+**Recovery.** This workspace held `b71d7b5` with no uncommitted changes; the remote
+branch held ten further pushed commits (`ad98099`…`9a0ed0a`), fast-forwarded without
+any reset. Unpushed state of the interrupted workspace (including its preserved R3
+failure log) was not available and is not claimed.
+
+**Validation hold — R3 stress (`r3-brush-browser-check.mjs:468`).** The previous run
+timed out waiting for the composite preview after the 13,200-step dense stroke. On
+the unchanged application code of `9a0ed0a` it was re-run five times:
+
+| Run | Condition                                                                            | Result       | Dense-stroke preview |
+| --- | ------------------------------------------------------------------------------------ | ------------ | -------------------: |
+| 1   | Alone                                                                                | PASS (400 s) |                    — |
+| 2   | Instrumented copy, idle                                                              | PASS         |  317 ms (busy 96 ms) |
+| 3   | Instrumented copy, 3 CPU-bound processes on 4 cores                                  | PASS         |  333 ms (busy 97 ms) |
+| 4   | Concurrently with R7, R6 layers, R8 UI, Pro and Layers suites on the same dev server | PASS (399 s) |                    — |
+| 5   | Full matrix, exclusive slot                                                          | PASS (391 s) |                    — |
+
+Unchanged main `401e925`, same instrumentation: 286 ms (busy 92 ms). The step is two
+orders of magnitude inside its 30 s limit on both. No Vite dependency-reload occurred
+and no R10 module imports a new package. **Not reproduced; root cause of the single
+earlier failure unconfirmed** (its log was not pushed). It is recorded, not
+reclassified as an environment failure, and no assertion or timeout changed.
+
+**Formatting.** 16 R10-added files (reports, evidence JSON, one test script) were not
+Prettier-formatted; formatted in `a320325` with JSON data verified identical. The 89
+unformatted files that predate R10 on main were left alone.
+
+**Full matrix** (`scripts/r10-regression-matrix.mjs`, original assertions and timeouts)
+on `a320325` (application code identical to `9a0ed0a`): **55/58 passed** in the run.
+
+| Command                                   | Result                                   | Disposition                                                                                                                                                                                                                                                                     |
+| ----------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test:r10:recovery:browser`               | Failed in 1.7 s on the production build  | Runner bug: suite imports `/src` in the page but was not in the source-server list. Fixed in `00dd895` (list now matches all in-page `/src` suites by scan); **passes on the dev server**.                                                                                      |
+| `test:production:browser … --raster --ai` | AI step "Failed to fetch"                | Proxy log: `huggingface.co:443 connect_rejected` at that time. Re-run **without `--ai` passes** on the exact SHA (release meta, Chapter, Pathfinder, gradient, text on path, SVG, native reopen, Raster, 4096² masked export, 0 failed assets). `--ai` **blocked**, not passed. |
+| `test:studio:browser`                     | AI Enhance "Failed to fetch" at line 123 | `huggingface.co` tunnel failure; **identical on unchanged main `401e925`** built and served the same way. **Blocked**, not passed.                                                                                                                                              |
+
+Effective result: every suite passes except the two steps that need huggingface.co,
+which this sandbox's egress policy denies (main fails identically). The platform
+branding script (`grok.com`) is fulfilled with an empty script inside the test browser
+only, as in R9; no other request is altered.
+
+**D1 lossless split** (`06f73e2`): 3 new unit tests (plans; byte-exact stacking for
+1/2/4/8/16-bit grey, grey+alpha, RGB, RGBA, palette and palette+tRNS; colour/animation
+refusals). `test:r10:split:browser` passes on the dev server and the production bundle
+(1440 px 1080×20000 → 2 parts; 390 px touch 1080×5000 → 2 parts), plus re-runs of audit,
+mobile, opening, editor, Vector-hidden, patterns, masks, Chapter display/import and
+long-page suites after the change — all pass.
+
+**Static gates on `bb0bf35`:** typecheck, lint, Prettier on changed files, production
+build and `check:build` pass; **1,078 unit tests** (200 + 59 + 121 + 698), 0 failures;
+audit probes fail closed.
+
+All browser results are Chromium emulation (1440/768/390/360/320 px); no physical
+Android, iOS or stylus testing was performed.

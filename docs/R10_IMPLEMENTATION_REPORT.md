@@ -15,14 +15,14 @@ The persistence design in the user's handoff is being continued after source ins
 
 ## Milestones
 
-| Milestone                                       | Status                                                                                                                     |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| A: six audit defects                            | Verified: six recovered fixes plus completed device-area preflight; baseline matrix and post-fix native/mobile checks pass |
-| B: checkpoints, save status, asset reachability | B1/B2 implemented and verified; B3 analysis verified, asset deletion deferred                                              |
-| C: professional Raster improvements             | C1/C2 implemented and verified; C3/C4 pending                                                                              |
-| D: long-page capabilities and tiled processing  | Pending                                                                                                                    |
-| E: mobile improvements                          | Pending                                                                                                                    |
-| F: regression, security and performance         | Recovered full matrix passed; continuation verification ongoing                                                            |
+| Milestone                                       | Status (verified on the final source; see R10_TEST_REPORT.md)                                                                                                     |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A: six audit defects                            | Implemented and verified (`c03de53`…`b71d7b5`, device-area preflight `ad98099`)                                                                                   |
+| B: checkpoints, save status, asset reachability | B1/B2 implemented and verified (`734391f`); B3 reachability analysis verified, asset deletion deferred                                                            |
+| C: professional Raster improvements             | C1 (`b401381`, fix `9a0ed0a`), C2 (`d718e7b`), C3 (`a349c94`) implemented and verified; C4 prototype and proposal only (`38725b5`), production refusal kept       |
+| D: long-page capabilities and tiled processing  | D1 capability notice (`7b31e54`) and lossless split (`06f73e2`); D2 local Smart Filter tiling (partial: compositor full-plane); D3 long-page tests; no cap raised |
+| E: mobile improvements                          | Implemented and verified on emulated widths (`96a68a9`)                                                                                                           |
+| F: regression, security and performance         | Full matrix 55/58 + 2 reruns passing, 2 AI steps blocked by huggingface.co (identical on main); CI browser workflow (`f4b0f91`); p50/p95 measurements             |
 
 See the architecture, audit remediation, test, performance and roadmap reports
 beside this file. Statuses will be updated with actual execution results.
@@ -145,3 +145,44 @@ E gives360/320px rows a full-width thumbnail/name row with a two-line filename, 
 ## Final-review capture correction
 
 Final review found and fixed a C1 regression: no active selection had been converted to a document-framed white mask, clipping source pixels temporarily outside the canvas. captureFilterMask now returns unframed full-source coverage for no selection and uses existing R7 source-local framing only for explicit selections. A before-fix built-browser regression fails on f4b0f91; five-width dev and built checks now pass with native metadata, moving the layer back into view and pixel-exact export. Enable/invert UI checks are also explicit.1075 unit tests, type/lint/build pass. The initial final-matrix run was intentionally stopped and preserved; its incomplete R3 stress run is not counted. A full matrix will rerun on the corrected source.
+
+## Workspace recovery continuation
+
+The interrupted workspace was not available. This workspace held `b71d7b5` with no
+uncommitted changes; the ten pushed commits after it (`ad98099`…`9a0ed0a`) were
+fast-forwarded without reset. Nothing was reimplemented.
+
+- **Validation hold resolved by evidence.** The R3 stress failure at
+  `r3-brush-browser-check.mjs:468` was re-run five times on the unchanged application
+  code (alone, instrumented idle and under CPU load, concurrently with five suites, in
+  the matrix's exclusive slot): all passed; the step takes ~0.3 s on both main and R10
+  against a 30 s limit. The earlier failure's cause stays unconfirmed (its log was not
+  pushed) and is recorded as such.
+- **Full matrix** on the final application code: see R10_TEST_REPORT.md. The matrix
+  runner sent the recovery suite to the production build although it imports source
+  modules; fixed (`00dd895`), and the suite passes on the dev server.
+- **D1 lossless split** (`06f73e2`). Image options offers "Split into N editable pages"
+  when an image exceeds this device's Raster budget. PNG bands keep bit depth,
+  channels, palette and tRNS (exact reconstruction verified for every PNG format);
+  colour-managed or animated PNGs and transparent/profiled JPEG/WebP are refused with
+  a reason. Parts use the normal import pipeline and sit right after the original,
+  which is never changed; placing them is a normal, undoable reorder. Compatible
+  reduced-resolution copies were not built (they reduce quality; design deferred).
+- **Copy.** Three R10 messages had missing spaces ("up to1024px"); fixed (`bb0bf35`).
+  The same pattern in older messages is left for a separate pass.
+- **Formatting.** 16 unformatted R10 files formatted (`a320325`), data unchanged.
+- **Performance.** Repeated runs (n = 7) with p50/p95 for import, open, brush, export,
+  recovery and Smart Filter latency in R10_PERFORMANCE_REPORT.md.
+- **Roadmap.** All twenty audit improvements classified, with designs for the
+  high-risk items, in R10_ROADMAP.md.
+
+## Known limitations (final)
+
+- Arabic/RTL text on a path remains refused (prototype and proposal only).
+- Asset deletion (B3) and a general tiled document compositor (D2) are deferred.
+- Searchable command palette (#11), provider rate/cost controls (#16), controller
+  extraction (#17), fonts (#18), PSD/OpenRaster (#19) and ICC/16-bit (#20) are design
+  only or deferred.
+- AI Enhance browser steps could not run here (huggingface.co denied; main identical).
+- All UI testing is Chromium emulation; no physical Android/iOS/stylus testing.
+- Older messages with missing spaces before numbers remain.

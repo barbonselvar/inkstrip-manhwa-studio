@@ -81,3 +81,18 @@ Bitmap Pattern Overlay extends only the strict effect record to version3. Docume
 ## Milestone D continuation
 
 D2 immutable input/output planes remain full-resolution. Temporary neighborhood planes are bounded by256px tiles plus the exact kernel halo, clamped at true image edges. Gaussian-family uses ceil(3×sigma), Median/Surface use radius, and edge filters use1px. Fractional/global-coordinate/seeded algorithms use unchanged whole-plane processing. The scaled filter stack accounts for halo work inside128M taps, reverting to the existing path when overhead would exceed it. No native/schema change and no silently reduced resolution. General tiled compositing remains outside this safe extension.
+
+## D1 lossless split
+
+`page-split.ts` (pure) plans full-width bands within this device's Raster budget
+(`browserCapabilityBudgets()`: 16.8MP desktop, 4MP touch/low memory, 16384 px per side),
+as even as possible, at most 64. `page-split-worker.ts` decodes PNG with fast-png and
+re-encodes each band with the same depth, channels, palette and tRNS, so the parts
+stack back into the original samples exactly. PNGs with iCCP, gAMA, cHRM, cICP, mDCV,
+cLLI or acTL are refused because fast-png would not carry those chunks and the parts
+would display differently. JPEG/WebP are decoded by the browser without colour
+conversion and split only when opaque and without an embedded profile.
+`page-split-client.ts` hands the parts to the existing `addImages` pipeline (format
+validation, thumbnails, atomic commits, storage estimate) and then uses the existing
+`reorderPanels` to place them after the original. The original panel, its blobs,
+edits and native drafts are never touched. No schema, database or limit change.
