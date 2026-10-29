@@ -25,13 +25,11 @@ const ready = async (p) =>
   });
 const pixels = async (p) => {
   await ready(p);
-  return p
-    .getByLabel("Layer properties composite preview", { exact: true })
-    .evaluate((c) => ({
-      width: c.width,
-      height: c.height,
-      pixels: [...c.getContext("2d").getImageData(0, 0, c.width, c.height).data],
-    }));
+  return p.getByLabel("Layer properties composite preview", { exact: true }).evaluate((c) => ({
+    width: c.width,
+    height: c.height,
+    pixels: [...c.getContext("2d").getImageData(0, 0, c.width, c.height).data],
+  }));
 };
 const number = async (p, name, v) => {
   await p.getByLabel(name, { exact: true }).fill(String(v));
