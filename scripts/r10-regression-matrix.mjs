@@ -23,6 +23,7 @@ const source = new Set([
     "test:dialogue:security",
     "test:chapter-import:browser",
     "test:chapter-display:browser",
+    "test:r10:recovery:browser",
   ]),
   exclusive = new Set(["test:r3:browser", "bench:raster:browser", "test:r10:long-pages:browser"]);
 await mkdir("/workspace/r10-evidence/f-matrix", { recursive: true });
