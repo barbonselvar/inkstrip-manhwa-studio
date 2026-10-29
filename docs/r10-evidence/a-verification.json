@@ -1,0 +1,22 @@
+{
+  "startingHead": "b71d7b5e023472940508ea2a4344ea2218d03a75",
+  "baselineBrowserCommands": 49,
+  "baselineFailures": 0,
+  "productionVerifier": {
+    "raster": true,
+    "realAI": true,
+    "exitCode": 0
+  },
+  "newDeviceLimitBug": {
+    "alsoOnMain": true,
+    "regressionFailedBefore": true,
+    "fixedBeforeHistoryInstall": true
+  },
+  "postFixUnitTests": 1042,
+  "postFixOpeningDev": true,
+  "postFixOpeningBuilt": true,
+  "postFixAuditDev": true,
+  "postFixAuditBuilt": true,
+  "postFixR8RecoveryPixelTolerance": 0,
+  "postFixR9Integration": true
+}

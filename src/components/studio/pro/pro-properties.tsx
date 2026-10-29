@@ -106,7 +106,7 @@ export function ProProperties({
 }) {
   return (
     <div className="pro-properties-content">
-      <ToolSection title="Brush & selection" defaultOpen>
+      <ToolSection id="pro-brush-settings" title="Brush & selection" defaultOpen>
         <ProBrushSettings
           brush={brush}
           onBrush={onBrush}
@@ -417,7 +417,7 @@ export function ProProperties({
               </ToolSection>
             )}
             {selected.kind === "text" && (
-              <ToolSection title="Editable typography" defaultOpen>
+              <ToolSection id="pro-text-settings" title="Editable typography" defaultOpen>
                 {selected.textPath && anchorControls}
                 <label className="pro-field">
                   Text

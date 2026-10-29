@@ -1,0 +1,34 @@
+✔ checkpoint round trip preserves native schema1, all settings and source bytes (14.984834ms)
+✔ checkpoint round trip preserves native schema2, all settings and source bytes (4.732908ms)
+✔ checkpoint round trip preserves native schema3, all settings and source bytes (4.611397ms)
+✔ checkpoint identity, revision, future versions, unsafe keys and content corruption fail closed (2.446287ms)
+✔ retention keeps three versions per page with a bounded shared byte budget (1.556387ms)
+✖ late older checkpoint workers cannot evict newer confirmed revisions (1.734563ms)
+✔ checkpoint queue coalesces rapid confirmed revisions and survives failed/interrupted writes (1.157834ms)
+✔ save status follows acknowledged primary state, not rendering or checkpoint results (0.271324ms)
+✔ late acknowledgement retains new immutable assets and never redirects to another page (0.269401ms)
+✔ reachability retains Undo, Redo, pending, render and checkpoint roots; deletion remains disabled (1.023614ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 9
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 204.929123
+
+✖ failing tests:
+
+test at src/lib/studio/pro/recovery.test.ts:120:1
+✖ late older checkpoint workers cannot evict newer confirmed revisions (1.734563ms)
+  AssertionError [ERR_ASSERTION]: latest confirmed revision survives late worker completion
+      at TestContext.<anonymous> (file:///workspace/inkstrip-r10/src/lib/studio/pro/recovery.test.ts:126:12)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

@@ -1,0 +1,51 @@
+name: Raster continuity browser checks
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: raster-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  continuity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Prepare isolated browser evidence directories
+        run: sudo install -d -m 0755 -o "$(id -u)" -g "$(id -g)" /workspace/screenshots /workspace/r10-evidence
+      - name: Start local Raster QA server
+        run: |
+          VITE_AUTH_ENABLED=false npm run dev -- --config scripts/vite-browser-qa.config.mjs > /tmp/raster-browser-server.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8080/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/raster-browser-server.log
+          exit 1
+      - run: npm run test:r10:masks:browser
+      - run: npm run test:r10:patterns:browser
+      - run: npm run test:r10:inspector:browser
+      - run: npm run test:r10:mobile:browser
+      - name: Preserve browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raster-browser-evidence
+          path: |
+            /workspace/screenshots
+            /workspace/r10-evidence
+            /tmp/raster-browser-server.log
+          if-no-files-found: warn

@@ -1,0 +1,4 @@
+{
+  "reason": "Confirmed no-selection capture scope regression found during final review; incomplete stress run is not counted as passed. Full matrix will rerun after the fix.",
+  "sha": "f4b0f910c0fe629238d78e11501b71c14848b373"
+}

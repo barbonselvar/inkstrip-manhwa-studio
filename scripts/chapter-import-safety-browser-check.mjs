@@ -454,13 +454,20 @@ try {
       const { readProjectData, writeProjectData } = await import("/src/lib/studio/backup-store.ts");
       const outcomes = [];
       const n = window.__audit.bitmaps;
-      for (const kind of ["dimensions", "character reference"]) {
+      for (const kind of ["oversized dimensions", "mismatched dimensions", "character reference"]) {
         const data = await readProjectData(id);
-        if (kind === "dimensions") data.panels[0].width = 0xffffffff;
+        // Out of range: rejected by the record schema (R10, INK-AUD-001) before any decode.
+        if (kind === "oversized dimensions") data.panels[0].width = 0xffffffff;
+        // In range but not the real image: rejected by the source-header comparison.
+        else if (kind === "mismatched dimensions") data.panels[0].width += 1;
         else
           data.project.characters = [
             {
               id: "unsafe",
+              name: "Unsafe",
+              notes: "",
+              primaryId: "unsafe",
+              updatedAt: 1,
               references: [
                 { id: "unsafe", angle: "front", blob: new Blob(["bad"], { type: "image/png" }) },
               ],
@@ -475,8 +482,9 @@ try {
       }
       return { outcomes, decodes: window.__audit.bitmaps - n };
     }, project.id);
-    assert.match(backupGuards.outcomes[0], /dimensions disagree/);
-    assert.match(backupGuards.outcomes[1], /Backup image rejected/);
+    assert.match(backupGuards.outcomes[0], /Invalid page width/);
+    assert.match(backupGuards.outcomes[1], /dimensions disagree/);
+    assert.match(backupGuards.outcomes[2], /Backup image rejected/);
     assert.equal(backupGuards.decodes, 0);
     assert.deepEqual(await snapshot(p), beforeReplace);
     // Repeated import/removal must release actual thumbnail object URLs, while

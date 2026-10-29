@@ -122,11 +122,18 @@ self.onmessage = async ({ data }) => {
       if (!size || !assets[assetId]) throw new Error("A raster asset is missing.");
       const key = `${assetId}:${size.width}x${size.height}:${s}`;
       if (!cache.has(key)) {
-        await preflightImage(assets[assetId]!, {
+        const info = await preflightImage(assets[assetId]!, {
           ...imagePolicy(data.maxArea <= 4_000_000),
           maxPixels: data.maxArea,
           maxSide: 16384,
         });
+        if (
+          doc.layers.some((l) =>
+            l.effects?.some((e) => e.pattern?.kind === "bitmap" && e.pattern.assetId === assetId),
+          ) &&
+          (info.width !== size.width || info.height !== size.height)
+        )
+          throw Error("Bitmap pattern dimensions disagree with the validated source header.");
         const bitmap = await createImageBitmap(assets[assetId]!, {
           resizeWidth: Math.max(1, Math.round(size.width * s)),
           resizeHeight: Math.max(1, Math.round(size.height * s)),

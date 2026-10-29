@@ -1,9 +1,5 @@
-import {
-  processSmart,
-  scaledSmartOperation,
-  mixFilterMask,
-  validateSmartWork,
-} from "./smart-filters";
+import { processSmartTiled, tiledStackWithinBudget } from "./smart-tiles";
+import { scaledSmartOperation, mixFilterMask, validateSmartWork } from "./smart-filters";
 import { applyAdjustmentTiles } from "./adjustment-tiles";
 import { letteringFont } from "../dialogue/lettering.ts";
 import { previewCoverage } from "./coverage-preview";
@@ -368,6 +364,7 @@ export async function surface(
   scale: number,
   asset: (id: string, scale: number) => Promise<ImageBitmap>,
   stageCheckpoint?: () => Promise<void>,
+  stageProgress?: (fraction: number) => void,
 ) {
   if (l.smartFilters?.length)
     validateSmartWork(Math.ceil(l.width), Math.ceil(l.height), l.smartFilters);
@@ -504,15 +501,18 @@ export async function surface(
   }
   if (l.smartFilters?.some((f) => f.enabled)) {
     const image = ctx.getImageData(0, 0, out.width, out.height);
-    for (const f of l.smartFilters) {
-      if (!f.enabled) continue;
+    const stack = l.smartFilters
+        .filter((f) => f.enabled)
+        .map((f) => ({ ...f, operation: scaledSmartOperation(f.operation, scale) })),
+      tiled = tiledStackWithinBudget(out.width, out.height, stack);
+    for (let i = 0; i < stack.length; i++) {
+      const f = stack[i]!;
       await stageCheckpoint?.();
-      const processed = processSmart(
-        image.data,
-        out.width,
-        out.height,
-        scaledSmartOperation(f.operation, scale),
-      );
+      const processed = await processSmartTiled(image.data, out.width, out.height, f.operation, {
+        checkpoint: stageCheckpoint,
+        wholePlane: !tiled,
+        progress: (n, total) => stageProgress?.((i + n / total) / stack.length),
+      });
       if (f.mask?.enabled) {
         const stencil = selectionCanvas(f.mask.selection, l.width, l.height, scale),
           coverage = stencil
@@ -632,7 +632,7 @@ export async function composite(
     );
   if (
     d.layers.some(
-      (l) => visible.has(l.id) && l.effects?.some((e) => e.enabled && e.version === 2),
+      (l) => visible.has(l.id) && l.effects?.some((e) => e.enabled && e.version !== undefined),
     ) &&
     outputWidth * outputHeight > 4_000_000
   )
@@ -717,11 +717,17 @@ export async function composite(
     let bitmap =
       l.kind === "group" || direct
         ? canvas(output.width, output.height)
-        : await surface(l, scale, asset, async () => {
-            if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
-            await new Promise((resolve) => setTimeout(resolve, 0));
-            if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
-          });
+        : await surface(
+            l,
+            scale,
+            asset,
+            async () => {
+              if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
+              await new Promise((resolve) => setTimeout(resolve, 0));
+              if (cancel()) throw new DOMException("Rendering superseded.", "AbortError");
+            },
+            (fraction) => progress(done + fraction * 0.9, total),
+          );
     if (direct) {
       const ctx = bitmap.getContext("2d")!,
         m = affine(l.transform);
@@ -770,10 +776,39 @@ export async function composite(
           release(bitmap);
           bitmap = full;
         }
+        const textures = new Map<
+          string,
+          { width: number; height: number; data: Uint8ClampedArray }
+        >();
+        for (const effect of l.effects)
+          if (effect.enabled && effect.pattern?.kind === "bitmap") {
+            const p = effect.pattern,
+              texture = await asset(p.assetId!, 1);
+            if (texture.width !== p.width || texture.height !== p.height)
+              throw Error("Bitmap pattern dimensions do not match its immutable source.");
+            const tile = canvas(texture.width, texture.height),
+              ctx = tile.getContext("2d")!;
+            ctx.drawImage(texture, 0, 0);
+            textures.set(p.assetId!, {
+              width: tile.width,
+              height: tile.height,
+              data: ctx.getImageData(0, 0, tile.width, tile.height).data,
+            });
+            release(tile);
+            if (cancel()) throw new DOMException("Rendering cancelled.", "AbortError");
+          }
         const ctx = bitmap.getContext("2d")!,
           image = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
         image.data.set(
-          effectPixels(image.data, bitmap.width, bitmap.height, l.effects, scale, d.styleLight),
+          effectPixels(
+            image.data,
+            bitmap.width,
+            bitmap.height,
+            l.effects,
+            scale,
+            d.styleLight,
+            textures,
+          ),
         );
         ctx.putImageData(image, 0, 0);
       }

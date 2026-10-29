@@ -59,6 +59,16 @@ export function documentSources(doc: ProDocument, maxArea: number) {
       throw new Error("The retained original exceeds this device’s memory budget.");
     dimensions.set(original.assetId, original);
   }
+  for (const l of doc.layers) {
+    for (const e of l.effects ?? [])
+      if (e.pattern?.kind === "bitmap") {
+        const p = e.pattern,
+          previous = dimensions.get(p.assetId!);
+        if (previous && (previous.width !== p.width || previous.height !== p.height))
+          throw Error("Bitmap pattern asset dimensions conflict with another source reference.");
+        dimensions.set(p.assetId!, { width: p.width!, height: p.height! });
+      }
+  }
   if ([...dimensions.values()].reduce((n, s) => n + s.width * s.height, 0) > maxArea * 3)
     throw new Error(
       "Raster sources exceed this device’s combined memory budget. Use fewer or smaller sources.",

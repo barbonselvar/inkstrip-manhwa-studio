@@ -3,6 +3,7 @@ import { mediaIds } from "./editor/references";
 import { validateRecipe } from "./editor/geometry";
 import { preflightImage, thumbnailPolicy, type ImagePolicy } from "./image-policy";
 import type { Chapter, Panel, Project, Strip } from "@/lib/studio/types";
+import { partitionLibrary } from "./records";
 
 const DB_NAME = "inkstrip";
 const DB_VERSION = 2;
@@ -96,11 +97,13 @@ export function openDb() {
 export async function loadLibrary() {
   const db = await openDb();
   const tx = db.transaction(["projects", "chapters", "panels"], "readonly");
-  const projects = await request<Project[]>(tx.objectStore("projects").getAll());
-  const chapters = await request<Chapter[]>(tx.objectStore("chapters").getAll());
-  const panels = await request<Panel[]>(tx.objectStore("panels").getAll());
+  const projects = await request<unknown[]>(tx.objectStore("projects").getAll());
+  const chapters = await request<unknown[]>(tx.objectStore("chapters").getAll());
+  const panels = await request<unknown[]>(tx.objectStore("panels").getAll());
   await transactionDone(tx);
-  return { projects, chapters, panels };
+  // Malformed stored records are set aside in memory, never deleted, so the other
+  // projects still open (INK-AUD-001).
+  return partitionLibrary({ projects, chapters, panels });
 }
 
 export async function putRecords(input: {

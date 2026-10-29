@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Pencil, Sparkles, Paintbrush, PenTool } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Pencil, Sparkles, Paintbrush, PenTool, MoreHorizontal, Rows3 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { LONG_PRESS_MS, withinPress } from "@/lib/studio/editor/gestures";
@@ -10,20 +10,32 @@ export function PanelImageActions({
   panel,
   thumb,
   disabled,
+  selected,
+  menu,
+  onMenu,
   onToggle,
   onEdit,
   onEnhance,
   onStudio,
+  splitParts,
+  onSplit,
 }: {
   panel: Panel;
   thumb?: string;
   disabled: boolean;
+  selected: boolean;
+  /** The image tools menu is controlled so the row's explicit options button can open it. */
+  menu: boolean;
+  onMenu: (open: boolean) => void;
   onToggle: () => void;
   onEdit: () => void;
   onEnhance: () => void;
   onStudio: (mode: "raster" | "vector") => void;
+  /** Parts a lossless split would create when the image is over Raster's limit. */
+  splitParts?: number;
+  onSplit?: () => void;
 }) {
-  const [menu, setMenu] = useState(false);
+  const setMenu = onMenu;
   const legacyVector = useLegacyVector();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const start = useRef<{ x: number; y: number; pointer: number } | null>(null);
@@ -72,7 +84,11 @@ export function PanelImageActions({
         type="button"
         className="panel-image-target focus-ring min-w-0 flex-1 text-left"
         disabled={disabled}
-        aria-label={`Image options for ${panel.name}`}
+        // A click toggles selection, so the target is named and exposed as a selection
+        // toggle; image options have their own button (PanelOptionsButton, INK-AUD-006).
+        // Context menu, Shift+F10 and long press still open the options here too.
+        aria-label={`Select image ${panel.name}`}
+        aria-pressed={selected}
         aria-keyshortcuts="E Shift+F10"
         onClick={() => {
           if (!suppress.current) onToggle();
@@ -141,8 +157,10 @@ export function PanelImageActions({
           ) : (
             <span className="h-16 w-12 shrink-0 rounded-sm bg-paper" />
           )}
-          <span className="min-w-0">
-            <span className="block truncate text-sm text-fg">{panel.name}</span>
+          <span className="panel-image-info min-w-0">
+            <span className="panel-image-name block truncate text-sm text-fg" title={panel.name}>
+              {panel.name}
+            </span>
             <span className="mt-1 block text-xs text-subtle tabular-nums">
               {panel.width} × {panel.height}
               {panel.edit ? " · edited" : ""}
@@ -193,6 +211,25 @@ export function PanelImageActions({
             <Paintbrush className="size-4" />
             Open in Raster Studio
           </Button>
+          {!!splitParts && onSplit && (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setMenu(false);
+                  onSplit();
+                }}
+              >
+                <Rows3 className="size-4" />
+                Split into {splitParts} editable pages
+              </Button>
+              <p className="text-xs text-muted">
+                This image is over Raster Studio&apos;s limit on this device. Splitting adds{" "}
+                {splitParts} full-width PNG pages below it, pixel for pixel; the original stays
+                unchanged.
+              </p>
+            </>
+          )}
           {legacyVector && (
             <Button
               variant="secondary"
@@ -222,5 +259,33 @@ export function PanelImageActions({
         </div>
       </Modal>
     </>
+  );
+}
+
+/** The explicit, accurately named trigger for an image's tools menu (INK-AUD-006). */
+export function PanelOptionsButton({
+  name,
+  open,
+  disabled,
+  onOpen,
+}: {
+  name: string;
+  open: boolean;
+  disabled: boolean;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`Image options for ${name}`}
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      title="Image options (Shift+F10)"
+      className="focus-ring grid size-11 place-items-center rounded-sm text-fg hover:bg-bg-subtle"
+      disabled={disabled}
+      onClick={onOpen}
+    >
+      <MoreHorizontal className="size-4" />
+    </button>
   );
 }

@@ -179,11 +179,17 @@ export const useStudio = create<Studio>((set, get) => ({
     if (!hydratePromise) {
       hydratePromise = (async () => {
         try {
-          const library = await loadLibrary();
+          const { quarantined, ...library } = await loadLibrary();
           set({
             ...library,
             ready: true,
+            ...(quarantined.length
+              ? {
+                  banner: `${quarantined.length === 1 ? "1 stored record has" : `${quarantined.length} stored records have`} invalid metadata and ${quarantined.length === 1 ? "was" : "were"} set aside. ${quarantined.length === 1 ? "It stays" : "They stay"} unchanged on this device; every other project is available.`,
+                }
+              : {}),
           });
+          if (quarantined.length) console.warn("Inkstrip set aside invalid records", quarantined);
         } catch (error) {
           set({ ready: true, banner: storageMessage(error) });
         }

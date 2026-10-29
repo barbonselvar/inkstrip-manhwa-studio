@@ -1,0 +1,310 @@
+{
+  "method": "7 sequential runs per case of the repository's unchanged scripts (r10-long-page-browser-check on the production build, r10-recovery-benchmark on the dev server); nothing else running. p50/p95 by linear interpolation; with n=7, p95 is close to the maximum. Refused operations have no timing and are reported as refused, not zero.",
+  "machine": "4-vCPU cloud sandbox, headless Chromium 153 via Playwright 1.64; not a device guarantee",
+  "memory": "Chromium JS heap used after the case (CDP Performance metrics); not GPU or process peak",
+  "longPage": [
+    {
+      "viewport": 1440,
+      "height": 1920,
+      "raster": true,
+      "n": 7,
+      "importMs": {
+        "p50": 169.6,
+        "p95": 171.6,
+        "min": 164.9,
+        "max": 171.9
+      },
+      "openMs": {
+        "p50": 1064.2,
+        "p95": 1092.5,
+        "min": 1030.8,
+        "max": 1100.1
+      },
+      "brushMs": {
+        "p50": 384.0,
+        "p95": 416.0,
+        "min": 365.8,
+        "max": 416.8
+      },
+      "exportMs": {
+        "p50": 672.1,
+        "p95": 707.7,
+        "min": 632.3,
+        "max": 709.3
+      },
+      "jsHeapUsedMiB_p50": 11.1
+    },
+    {
+      "viewport": 1440,
+      "height": 5000,
+      "raster": true,
+      "n": 7,
+      "importMs": {
+        "p50": 290.2,
+        "p95": 301.1,
+        "min": 282.2,
+        "max": 301.8
+      },
+      "openMs": {
+        "p50": 1138.7,
+        "p95": 1164.9,
+        "min": 1067.7,
+        "max": 1166.2
+      },
+      "brushMs": {
+        "p50": 99.6,
+        "p95": 100.1,
+        "min": 98.7,
+        "max": 100.1
+      },
+      "exportMs": {
+        "p50": 224.4,
+        "p95": 240.5,
+        "min": 208.3,
+        "max": 242.8
+      },
+      "jsHeapUsedMiB_p50": 18.1
+    },
+    {
+      "viewport": 1440,
+      "height": 10000,
+      "raster": true,
+      "n": 7,
+      "importMs": {
+        "p50": 582.5,
+        "p95": 623.3,
+        "min": 565.7,
+        "max": 634.2
+      },
+      "openMs": {
+        "p50": 1135.1,
+        "p95": 1185.7,
+        "min": 1098.6,
+        "max": 1202.2
+      },
+      "brushMs": {
+        "p50": 100.2,
+        "p95": 100.4,
+        "min": 99.5,
+        "max": 100.4
+      },
+      "exportMs": {
+        "p50": 385.7,
+        "p95": 401.0,
+        "min": 355.1,
+        "max": 404.0
+      },
+      "jsHeapUsedMiB_p50": 57.7
+    },
+    {
+      "viewport": 1440,
+      "height": 20000,
+      "raster": "safely refused",
+      "n": 7,
+      "importMs": {
+        "p50": 996.5,
+        "p95": 1042.9,
+        "min": 979.5,
+        "max": 1045.4
+      },
+      "openMs": {
+        "p50": 855.2,
+        "p95": 896.4,
+        "min": 844.5,
+        "max": 913.2
+      },
+      "jsHeapUsedMiB_p50": 19.2
+    },
+    {
+      "viewport": 390,
+      "height": 1920,
+      "raster": true,
+      "n": 7,
+      "importMs": {
+        "p50": 166.5,
+        "p95": 172.6,
+        "min": 161.4,
+        "max": 174.9
+      },
+      "openMs": {
+        "p50": 1070.7,
+        "p95": 1101.7,
+        "min": 1058.2,
+        "max": 1107.7
+      },
+      "brushMs": {
+        "p50": 401.0,
+        "p95": 401.4,
+        "min": 400.4,
+        "max": 401.4
+      },
+      "exportMs": {
+        "p50": 600.2,
+        "p95": 663.5,
+        "min": 597.1,
+        "max": 669.0
+      },
+      "jsHeapUsedMiB_p50": 11.1
+    },
+    {
+      "viewport": 390,
+      "height": 5000,
+      "raster": "safely refused",
+      "n": 7,
+      "importMs": {
+        "p50": 295.7,
+        "p95": 342.2,
+        "min": 289.0,
+        "max": 355.4
+      },
+      "openMs": {
+        "p50": 825.9,
+        "p95": 831.5,
+        "min": 819.0,
+        "max": 833.1
+      },
+      "jsHeapUsedMiB_p50": 12.4
+    },
+    {
+      "viewport": 390,
+      "height": 10000,
+      "raster": "safely refused",
+      "n": 7,
+      "importMs": {
+        "p50": 584.7,
+        "p95": 588.8,
+        "min": 567.9,
+        "max": 589.8
+      },
+      "openMs": {
+        "p50": 827.5,
+        "p95": 854.3,
+        "min": 825.1,
+        "max": 862.3
+      },
+      "jsHeapUsedMiB_p50": 14.5
+    },
+    {
+      "viewport": 390,
+      "height": 20000,
+      "raster": "safely refused",
+      "n": 7,
+      "importMs": {
+        "p50": 984.8,
+        "p95": 1010.5,
+        "min": 974.5,
+        "max": 1012.7
+      },
+      "openMs": {
+        "p50": 826.9,
+        "p95": 835.5,
+        "min": 819.4,
+        "max": 835.6
+      },
+      "jsHeapUsedMiB_p50": 19.2
+    }
+  ],
+  "recovery": [
+    {
+      "width": 256,
+      "height": 256,
+      "n": 7,
+      "allExact": true,
+      "primaryMs": {
+        "p50": 6.6,
+        "p95": 6.8
+      },
+      "checkpointMs": {
+        "p50": 135,
+        "p95": 181.7
+      },
+      "verifyReadMs": {
+        "p50": 18.7,
+        "p95": 23.3
+      }
+    },
+    {
+      "width": 1024,
+      "height": 1024,
+      "n": 7,
+      "allExact": true,
+      "primaryMs": {
+        "p50": 2.4,
+        "p95": 2.7
+      },
+      "checkpointMs": {
+        "p50": 218.7,
+        "p95": 272.8
+      },
+      "verifyReadMs": {
+        "p50": 147.4,
+        "p95": 184.2
+      }
+    },
+    {
+      "width": 1080,
+      "height": 1920,
+      "n": 7,
+      "allExact": true,
+      "primaryMs": {
+        "p50": 2.9,
+        "p95": 3.4
+      },
+      "checkpointMs": {
+        "p50": 321.6,
+        "p95": 334.8
+      },
+      "verifyReadMs": {
+        "p50": 260.7,
+        "p95": 274.3
+      }
+    }
+  ],
+  "smartFilterTiles": [
+    {
+      "width": 512,
+      "height": 512,
+      "n": 7,
+      "wholeMs": {
+        "p50": 52.9,
+        "p95": 53.7
+      },
+      "tileMs": {
+        "p50": 41.8,
+        "p95": 42.6
+      },
+      "tiles": 4,
+      "maxPixelTolerance": 0
+    },
+    {
+      "width": 1080,
+      "height": 1920,
+      "n": 7,
+      "wholeMs": {
+        "p50": 313.6,
+        "p95": 316.8
+      },
+      "tileMs": {
+        "p50": 327.9,
+        "p95": 353.5
+      },
+      "tiles": 40,
+      "maxPixelTolerance": 0
+    },
+    {
+      "width": 2000,
+      "height": 2000,
+      "n": 7,
+      "wholeMs": {
+        "p50": 610.6,
+        "p95": 617.7
+      },
+      "tileMs": {
+        "p50": 618.2,
+        "p95": 682.7
+      },
+      "tiles": 64,
+      "maxPixelTolerance": 0
+    }
+  ]
+}

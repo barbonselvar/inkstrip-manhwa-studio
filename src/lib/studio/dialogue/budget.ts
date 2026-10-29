@@ -1,8 +1,9 @@
+import { RASTER_MAX_AREA, RASTER_TOUCH_MAX_AREA } from "../raster-limits.ts";
 import type { ZipEntry } from "./zip.ts";
 export function dialogueBudget(deviceMemory = 8, coarse = false) {
   const constrained = deviceMemory <= 4 || coarse;
   return {
-    maxArea: constrained ? 4_000_000 : 16_777_216,
+    maxArea: constrained ? RASTER_TOUCH_MAX_AREA : RASTER_MAX_AREA,
     archiveBytes: constrained ? 128_000_000 : 512_000_000,
   };
 }

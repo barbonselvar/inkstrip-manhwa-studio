@@ -1,0 +1,49 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "touchEmulation": false,
+      "terminalFailure": true,
+      "retry": true,
+      "noDraftWritten": true,
+      "subsequentValidImage": true
+    },
+    {
+      "width": 768,
+      "touchEmulation": true,
+      "terminalFailure": true,
+      "retry": true,
+      "noDraftWritten": true,
+      "existingDraftPreserved": true,
+      "subsequentValidImage": true
+    },
+    {
+      "width": 390,
+      "touchEmulation": true,
+      "terminalFailure": true,
+      "retry": true,
+      "noDraftWritten": true,
+      "existingDraftPreserved": true,
+      "subsequentValidImage": true
+    },
+    {
+      "width": 360,
+      "touchEmulation": true,
+      "terminalFailure": true,
+      "retry": true,
+      "noDraftWritten": true,
+      "existingDraftPreserved": true,
+      "subsequentValidImage": true
+    },
+    {
+      "width": 320,
+      "touchEmulation": true,
+      "terminalFailure": true,
+      "retry": true,
+      "noDraftWritten": true,
+      "existingDraftPreserved": true,
+      "subsequentValidImage": true
+    }
+  ],
+  "errors": []
+}

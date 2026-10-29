@@ -1,0 +1,107 @@
+{
+  "results": [
+    {
+      "width": 512,
+      "height": 512,
+      "wholeMs": 83.65409900000003,
+      "tileMs": 40.587710000000015,
+      "tileCount": 4,
+      "maxTilePixels": 67081,
+      "checkpoints": 6,
+      "pixelTolerance": 0,
+      "processMemorySamples": {
+        "before": {
+          "rss": 73392128,
+          "heapTotal": 14520320,
+          "heapUsed": 10646960,
+          "external": 10581732,
+          "arrayBuffers": 1318179
+        },
+        "afterWhole": {
+          "rss": 84008960,
+          "heapTotal": 14782464,
+          "heapUsed": 10026328,
+          "external": 16698810,
+          "arrayBuffers": 7478527
+        },
+        "afterTiles": {
+          "rss": 90562560,
+          "heapTotal": 14782464,
+          "heapUsed": 10962600,
+          "external": 23650514,
+          "arrayBuffers": 12820287
+        }
+      },
+      "note": "Node process memory samples, not isolated GPU or algorithm peak; original and both outputs retained for comparison"
+    },
+    {
+      "width": 1080,
+      "height": 1920,
+      "wholeMs": 262.817673,
+      "tileMs": 282.71346399999993,
+      "tileCount": 40,
+      "maxTilePixels": 68644,
+      "checkpoints": 42,
+      "pixelTolerance": 0,
+      "processMemorySamples": {
+        "before": {
+          "rss": 98820096,
+          "heapTotal": 14782464,
+          "heapUsed": 11003264,
+          "external": 30365177,
+          "arrayBuffers": 21114687
+        },
+        "afterWhole": {
+          "rss": 148627456,
+          "heapTotal": 14782464,
+          "heapUsed": 9938984,
+          "external": 69546937,
+          "arrayBuffers": 60296447
+        },
+        "afterTiles": {
+          "rss": 117207040,
+          "heapTotal": 14782464,
+          "heapUsed": 9889952,
+          "external": 47593365,
+          "arrayBuffers": 27247699
+        }
+      },
+      "note": "Node process memory samples, not isolated GPU or algorithm peak; original and both outputs retained for comparison"
+    },
+    {
+      "width": 2000,
+      "height": 2000,
+      "wholeMs": 500.47453500000006,
+      "tileMs": 508.22168599999986,
+      "tileCount": 64,
+      "maxTilePixels": 68644,
+      "checkpoints": 66,
+      "pixelTolerance": 0,
+      "processMemorySamples": {
+        "before": {
+          "rss": 128086016,
+          "heapTotal": 14782464,
+          "heapUsed": 9900464,
+          "external": 52498189,
+          "arrayBuffers": 43247699
+        },
+        "afterWhole": {
+          "rss": 212197376,
+          "heapTotal": 11005952,
+          "heapUsed": 6822320,
+          "external": 137977785,
+          "arrayBuffers": 128727295
+        },
+        "afterTiles": {
+          "rss": 261873664,
+          "heapTotal": 11005952,
+          "heapUsed": 5627856,
+          "external": 197067249,
+          "arrayBuffers": 186489991
+        }
+      },
+      "note": "Node process memory samples, not isolated GPU or algorithm peak; original and both outputs retained for comparison"
+    }
+  ],
+  "node": "v24.19.0"
+}

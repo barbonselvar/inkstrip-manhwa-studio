@@ -1,0 +1,6 @@
+{
+  "main": "401e9251775dcf4eb64f4447488f65f4e9ae2536",
+  "startingHead": "b71d7b5e023472940508ea2a4344ea2218d03a75",
+  "status": "",
+  "commits": "b71d7b5e023472940508ea2a4344ea2218d03a75 test(r10): Milestone A browser regressions for the audit defects\n06096e543ad56a4cfce5545ee4c5f26afc51c6c2 fix(INK-AUD-006): name the image target as a selection toggle; add an options button\n559d72d962b833b618155dc7a7273e38525f39de fix(INK-AUD-005): explicit loading, ready and failed states for opening an image\nfdf715a19e589661e3e0c7d010533a1a6d35d4dc fix(INK-AUD-004): derive the SVG Assets help from the importer allow-list\n78c1afd9d40958b97e3b26669d96fdace0feed32 fix(INK-AUD-002/003): complete bounded PNG validation for cloud input and output\nc03de5351d23cdc47fc309ae0db3f822183d551f fix(INK-AUD-001): strict bounded schemas for Project, Chapter and Page records\n"
+}

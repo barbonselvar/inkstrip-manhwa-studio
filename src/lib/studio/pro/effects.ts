@@ -14,14 +14,17 @@ export const EFFECT_NAMES = {
   bevel: "Bevel and Emboss",
 } as const;
 export type Effect = {
-  version?: 2;
+  version?: 2 | 3;
   spread?: number;
   choke?: number;
   globalLight?: boolean;
   fillKind?: "solid" | "gradient";
   glowSource?: "edge" | "center";
   pattern?: {
-    kind: "checker" | "stripes" | "dots";
+    kind: "checker" | "stripes" | "dots" | "bitmap";
+    assetId?: string;
+    width?: number;
+    height?: number;
     scale: number;
     offsetX: number;
     offsetY: number;
@@ -132,7 +135,8 @@ export function validateEffects(effects: Effect[]) {
       throw Error("Advanced layer styles need version2.");
     if (e.version !== undefined) {
       if (
-        e.version !== 2 ||
+        ![2, 3].includes(e.version) ||
+        (e.version === 3 && (e.kind !== "patternOverlay" || e.pattern?.kind !== "bitmap")) ||
         Object.keys(e).some(
           (k) =>
             ![
@@ -164,9 +168,25 @@ export function validateEffects(effects: Effect[]) {
         if (
           !p ||
           Object.keys(p).some(
-            (k) => !["kind", "scale", "offsetX", "offsetY", "color2"].includes(k),
+            (k) =>
+              ![
+                "kind",
+                "scale",
+                "offsetX",
+                "offsetY",
+                "color2",
+                ...(p.kind === "bitmap" ? ["assetId", "width", "height"] : []),
+              ].includes(k),
           ) ||
-          !["checker", "stripes", "dots"].includes(p.kind) ||
+          !["checker", "stripes", "dots", "bitmap"].includes(p.kind) ||
+          (p.kind === "bitmap" &&
+            (e.version !== 3 ||
+              typeof p.assetId !== "string" ||
+              !/^[a-zA-Z0-9-]{1,100}$/.test(p.assetId) ||
+              !Number.isInteger(p.width) ||
+              !Number.isInteger(p.height) ||
+              !n(p.width, 1, 512) ||
+              !n(p.height, 1, 512))) ||
           !n(p.scale, 0.1, 32) ||
           !n(p.offsetX, -4096, 4096) ||
           !n(p.offsetY, -4096, 4096) ||
@@ -203,7 +223,7 @@ export function validateEffects(effects: Effect[]) {
           throw Error("Invalid bevel lighting.");
       } else if (e.bevel !== undefined) throw Error("Relief settings need Bevel and Emboss.");
     }
-    if (e.gradient?.version === 2 && e.version !== 2)
+    if (e.gradient?.version === 2 && e.version === undefined)
       throw Error("Advanced gradient effects need style version2.");
     validateGradient(e.gradient);
   }
@@ -355,10 +375,14 @@ export function effectPixels(
   effects: Effect[],
   scale = 1,
   globalLight = 135,
+  textures: ReadonlyMap<
+    string,
+    { width: number; height: number; data: Uint8ClampedArray }
+  > = new Map(),
 ) {
   if (source.length !== w * h * 4 || !Number.isInteger(w) || !Number.isInteger(h) || w < 1 || h < 1)
     throw Error("Invalid style pixel buffer.");
-  if (effects.some((e) => e.enabled && e.version === 2) && w * h > 4_000_000)
+  if (effects.some((e) => e.enabled && e.version !== undefined) && w * h > 4_000_000)
     throw Error(
       "Advanced layer styles support rendered planes up to4MP. Source resolution was not reduced.",
     );
@@ -461,7 +485,39 @@ export function effectPixels(
                 : pat.kind === "stripes"
                   ? (px + py) % 1 < 0.5
                   : Math.hypot(px - 0.5, py - 0.5) < 0.3;
-          if (!foreground) color = [1, 3, 5].map((j) => parseInt(pat.color2.slice(j, j + 2), 16));
+          if (pat.kind === "bitmap") {
+            const texture = textures.get(pat.assetId!);
+            if (
+              !texture ||
+              texture.width !== pat.width ||
+              texture.height !== pat.height ||
+              texture.data.length !== texture.width * texture.height * 4
+            )
+              throw Error(
+                "A bitmap Pattern Overlay source is missing or has incompatible dimensions.",
+              );
+            // Repeat with premultiplied bilinear interpolation, including tile seams.
+            const tx = (x + 0.5 - left - pat.offsetX * scale) / (pat.scale * scale) - 0.5,
+              ty = (y + 0.5 - top - pat.offsetY * scale) / (pat.scale * scale) - 0.5;
+            const ix = Math.floor(tx),
+              iy = Math.floor(ty),
+              fx = tx - ix,
+              fy = ty - iy;
+            const sum = [0, 0, 0, 0];
+            for (let by = 0; by < 2; by++)
+              for (let bx = 0; bx < 2; bx++) {
+                const xx = (((ix + bx) % texture.width) + texture.width) % texture.width,
+                  yy = (((iy + by) % texture.height) + texture.height) % texture.height,
+                  i = (yy * texture.width + xx) * 4,
+                  weight = (bx ? fx : 1 - fx) * (by ? fy : 1 - fy),
+                  a = texture.data[i + 3]! / 255;
+                sum[3]! += a * weight;
+                for (let c = 0; c < 3; c++) sum[c]! += texture.data[i + c]! * a * weight;
+              }
+            color = sum.slice(0, 3).map((c) => (sum[3] ? c / sum[3]! : 0));
+            opacity *= sum[3]!;
+          } else if (!foreground)
+            color = [1, 3, 5].map((j) => parseInt(pat.color2.slice(j, j + 2), 16));
         }
         if (e.kind === "bevel" && e.bevel && relief) {
           const b = e.bevel,
@@ -529,11 +585,15 @@ export function validateAdvancedStyleWork(d: ProDocument) {
     }
     return true;
   };
-  if (!d.layers.some((l) => visible(l) && l.effects?.some((e) => e.enabled && e.version === 2)))
+  if (
+    !d.layers.some(
+      (l) => visible(l) && l.effects?.some((e) => e.enabled && e.version !== undefined),
+    )
+  )
     return;
   const padding = effectPadding(d);
   const styleCount = d.layers
-    .filter((l) => visible(l) && l.effects?.some((e) => e.enabled && e.version === 2))
+    .filter((l) => visible(l) && l.effects?.some((e) => e.enabled && e.version !== undefined))
     .reduce(
       (sum, l) => sum + (l.effects?.filter((e) => e.enabled && e.opacity > 0).length ?? 0),
       0,

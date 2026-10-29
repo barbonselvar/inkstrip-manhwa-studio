@@ -1,3 +1,4 @@
+import { ImageCapabilityNotice } from "./image-capability-notice";
 import { DialogueChapterExport } from "./dialogue-chapter-export";
 import { AppearanceButton } from "./design/preferences";
 import { ToolSection } from "./design/tool-section";
@@ -6,7 +7,7 @@ import { getBlob } from "@/lib/studio/db";
 import { ReorderHandle, type DragPosition } from "./reorder-handle";
 import { FaceQueue } from "./retouch/face-queue";
 import { ImageEditor } from "./editor/image-editor";
-import { PanelImageActions } from "./editor/panel-image-actions";
+import { PanelImageActions, PanelOptionsButton } from "./editor/panel-image-actions";
 import { EnhanceDialog } from "@/components/studio/enhance-dialog";
 import { ReaderHeader } from "@/components/studio/reader-header";
 import type { Panel } from "@/lib/studio/types";
@@ -39,6 +40,8 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { needsSplit, splitPlan, type SplitBudget } from "@/lib/studio/page-split";
+import { rasterSplitBudget, splitChapterImage } from "@/lib/studio/page-split-client";
 
 const emptyUrls: string[] = [];
 
@@ -74,6 +77,26 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const [batchTargets, setBatchTargets] = useState<Panel[] | null>(null);
   const [faceTargets, setFaceTargets] = useState<Panel[] | null>(null);
   const [proPanel, setProPanel] = useState<Panel | null>(null);
+  const [menuPanel, setMenuPanel] = useState<string | null>(null);
+  // Lossless split for images over this device's Raster limit (R10 D1).
+  const [splitBudget, setSplitBudget] = useState<SplitBudget | null>(null);
+  useEffect(() => setSplitBudget(rasterSplitBudget()), []);
+  const splitPartsFor = (panel: Panel) =>
+    splitBudget && needsSplit(panel.width, panel.height, splitBudget)
+      ? splitPlan(panel.width, panel.height, splitBudget).length
+      : undefined;
+  const splitImage = async (panel: Panel) => {
+    if (!splitBudget) return;
+    try {
+      const added = await splitChapterImage(chapterId, panel, splitBudget);
+      if (added)
+        useStudio.setState({
+          banner: `Added ${added} editable ${added === 1 ? "page" : "pages"} below ${panel.name}. The original image is unchanged.`,
+        });
+    } catch (error) {
+      useStudio.setState({ banner: (error as Error).message });
+    }
+  };
   const [dialogueMode, setDialogueMode] = useState(false);
   const [dialogueQuick, setDialogueQuick] = useState(true);
   const [workspaceTab, setWorkspaceTab] = useState<"images" | "dialogue">("images");
@@ -364,6 +387,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                     }}
                   />
                 </label>
+                <ImageCapabilityNotice />
                 <p className="upload-hint text-sm text-muted">
                   Your panels, at their original quality. Drop, paste, or choose files.
                   <span className="sr-only">{FORMAT_HINT}</span>
@@ -650,7 +674,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                           aria-label={on ? `Uncheck ${panel.name}` : `Check ${panel.name}`}
                           onClick={() => toggleSelected(chapter.id, panel.id)}
                           className={cn(
-                            "focus-ring grid size-11 shrink-0 place-items-center rounded-sm border text-sm tabular-nums",
+                            "panel-check focus-ring grid size-11 shrink-0 place-items-center rounded-sm border text-sm tabular-nums",
                             on
                               ? "border-accent bg-accent text-accent-fg"
                               : "border-border text-muted",
@@ -662,6 +686,9 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                           panel={panel}
                           thumb={thumbs[panel.id]}
                           disabled={busy}
+                          selected={on}
+                          menu={menuPanel === panel.id}
+                          onMenu={(open) => setMenuPanel(open ? panel.id : null)}
                           onToggle={() => toggleSelected(chapter.id, panel.id)}
                           onEdit={() => setEditorPanel(panel)}
                           onStudio={(mode) => {
@@ -670,6 +697,8 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                             setProPanel(panel);
                           }}
                           onEnhance={() => setEnhancePanels([panel])}
+                          splitParts={splitPartsFor(panel)}
+                          onSplit={() => void splitImage(panel)}
                         />
                         <div className="panel-order-actions flex shrink-0 flex-col">
                           <button
@@ -691,15 +720,23 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                             <ChevronDown className="size-4" />
                           </button>
                         </div>
-                        <button
-                          type="button"
-                          className="panel-remove focus-ring grid size-11 place-items-center text-subtle hover:text-danger"
-                          aria-label={`Remove ${panel.name}`}
-                          disabled={busy}
-                          onClick={() => void removePanel(panel.id)}
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
+                        <div className="panel-row-end flex shrink-0 flex-col">
+                          <PanelOptionsButton
+                            name={panel.name}
+                            open={menuPanel === panel.id}
+                            disabled={busy}
+                            onOpen={() => setMenuPanel(panel.id)}
+                          />
+                          <button
+                            type="button"
+                            className="panel-remove focus-ring grid size-11 place-items-center text-subtle hover:text-danger"
+                            aria-label={`Remove ${panel.name}`}
+                            disabled={busy}
+                            onClick={() => void removePanel(panel.id)}
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
                       </li>
                     );
                   })}

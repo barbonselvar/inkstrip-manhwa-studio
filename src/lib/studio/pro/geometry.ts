@@ -1,3 +1,4 @@
+import { RASTER_MAX_AREA, RASTER_MAX_SIDE } from "../raster-limits.ts";
 import type { Point, ProDocument } from "./model.ts";
 export type Resampling = "nearest" | "bilinear" | "bicubic" | "lanczos";
 export type Crop = { x: number; y: number; width: number; height: number; rotation: number };
@@ -111,9 +112,9 @@ export function validateGeometry(d: ProDocument) {
     Number.isInteger(s.height) &&
     s.width >= 1 &&
     s.height >= 1 &&
-    s.width <= 16384 &&
-    s.height <= 16384 &&
-    s.width * s.height <= 16_777_216;
+    s.width <= RASTER_MAX_SIDE &&
+    s.height <= RASTER_MAX_SIDE &&
+    s.width * s.height <= RASTER_MAX_AREA;
   if (
     d.crop !== undefined &&
     (!size(d.crop) ||

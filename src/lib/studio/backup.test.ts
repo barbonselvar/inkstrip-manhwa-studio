@@ -32,11 +32,21 @@ function sample(): ProjectData {
     width: 800,
     seam: 0,
     format: "image/jpeg",
-    strip: { parts: [{ blobId: "s1" }] } as unknown as Chapter["strip"],
+    strip: {
+      width: 800,
+      totalHeight: 10,
+      parts: [{ blobId: "s1", height: 10 }],
+      panelIds: ["pa1"],
+      widthSetting: 800,
+      seam: 0,
+      format: "image/jpeg",
+      createdAt: 2,
+    },
   };
-  const panel = {
+  const panel: Panel = {
     id: "pa1",
     chapterId: "ch1",
+    name: "page-1.png",
     order: 0,
     createdAt: 1,
     blobId: "b1",
@@ -44,7 +54,7 @@ function sample(): ProjectData {
     mime: "image/png",
     width: 10,
     height: 10,
-  } as unknown as Panel;
+  };
   return {
     project,
     chapters: [chapter],

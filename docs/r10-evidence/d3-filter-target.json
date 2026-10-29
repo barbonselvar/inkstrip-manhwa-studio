@@ -1,0 +1,13 @@
+[
+  {
+    "kind": "raster",
+    "strokes": 0,
+    "filters": [
+      {
+        "enabled": true,
+        "id": "0734947f-8c35-4e98-98a0-b47103f5777f",
+        "operation": { "kind": "gaussian", "radius": 1 }
+      }
+    ]
+  }
+]

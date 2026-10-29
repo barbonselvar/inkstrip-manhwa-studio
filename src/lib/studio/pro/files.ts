@@ -1,4 +1,5 @@
 import { documentSources } from "./raster-budget.ts";
+import { documentAssetIds } from "./asset-references.ts";
 import { canonicalNative, validateNativeTree } from "./adjustment-schema.ts";
 import { escapeXml } from "./xml.ts";
 export { escapeXml } from "./xml.ts";
@@ -27,14 +28,7 @@ export async function nativeFile(s: ProSession): Promise<Blob> {
   // History stays in the session's immutable pool. Native files carry the current
   // document, not the undo timeline; exporting unused history assets makes repeated
   // import/export exponentially duplicate the same bytes under fresh immutable IDs.
-  const referenced = new Set<string>();
-  const original = sourceReference(s.document);
-  if (original) referenced.add(original.assetId);
-  for (const l of s.document.layers) {
-    if (l.assetId) referenced.add(l.assetId);
-    for (const stroke of [...l.strokes, ...(l.mask?.strokes ?? [])])
-      if (stroke.clone) referenced.add(stroke.clone.assetId);
-  }
+  const referenced = documentAssetIds(s.document);
   const assets = Object.fromEntries(
     await Promise.all(
       Object.entries(s.assets)
@@ -294,6 +288,15 @@ export function mergeNativeSession(current: ProSession, incoming: ProSession): P
     layers: incoming.document.layers.map((l) => ({
       ...l,
       ...(l.assetId ? { assetId: mapping.get(l.assetId)! } : {}),
+      ...(l.effects
+        ? {
+            effects: l.effects.map((e) =>
+              e.pattern?.kind === "bitmap"
+                ? { ...e, pattern: { ...e.pattern, assetId: mapping.get(e.pattern.assetId!)! } }
+                : e,
+            ),
+          }
+        : {}),
       strokes: l.strokes.map((stroke) =>
         stroke.clone
           ? { ...stroke, clone: { ...stroke.clone, assetId: mapping.get(stroke.clone.assetId)! } }

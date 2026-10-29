@@ -1,3 +1,5 @@
+export const ENHANCE_MAX_AREA = 4_000_000,
+  ENHANCE_MAX_SIDE = 4096;
 export type EnhanceOptions = {
   scale: 1 | 2;
   denoise: number;
@@ -30,7 +32,7 @@ export function enhancementSize(width: number, height: number, scale: number) {
     throw new Error("Invalid image dimensions or scale.");
   }
   // Also bound the 2× intermediate canvas when the requested final size is 1×.
-  if (width * height > 4_000_000 || Math.max(width, height) * 2 > 8192) {
+  if (width * height > ENHANCE_MAX_AREA || Math.max(width, height) > ENHANCE_MAX_SIDE) {
     throw new Error(
       "This image exceeds the on-device AI limit (4 megapixels / 4096px per side). Original unchanged.",
     );

@@ -1,0 +1,113 @@
+[
+  {
+    "width": 1440,
+    "label": "r10",
+    "geometry": {
+      "row": {
+        "width": 351,
+        "height": 107.59375,
+        "x": 0,
+        "y": 0
+      },
+      "target": {
+        "width": 107.40625,
+        "height": 64,
+        "x": 89.796875,
+        "y": 21.796875
+      },
+      "thumbnail": {
+        "width": 48,
+        "height": 64,
+        "x": 89.796875,
+        "y": 21.796875
+      },
+      "quickActions": {
+        "width": 44,
+        "height": 88,
+        "x": 205.203125,
+        "y": 9.796875
+      },
+      "orderActions": {
+        "width": 44,
+        "height": 88,
+        "x": 257.203125,
+        "y": 9.796875
+      }
+    },
+    "identicalToMain": true
+  },
+  {
+    "width": 390,
+    "label": "r10",
+    "geometry": {
+      "row": {
+        "width": 358,
+        "height": 115.59375,
+        "x": 0,
+        "y": 0
+      },
+      "target": {
+        "width": 130.40625,
+        "height": 64,
+        "x": 61.796875,
+        "y": 25.796875
+      },
+      "thumbnail": {
+        "width": 36,
+        "height": 64,
+        "x": 61.796875,
+        "y": 25.796875
+      },
+      "quickActions": {
+        "width": 44,
+        "height": 88,
+        "x": 200.203125,
+        "y": 13.796875
+      },
+      "orderActions": {
+        "width": 44,
+        "height": 88,
+        "x": 252.203125,
+        "y": 13.796875
+      }
+    },
+    "identicalToMain": true
+  },
+  {
+    "width": 320,
+    "label": "r10",
+    "geometry": {
+      "row": {
+        "width": 288,
+        "height": 115.59375,
+        "x": 0,
+        "y": 0
+      },
+      "target": {
+        "width": 60.40625,
+        "height": 64,
+        "x": 61.796875,
+        "y": 25.796875
+      },
+      "thumbnail": {
+        "width": 36,
+        "height": 64,
+        "x": 61.796875,
+        "y": 25.796875
+      },
+      "quickActions": {
+        "width": 44,
+        "height": 88,
+        "x": 130.203125,
+        "y": 13.796875
+      },
+      "orderActions": {
+        "width": 44,
+        "height": 88,
+        "x": 182.203125,
+        "y": 13.796875
+      }
+    },
+    "identicalToMain": true
+  }
+]

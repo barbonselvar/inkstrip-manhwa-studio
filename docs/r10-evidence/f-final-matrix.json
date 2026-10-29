@@ -1,0 +1,599 @@
+{
+  "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+  "applicationCodeIdenticalTo": "9a0ed0a8e11bdcb4e1c34f1d21549fb971936082",
+  "shim": "grok.com/grok-app-builder/extensions.js fulfilled with an empty script in the test browser (sandbox egress denies grok.com); no other request altered",
+  "matrix": [
+    {
+      "suite": "bench:raster:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "bench:raster:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 20.41
+    },
+    {
+      "suite": "test:r3:browser",
+      "base": "http://127.0.0.1:8083",
+      "args": ["run", "test:r3:browser", "--", "http://127.0.0.1:8083"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 391.38
+    },
+    {
+      "suite": "test:r10:long-pages:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r10:long-pages:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 73.14
+    },
+    {
+      "suite": "test:studio:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:studio:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 1,
+      "signal": null,
+      "seconds": 5.39
+    },
+    {
+      "suite": "test:editor:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:editor:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 19.92
+    },
+    {
+      "suite": "test:r10:audit:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r10:audit:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 32.33
+    },
+    {
+      "suite": "test:retouch:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:retouch:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 7.97
+    },
+    {
+      "suite": "test:adjustments:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:adjustments:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 20.6
+    },
+    {
+      "suite": "test:workflow:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:workflow:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 23.73
+    },
+    {
+      "suite": "test:ui:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:ui:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 26.23
+    },
+    {
+      "suite": "test:layers:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:layers:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 47.53
+    },
+    {
+      "suite": "test:pro:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:pro:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 61.6
+    },
+    {
+      "suite": "test:geometry:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:geometry:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 28.62
+    },
+    {
+      "suite": "test:repair:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:repair:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 37.65
+    },
+    {
+      "suite": "test:color:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:color:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 30.45
+    },
+    {
+      "suite": "test:transform:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:transform:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 40.25
+    },
+    {
+      "suite": "test:r6:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r6:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 89.4
+    },
+    {
+      "suite": "test:r8:foundation:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r8:foundation:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 7.54
+    },
+    {
+      "suite": "test:r6:layers:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r6:layers:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 132.73
+    },
+    {
+      "suite": "test:r8:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r8:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 60.62
+    },
+    {
+      "suite": "test:r8:processing:browser",
+      "base": "http://127.0.0.1:8083",
+      "args": ["run", "test:r8:processing:browser", "--", "http://127.0.0.1:8083"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 2.39
+    },
+    {
+      "suite": "test:r8:styles:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r8:styles:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 31.26
+    },
+    {
+      "suite": "test:r8:recovery:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r8:recovery:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 18.16
+    },
+    {
+      "suite": "test:r8:gradient:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r8:gradient:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 49.07
+    },
+    {
+      "suite": "test:appearance:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:appearance:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 34.32
+    },
+    {
+      "suite": "test:vector:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:vector:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 33.04
+    },
+    {
+      "suite": "test:compound:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:compound:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 48.46
+    },
+    {
+      "suite": "test:pathfinder:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:pathfinder:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 61.25
+    },
+    {
+      "suite": "test:artboards:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:artboards:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 36.35
+    },
+    {
+      "suite": "test:preview:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:preview:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 17.38
+    },
+    {
+      "suite": "test:production:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": [
+        "run",
+        "test:production:browser",
+        "--",
+        "http://127.0.0.1:8081",
+        "a320325301d1e85554f8f13085cb0c9a4391f642"
+      ],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 36.64
+    },
+    {
+      "suite": "test:vector-final:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:vector-final:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 77.64
+    },
+    {
+      "suite": "test:raster-refinement:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:raster-refinement:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 60.73
+    },
+    {
+      "suite": "test:dialogue:ocr",
+      "base": "http://127.0.0.1:8083",
+      "args": ["run", "test:dialogue:ocr", "--", "http://127.0.0.1:8083"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 6.62
+    },
+    {
+      "suite": "test:homepage:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:homepage:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 52.37
+    },
+    {
+      "suite": "test:dialogue:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:dialogue:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 22.95
+    },
+    {
+      "suite": "test:dialogue:render",
+      "base": "http://127.0.0.1:8083",
+      "args": ["run", "test:dialogue:render", "--", "http://127.0.0.1:8083"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 2.26
+    },
+    {
+      "suite": "test:dialogue:security",
+      "base": "http://127.0.0.1:8083",
+      "args": ["run", "test:dialogue:security", "--", "http://127.0.0.1:8083"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 3.32
+    },
+    {
+      "suite": "test:dialogue:workflow",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:dialogue:workflow", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 22.05
+    },
+    {
+      "suite": "test:chapter-import:browser",
+      "base": "http://127.0.0.1:8083",
+      "args": ["run", "test:chapter-import:browser", "--", "http://127.0.0.1:8083"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 28.06
+    },
+    {
+      "suite": "test:r2:gesture:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r2:gesture:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 9.71
+    },
+    {
+      "suite": "test:r2:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r2:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 75.64
+    },
+    {
+      "suite": "test:r5:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r5:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 65.7
+    },
+    {
+      "suite": "test:chapter-display:browser",
+      "base": "http://127.0.0.1:8083",
+      "args": ["run", "test:chapter-display:browser", "--", "http://127.0.0.1:8083"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 38.52
+    },
+    {
+      "suite": "test:vector-hidden:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:vector-hidden:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 18.41
+    },
+    {
+      "suite": "test:raster-advanced:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:raster-advanced:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 22.77
+    },
+    {
+      "suite": "test:pr21-r8:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:pr21-r8:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 21.73
+    },
+    {
+      "suite": "test:r9:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r9:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 37.99
+    },
+    {
+      "suite": "test:r9:svg:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r9:svg:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 7.1
+    },
+    {
+      "suite": "test:r9:integration:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r9:integration:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 29.92
+    },
+    {
+      "suite": "test:r7:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r7:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 205.68
+    },
+    {
+      "suite": "test:r10:recovery:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r10:recovery:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 1,
+      "signal": null,
+      "seconds": 1.72
+    },
+    {
+      "suite": "test:r10:opening:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r10:opening:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 28.74
+    },
+    {
+      "suite": "test:r10:masks:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r10:masks:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 88.06
+    },
+    {
+      "suite": "test:r10:patterns:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r10:patterns:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 71.38
+    },
+    {
+      "suite": "test:r10:inspector:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r10:inspector:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 25.51
+    },
+    {
+      "suite": "test:r10:mobile:browser",
+      "base": "http://127.0.0.1:8081",
+      "args": ["run", "test:r10:mobile:browser", "--", "http://127.0.0.1:8081"],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 0,
+      "signal": null,
+      "seconds": 24.08
+    },
+    {
+      "suite": "test:production:browser-enhanced",
+      "base": "http://127.0.0.1:8081",
+      "args": [
+        "run",
+        "test:production:browser",
+        "--",
+        "http://127.0.0.1:8081",
+        "a320325301d1e85554f8f13085cb0c9a4391f642",
+        "--raster",
+        "--ai"
+      ],
+      "sha": "a320325301d1e85554f8f13085cb0c9a4391f642",
+      "exitCode": 1,
+      "signal": null,
+      "seconds": 57.41
+    }
+  ],
+  "reruns": [
+    {
+      "suite": "test:r10:recovery:browser",
+      "base": "dev http://127.0.0.1:8083",
+      "exitCode": 0,
+      "reason": "runner sent an in-page /src suite to the production build; fixed in 00dd895"
+    },
+    {
+      "suite": "test:production:browser --raster (no --ai)",
+      "base": "built",
+      "exitCode": 0,
+      "reason": "--ai step blocked: proxy log huggingface.co:443 connect_rejected"
+    },
+    {
+      "suite": "test:studio:browser on unchanged main 401e925",
+      "base": "main built",
+      "exitCode": 1,
+      "reason": "identical huggingface.co tunnel failure at studio-browser-check.mjs:123"
+    }
+  ],
+  "r3Investigation": {
+    "headIdle": {
+      "width": "",
+      "previewMs": 317,
+      "transitions": 2,
+      "busy": [
+        [0, "true"],
+        [96, "false"]
+      ]
+    },
+    "headCpuLoad": {
+      "width": "",
+      "previewMs": 333,
+      "transitions": 2,
+      "busy": [
+        [0, "true"],
+        [97, "false"]
+      ]
+    },
+    "main401e925Idle": {
+      "width": "",
+      "previewMs": 286,
+      "transitions": 2,
+      "busy": [
+        [0, "true"],
+        [92, "false"]
+      ]
+    },
+    "fullRuns": [
+      "alone PASS 400s",
+      "concurrent with r7/r6-layers/r8/pro/layers PASS 399s",
+      "matrix exclusive PASS 391s"
+    ],
+    "note": "main instrumented run's final console assertion failed only because the comparison worktree symlinked node_modules outside Vite fs.allow (403s); its functional steps and timing are valid",
+    "conclusion": "not reproduced in 5 runs; earlier failure cause unconfirmed (log not pushed)"
+  }
+}

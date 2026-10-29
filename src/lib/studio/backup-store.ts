@@ -12,6 +12,7 @@ import {
 import type { Chapter, Panel, Project } from "./types";
 import { preflightRecoveryImages } from "./image-policy";
 import { matchingDimensions } from "./image-decode";
+import { validateChapterRecord, validatePanelRecord, validateProjectRecord } from "./records";
 
 /** Project backup/restore and storage persistence, kept beside (not inside) the core store. */
 
@@ -105,6 +106,19 @@ export async function readProjectData(projectId: string): Promise<ProjectData> {
 
 /** Restore a decoded backup atomically. Refuses to overwrite a project that already exists. */
 export async function writeProjectData(data: ProjectData) {
+  // The same strict schemas as decoding, at the write boundary: no malformed Project,
+  // Chapter or Panel record can be stored, whoever calls this (INK-AUD-001).
+  try {
+    validateProjectRecord(data.project);
+    data.chapters.forEach(validateChapterRecord);
+    data.panels.forEach(validatePanelRecord);
+  } catch (error) {
+    throw Error(
+      `${(error as Error).message} Nothing was restored; existing projects are unchanged.`,
+    );
+  }
+  if (data.chapters.some((c) => c.projectId !== data.project.id))
+    throw Error("Backup chapters belong to another project. Existing projects are unchanged.");
   // Backup metadata is not a trust marker. Check every source/thumbnail/reference
   // and native asset before publishing any URL, session or Chapter record.
   const thumbnails = new Set(

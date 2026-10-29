@@ -1,3 +1,4 @@
+import { contextualInspector, inspectorKeyIndex } from "@/lib/studio/pro/inspector";
 import { ProR8Lab } from "./pro-r8-lab";
 import { advancedGradient } from "@/lib/studio/pro/gradient";
 import {
@@ -31,6 +32,20 @@ import { ProDialogue } from "./pro-dialogue";
 import { cleanView } from "@/lib/studio/dialogue/operations";
 import { reconcileDialogue } from "@/lib/studio/dialogue/operations";
 import { validateNativeImages, validateRasterInput } from "@/lib/studio/pro/native-images";
+import { validateOpeningSession } from "@/lib/studio/pro/opening";
+import { ProRecovery } from "./pro-recovery";
+import { listCheckpoints, readCheckpoint, type CheckpointHeader } from "@/lib/studio/pro/recovery";
+import {
+  subscribeRecovery,
+  flushCheckpoints,
+  type RecoveryStatus,
+} from "@/lib/studio/pro/recovery-client";
+import {
+  acknowledgeDraft,
+  draftSaveStatus,
+  saveFailure,
+  type SaveFailure,
+} from "@/lib/studio/pro/save-status";
 import { previewDirtyRect } from "@/lib/studio/pro/preview-dirty";
 import { budgetHistory } from "@/lib/studio/pro/history-budget";
 import { copyLayerMask, maskFromSelection } from "@/lib/studio/pro/masks";
@@ -88,6 +103,7 @@ import {
   MessageCircle,
   PanelRightClose,
   PanelRightOpen,
+  ArchiveRestore,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProCanvas, type ProTool } from "./pro-canvas";
@@ -152,6 +168,8 @@ import { useStudio } from "@/lib/studio/store";
 import type { Panel } from "@/lib/studio/types";
 import { decodeBlob } from "@/lib/studio/images";
 import { ToolSection } from "../design/tool-section";
+import { needsSplit } from "@/lib/studio/page-split";
+import { RASTER_MAX_SIDE } from "@/lib/studio/raster-limits";
 import {
   browserBrushStorage,
   loadBrushPresets,
@@ -358,7 +376,15 @@ export default function ProWorkspace({
     [panelWidth, setPanelWidth] = useState(300),
     [error, setError] = useState(""),
     [status, setStatus] = useState("Opening layered document…"),
+    /** Initial open: explicit loading → ready | failed, never a stale "Opening…" (INK-AUD-005). */
+    [load, setLoad] = useState<{ state: "loading" | "ready" | "failed"; error?: string }>({
+      state: "loading",
+    }),
+    [openAttempt, setOpenAttempt] = useState(0),
     [saved, setSaved] = useState(false),
+    [saving, setSaving] = useState(0),
+    [saveError, setSaveError] = useState<SaveFailure | null>(null),
+    [recovery, setRecovery] = useState<RecoveryStatus>({ state: "idle" }),
     [saveAcknowledgment, setSaveAcknowledgment] = useState(0),
     [assetEpoch, setAssetEpoch] = useState(0),
     [ready, setReady] = useState(0),
@@ -382,6 +408,7 @@ export default function ProWorkspace({
     closeInProgress = useRef(false),
     saveTail = useRef<Promise<unknown>>(Promise.resolve()),
     pendingSaves = useRef(0),
+    lastSaveFailure = useRef<{ panelId: string; message: string } | null>(null),
     lastSaved = useRef(""),
     generation = useRef(0),
     busyRef = useRef(false),
@@ -397,6 +424,53 @@ export default function ProWorkspace({
     savePreference(RULER_UNIT_KEY, value);
   };
   const maxArea = browserDialogueBudget().maxArea;
+  const [inspectorTarget, setInspectorTarget] = useState<ReturnType<
+    typeof contextualInspector
+  > | null>(null);
+  useEffect(() => {
+    if (!inspectorTarget || !panelOpen || tab !== inspectorTarget.panel) return;
+    const content = document.querySelector<HTMLElement>(".pro-panel-content");
+    const target =
+      (inspectorTarget.section ? document.getElementById(inspectorTarget.section) : content) ??
+      content;
+    if (!content || !target) return;
+    for (
+      let parent: HTMLElement | null = target;
+      parent && parent !== content;
+      parent = parent.parentElement
+    )
+      if (parent instanceof HTMLDetailsElement) parent.open = true;
+    if (!inspectorTarget.section) content.scrollTop = 0;
+    target.scrollIntoView({ block: "nearest", inline: "nearest" });
+    target.focus({ preventScroll: true });
+    setInspectorTarget(null);
+  }, [inspectorTarget, panelOpen, tab]);
+
+  const durability = draftSaveStatus(load.state === "ready", saving, saved, saveError);
+  useEffect(() => {
+    let active = true;
+    const unsubscribe = subscribeRecovery(panel.id, (status) => {
+      if (active) setRecovery(status);
+    });
+    void listCheckpoints(panel.id).then(
+      (result) => {
+        if (active && result.entries[0])
+          setRecovery((current) =>
+            current.state === "idle" ? { state: "available", header: result.entries[0] } : current,
+          );
+      },
+      (e) => {
+        if (active)
+          setRecovery((current) =>
+            current.state === "idle" ? { state: "failed", error: (e as Error).message } : current,
+          );
+      },
+    );
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [panel.id]);
   const doc = useMemo(() => {
       const current = history?.present.doc;
       if (!current || !transformDraft || transformDraft.origin !== current) return current;
@@ -475,13 +549,18 @@ export default function ProWorkspace({
   useEffect(() => {
     alive.current = true;
     let active = true;
+    setLoad({ state: "loading" });
+    setStatus("Opening layered document…");
     void (async () => {
       const recovered = await loadSession(panel.id);
       if (recovered) {
+        validateOpeningSession(recovered, maxArea);
         if (active) {
           install(recovered, "Recovered Pro draft");
+          setLoad({ state: "ready" });
           lastSaved.current = JSON.stringify(recovered.document);
           setSaved(true);
+          setSaveError(null);
           setStatus("Recovered editable Pro document. Chapter unchanged.");
         }
         return;
@@ -499,38 +578,53 @@ export default function ProWorkspace({
         acceptedBlobId: panel.blobId,
         updatedAt: Date.now(),
       };
-      validateAssets(s);
+      validateOpeningSession(s, maxArea);
       if (active) {
         install(s, "Imported accepted image");
+        setLoad({ state: "ready" });
         setStatus("New layered document. Original artwork remains in your chapter.");
       }
     })().catch((e) => {
-      if (active) setError(storageMessage(e));
+      if (!active) return;
+      setLoad({ state: "failed", error: storageMessage(e) });
+      setStatus("Not opened. Chapter artwork is unchanged.");
     });
     return () => {
       active = false;
       alive.current = false;
       renderer.current?.dispose();
     };
-  }, [panel]);
+  }, [panel, openAttempt, maxArea]);
   const persist = useCallback((document: ProDocument) => {
     pendingSaves.current++;
-    if (alive.current) setSaved(false);
+    if (alive.current) {
+      setSaved(false);
+      setSaveError(null);
+      setSaving(pendingSaves.current);
+    }
     const task = saveTail.current
       .catch(() => {})
       .then(async () => {
         const current = sessionRef.current;
         if (!current) throw new Error("The document has not loaded.");
+        if (current.document.panelId !== document.panelId)
+          throw new Error(
+            "This save belongs to a different document. No document was overwritten.",
+          );
         const next = await saveSession({ ...current, document }, current.revision);
         // A file import can append immutable assets while this transaction is pending.
         // A save acknowledgement must never replace that newer in-memory asset pool.
         const live = sessionRef.current ?? next;
-        const currentSession = {
-          ...next,
-          document: historyRef.current?.present.doc ?? document,
-          assets: { ...next.assets, ...live.assets },
-          acceptedBlobId: live.acceptedBlobId,
-        };
+        const currentSession = acknowledgeDraft(
+          next,
+          live,
+          historyRef.current?.present.doc ?? document,
+        );
+        if (
+          currentSession === live &&
+          (live.document.panelId !== next.document.panelId || live.recoveryId !== next.recoveryId)
+        )
+          return next;
         sessionRef.current = currentSession;
         if (alive.current) {
           setSession(currentSession);
@@ -542,6 +636,12 @@ export default function ProWorkspace({
         (next) => {
           pendingSaves.current--;
           if (alive.current) {
+            setSaving(pendingSaves.current);
+            const failed = lastSaveFailure.current;
+            if (failed?.panelId === document.panelId) {
+              setError((current) => (current === failed.message ? "" : current));
+              lastSaveFailure.current = null;
+            }
             setSaved(
               pendingSaves.current === 0 &&
                 JSON.stringify(historyRef.current?.present.doc) === lastSaved.current,
@@ -554,6 +654,14 @@ export default function ProWorkspace({
         },
         (error) => {
           pendingSaves.current--;
+          if (alive.current) {
+            setSaving(pendingSaves.current);
+            if (sessionRef.current?.document.panelId === document.panelId) {
+              const failure = saveFailure(error);
+              setSaveError(failure);
+              lastSaveFailure.current = { panelId: document.panelId, message: failure.message };
+            }
+          }
           throw error;
         },
       );
@@ -565,12 +673,13 @@ export default function ProWorkspace({
     const signature = JSON.stringify(history.present.doc);
     const durable = signature === lastSaved.current && pendingSaves.current === 0;
     setSaved(durable);
+    if (durable) setSaveError(null);
     if (durable || pendingSaves.current > 0) return;
     const timer = setTimeout(() => {
       if (closeInProgress.current || busyRef.current) return;
       void persist(history.present.doc).catch((e) => {
-        if (alive.current) {
-          setError(storageMessage(e));
+        if (alive.current && sessionRef.current?.document.panelId === history.present.doc.panelId) {
+          setError(saveFailure(e).message);
           setStatus("Draft not saved. Export a native backup.");
         }
       });
@@ -759,14 +868,28 @@ export default function ProWorkspace({
     },
     [setHist, maxArea],
   );
-  const applyR8Settings = (settings: R8Settings): true | string => {
+  const applyR8Settings = (
+    settings: R8Settings,
+    addedAssets: Record<string, Blob> = {},
+  ): true | string => {
     const current = historyRef.current?.present.doc;
     if (!current || !r8Draft || busyRef.current || transformRef.current || quickMask)
       return "This target is unavailable. Exit Quick Mask and finish active operations first.";
     try {
       const next = commitR8Document(current, r8Draft, settings, maxArea);
+      const nextSession = {
+        ...sessionRef.current!,
+        document: next,
+        assets: { ...sessionRef.current!.assets, ...addedAssets },
+      };
+      validateAssets(nextSession);
       if (next !== current && !commit(next, "Edit layer styles / Smart Filters / gradient"))
         return "Layer properties were not committed. Original artwork is unchanged.";
+      if (Object.keys(addedAssets).length) {
+        sessionRef.current = nextSession;
+        setSession(nextSession);
+        setAssetEpoch((n) => n + 1);
+      }
       setSelectedIds([r8Draft.layerId]);
       setMaskMode(false);
       setStatus("Editable layer properties saved. Original artwork is unchanged.");
@@ -1544,6 +1667,7 @@ export default function ProWorkspace({
     closeInProgress.current = true;
     try {
       if (historyRef.current) await persist(historyRef.current.present.doc);
+      await flushCheckpoints();
       onClose();
     } catch (e) {
       closeInProgress.current = false;
@@ -1571,7 +1695,7 @@ export default function ProWorkspace({
         );
       setCancellable(true);
       const result = await renderer.current.export(d, maxArea, "image/png", 1, (n, t) =>
-        setProgress(`Rendering layer ${n} / ${t}`),
+        setProgress(`Rendering artwork · ${Math.round((n / Math.max(1, t)) * 100)}%`),
       );
       if (run !== operationRun.current) throw new DOMException("Cancelled", "AbortError");
       setCancellable(false);
@@ -1651,6 +1775,7 @@ export default function ProWorkspace({
       );
       lastSaved.current = JSON.stringify(document);
       setSaved(true);
+      setSaveError(null);
       setSelectedIds([base.id]);
       setMaskMode(false);
       setBefore(false);
@@ -1673,6 +1798,65 @@ export default function ProWorkspace({
     a.download = name.replace(/[\\/:*?"<>|]/g, "-");
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
+  };
+  const restoreCheckpoint = async (header: CheckpointHeader) => {
+    const origin = historyRef.current?.present.doc;
+    if (
+      !origin ||
+      !sessionRef.current ||
+      busyRef.current ||
+      transformRef.current ||
+      dialoguePendingRef.current ||
+      transient ||
+      header.panelId !== origin.panelId
+    )
+      throw Error("Finish the active operation before restoring this page's checkpoint.");
+    const run = ++operationRun.current;
+    busyRef.current = true;
+    setBusy(true);
+    setProgress("Verifying recovery checkpoint…");
+    ++generation.current;
+    try {
+      await saveTail.current;
+      const checkpoint = await readCheckpoint(header.id, origin.panelId);
+      if (checkpoint.header.integritySha256 !== header.integritySha256)
+        throw Error(
+          "The selected checkpoint changed. Refresh recovery checkpoints before restoring.",
+        );
+      validateOpeningSession(checkpoint.session, maxArea);
+      await validateNativeImages(checkpoint.session, maxArea);
+      if (
+        !alive.current ||
+        run !== operationRun.current ||
+        historyRef.current?.present.doc !== origin ||
+        sessionRef.current?.document.panelId !== origin.panelId
+      )
+        throw Error(
+          "The document changed while recovery was being verified. Nothing was restored.",
+        );
+      const next = mergeNativeSession(sessionRef.current, checkpoint.session);
+      validateOpeningSession(next, maxArea);
+      sessionRef.current = next;
+      setSession(next);
+      setHist(
+        record(historyRef.current!, {
+          doc: next.document,
+          label: `Restore checkpoint revision ${header.revision}`,
+        }),
+      );
+      setSaved(false);
+      setSaveError(null);
+      setAssetEpoch((n) => n + 1);
+      setStatus(
+        "Checkpoint restored as one undoable action. Original artwork and previous layers remain recoverable.",
+      );
+    } finally {
+      busyRef.current = false;
+      if (alive.current) {
+        setBusy(false);
+        setProgress("");
+      }
+    }
   };
   const exportBoards = async (boards: Artboard[], format: string, scale: number) => {
     if (!doc || busyRef.current || !boards.length || !renderer.current) return;
@@ -1758,7 +1942,7 @@ export default function ProWorkspace({
       ++generation.current;
       setCancellable(true);
       const r = await renderer.current!.export(doc, maxArea, mime, quality, (n, t) =>
-        setProgress(`Exporting layer ${n} / ${t}`),
+        setProgress(`Exporting artwork · ${Math.round((n / Math.max(1, t)) * 100)}%`),
       );
       if (r.blob) {
         download(r.blob, `${doc.name}-composite.${mime.split("/")[1]}`);
@@ -2820,15 +3004,41 @@ export default function ProWorkspace({
                 </Button>
               )}
             </div>
-            <span className="pro-save-state" role="status">
-              {busy
-                ? progress
-                : rendering
-                  ? "Rendering preview…"
-                  : saved
-                    ? "Draft saved"
-                    : "Unsaved draft"}
+            <span
+              className="pro-save-state"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              data-save-state={load.state === "failed" ? "not-opened" : durability.state}
+              title={saveError?.message}
+            >
+              {!doc ? (load.state === "failed" ? "Not opened" : "Opening…") : durability.label}
             </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Recovery checkpoints"
+              className="pro-recovery-button"
+              disabled={load.state === "loading" || busy || dialoguePending}
+              title={
+                recovery.header
+                  ? "Recovery available · open checkpoints"
+                  : "Open recovery checkpoints"
+              }
+              data-recovery-state={recovery.state}
+              onClick={() => {
+                if (load.state === "failed") {
+                  root.current
+                    ?.querySelector(".pro-load-failed .pro-recovery-panel")
+                    ?.scrollIntoView({ block: "nearest" });
+                  return;
+                }
+                setTab("history");
+                setPanelOpen(true);
+              }}
+            >
+              <ArchiveRestore />
+            </Button>
             <div className="pro-history-buttons">
               <Button
                 variant="ghost"
@@ -2852,11 +3062,12 @@ export default function ProWorkspace({
             <Button
               variant="secondary"
               className="pro-save-button"
+              aria-label="Save draft"
               disabled={!doc || busy || dialoguePending || !!transformDraft}
-              onClick={() => void saveNow().catch((e) => setError(storageMessage(e)))}
+              onClick={() => void saveNow().catch((e) => setError(saveFailure(e).message))}
             >
               <Save />
-              Save draft
+              <span>Save draft</span>
             </Button>
             <Button
               intent="save"
@@ -2951,6 +3162,18 @@ export default function ProWorkspace({
               </div>
             )}
             <span>{TOOLS.find((t) => t.id === tool)?.name ?? "Move"}</span>
+            <Button
+              variant="ghost"
+              className="pro-tool-settings"
+              onClick={() => {
+                const target = contextualInspector(tool, mode, dialogue);
+                setPanelOpen(true);
+                setTab(target.panel);
+                setInspectorTarget(target);
+              }}
+            >
+              Tool settings
+            </Button>
             <label className="pro-check">
               <input
                 type="checkbox"
@@ -3300,16 +3523,78 @@ export default function ProWorkspace({
                   )
                 }
               />
+            ) : load.state === "failed" ? (
+              <div className="pro-loading pro-load-failed" role="alert">
+                <Layers3 />
+                <h3>This image could not be opened in Raster Studio</h3>
+                <p>{load.error}</p>
+                <p className="pro-help">
+                  Raster Studio opens images up to 16,384 px per side and{" "}
+                  {(maxArea / 1_000_000).toFixed(1)} megapixels on this device. Your original stays
+                  unchanged in the chapter; nothing was saved.
+                </p>
+                {needsSplit(panel.width, panel.height, { maxSide: RASTER_MAX_SIDE, maxArea }) && (
+                  <p className="pro-help">
+                    To edit it here, return to the chapter and choose Image options → Split into
+                    editable pages. The split pages are added below the original, pixel for pixel.
+                  </p>
+                )}
+                <div className="pro-actions">
+                  <Button onClick={onClose}>Return to chapter</Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      // Clear the previous failure in the same UI transaction as
+                      // the retry request, before asynchronous storage starts.
+                      setLoad({ state: "loading" });
+                      setStatus("Opening layered document…");
+                      setOpenAttempt((n) => n + 1);
+                    }}
+                  >
+                    Try again
+                  </Button>
+                </div>
+                <ProRecovery
+                  panelId={panel.id}
+                  revision={undefined}
+                  epoch={saveAcknowledgment}
+                  status={recovery}
+                  disabled={busy}
+                  onDownload={download}
+                />
+              </div>
             ) : (
-              <div className="pro-loading">
+              <div className="pro-loading" aria-busy="true">
                 <Layers3 />
                 <p>{status}</p>
-                {error && <Button onClick={onClose}>Return to chapter</Button>}
               </div>
             )}
             {panelOpen && (
               <aside className="pro-inspector" aria-label="Pro inspector">
-                <nav className="pro-panel-tabs" aria-label="Pro panels">
+                <nav
+                  className="pro-panel-tabs"
+                  aria-label="Pro panels"
+                  onKeyDown={(event) => {
+                    if (!(event.target instanceof HTMLButtonElement)) return;
+                    const buttons = [
+                        ...event.currentTarget.querySelectorAll<HTMLButtonElement>(
+                          "button:not(:disabled)",
+                        ),
+                      ],
+                      index = inspectorKeyIndex(
+                        event.key,
+                        buttons.indexOf(event.target),
+                        buttons.length,
+                      );
+                    if (index === undefined) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const button = buttons[index]!;
+                    button.click();
+                    button.focus();
+                    button.scrollIntoView({ block: "nearest", inline: "nearest" });
+                  }}
+                >
                   {(
                     [
                       "dialogue",
@@ -3360,7 +3645,7 @@ export default function ProWorkspace({
                       </button>
                     ))}
                 </nav>
-                <div className="pro-panel-content">
+                <div className="pro-panel-content" tabIndex={-1}>
                   {tab === "dialogue" && history && (
                     <ProDialogue
                       document={history.present.doc}
@@ -4125,14 +4410,26 @@ export default function ProWorkspace({
                     />
                   )}
                   {tab === "history" && history && (
-                    <ProHistoryTab
-                      history={history}
-                      onUndo={() => actions.current.undo()}
-                      onRedo={() => actions.current.redo()}
-                    />
+                    <>
+                      <ProHistoryTab
+                        history={history}
+                        onUndo={() => actions.current.undo()}
+                        onRedo={() => actions.current.redo()}
+                      />
+                      <ProRecovery
+                        panelId={panel.id}
+                        revision={session?.revision}
+                        epoch={saveAcknowledgment}
+                        status={recovery}
+                        disabled={busy || dialoguePending || !!transformDraft || !!transient}
+                        onRestore={restoreCheckpoint}
+                        onDownload={download}
+                      />
+                    </>
                   )}
                   {tab === "assets" && (
                     <ProAssetsTab
+                      size={doc ? { width: doc.width, height: doc.height } : undefined}
                       disabled={busy || dialoguePending || !!transformDraft}
                       characters={project?.characters}
                       onImport={(file) => void importFile(file)}
@@ -4201,7 +4498,7 @@ export default function ProWorkspace({
             )}
           </div>
           <footer className="pro-footer">
-            <span role="status">{status}</span>
+            <span role="status">{busy ? progress : status}</span>
             {busy ? (
               <Button variant="danger" disabled={!cancellable} onClick={cancel}>
                 Cancel rendering

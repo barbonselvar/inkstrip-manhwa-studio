@@ -1,0 +1,17 @@
+Mobile width 1440
+Mobile width 768
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: touch targets remain at least44px
+    at file:///workspace/inkstrip-r10/scripts/r10-mobile-browser-check.mjs:71:14 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

@@ -1,0 +1,17 @@
+{
+  "base": "http://127.0.0.1:8080",
+  "layersBefore": [
+    {
+      "kind": "raster",
+      "name": "Imported artwork"
+    },
+    {
+      "kind": "paint",
+      "name": "Paint"
+    }
+  ],
+  "actualFilterTarget": "paint",
+  "differencesFromWrongCompositeAssumption": 3018,
+  "sourceUntouched": true,
+  "errors": []
+}

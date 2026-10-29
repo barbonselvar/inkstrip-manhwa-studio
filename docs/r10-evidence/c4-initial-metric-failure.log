@@ -1,0 +1,18 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: SVG path retains whole-run shaped advances at browser 1/64px precision
+
+27542 !== 27533
+
+    at file:///workspace/inkstrip-r10/scripts/r10-rtl-path-prototype.mjs:35:12 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 27542,
+  expected: 27533,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

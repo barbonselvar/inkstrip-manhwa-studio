@@ -1,3 +1,4 @@
+import { ImageCapabilityNotice } from "../image-capability-notice";
 import { useImageUrl } from "@/lib/studio/use-image-url";
 import { Download, Folder, Redo2, Save, Sparkles, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { outputSize } from "@/lib/studio/pro/geometry";
 import type { History } from "@/lib/studio/editor/history";
 import type { ProDocument } from "@/lib/studio/pro/model";
 import type { CharacterProfile } from "@/lib/studio/characters/types";
+import { svgImportHelp } from "@/lib/studio/pro/svg-capabilities";
 
 /** Self-contained inspector tabs of the Pro workspace. State stays in ProWorkspace. */
 
@@ -71,11 +73,13 @@ function ReferenceImage({
 }
 
 export function ProAssetsTab({
+  size,
   disabled,
   characters,
   onImport,
   onPlace,
 }: {
+  size?: { width: number; height: number };
   disabled: boolean;
   characters: CharacterProfile[] | undefined;
   onImport: (file: File | undefined) => void;
@@ -84,6 +88,7 @@ export function ProAssetsTab({
   return (
     <>
       <h3>Assets & characters</h3>
+      <ImageCapabilityNotice {...size} />
       <p className="pro-help">
         References belong to this project. Placing one creates a separate raster layer; no identity
         matching or upload occurs.
@@ -103,9 +108,7 @@ export function ProAssetsTab({
         />
       </label>
       <p className="pro-help">
-        SVG imports editable paths, compound contours, affine transforms, nested groups and basic
-        text. Gradients, clipping paths, masks and other unsafe or unsupported markup are rejected.
-        Native import replaces this draft; Chapter artwork is retained.
+        {svgImportHelp()} Native import replaces this draft; Chapter artwork is retained.
       </p>
       {characters?.length ? (
         characters.map((c) => (

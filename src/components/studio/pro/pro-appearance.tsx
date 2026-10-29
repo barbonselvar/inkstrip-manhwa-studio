@@ -113,19 +113,34 @@ export function ProAppearance({
   advanced = false,
   showGradient = true,
   showEffects = true,
+  onPatternImport,
 }: {
   layer: Layer;
   advanced?: boolean;
   showGradient?: boolean;
   showEffects?: boolean;
   onPatch: (p: Partial<Layer>, group?: string) => void;
+  onPatternImport?: (file: File) => void;
 }) {
   const effects = layer.effects ?? [],
     set = (kind: Effect["kind"], patch: Partial<Effect>) =>
       onPatch(
         {
           effects: effects.map((e) =>
-            e.kind === kind ? { ...e, ...patch, ...(advanced ? { version: 2 as const } : {}) } : e,
+            e.kind === kind
+              ? {
+                  ...e,
+                  ...patch,
+                  ...(advanced
+                    ? {
+                        version:
+                          (patch.pattern ?? e.pattern)?.kind === "bitmap"
+                            ? (3 as const)
+                            : (2 as const),
+                      }
+                    : {}),
+                }
+              : e,
           ),
         },
         `effect-${kind}-${Object.keys(patch).join("-")}`,
@@ -291,18 +306,41 @@ export function ProAppearance({
                               onChange={(v) =>
                                 set(e.kind, {
                                   pattern: {
-                                    ...e.pattern!,
                                     kind: v.target.value as NonNullable<Effect["pattern"]>["kind"],
+                                    scale: e.pattern!.scale,
+                                    offsetX: e.pattern!.offsetX,
+                                    offsetY: e.pattern!.offsetY,
+                                    color2: e.pattern!.color2,
                                   },
                                 })
                               }
                             >
-                              {["checker", "stripes", "dots"].map((k) => (
+                              {[
+                                "checker",
+                                "stripes",
+                                "dots",
+                                ...(e.pattern.kind === "bitmap" ? ["bitmap"] : []),
+                              ].map((k) => (
                                 <option key={k}>{k}</option>
                               ))}
                             </select>
                           </label>
-                          <label className="pro-field">
+                          {onPatternImport && (
+                            <label className="pro-field">
+                              Import bitmap pattern (up to 512px per side / 2MB)
+                              <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp"
+                                aria-label="Import bitmap pattern"
+                                onChange={(ev) => {
+                                  const file = ev.target.files?.[0];
+                                  ev.target.value = "";
+                                  if (file) onPatternImport(file);
+                                }}
+                              />
+                            </label>
+                          )}
+                          <label className="pro-field" hidden={e.pattern.kind === "bitmap"}>
                             Pattern second color
                             <input
                               type="color"

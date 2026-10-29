@@ -1,5 +1,10 @@
 import { timingSafeEqual } from "node:crypto";
+import { PngError, validatePng, type PngInfo } from "./png-guard.server.ts";
 const MAX_BODY = 4_000_000;
+const INPUT = { maxSide: 1024, maxBytes: 2_000_000 };
+/** The provider is asked for one 1024 × 1024 PNG; anything else is not a usable result. */
+const OUTPUT = { side: 1024, maxBytes: 16_000_000 };
+const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 const fail = (error: string, status: number) =>
   Response.json({ error }, { status, headers: { "cache-control": "no-store" } });
 export async function imageEdit(
@@ -42,33 +47,28 @@ export async function imageEdit(
       reference = parsed.get("reference"),
       op = parsed.get("operation");
     if (op !== "erase" && op !== "face") return fail("Unsupported operation.", 400);
-    const valid = async (value: FormDataEntryValue | null) => {
-      if (
-        !(value instanceof Blob) ||
-        value.type !== "image/png" ||
-        value.size < 24 ||
-        value.size > 2_000_000
-      )
-        return false;
-      const b = new DataView(await value.slice(0, 24).arrayBuffer());
-      return (
-        b.getUint32(0) === 0x89504e47 &&
-        b.getUint32(4) === 0x0d0a1a0a &&
-        b.getUint32(16) > 0 &&
-        b.getUint32(20) > 0 &&
-        b.getUint32(16) <= 1024 &&
-        b.getUint32(20) <= 1024
-      );
+    // Complete bounded validation before any provider call (INK-AUD-002): the PNG must
+    // decode, and the mask must cover exactly the image it edits.
+    const inspect = async (value: FormDataEntryValue | null): Promise<PngInfo | undefined> => {
+      if (!(value instanceof Blob) || value.type !== "image/png" || value.size > INPUT.maxBytes)
+        return undefined;
+      try {
+        return validatePng(new Uint8Array(await value.arrayBuffer()), INPUT);
+      } catch (error) {
+        if (error instanceof PngError) return undefined;
+        throw error;
+      }
     };
-    if (
-      !(await valid(image)) ||
-      !(await valid(mask)) ||
-      (op === "face" && !(await valid(reference)))
-    )
+    const imageInfo = await inspect(image),
+      maskInfo = await inspect(mask),
+      referenceInfo = op === "face" ? await inspect(reference) : undefined;
+    if (!imageInfo || !maskInfo || (op === "face" && !referenceInfo))
       return fail(
         "Valid PNG context, mask, and face reference (when needed), up to 1024px, required.",
         400,
       );
+    if (imageInfo.width !== maskInfo.width || imageInfo.height !== maskInfo.height)
+      return fail("The mask must have the same dimensions as the image.", 400);
     const body = new FormData();
     body.set("model", "gpt-image-1");
     body.append("image[]", image as Blob, "context.png");
@@ -99,11 +99,22 @@ export async function imageEdit(
       );
     const payload = await response.json();
     const encoded = payload?.data?.[0]?.b64_json;
-    if (typeof encoded !== "string" || encoded.length > 24_000_000)
-      return fail("Provider returned no usable image.", 502);
+    // Complete output validation (INK-AUD-003): strict base64, bounded size, a fully
+    // decodable PNG of the requested dimensions. Anything else never reaches the editor.
+    if (
+      typeof encoded !== "string" ||
+      encoded.length > Math.ceil(OUTPUT.maxBytes / 3) * 4 ||
+      !BASE64.test(encoded)
+    )
+      return fail("Provider returned no usable image. Your artwork is unchanged.", 502);
     const output = Buffer.from(encoded, "base64");
-    if (output.readUInt32BE(0) !== 0x89504e47)
-      return fail("Provider returned an invalid PNG.", 502);
+    try {
+      const info = validatePng(output, { maxSide: OUTPUT.side, maxBytes: OUTPUT.maxBytes });
+      if (info.width !== OUTPUT.side || info.height !== OUTPUT.side) throw new PngError("size");
+    } catch (error) {
+      if (!(error instanceof PngError)) throw error;
+      return fail("Provider returned an invalid PNG. Your artwork is unchanged.", 502);
+    }
     return new Response(output, {
       headers: { "content-type": "image/png", "cache-control": "no-store" },
     });

@@ -1,3 +1,4 @@
+import { RASTER_MAX_AREA, RASTER_MAX_SIDE } from "../raster-limits.ts";
 import {
   validateSmartFilters,
   validateSmartWork,
@@ -330,9 +331,9 @@ export function validateSelection(s: Selection) {
     if (
       !Number.isInteger(width) ||
       !Number.isInteger(height) ||
-      !finite(width, 1, 16384) ||
-      !finite(height, 1, 16384) ||
-      width * height > 16_777_216 ||
+      !finite(width, 1, RASTER_MAX_SIDE) ||
+      !finite(height, 1, RASTER_MAX_SIDE) ||
+      width * height > RASTER_MAX_AREA ||
       !t ||
       !point(t) ||
       !finite(t.scaleX, 0.01, 100) ||
@@ -360,9 +361,9 @@ export function validateSelection(s: Selection) {
         r.points.length !== 3 ||
         !Number.isInteger(p.width) ||
         !Number.isInteger(p.height) ||
-        !finite(p.width, 1, 16384) ||
-        !finite(p.height, 1, 16384) ||
-        p.width * p.height > 16_777_216 ||
+        !finite(p.width, 1, RASTER_MAX_SIDE) ||
+        !finite(p.height, 1, RASTER_MAX_SIDE) ||
+        p.width * p.height > RASTER_MAX_AREA ||
         !Array.isArray(p.runs) ||
         p.runs.length % 3 ||
         p.runs.length > 600_000
@@ -448,11 +449,11 @@ function validateStroke(s: Stroke) {
     s.clone &&
     (typeof s.clone.assetId !== "string" ||
       !s.clone.assetId ||
-      !finite(s.clone.width, 1, 16384) ||
+      !finite(s.clone.width, 1, RASTER_MAX_SIDE) ||
       !Number.isInteger(s.clone.width) ||
-      !finite(s.clone.height, 1, 16384) ||
+      !finite(s.clone.height, 1, RASTER_MAX_SIDE) ||
       !Number.isInteger(s.clone.height) ||
-      s.clone.width * s.clone.height > 16_777_216 ||
+      s.clone.width * s.clone.height > RASTER_MAX_AREA ||
       !point(s.clone.source) ||
       !point(s.clone.destination) ||
       (s.clone.mode !== undefined && s.clone.mode !== "clone" && s.clone.mode !== "heal"))
@@ -480,11 +481,11 @@ export function validateDocument(d: ProDocument) {
     typeof d.panelId !== "string" ||
     typeof d.name !== "string" ||
     d.name.length > 200 ||
-    !finite(d.width, 1, 16384) ||
+    !finite(d.width, 1, RASTER_MAX_SIDE) ||
     !Number.isInteger(d.width) ||
-    !finite(d.height, 1, 16384) ||
+    !finite(d.height, 1, RASTER_MAX_SIDE) ||
     !Number.isInteger(d.height) ||
-    d.width * d.height > 16_777_216 ||
+    d.width * d.height > RASTER_MAX_AREA ||
     !validColor(d.background) ||
     !Array.isArray(d.layers) ||
     d.layers.length > MAX_LAYERS
@@ -507,9 +508,9 @@ export function validateDocument(d: ProDocument) {
     (!d.source ||
       typeof d.source.assetId !== "string" ||
       !d.source.assetId ||
-      !finite(d.source.width, 1, 16384) ||
-      !finite(d.source.height, 1, 16384) ||
-      d.source.width * d.source.height > 16_777_216)
+      !finite(d.source.width, 1, RASTER_MAX_SIDE) ||
+      !finite(d.source.height, 1, RASTER_MAX_SIDE) ||
+      d.source.width * d.source.height > RASTER_MAX_AREA)
   )
     throw new Error("Invalid original source reference.");
   if (d.dialogue !== undefined) validateDialogue(d.dialogue);
@@ -561,9 +562,9 @@ export function validateDocument(d: ProDocument) {
         (typeof l.linkId !== "string" || !l.linkId || l.linkId.length > 128)) ||
       !finite(l.opacity, 0, 1) ||
       !isBlendMode(l.blend) ||
-      !finite(l.width, 1, 16384) ||
-      !finite(l.height, 1, 16384) ||
-      l.width * l.height > 16_777_216
+      !finite(l.width, 1, RASTER_MAX_SIDE) ||
+      !finite(l.height, 1, RASTER_MAX_SIDE) ||
+      l.width * l.height > RASTER_MAX_AREA
     )
       throw new Error("Invalid or oversized layer.");
     if (d.version >= 2) {
@@ -646,7 +647,7 @@ export function validateDocument(d: ProDocument) {
     if (
       d.version !== 3 &&
       (l.gradient?.version === 2 ||
-        l.effects?.some((e) => e.version === 2 || e.gradient?.version === 2))
+        l.effects?.some((e) => e.version !== undefined || e.gradient?.version === 2))
     )
       throw Error("Advanced styles and gradients require document schema3.");
     if (l.kind === "adjustment" && l.effects?.length)
@@ -743,9 +744,9 @@ export function validateDocument(d: ProDocument) {
         (l.mask.width !== undefined &&
           (!Number.isInteger(l.mask.width) ||
             !Number.isInteger(l.mask.height) ||
-            !finite(l.mask.width, 1, 16384) ||
-            !finite(l.mask.height, 1, 16384) ||
-            l.mask.width * l.mask.height! > 16_777_216))
+            !finite(l.mask.width, 1, RASTER_MAX_SIDE) ||
+            !finite(l.mask.height, 1, RASTER_MAX_SIDE) ||
+            l.mask.width * l.mask.height! > RASTER_MAX_AREA))
       )
         throw Error("Invalid mask frame.");
       validateSelection(l.mask.selection);
@@ -926,6 +927,14 @@ export function validateAssets(session: ProSession) {
         !(session.assets[l.assetId] instanceof Blob))
     )
       throw new Error("A raster source is missing; existing artwork is unchanged.");
+  for (const l of session.document.layers)
+    for (const e of l.effects ?? [])
+      if (
+        e.pattern?.kind === "bitmap" &&
+        (!Object.hasOwn(session.assets, e.pattern.assetId!) ||
+          !(session.assets[e.pattern.assetId!] instanceof Blob))
+      )
+        throw Error("A bitmap Pattern Overlay source is missing; existing artwork is unchanged.");
   for (const l of session.document.layers)
     for (const stroke of [...l.strokes, ...(l.mask?.strokes ?? [])])
       if (stroke.clone && !Object.hasOwn(session.assets, stroke.clone.assetId))
