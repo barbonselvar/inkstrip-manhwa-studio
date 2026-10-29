@@ -168,6 +168,8 @@ import { useStudio } from "@/lib/studio/store";
 import type { Panel } from "@/lib/studio/types";
 import { decodeBlob } from "@/lib/studio/images";
 import { ToolSection } from "../design/tool-section";
+import { needsSplit } from "@/lib/studio/page-split";
+import { RASTER_MAX_SIDE } from "@/lib/studio/raster-limits";
 import {
   browserBrushStorage,
   loadBrushPresets,
@@ -3531,6 +3533,12 @@ export default function ProWorkspace({
                   {(maxArea / 1_000_000).toFixed(1)} megapixels on this device. Your original stays
                   unchanged in the chapter; nothing was saved.
                 </p>
+                {needsSplit(panel.width, panel.height, { maxSide: RASTER_MAX_SIDE, maxArea }) && (
+                  <p className="pro-help">
+                    To edit it here, return to the chapter and choose Image options → Split into
+                    editable pages. The split pages are added below the original, pixel for pixel.
+                  </p>
+                )}
                 <div className="pro-actions">
                   <Button onClick={onClose}>Return to chapter</Button>
                   <Button

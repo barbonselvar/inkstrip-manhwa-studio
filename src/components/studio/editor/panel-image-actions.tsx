@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Pencil, Sparkles, Paintbrush, PenTool, MoreHorizontal } from "lucide-react";
+import { Pencil, Sparkles, Paintbrush, PenTool, MoreHorizontal, Rows3 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { LONG_PRESS_MS, withinPress } from "@/lib/studio/editor/gestures";
@@ -17,6 +17,8 @@ export function PanelImageActions({
   onEdit,
   onEnhance,
   onStudio,
+  splitParts,
+  onSplit,
 }: {
   panel: Panel;
   thumb?: string;
@@ -29,6 +31,9 @@ export function PanelImageActions({
   onEdit: () => void;
   onEnhance: () => void;
   onStudio: (mode: "raster" | "vector") => void;
+  /** Parts a lossless split would create when the image is over Raster's limit. */
+  splitParts?: number;
+  onSplit?: () => void;
 }) {
   const setMenu = onMenu;
   const legacyVector = useLegacyVector();
@@ -206,6 +211,25 @@ export function PanelImageActions({
             <Paintbrush className="size-4" />
             Open in Raster Studio
           </Button>
+          {!!splitParts && onSplit && (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setMenu(false);
+                  onSplit();
+                }}
+              >
+                <Rows3 className="size-4" />
+                Split into {splitParts} editable pages
+              </Button>
+              <p className="text-xs text-muted">
+                This image is over Raster Studio&apos;s limit on this device. Splitting adds{" "}
+                {splitParts} full-width PNG pages below it, pixel for pixel; the original stays
+                unchanged.
+              </p>
+            </>
+          )}
           {legacyVector && (
             <Button
               variant="secondary"

@@ -40,6 +40,8 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { needsSplit, splitPlan, type SplitBudget } from "@/lib/studio/page-split";
+import { rasterSplitBudget, splitChapterImage } from "@/lib/studio/page-split-client";
 
 const emptyUrls: string[] = [];
 
@@ -76,6 +78,25 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const [faceTargets, setFaceTargets] = useState<Panel[] | null>(null);
   const [proPanel, setProPanel] = useState<Panel | null>(null);
   const [menuPanel, setMenuPanel] = useState<string | null>(null);
+  // Lossless split for images over this device's Raster limit (R10 D1).
+  const [splitBudget, setSplitBudget] = useState<SplitBudget | null>(null);
+  useEffect(() => setSplitBudget(rasterSplitBudget()), []);
+  const splitPartsFor = (panel: Panel) =>
+    splitBudget && needsSplit(panel.width, panel.height, splitBudget)
+      ? splitPlan(panel.width, panel.height, splitBudget).length
+      : undefined;
+  const splitImage = async (panel: Panel) => {
+    if (!splitBudget) return;
+    try {
+      const added = await splitChapterImage(chapterId, panel, splitBudget);
+      if (added)
+        useStudio.setState({
+          banner: `Added ${added} editable ${added === 1 ? "page" : "pages"} below ${panel.name}. The original image is unchanged.`,
+        });
+    } catch (error) {
+      useStudio.setState({ banner: (error as Error).message });
+    }
+  };
   const [dialogueMode, setDialogueMode] = useState(false);
   const [dialogueQuick, setDialogueQuick] = useState(true);
   const [workspaceTab, setWorkspaceTab] = useState<"images" | "dialogue">("images");
@@ -676,6 +697,8 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                             setProPanel(panel);
                           }}
                           onEnhance={() => setEnhancePanels([panel])}
+                          splitParts={splitPartsFor(panel)}
+                          onSplit={() => void splitImage(panel)}
                         />
                         <div className="panel-order-actions flex shrink-0 flex-col">
                           <button

@@ -22,7 +22,7 @@
     "check:build": "node scripts/check-build.mjs",
     "test:audit:probes": "node --experimental-strip-types scripts/r10-audit-probes.mjs",
     "test:r10:audit:browser": "node --experimental-strip-types scripts/r10-audit-browser-check.mjs",
-    "test:studio": "node --experimental-strip-types --test src/lib/studio/enhance/enhance.test.ts src/lib/studio/image-policy.test.ts src/lib/studio/image-capabilities.test.ts src/lib/studio/image-decode.test.ts src/lib/studio/chapter-import.test.ts src/lib/studio/legacy-vector.test.ts src/lib/studio/reader-scroll.test.ts src/lib/studio/editor/editor.test.ts src/lib/studio/editor/adjustments.test.ts src/lib/studio/retouch/retouch.test.ts src/lib/ai/image-edit.test.ts src/lib/studio/faces/detect.test.ts src/lib/studio/characters/characters.test.ts src/lib/studio/order.test.ts src/lib/studio/backup.test.ts src/lib/studio/records.test.ts src/lib/studio/workflow.test.ts src/lib/studio/ui/preferences.test.ts src/lib/studio/ui/gallery.test.ts && npm run test:pro",
+    "test:studio": "node --experimental-strip-types --test src/lib/studio/enhance/enhance.test.ts src/lib/studio/image-policy.test.ts src/lib/studio/image-capabilities.test.ts src/lib/studio/image-decode.test.ts src/lib/studio/chapter-import.test.ts src/lib/studio/legacy-vector.test.ts src/lib/studio/reader-scroll.test.ts src/lib/studio/editor/editor.test.ts src/lib/studio/editor/adjustments.test.ts src/lib/studio/retouch/retouch.test.ts src/lib/ai/image-edit.test.ts src/lib/studio/faces/detect.test.ts src/lib/studio/characters/characters.test.ts src/lib/studio/order.test.ts src/lib/studio/backup.test.ts src/lib/studio/records.test.ts src/lib/studio/page-split.test.ts src/lib/studio/workflow.test.ts src/lib/studio/ui/preferences.test.ts src/lib/studio/ui/gallery.test.ts && npm run test:pro",
     "test:studio:browser": "node scripts/studio-browser-check.mjs",
     "test:editor:browser": "node scripts/editor-browser-check.mjs",
     "test:adjustments:browser": "node scripts/adjustments-browser-check.mjs",
@@ -90,6 +90,7 @@
     "test:r10:inspector:browser": "node --experimental-strip-types scripts/r10-inspector-browser-check.mjs",
     "test:r10:long-pages:browser": "node --experimental-strip-types scripts/r10-long-page-browser-check.mjs",
     "test:r10:mobile:browser": "node scripts/r10-mobile-browser-check.mjs",
+    "test:r10:split:browser": "node scripts/r10-split-browser-check.mjs",
     "test:r10:matrix": "node scripts/r10-regression-matrix.mjs",
     "bench:r10:tiles": "node --experimental-strip-types scripts/r10-tiles-benchmark.mjs",
     "bench:r10:recovery": "node scripts/r10-recovery-benchmark.mjs"
