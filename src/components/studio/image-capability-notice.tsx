@@ -24,7 +24,8 @@ export function ImageCapabilityNotice({ width, height }: { width?: number; heigh
           </li>
           <li>
             On-device AI enhancement: {mp(budgets.enhance)} · {budgets.enhanceSide}px per side.
-            Cloud repair uses a selected context up to1024px; it does not process a whole long page.
+            Cloud repair uses a selected context up to 1024px; it does not process a whole long
+            page.
           </li>
         </ul>
         {selected && (

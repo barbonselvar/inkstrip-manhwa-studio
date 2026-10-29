@@ -327,7 +327,7 @@ export function ProAppearance({
                           </label>
                           {onPatternImport && (
                             <label className="pro-field">
-                              Import bitmap pattern (up to512px per side /2MB)
+                              Import bitmap pattern (up to 512px per side / 2MB)
                               <input
                                 type="file"
                                 accept="image/png,image/jpeg,image/webp"

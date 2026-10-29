@@ -13,7 +13,7 @@ export function maskPaintSize(width: number, height: number) {
     w * h > 4_000_000
   )
     throw Error(
-      "Paintable Smart Filter masks support native source planes up to4MP. No image was resized.",
+      "Paintable Smart Filter masks support native source planes up to 4MP. No image was resized.",
     );
   return { width: w, height: h };
 }
