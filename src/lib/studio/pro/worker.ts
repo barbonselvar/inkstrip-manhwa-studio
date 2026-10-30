@@ -80,7 +80,7 @@ self.onmessage = async ({ data }) => {
         frame.width * frame.height > 4_000_000)
     )
       throw Error(
-        "OCR/cleaning requires a native document region up to4MP within the image bounds.",
+        "OCR/cleaning requires a native document region up to 4MP within the image bounds.",
       );
     if (type === "repair" && data.request.stroke.clone) {
       const source = data.request.stroke.clone;

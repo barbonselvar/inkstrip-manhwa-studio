@@ -637,7 +637,7 @@ export async function composite(
     outputWidth * outputHeight > 4_000_000
   )
     throw Error(
-      "Advanced layer styles need a rendered plane up to4MP including padding. Original artwork was not downscaled.",
+      "Advanced layer styles need a rendered plane up to 4MP including padding. Original artwork was not downscaled.",
     );
   const output = canvas(outputWidth, outputHeight);
   const documentPlanes = new WeakSet<OffscreenCanvas>();

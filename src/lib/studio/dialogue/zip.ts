@@ -48,7 +48,7 @@ export async function zipStore(
   onProgress: (n: number, total: number) => void = () => {},
 ) {
   if (!entries.length || entries.length > 1000)
-    throw Error("Export between1 and1000 archive entries.");
+    throw Error("Export between 1 and 1000 archive entries.");
   const names = new Set<string>(),
     parts: BlobPart[] = [],
     directory: BlobPart[] = [];
@@ -61,7 +61,7 @@ export async function zipStore(
     if (names.has(name)) throw Error("Duplicate archive filename.");
     names.add(name);
     if (offset + blob.size + encoded.length + 30 > 2_000_000_000)
-      throw Error("Archive exceeds the2GB safety budget. Export smaller page ranges.");
+      throw Error("Archive exceeds the 2GB safety budget. Export smaller page ranges.");
     const crc = await crc32(blob, signal),
       local = new Uint8Array(30),
       v = new DataView(local.buffer);

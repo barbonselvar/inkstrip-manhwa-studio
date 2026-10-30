@@ -43,7 +43,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
 ];
 export function validateColorPresets(value: unknown): asserts value is ColorPreset[] {
   if (!Array.isArray(value) || value.length > 32)
-    throw Error("Keep at most32 custom color presets.");
+    throw Error("Keep at most 32 custom color presets.");
   const names = new Set(COLOR_PRESETS.map((p) => p.name.toLowerCase()));
   for (const p of value) {
     if (

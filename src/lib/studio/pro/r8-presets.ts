@@ -23,7 +23,7 @@ export function validateR8Settings(s: R8Settings) {
     throw Error("Invalid shared style light.");
 }
 export function validateR8Presets(p: R8Preset[]) {
-  if (!Array.isArray(p) || p.length > 20) throw Error("Save at most20 layer-property presets.");
+  if (!Array.isArray(p) || p.length > 20) throw Error("Save at most 20 layer-property presets.");
   const names = new Set<string>();
   for (const v of p) {
     if (

@@ -246,7 +246,7 @@ export function ProDialogue({
         );
       const old = dialogueData(source);
       if (old.regions.length + result.regions.length > 200)
-        throw Error("The review queue limit is200 regions. Remove reviewed regions first.");
+        throw Error("The review queue limit is 200 regions. Remove reviewed regions first.");
       onDocument(
         { ...source, dialogue: { ...old, regions: [...old.regions, ...result.regions] } },
         "Detect dialogue locally",
@@ -950,7 +950,7 @@ export function ProDialogue({
                   y = Math.max(0, Math.floor(Math.min(...points.map((r) => r.y))));
                 const right = Math.min(d.width, Math.ceil(Math.max(...points.map((r) => r.x)))),
                   bottom = Math.min(d.height, Math.ceil(Math.max(...points.map((r) => r.y))));
-                if (right - x < 3 || bottom - y < 3) throw Error("Select a region at least3×3px.");
+                if (right - x < 3 || bottom - y < 3) throw Error("Select a region at least 3×3px.");
                 setArea({ x, y, width: right - x, height: bottom - y });
               })
             }

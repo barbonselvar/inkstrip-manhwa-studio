@@ -133,7 +133,7 @@ export async function readNative(
     Array.isArray(value.assets)
   )
     throw new Error(
-      "Unsupported native document. This editor supports native versions 1–5, Dialogue7 and R6 version8 and R8 version9. Unreleased AI version 6 must be opened in its AI Studio branch.",
+      "Unsupported native document. This editor supports native versions 1–5, Dialogue 7 and R6 version 8 and R8 version 9. Unreleased AI version 6 must be opened in its AI Studio branch.",
     );
   if (
     !value.document ||
@@ -148,11 +148,11 @@ export async function readNative(
     value.version >= 8 &&
     Object.keys(value).some((k) => !["format", "version", "document", "assets"].includes(k))
   )
-    throw Error("Unknown native version8 field.");
+    throw Error("Unknown native version 8 field.");
   validateDocument({ ...value.document, panelId });
   if (value.version >= 8) documentSources({ ...value.document, panelId }, 16_777_216);
   if (Object.keys(value.assets).length > 64)
-    throw Error("Native documents support at most64 embedded assets. Nothing was imported.");
+    throw Error("Native documents support at most 64 embedded assets. Nothing was imported.");
   const assets: Record<string, Blob> = Object.create(null);
   let total = 0;
   for (const [id, entry] of Object.entries(value.assets)) {

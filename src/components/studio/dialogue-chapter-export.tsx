@@ -142,7 +142,7 @@ export function DialogueChapterExport({ panels, title }: { panels: Panel[]; titl
           <input
             className="field"
             aria-label="Dialogue export page ranges"
-            placeholder="All pages, or1-3,5"
+            placeholder="All pages, or 1-3,5"
             value={range}
             onChange={(e) => setRange(e.target.value)}
           />

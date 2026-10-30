@@ -32,7 +32,7 @@ export class LocalOcr {
       image.data.length !== image.width * image.height * 4
     )
       throw Error(
-        "OCR supports a source-resolution region up to4MP. Select a smaller area; no image is resized silently.",
+        "OCR supports a source-resolution region up to 4MP. Select a smaller area; no image is resized silently.",
       );
     this.cancel();
     const worker = new Worker(new URL("./ocr-worker.ts", import.meta.url), { type: "module" });

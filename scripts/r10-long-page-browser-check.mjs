@@ -174,7 +174,7 @@ try {
       } else {
         await lab
           .getByText(
-            "Smart Filters support native source layers up to4MP. This layer was not resized.",
+            "Smart Filters support native source layers up to 4MP. This layer was not resized.",
             { exact: true },
           )
           .waitFor();

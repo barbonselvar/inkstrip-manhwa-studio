@@ -42,7 +42,7 @@ export function validateGradient(g: Gradient) {
       g.smoothness !== undefined ||
       g.stops?.some((s) => s.midpoint !== undefined)
     )
-      throw Error("Advanced gradient settings need version2.");
+      throw Error("Advanced gradient settings need version 2.");
     validateStops(g.stops);
   } else {
     if (
@@ -74,7 +74,7 @@ export function validateGradient(g: Gradient) {
       g.stops[0]?.position !== 0 ||
       g.stops.at(-1)?.position !== 1
     )
-      throw Error("Use2–128 gradient stops including0% and100%.");
+      throw Error("Use 2–128 gradient stops including 0% and 100%.");
     for (const [i, s] of g.stops.entries())
       if (
         !s ||

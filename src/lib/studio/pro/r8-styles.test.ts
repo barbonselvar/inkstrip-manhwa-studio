@@ -105,7 +105,7 @@ test("strict style validation rejects invalid relief patterns versions and advan
   const effect = advancedEffect("gradientOverlay");
   effect.gradient = advancedGradient();
   delete effect.version;
-  assert.throws(() => validateEffects([effect]), /version2/);
+  assert.throws(() => validateEffects([effect]), /version 2/);
 });
 test("Quick Mask import and cyclic draft documents reject safely before processing or locked-parent traversal", () => {
   const d = fromPanel({ id: "p", name: "Trust", width: 64, height: 64 });

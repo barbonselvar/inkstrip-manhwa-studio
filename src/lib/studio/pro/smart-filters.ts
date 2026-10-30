@@ -126,7 +126,7 @@ export function validateSmartOperation(a: SmartOperation) {
 }
 export function validateSmartFilters(stack: SmartFilter[]) {
   if (!Array.isArray(stack) || stack.length > SMART_MAX_FILTERS)
-    throw Error("Use at most12 Smart Filters per layer.");
+    throw Error("Use at most 12 Smart Filters per layer.");
   const ids = new Set<string>();
   for (const f of stack) {
     keys(f, ["id", "enabled", "operation", "mask"]);
@@ -191,11 +191,11 @@ export function validateSmartWork(w: number, h: number, stack: SmartFilter[]) {
     w * h > SMART_MAX_AREA
   )
     throw Error(
-      "Smart Filters support source layers up to4MP. Original resolution was not changed.",
+      "Smart Filters support source layers up to 4MP. Original resolution was not changed.",
     );
   if (smartFilterWork(w, h, stack) > SMART_MAX_TAPS)
     throw Error(
-      "Smart Filter stack exceeds128M kernel taps. Reduce radius, strength or active filter count.",
+      "Smart Filter stack exceeds 128M kernel taps. Reduce radius, strength or active filter count.",
     );
 }
 /** Premultiplied crossfade, not source-over: zero mask restores exact original bytes. */
