@@ -1,0 +1,9 @@
+file:///home/user/inkstrip-manhwa-studio/scripts/r11-browser-check.mjs:100
+      throw Error(`Stored assets ${row?.assets} never reached ${expected}`);
+            ^
+
+Error: Stored assets 64 never reached 2
+    at storedAssets (file:///home/user/inkstrip-manhwa-studio/scripts/r11-browser-check.mjs:100:13)
+    at async file:///home/user/inkstrip-manhwa-studio/scripts/r11-browser-check.mjs:168:23
+
+Node.js v22.22.0

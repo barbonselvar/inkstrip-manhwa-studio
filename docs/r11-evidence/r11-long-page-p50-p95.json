@@ -1,0 +1,170 @@
+[
+  {
+    "viewport": 1440,
+    "height": 1920,
+    "raster": true,
+    "n": 5,
+    "importMs": {
+      "p50": 205.0,
+      "p95": 231.4
+    },
+    "openMs": {
+      "p50": 1638.9,
+      "p95": 1783.4
+    },
+    "brushMs": {
+      "p50": 499.3,
+      "p95": 608.7
+    },
+    "exportMs": {
+      "p50": 1005.1,
+      "p95": 1123.6
+    },
+    "heapMiB_p50": 21.6,
+    "allChecks": true
+  },
+  {
+    "viewport": 1440,
+    "height": 5000,
+    "raster": true,
+    "n": 5,
+    "importMs": {
+      "p50": 406.4,
+      "p95": 590.0
+    },
+    "openMs": {
+      "p50": 1731.7,
+      "p95": 1916.3
+    },
+    "brushMs": {
+      "p50": 99.9,
+      "p95": 112.8
+    },
+    "exportMs": {
+      "p50": 304.7,
+      "p95": 332.9
+    },
+    "heapMiB_p50": 22.6,
+    "allChecks": true
+  },
+  {
+    "viewport": 1440,
+    "height": 10000,
+    "raster": true,
+    "n": 5,
+    "importMs": {
+      "p50": 861.7,
+      "p95": 928.7
+    },
+    "openMs": {
+      "p50": 1719.3,
+      "p95": 1872.7
+    },
+    "brushMs": {
+      "p50": 100.2,
+      "p95": 103.0
+    },
+    "exportMs": {
+      "p50": 598.5,
+      "p95": 701.5
+    },
+    "heapMiB_p50": 58.3,
+    "allChecks": true
+  },
+  {
+    "viewport": 1440,
+    "height": 20000,
+    "raster": "safely refused",
+    "n": 5,
+    "importMs": {
+      "p50": 1563.4,
+      "p95": 1680.1
+    },
+    "openMs": {
+      "p50": 1391.6,
+      "p95": 1413.3
+    },
+    "brushMs": null,
+    "exportMs": null,
+    "heapMiB_p50": 52.3,
+    "allChecks": true
+  },
+  {
+    "viewport": 390,
+    "height": 1920,
+    "raster": true,
+    "n": 5,
+    "importMs": {
+      "p50": 210.4,
+      "p95": 242.2
+    },
+    "openMs": {
+      "p50": 1706.7,
+      "p95": 1750.4
+    },
+    "brushMs": {
+      "p50": 567.3,
+      "p95": 669.3
+    },
+    "exportMs": {
+      "p50": 1026.7,
+      "p95": 1067.5
+    },
+    "heapMiB_p50": 19.0,
+    "allChecks": true
+  },
+  {
+    "viewport": 390,
+    "height": 5000,
+    "raster": "safely refused",
+    "n": 5,
+    "importMs": {
+      "p50": 540.5,
+      "p95": 612.5
+    },
+    "openMs": {
+      "p50": 1343.5,
+      "p95": 1347.3
+    },
+    "brushMs": null,
+    "exportMs": null,
+    "heapMiB_p50": 12.7,
+    "allChecks": true
+  },
+  {
+    "viewport": 390,
+    "height": 10000,
+    "raster": "safely refused",
+    "n": 5,
+    "importMs": {
+      "p50": 860.3,
+      "p95": 970.5
+    },
+    "openMs": {
+      "p50": 1357.9,
+      "p95": 1367.6
+    },
+    "brushMs": null,
+    "exportMs": null,
+    "heapMiB_p50": 14.6,
+    "allChecks": true
+  },
+  {
+    "viewport": 390,
+    "height": 20000,
+    "raster": "safely refused",
+    "n": 5,
+    "importMs": {
+      "p50": 1716.9,
+      "p95": 1815.3
+    },
+    "openMs": {
+      "p50": 1354.7,
+      "p95": 1374.5
+    },
+    "brushMs": null,
+    "exportMs": null,
+    "heapMiB_p50": 99.2,
+    "allChecks": true
+  }
+]

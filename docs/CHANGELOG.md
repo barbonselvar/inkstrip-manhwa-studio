@@ -1,5 +1,18 @@
 # Inkstrip release changelog
 
+## R11 — final validation, reliability and command palette (PR #24)
+
+- Opening a saved page releases images its document no longer references, so long-edited
+  pages stop refusing new work at the 64-asset / 48MB page limit. Native files, pixels and
+  open-page Undo are unchanged.
+- Command palette (Ctrl/⌘+K or **Commands**) for existing tools, panels and document actions.
+- 44 limit and validation messages gain their missing spaces.
+- Live production and real on-device AI verified on GitHub runners; documents from R6–R10
+  verified with each release's own writer. No native format, limit or AI change.
+- [Implementation](R11_IMPLEMENTATION_REPORT.md), [architecture](R11_ARCHITECTURE.md),
+  [tests](R11_TEST_REPORT.md), [performance](R11_PERFORMANCE_REPORT.md),
+  [deferred review](R11_DEFERRED_FEATURE_REVIEW.md), [release notes](R11_RELEASE_NOTES.md).
+
 ## R9 — precision vector editing in Raster Studio (PR #22)
 
 - Path operations in Properties: split at an anchor, join two open paths, smooth, simplify

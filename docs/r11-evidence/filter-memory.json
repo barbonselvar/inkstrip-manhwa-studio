@@ -1,0 +1,203 @@
+{
+  "node": "v22.22.0",
+  "results": [
+    {
+      "size": "1080x1920",
+      "operation": {
+        "kind": "gaussian",
+        "radius": 1
+      },
+      "runs": 3,
+      "whole": {
+        "sha256": "cc682dca4a43e0de19ca3996d1b1159bb33b461708dfd0715d451658a441d158",
+        "inputMiB": 7.91015625,
+        "peakAboveInputMiB": {
+          "p50": 49.75,
+          "max": 49.8984375
+        },
+        "ms": {
+          "p50": 488.89937399999997,
+          "p95": 698.4809700000001
+        }
+      },
+      "tiled": {
+        "sha256": "cc682dca4a43e0de19ca3996d1b1159bb33b461708dfd0715d451658a441d158",
+        "inputMiB": 7.91015625,
+        "peakAboveInputMiB": {
+          "p50": 29.9296875,
+          "max": 30
+        },
+        "ms": {
+          "p50": 592.3120630000001,
+          "p95": 613.8992938
+        }
+      },
+      "identical": true
+    },
+    {
+      "size": "1080x1920",
+      "operation": {
+        "kind": "gaussian",
+        "radius": 2
+      },
+      "runs": 3,
+      "whole": {
+        "sha256": "c2f7eeb2aad3a2f04282ae8198abdc1a3cbd48d6d532bdd39da4777d0d8bcd8f",
+        "inputMiB": 7.91015625,
+        "peakAboveInputMiB": {
+          "p50": 49.8046875,
+          "max": 49.9296875
+        },
+        "ms": {
+          "p50": 829.4463450000001,
+          "p95": 834.6933746999999
+        }
+      },
+      "tiled": {
+        "sha256": "c2f7eeb2aad3a2f04282ae8198abdc1a3cbd48d6d532bdd39da4777d0d8bcd8f",
+        "inputMiB": 7.91015625,
+        "peakAboveInputMiB": {
+          "p50": 28.5,
+          "max": 31.125
+        },
+        "ms": {
+          "p50": 915.9397530000001,
+          "p95": 1013.1214893000001
+        }
+      },
+      "identical": true
+    },
+    {
+      "size": "1080x1920",
+      "operation": {
+        "kind": "median",
+        "radius": 1
+      },
+      "runs": 3,
+      "whole": {
+        "sha256": "9cfc3e580da5b631b8e3caa0435fdbcb59cfb32939d586b0aecaeb9dd858cc5c",
+        "inputMiB": 7.91015625,
+        "peakAboveInputMiB": {
+          "p50": 22.125,
+          "max": 23.4296875
+        },
+        "ms": {
+          "p50": 3516.410117,
+          "p95": 3523.0599434
+        }
+      },
+      "tiled": {
+        "sha256": "9cfc3e580da5b631b8e3caa0435fdbcb59cfb32939d586b0aecaeb9dd858cc5c",
+        "inputMiB": 7.91015625,
+        "peakAboveInputMiB": {
+          "p50": 32.8046875,
+          "max": 33.25
+        },
+        "ms": {
+          "p50": 3118.924028,
+          "p95": 3421.7328512
+        }
+      },
+      "identical": true
+    },
+    {
+      "size": "1080x3700",
+      "operation": {
+        "kind": "gaussian",
+        "radius": 1
+      },
+      "runs": 3,
+      "whole": {
+        "sha256": "61aca4c0c76695d4a8a91a336e46197759a8603ad988e3d7365eb0cb50f07d58",
+        "inputMiB": 15.2435302734375,
+        "peakAboveInputMiB": {
+          "p50": 93.9296875,
+          "max": 93.9296875
+        },
+        "ms": {
+          "p50": 815.4136529999998,
+          "p95": 958.1910939
+        }
+      },
+      "tiled": {
+        "sha256": "61aca4c0c76695d4a8a91a336e46197759a8603ad988e3d7365eb0cb50f07d58",
+        "inputMiB": 15.2435302734375,
+        "peakAboveInputMiB": {
+          "p50": 30.375,
+          "max": 30.53125
+        },
+        "ms": {
+          "p50": 1094.497297,
+          "p95": 1203.3614653
+        }
+      },
+      "identical": true
+    },
+    {
+      "size": "1080x3700",
+      "operation": {
+        "kind": "gaussian",
+        "radius": 2
+      },
+      "runs": 3,
+      "whole": {
+        "sha256": "2afdc86e0cc60968040bab9c984e97bad0251b59a0ba6871e2ff93543563b15e",
+        "inputMiB": 15.2435302734375,
+        "peakAboveInputMiB": {
+          "p50": 93.75,
+          "max": 94
+        },
+        "ms": {
+          "p50": 1598.134224,
+          "p95": 1820.3759526000001
+        }
+      },
+      "tiled": {
+        "sha256": "2afdc86e0cc60968040bab9c984e97bad0251b59a0ba6871e2ff93543563b15e",
+        "inputMiB": 15.2435302734375,
+        "peakAboveInputMiB": {
+          "p50": 30.5546875,
+          "max": 30.6640625
+        },
+        "ms": {
+          "p50": 1889.2103699999998,
+          "p95": 1978.3864110000002
+        }
+      },
+      "identical": true
+    },
+    {
+      "size": "1080x3700",
+      "operation": {
+        "kind": "median",
+        "radius": 1
+      },
+      "runs": 3,
+      "whole": {
+        "sha256": "d05b4ed847bf356db1b7cd09582d66571c37ddbf066465959346afac104704e7",
+        "inputMiB": 15.2435302734375,
+        "peakAboveInputMiB": {
+          "p50": 45,
+          "max": 45.0546875
+        },
+        "ms": {
+          "p50": 6175.880841,
+          "p95": 6725.6055507
+        }
+      },
+      "tiled": {
+        "sha256": "d05b4ed847bf356db1b7cd09582d66571c37ddbf066465959346afac104704e7",
+        "inputMiB": 15.2435302734375,
+        "peakAboveInputMiB": {
+          "p50": 41.875,
+          "max": 41.9296875
+        },
+        "ms": {
+          "p50": 6010.067469,
+          "p95": 6202.5675285
+        }
+      },
+      "identical": true
+    }
+  ]
+}
