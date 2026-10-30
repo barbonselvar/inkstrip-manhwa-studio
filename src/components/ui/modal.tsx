@@ -9,6 +9,8 @@ export function Modal({
   description,
   children,
   wide = false,
+  onOpenAutoFocus,
+  layerClassName,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -16,13 +18,20 @@ export function Modal({
   description?: string;
   children: ReactNode;
   wide?: boolean;
+  /** Overrides Radix's first-tabbable focus, e.g. to start in a search field. */
+  onOpenAutoFocus?: (event: Event) => void;
+  /** Adds `<name>-overlay` and `<name>` so a modal nested in a higher layer can stack above it. */
+  layerClassName?: string;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="studio-modal-overlay overlay-in fixed inset-0 z-40 bg-ink/70" />
+        <Dialog.Overlay
+          className={`studio-modal-overlay overlay-in fixed inset-0 z-40 bg-ink/70 ${layerClassName ? `${layerClassName}-overlay` : ""}`}
+        />
         <Dialog.Content
-          className={`modal-in modal-panel ${wide ? "modal-wide" : ""} fixed top-1/2 left-1/2 z-50 rounded-xl border border-border bg-bg-elevated p-5`}
+          onOpenAutoFocus={onOpenAutoFocus}
+          className={`modal-in modal-panel ${wide ? "modal-wide" : ""} ${layerClassName ?? ""} fixed top-1/2 left-1/2 z-50 rounded-xl border border-border bg-bg-elevated p-5`}
         >
           <div className="modal-header flex items-start justify-between gap-3">
             <Dialog.Title className="font-display text-2xl text-fg">{title}</Dialog.Title>
