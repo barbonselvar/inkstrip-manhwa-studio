@@ -152,8 +152,11 @@ gradients (`r8:gradient`), text and lettering (`dialogue:*`, `r9`), guides
 | `3dd952a` | pass     | pass  | **fail**: palette occlusion first-frame race (test fixed)    | pass                      | pass                   | not checked                                      |
 | `7d39231` | pass     | pass  | pass                                                         | pass                      | pass                   | Ready (Vercel status "Deployment has completed") |
 
-The release candidate adds only documentation and evidence files on top of
-`7d39231`; its own checks are recorded on PR #24 and in the final release report.
+The release candidate adds documentation, evidence files and one CI change on top
+of `7d39231` (the live production job now waits up to 10 minutes for the deployed
+release marker to equal main, so a post-merge run does not fail on Vercel's
+deployment race). Its own checks are recorded on PR #24 and in the final release
+report.
 
 ## F. Security
 
