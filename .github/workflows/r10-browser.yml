@@ -18,6 +18,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: the native compatibility test writes documents with
+          # each earlier release's own code, extracted from its merge commit.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -25,7 +29,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npx playwright install --with-deps chromium
       - name: Prepare isolated browser evidence directories
-        run: sudo install -d -m 0755 -o "$(id -u)" -g "$(id -g)" /workspace/screenshots /workspace/r10-evidence
+        run: sudo install -d -m 0755 -o "$(id -u)" -g "$(id -g)" /workspace/screenshots /workspace/r10-evidence /workspace/r11-evidence
       - name: Start local Raster QA server
         run: |
           VITE_AUTH_ENABLED=false npm run dev -- --config scripts/vite-browser-qa.config.mjs > /tmp/raster-browser-server.log 2>&1 &
@@ -39,6 +43,8 @@ jobs:
       - run: npm run test:r10:patterns:browser
       - run: npm run test:r10:inspector:browser
       - run: npm run test:r10:mobile:browser
+      - run: npm run test:r11:browser
+      - run: npm run test:r11:native-compat
       - name: Preserve browser diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -47,5 +53,6 @@ jobs:
           path: |
             /workspace/screenshots
             /workspace/r10-evidence
+            /workspace/r11-evidence
             /tmp/raster-browser-server.log
           if-no-files-found: warn
