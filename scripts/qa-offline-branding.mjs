@@ -12,10 +12,8 @@ import { chromium } from "playwright";
 
 const platform = /^https:\/\/grok\.com\//;
 const stub = (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: "" });
-const launch = chromium.launch.bind(chromium);
-chromium.launch = async (...args) => {
-  const browser = await launch(...args),
-    newContext = browser.newContext.bind(browser),
+function wrap(browser) {
+  const newContext = browser.newContext.bind(browser),
     newPage = browser.newPage.bind(browser);
   browser.newContext = async (...options) => {
     const context = await newContext(...options);
@@ -28,4 +26,15 @@ chromium.launch = async (...args) => {
     return page;
   };
   return browser;
+}
+// Every way the suites obtain a browser: launch, launchServer + connect, persistent.
+const launch = chromium.launch.bind(chromium),
+  connect = chromium.connect.bind(chromium),
+  persistent = chromium.launchPersistentContext.bind(chromium);
+chromium.launch = async (...args) => wrap(await launch(...args));
+chromium.connect = async (...args) => wrap(await connect(...args));
+chromium.launchPersistentContext = async (...args) => {
+  const context = await persistent(...args);
+  await context.route(platform, stub);
+  return context;
 };
