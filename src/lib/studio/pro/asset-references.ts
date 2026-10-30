@@ -17,6 +17,28 @@ export function documentAssetIds(document: ProDocument): Set<string> {
   return ids;
 }
 
+/** Opening-time compaction, the one point where the stored document is the only
+ * live root: Undo/Redo is not persisted, and no transaction, worker job or clone
+ * source exists yet for the session. Checkpoints own independent native copies.
+ * The retained set is exactly the one a native export carries, so the document
+ * renders identically. Unreferenced Blobs are dropped from this in-memory copy
+ * only; the stored record changes through the next ordinary optimistic save. */
+export function compactOpenedSession(session: ProSession) {
+  const keep = documentAssetIds(session.document),
+    removed = Object.keys(session.assets)
+      .filter((id) => !keep.has(id))
+      .sort();
+  if (!removed.length) return { session, removed, bytes: 0 };
+  return {
+    session: {
+      ...session,
+      assets: Object.fromEntries(Object.entries(session.assets).filter(([id]) => keep.has(id))),
+    },
+    removed,
+    bytes: removed.reduce((n, id) => n + session.assets[id]!.size, 0),
+  };
+}
+
 /** Analysis only. Callers provide history, staged transactions and rendering
  * roots; UI-only clone sources and in-flight workers are not yet lease-tracked.
  * Therefore no deletion is exposed. Checkpoints own independent native Blobs. */

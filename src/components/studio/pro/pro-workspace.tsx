@@ -33,6 +33,7 @@ import { cleanView } from "@/lib/studio/dialogue/operations";
 import { reconcileDialogue } from "@/lib/studio/dialogue/operations";
 import { validateNativeImages, validateRasterInput } from "@/lib/studio/pro/native-images";
 import { validateOpeningSession } from "@/lib/studio/pro/opening";
+import { compactOpenedSession } from "@/lib/studio/pro/asset-references";
 import { ProRecovery } from "./pro-recovery";
 import { listCheckpoints, readCheckpoint, type CheckpointHeader } from "@/lib/studio/pro/recovery";
 import {
@@ -540,6 +541,10 @@ export default function ProWorkspace({
     sessionRef.current = entry;
     setSession(entry);
     if (entry.document.brushSettings) setBrush(entry.document.brushSettings);
+    // Sampled-source state can outlive an install; it must belong to this pool.
+    setCloneSource((source) =>
+      source && Object.hasOwn(entry.assets, source.assetId) ? source : null,
+    );
     const h = createHistory({ doc: entry.document, label });
     historyRef.current = h;
     setHistory(h);
@@ -552,8 +557,9 @@ export default function ProWorkspace({
     setLoad({ state: "loading" });
     setStatus("Opening layered document…");
     void (async () => {
-      const recovered = await loadSession(panel.id);
-      if (recovered) {
+      const stored = await loadSession(panel.id);
+      if (stored) {
+        const { session: recovered, removed } = compactOpenedSession(stored);
         validateOpeningSession(recovered, maxArea);
         if (active) {
           install(recovered, "Recovered Pro draft");
@@ -561,7 +567,11 @@ export default function ProWorkspace({
           lastSaved.current = JSON.stringify(recovered.document);
           setSaved(true);
           setSaveError(null);
-          setStatus("Recovered editable Pro document. Chapter unchanged.");
+          setStatus(
+            removed.length
+              ? `Recovered editable Pro document. ${removed.length} unused stored image${removed.length === 1 ? "" : "s"} will be released on the next save. Chapter unchanged.`
+              : "Recovered editable Pro document. Chapter unchanged.",
+          );
         }
         return;
       }
