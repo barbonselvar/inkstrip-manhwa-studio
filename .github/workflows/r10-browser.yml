@@ -45,6 +45,7 @@ jobs:
       - run: npm run test:r10:mobile:browser
       - run: npm run test:r11:browser
       - run: npm run test:r11:native-compat
+      - run: npm run test:picker:browser
       - name: Preserve browser diagnostics
         if: always()
         uses: actions/upload-artifact@v4

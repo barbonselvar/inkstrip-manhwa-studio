@@ -486,7 +486,11 @@ export function ProCanvas({
     // Claim Backspace before the workspace's delete-layer shortcut (capture phase).
     const backspace = (e: KeyboardEvent) => {
       if (e.key !== "Backspace") return;
-      if ((e.target as HTMLElement)?.closest('input,textarea,select,[contenteditable="true"]'))
+      if (
+        (e.target as HTMLElement)?.closest(
+          'input,textarea,select,[contenteditable="true"],[data-image-picker]',
+        )
+      )
         return;
       e.preventDefault();
       e.stopImmediatePropagation();
