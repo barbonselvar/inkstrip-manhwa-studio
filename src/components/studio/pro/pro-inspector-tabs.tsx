@@ -9,6 +9,25 @@ import type { History } from "@/lib/studio/editor/history";
 import type { ProDocument } from "@/lib/studio/pro/model";
 import type { CharacterProfile } from "@/lib/studio/characters/types";
 import { svgImportHelp } from "@/lib/studio/pro/svg-capabilities";
+import { useState } from "react";
+import { ImagePicker } from "../picker/image-picker";
+import { defaultValidate, type PickerValidation } from "@/lib/studio/picker/validate";
+
+const PRO_ACCEPT = "image/png,image/jpeg,image/webp,image/svg+xml,.svg,.inkstrip";
+
+/** Raster Studio accepts PNG/JPEG/WebP, SVG up to 1MB and native documents. */
+async function validateProAsset(file: File, signal: AbortSignal): Promise<PickerValidation> {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".inkstrip"))
+    return file.size > 0
+      ? { ok: true, kind: "document", note: "Replaces this draft; Chapter artwork is kept" }
+      : { ok: false, reason: "Empty native document." };
+  if ((file.type === "image/svg+xml" || name.endsWith(".svg")) && file.size > 1_000_000)
+    return { ok: false, reason: "SVG import limit is 1MB." };
+  if (!["image/png", "image/jpeg", "image/webp", "image/svg+xml"].includes(file.type))
+    return { ok: false, reason: "Choose PNG, JPEG, WebP, basic SVG or an .inkstrip document." };
+  return defaultValidate(file, signal);
+}
 
 /** Self-contained inspector tabs of the Pro workspace. State stays in ProWorkspace. */
 
@@ -85,6 +104,7 @@ export function ProAssetsTab({
   onImport: (file: File | undefined) => void;
   onPlace: (blob: Blob, name: string) => void;
 }) {
+  const [picking, setPicking] = useState(false);
   return (
     <>
       <h3>Assets & characters</h3>
@@ -93,20 +113,42 @@ export function ProAssetsTab({
         References belong to this project. Placing one creates a separate raster layer; no identity
         matching or upload occurs.
       </p>
-      <label className="pro-import field">
+      <button
+        type="button"
+        className="pro-import field"
+        disabled={disabled}
+        aria-haspopup="dialog"
+        onClick={() => setPicking(true)}
+      >
         <Folder />
         Import image / SVG / native
-        <input
-          aria-label="Import Pro asset"
-          disabled={disabled}
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/svg+xml,.inkstrip"
-          onChange={(e) => {
-            onImport(e.target.files?.[0]);
-            e.target.value = "";
-          }}
-        />
-      </label>
+      </button>
+      {/* Direct single-file path into the same import handler (automation). */}
+      <input
+        aria-label="Import Pro asset"
+        className="sr-only"
+        tabIndex={-1}
+        disabled={disabled}
+        type="file"
+        accept={PRO_ACCEPT}
+        onChange={(e) => {
+          onImport(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+      <ImagePicker
+        open={picking}
+        onOpenChange={setPicking}
+        mode="single"
+        title="Import into Raster Studio"
+        description="Choose one image, SVG or .inkstrip document. Images become a new layer at full quality."
+        accept={PRO_ACCEPT}
+        photoAccept="image/png,image/jpeg,image/webp"
+        validate={validateProAsset}
+        disabled={disabled}
+        confirmLabel={() => "Import"}
+        onConfirm={(files) => onImport(files[0])}
+      />
       <p className="pro-help">
         {svgImportHelp()} Native import replaces this draft; Chapter artwork is retained.
       </p>

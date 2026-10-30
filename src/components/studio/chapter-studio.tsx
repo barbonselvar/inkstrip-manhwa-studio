@@ -11,9 +11,10 @@ import { PanelImageActions, PanelOptionsButton } from "./editor/panel-image-acti
 import { EnhanceDialog } from "@/components/studio/enhance-dialog";
 import { ReaderHeader } from "@/components/studio/reader-header";
 import type { Panel } from "@/lib/studio/types";
-import { Button, buttonClass } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { ConfirmButton, InlineTitle, Segment, Wordmark } from "@/components/studio/chrome";
 import { FORMAT_HINT, IMAGE_ACCEPT } from "@/lib/studio/images";
+import { ImagePicker } from "./picker/image-picker";
 import { extensionFor, selectedIds, stripFreshness, useStudio } from "@/lib/studio/store";
 import {
   enableLegacyVector,
@@ -110,6 +111,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const [enhancePanels, setEnhancePanels] = useState<Panel[] | null>(null);
   const [pane, setPane] = useState<"panels" | "page">("panels");
   const [dragOver, setDragOver] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [dragPosition, setDragPosition] = useState<DragPosition | null>(null);
   const orderBusy = useStudio((s) => s.orderBusy);
   const reorderPanels = useStudio((s) => s.reorderPanels);
@@ -157,7 +159,8 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
 
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
-      if (editorPanel || proPanel || enhancePanels || faceTargets || batchTargets) return;
+      if (pickerOpen || editorPanel || proPanel || enhancePanels || faceTargets || batchTargets)
+        return;
       const files = [...(event.clipboardData?.files ?? [])];
       if (files.length === 0) return;
       event.preventDefault();
@@ -165,7 +168,16 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [addImages, chapterId, editorPanel, proPanel, enhancePanels, faceTargets, batchTargets]);
+  }, [
+    addImages,
+    chapterId,
+    pickerOpen,
+    editorPanel,
+    proPanel,
+    enhancePanels,
+    faceTargets,
+    batchTargets,
+  ]);
 
   if (!project || !chapter || chapter.projectId !== projectId) {
     return (
@@ -366,27 +378,47 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
                   <p className="eyebrow">Chapter workspace</p>
                   <span className="status-pill">Local storage</span>
                 </div>
-                <label
-                  className={buttonClass({
-                    className: "upload-action w-full",
-                    variant: busy ? "secondary" : "primary",
-                  })}
+                <Button
+                  className="upload-action w-full"
+                  variant={busy ? "secondary" : "primary"}
+                  disabled={busy}
+                  aria-haspopup="dialog"
+                  onClick={() => setPickerOpen(true)}
                 >
                   <ImagePlus className="size-4" />
                   Add images
-                  <input
-                    ref={inputRef}
-                    type="file"
-                    accept={IMAGE_ACCEPT}
-                    multiple
-                    disabled={busy}
-                    className="sr-only"
-                    onChange={(event) => {
-                      takeFiles(event.target.files);
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
+                </Button>
+                {/* Direct path into the same import pipeline, kept for automation and
+                    assistive tooling that sets files programmatically. */}
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept={IMAGE_ACCEPT}
+                  multiple
+                  disabled={busy}
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-hidden
+                  onChange={(event) => {
+                    takeFiles(event.target.files);
+                    event.target.value = "";
+                  }}
+                />
+                <ImagePicker
+                  open={pickerOpen}
+                  onOpenChange={setPickerOpen}
+                  mode="multiple"
+                  title="Add images"
+                  accept={IMAGE_ACCEPT}
+                  disabled={busy}
+                  confirmLabel={(n) => (n ? `Add ${countLabel(n, "image")}` : "Add images")}
+                  annotate={(width, height) =>
+                    splitBudget && needsSplit(width, height, splitBudget)
+                      ? `Large page: can be split losslessly into ${splitPlan(width, height, splitBudget).length} after import`
+                      : undefined
+                  }
+                  onConfirm={(files) => takeFiles(files)}
+                />
                 <ImageCapabilityNotice />
                 <p className="upload-hint text-sm text-muted">
                   Your panels, at their original quality. Drop, paste, or choose files.

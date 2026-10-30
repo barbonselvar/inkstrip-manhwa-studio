@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useImageUrl } from "@/lib/studio/use-image-url";
 import { Button } from "@/components/ui/button";
+import { ImagePicker } from "../picker/image-picker";
 import { useStudio } from "@/lib/studio/store";
 import { updateProject, storageMessage } from "@/lib/studio/db";
 import { makeReference } from "@/lib/studio/characters/reference";
@@ -17,6 +18,8 @@ function Thumb({ blob }: { blob: Blob }) {
     />
   );
 }
+const REFERENCE_ACCEPT = "image/png,image/jpeg,image/webp";
+
 export function CharacterControls({
   projectId,
   blob,
@@ -32,6 +35,7 @@ export function CharacterControls({
 }) {
   const project = useStudio((s) => s.projects.find((p) => p.id === projectId)),
     profiles = project?.characters ?? [];
+  const [picking, setPicking] = useState(false);
   const [id, setId] = useState(
       () => sessionStorage.getItem(`inkstrip-character:${projectId}`) ?? "",
     ),
@@ -187,19 +191,34 @@ export function CharacterControls({
       <Button variant="secondary" disabled={!strokes.length} onClick={() => void saveReference()}>
         Save selected face reference
       </Button>
-      <label className="editor-field-label">
+      <Button variant="secondary" aria-haspopup="dialog" onClick={() => setPicking(true)}>
         Upload cropped reference
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          aria-label="Upload character reference"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void saveReference(f);
-            e.target.value = "";
-          }}
-        />
-      </label>
+      </Button>
+      <input
+        type="file"
+        accept={REFERENCE_ACCEPT}
+        aria-label="Upload character reference"
+        className="sr-only"
+        tabIndex={-1}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void saveReference(f);
+          e.target.value = "";
+        }}
+      />
+      <ImagePicker
+        open={picking}
+        onOpenChange={setPicking}
+        mode="single"
+        title="Character reference"
+        description="Choose one cropped face image. It stays in this project on this device."
+        accept={REFERENCE_ACCEPT}
+        photoAccept={REFERENCE_ACCEPT}
+        confirmLabel={() => "Save reference"}
+        onConfirm={([file]) => {
+          if (file) void saveReference(file);
+        }}
+      />
       {selected ? (
         <>
           <Button
