@@ -60,7 +60,7 @@ test("bitmap Pattern Overlay versions and bounded references reject unsafe metad
   delete s.assets.tile;
   assert.throws(() => validateAssets(s), /Pattern Overlay/);
   s.document.version = 2;
-  assert.throws(() => validateAssets(s), /schema3/);
+  assert.throws(() => validateAssets(s), /schema 3/);
 });
 test("bitmap pixels repeat, offset and premultiply alpha across bilinear seams", () => {
   const source = new Uint8ClampedArray(4 * 2 * 4).fill(255),

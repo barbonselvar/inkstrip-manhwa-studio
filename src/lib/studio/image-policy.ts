@@ -611,7 +611,7 @@ async function heifDisplay(
   return { width, height };
 }
 async function svg(h: Header) {
-  if (h.blob.size > MiB) fail("SVG exceeds the1MiB markup budget.");
+  if (h.blob.size > MiB) fail("SVG exceeds the 1MiB markup budget.");
   const text = new TextDecoder("utf-8", { fatal: true }).decode(await h.read(0, h.blob.size));
   if (
     /<!DOCTYPE|<!ENTITY|<\?|<\s*(?:script|foreignObject|image|use|style|filter|animate|set)\b|\son[a-z]+\s*=|(?:href|src)\s*=/i.test(
@@ -823,7 +823,8 @@ export async function preflightRecoveryImages(
   policy = browserImagePolicy(),
   signal?: AbortSignal,
 ) {
-  if (entries.length > 4000) fail("Backup exceeds4000 image references; split the project backup.");
+  if (entries.length > 4000)
+    fail("Backup exceeds 4000 image references; split the project backup.");
   const result: ImageInfo[] = [];
   let bytes = 0,
     headers = 0,

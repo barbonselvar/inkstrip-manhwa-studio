@@ -1,0 +1,96 @@
+name: External release verification
+
+# Runs the two checks that need hosts some development sandboxes cannot reach:
+# the live Vercel domain and huggingface.co (real Swin2SR model download and
+# inference). Nothing here is mocked. The production job verifies whatever main
+# is currently deployed, so a failure there describes production, not this PR.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: external-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production:
+    name: Live production (release marker, Chapter, Raster, real AI)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Prepare isolated browser evidence directories
+        run: sudo install -d -m 0755 -o "$(id -u)" -g "$(id -g)" /workspace/screenshots
+      - name: Resolve the current main SHA and wait for production to serve it
+        id: sha
+        run: |
+          main=$(git ls-remote "https://github.com/${{ github.repository }}" refs/heads/main | cut -f1)
+          echo "main=$main" >> "$GITHUB_OUTPUT"
+          echo "main $main"
+          # After a merge, Vercel needs a few minutes to deploy. Wait up to 10 minutes
+          # for the live marker; if it never matches, the check below fails truthfully.
+          for attempt in $(seq 1 60); do
+            live=$(curl -fsS -H 'Accept-Encoding: identity' https://inkstrip-manhwa-studio.vercel.app/ \
+              | grep -ao '<meta name="inkstrip-release" content="[a-f0-9]*"' | grep -o '[a-f0-9]\{40\}' || true)
+            echo "attempt $attempt: live ${live:-<none>}"
+            [ "$live" = "$main" ] && exit 0
+            sleep 10
+          done
+          echo "::warning::Production serves ${live:-no marker}, main is $main after 10 minutes."
+      - name: Live production check against current main
+        run: >-
+          node --experimental-strip-types scripts/production-vector-check.mjs
+          https://inkstrip-manhwa-studio.vercel.app ${{ steps.sha.outputs.main }} --raster --ai
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-evidence
+          path: /workspace/screenshots
+          if-no-files-found: warn
+
+  studio-ai:
+    name: Built Studio with real AI Enhance
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Prepare isolated browser evidence directories
+        run: sudo install -d -m 0755 -o "$(id -u)" -g "$(id -g)" /workspace/screenshots
+      - run: npm run build
+      - name: Start the built preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 8082 > /tmp/preview.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8082/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/preview.log
+          exit 1
+      - run: npm run test:studio:browser -- http://127.0.0.1:8082
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: studio-ai-evidence
+          path: |
+            /workspace/screenshots
+            /tmp/preview.log
+          if-no-files-found: warn

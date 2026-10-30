@@ -19,7 +19,7 @@ export function flatBackground(image: { width: number; height: number; data: Uin
     image.width * image.height > 4_000_000 ||
     image.data.length !== image.width * image.height * 4
   )
-    throw Error("Select a native region from3×3px up to4MP.");
+    throw Error("Select a native region from 3×3px up to 4MP.");
   const ring: number[][] = [];
   for (let y = 0; y < image.height; y++)
     for (let x = 0; x < image.width; x++) {

@@ -438,7 +438,7 @@ test("native asset cardinality is rejected before allocating embedded Blob objec
     }
   };
   try {
-    await assert.rejects(readNative(input, "p", "source"), /at most64/);
+    await assert.rejects(readNative(input, "p", "source"), /at most 64/);
     assert.equal(allocated, 0);
   } finally {
     globalThis.Blob = original;

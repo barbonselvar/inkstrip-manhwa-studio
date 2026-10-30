@@ -132,7 +132,7 @@ export function validateEffects(effects: Effect[]) {
       e.version === undefined &&
       (advanced.some((k) => Object.hasOwn(e, k)) || ["patternOverlay", "bevel"].includes(e.kind))
     )
-      throw Error("Advanced layer styles need version2.");
+      throw Error("Advanced layer styles need version 2.");
     if (e.version !== undefined) {
       if (
         ![2, 3].includes(e.version) ||
@@ -224,7 +224,7 @@ export function validateEffects(effects: Effect[]) {
       } else if (e.bevel !== undefined) throw Error("Relief settings need Bevel and Emboss.");
     }
     if (e.gradient?.version === 2 && e.version === undefined)
-      throw Error("Advanced gradient effects need style version2.");
+      throw Error("Advanced gradient effects need style version 2.");
     validateGradient(e.gradient);
   }
 }
@@ -384,7 +384,7 @@ export function effectPixels(
     throw Error("Invalid style pixel buffer.");
   if (effects.some((e) => e.enabled && e.version !== undefined) && w * h > 4_000_000)
     throw Error(
-      "Advanced layer styles support rendered planes up to4MP. Source resolution was not reduced.",
+      "Advanced layer styles support rendered planes up to 4MP. Source resolution was not reduced.",
     );
   if (!effects.some((e) => e.enabled)) return new Uint8ClampedArray(source);
   const alpha = new Float32Array(w * h),
@@ -600,7 +600,7 @@ export function validateAdvancedStyleWork(d: ProDocument) {
     );
   if (styleCount * (d.width + 2 * padding) * (d.height + 2 * padding) > 128_000_000)
     throw Error(
-      "Visible advanced styles exceed the128M document style-pixel budget. Hide a styled layer or disable an effect; original data is unchanged.",
+      "Visible advanced styles exceed the 128M document style-pixel budget. Hide a styled layer or disable an effect; original data is unchanged.",
     );
   if (
     (d.width + 2 * padding) * (d.height + 2 * padding) > 4_000_000 ||
@@ -608,6 +608,6 @@ export function validateAdvancedStyleWork(d: ProDocument) {
     d.height + 2 * padding > 16384
   )
     throw Error(
-      "Advanced styles support native document planes up to4MP /16384px per side including effect padding. Remove the style or use a smaller canvas; original resolution was not changed.",
+      "Advanced styles support native document planes up to 4MP / 16384px per side including effect padding. Remove the style or use a smaller canvas; original resolution was not changed.",
     );
 }

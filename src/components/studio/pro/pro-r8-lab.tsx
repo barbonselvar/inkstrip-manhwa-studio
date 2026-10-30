@@ -153,7 +153,7 @@ export function ProR8Lab({
       : base.layer.vectorOverflow || base.layer.textPath || base.layer.appearance
         ? "Smart Filters need a bounded source plane; extended vector appearance and path text stay editable without filters."
         : base.layer.width * base.layer.height > 4_000_000
-          ? "Smart Filters support native source layers up to4MP. This layer was not resized."
+          ? "Smart Filters support native source layers up to 4MP. This layer was not resized."
           : undefined;
   const save = (next: R8Preset[]) => {
     try {
@@ -163,7 +163,7 @@ export function ProR8Lab({
         );
       validateR8Presets(next);
       const raw = JSON.stringify(next);
-      if (raw.length > 1_000_000) throw Error("Preset storage exceeds1MB.");
+      if (raw.length > 1_000_000) throw Error("Preset storage exceeds 1MB.");
       localStorage.setItem(PRESETS, raw);
       setSaved(next);
       setMessage("Preset saved on this device.");

@@ -93,7 +93,10 @@
     "test:r10:split:browser": "node scripts/r10-split-browser-check.mjs",
     "test:r10:matrix": "node scripts/r10-regression-matrix.mjs",
     "bench:r10:tiles": "node --experimental-strip-types scripts/r10-tiles-benchmark.mjs",
-    "bench:r10:recovery": "node scripts/r10-recovery-benchmark.mjs"
+    "bench:r10:recovery": "node scripts/r10-recovery-benchmark.mjs",
+    "test:r11:browser": "node scripts/r11-browser-check.mjs",
+    "test:r11:native-compat": "node --experimental-strip-types --no-warnings scripts/r11-native-compat.mjs",
+    "bench:r11:filter-memory": "node --experimental-strip-types scripts/r11-filter-memory-benchmark.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

@@ -67,7 +67,7 @@ export async function validateRasterInput(blob: Blob, maxArea: number) {
   if (!Number.isFinite(maxArea) || maxArea < 1 || maxArea > RASTER_MAX_AREA)
     throw Error("Invalid Raster image pixel budget.");
   if (blob.size > MAX_ASSET_BYTES)
-    throw Error("Raster image exceeds the48MB asset budget. Current document unchanged.");
+    throw Error("Raster image exceeds the 48MB asset budget. Current document unchanged.");
   const size = await rasterSize(blob);
   if (
     !size.width ||

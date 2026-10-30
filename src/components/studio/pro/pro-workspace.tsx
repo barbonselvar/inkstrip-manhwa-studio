@@ -33,6 +33,14 @@ import { cleanView } from "@/lib/studio/dialogue/operations";
 import { reconcileDialogue } from "@/lib/studio/dialogue/operations";
 import { validateNativeImages, validateRasterInput } from "@/lib/studio/pro/native-images";
 import { validateOpeningSession } from "@/lib/studio/pro/opening";
+import { compactOpenedSession } from "@/lib/studio/pro/asset-references";
+import {
+  inspectorPanels,
+  panelLabel,
+  type WorkspaceCommand,
+  type WorkspacePanel,
+} from "@/lib/studio/pro/commands";
+import { ProCommandPalette } from "./pro-command-palette";
 import { ProRecovery } from "./pro-recovery";
 import { listCheckpoints, readCheckpoint, type CheckpointHeader } from "@/lib/studio/pro/recovery";
 import {
@@ -104,6 +112,7 @@ import {
   PanelRightClose,
   PanelRightOpen,
   ArchiveRestore,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProCanvas, type ProTool } from "./pro-canvas";
@@ -308,6 +317,7 @@ export default function ProWorkspace({
     [cropRatio, setCropRatio] = useState(0),
     [tolerance, setTolerance] = useState(32),
     [rulers, setRulers] = useState(() => storedPreference(RULERS_KEY) === "1"),
+    [commandsOpen, setCommandsOpen] = useState(false),
     [rulerUnit, setRulerUnit] = useState<RulerUnit>(() =>
       storedPreference(RULER_UNIT_KEY) === "%" ? "%" : "px",
     ),
@@ -540,6 +550,10 @@ export default function ProWorkspace({
     sessionRef.current = entry;
     setSession(entry);
     if (entry.document.brushSettings) setBrush(entry.document.brushSettings);
+    // Sampled-source state can outlive an install; it must belong to this pool.
+    setCloneSource((source) =>
+      source && Object.hasOwn(entry.assets, source.assetId) ? source : null,
+    );
     const h = createHistory({ doc: entry.document, label });
     historyRef.current = h;
     setHistory(h);
@@ -552,8 +566,9 @@ export default function ProWorkspace({
     setLoad({ state: "loading" });
     setStatus("Opening layered document…");
     void (async () => {
-      const recovered = await loadSession(panel.id);
-      if (recovered) {
+      const stored = await loadSession(panel.id);
+      if (stored) {
+        const { session: recovered, removed } = compactOpenedSession(stored);
         validateOpeningSession(recovered, maxArea);
         if (active) {
           install(recovered, "Recovered Pro draft");
@@ -561,7 +576,11 @@ export default function ProWorkspace({
           lastSaved.current = JSON.stringify(recovered.document);
           setSaved(true);
           setSaveError(null);
-          setStatus("Recovered editable Pro document. Chapter unchanged.");
+          setStatus(
+            removed.length
+              ? `Recovered editable Pro document. ${removed.length} unused stored image${removed.length === 1 ? "" : "s"} will be released on the next save. Chapter unchanged.`
+              : "Recovered editable Pro document. Chapter unchanged.",
+          );
         }
         return;
       }
@@ -2808,6 +2827,11 @@ export default function ProWorkspace({
         void actions.current.save().catch((err) => setError(storageMessage(err)));
         return;
       }
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCommandsOpen((open) => !open);
+        return;
+      }
       if (input) return;
       if (
         !e.ctrlKey &&
@@ -2879,6 +2903,94 @@ export default function ProWorkspace({
     "lasso",
     "poly-lasso",
   ]);
+  const offeredTools = TOOLS.filter(({ id }) =>
+    (dialogue ? dialogueTools : mode === "raster" ? RASTER_TOOL_IDS : VECTOR_TOOL_IDS).has(id),
+  );
+  const toolDisabled = (id: ProTool) =>
+    busy ||
+    (id === "text-path" && (active?.kind !== "shape" || isLocked(doc!, active.id))) ||
+    (id === "gradient" && !active?.appearance?.some((a) => a.paint.gradient)) ||
+    (id === "gradient-fill" &&
+      (!!quickMask || active?.kind !== "gradient" || isLocked(doc!, active.id)));
+  const openToolSettings = () => {
+    const target = contextualInspector(tool, mode, dialogue);
+    setPanelOpen(true);
+    setTab(target.panel);
+    setInspectorTarget(target);
+  };
+  // Same handlers and availability as the tool rail, inspector tabs and top bar.
+  const commands: WorkspaceCommand[] = [
+    ...offeredTools.map(({ id, name, key }) => ({
+      id: `tool:${id}`,
+      group: "Tools" as const,
+      label: name,
+      keywords: "tool",
+      shortcut: key || undefined,
+      disabled: toolDisabled(id),
+    })),
+    ...inspectorPanels(mode, dialogue).map((t) => ({
+      id: `panel:${t}`,
+      group: "Panels" as const,
+      label: `${panelLabel(t)} panel`,
+      keywords: "inspector tab",
+    })),
+    {
+      id: "doc:tool-settings",
+      group: "Document",
+      label: "Tool settings",
+      keywords: "brush options inspector",
+    },
+    {
+      id: "doc:undo",
+      group: "Document",
+      label: "Undo",
+      keywords: "history back",
+      shortcut: "Ctrl/⌘+Z",
+      disabled: !history?.past.length || busy || dialoguePending,
+    },
+    {
+      id: "doc:redo",
+      group: "Document",
+      label: "Redo",
+      keywords: "history forward",
+      shortcut: "Ctrl/⌘+Shift+Z",
+      disabled: !history?.future.length || busy || dialoguePending,
+    },
+    {
+      id: "doc:save",
+      group: "Document",
+      label: "Save draft",
+      keywords: "store persist",
+      shortcut: "Ctrl/⌘+S",
+      disabled: !doc || busy || dialoguePending || !!transformDraft,
+    },
+    {
+      id: "doc:rulers",
+      group: "Document",
+      label: rulers ? "Hide rulers" : "Show rulers",
+      keywords: "guides ruler",
+      shortcut: "Ctrl/⌘+R",
+    },
+    {
+      id: "doc:panels",
+      group: "Document",
+      label: panelOpen ? "Hide panels" : "Show panels",
+      keywords: "inspector sidebar",
+    },
+  ];
+  const runCommand = (id: string) => {
+    const [kind, value] = id.split(":") as [string, string];
+    if (kind === "tool") chooseTool(value as ProTool);
+    else if (kind === "panel") {
+      setPanelOpen(true);
+      setTab(value as WorkspacePanel);
+    } else if (value === "tool-settings") openToolSettings();
+    else if (value === "undo") actions.current.undo();
+    else if (value === "redo") actions.current.redo();
+    else if (value === "save") void saveNow().catch((e) => setError(saveFailure(e).message));
+    else if (value === "rulers") changeRulers(!rulers);
+    else if (value === "panels") setPanelOpen((v) => !v);
+  };
   const stale = !!session && livePanel?.blobId !== session.acceptedBlobId;
   return (
     <Dialog.Root
@@ -3140,6 +3252,12 @@ export default function ProWorkspace({
               </Button>
             </div>
           ) : null}
+          <ProCommandPalette
+            open={commandsOpen}
+            onOpenChange={setCommandsOpen}
+            commands={commands}
+            onRun={runCommand}
+          />
           <div className="pro-context-bar">
             {transformDraft && (
               <div className="pro-crop-actions">
@@ -3162,17 +3280,18 @@ export default function ProWorkspace({
               </div>
             )}
             <span>{TOOLS.find((t) => t.id === tool)?.name ?? "Move"}</span>
+            <Button variant="ghost" className="pro-tool-settings" onClick={openToolSettings}>
+              Tool settings
+            </Button>
             <Button
               variant="ghost"
-              className="pro-tool-settings"
-              onClick={() => {
-                const target = contextualInspector(tool, mode, dialogue);
-                setPanelOpen(true);
-                setTab(target.panel);
-                setInspectorTarget(target);
-              }}
+              className="pro-command-button"
+              title="Search commands (Ctrl/⌘+K)"
+              aria-haspopup="dialog"
+              onClick={() => setCommandsOpen(true)}
             >
-              Tool settings
+              <Search />
+              Commands
             </Button>
             <label className="pro-check">
               <input
@@ -3412,14 +3531,7 @@ export default function ProWorkspace({
           </div>
           <div className={`pro-body ${panelOpen ? "" : "pro-panel-hidden"}`}>
             <nav className="pro-tool-palette" aria-label="Pro tools">
-              {TOOLS.filter(({ id }) =>
-                (dialogue
-                  ? dialogueTools
-                  : mode === "raster"
-                    ? RASTER_TOOL_IDS
-                    : VECTOR_TOOL_IDS
-                ).has(id),
-              ).map(({ id, name, key, Icon }) => (
+              {offeredTools.map(({ id, name, key, Icon }) => (
                 <Button
                   key={id}
                   variant="ghost"
@@ -3427,14 +3539,7 @@ export default function ProWorkspace({
                   aria-label={`${name} tool`}
                   title={`${name}${key ? ` (${key})` : ""}`}
                   aria-pressed={tool === id}
-                  disabled={
-                    busy ||
-                    (id === "text-path" &&
-                      (active?.kind !== "shape" || isLocked(doc!, active.id))) ||
-                    (id === "gradient" && !active?.appearance?.some((a) => a.paint.gradient)) ||
-                    (id === "gradient-fill" &&
-                      (!!quickMask || active?.kind !== "gradient" || isLocked(doc!, active.id)))
-                  }
+                  disabled={toolDisabled(id)}
                   onClick={() => {
                     chooseTool(id);
                   }}
@@ -3595,55 +3700,16 @@ export default function ProWorkspace({
                     button.scrollIntoView({ block: "nearest", inline: "nearest" });
                   }}
                 >
-                  {(
-                    [
-                      "dialogue",
-                      "refine",
-                      "properties",
-                      "transform",
-                      "geometry",
-                      "layers",
-                      "paths",
-                      "pathfinder",
-                      "artboards",
-                      "precision",
-                      "appearance",
-                      "typography",
-                      "history",
-                      "assets",
-                      "ai",
-                      "export",
-                    ] as const
-                  )
-                    .filter(
-                      (t) =>
-                        (t !== "dialogue" || dialogue) &&
-                        (!dialogue ||
-                          [
-                            "dialogue",
-                            "properties",
-                            "transform",
-                            "layers",
-                            "history",
-                            "assets",
-                            "export",
-                          ].includes(t)) &&
-                        // Pathfinder, masks from paths and path ↔ selection live in Raster's
-                        // Paths tab; Appearance, Precision (guides, snapping, align) and
-                        // Typography (text on a path, R9) are shared by both modes.
-                        (t !== "paths" || mode === "raster") &&
-                        (!["pathfinder", "artboards"].includes(t) || mode === "vector"),
-                    )
-                    .map((t) => (
-                      <button
-                        type="button"
-                        key={t}
-                        aria-pressed={tab === t}
-                        onClick={() => setTab(t)}
-                      >
-                        {t === "ai" ? "AI tools" : t[0]!.toUpperCase() + t.slice(1)}
-                      </button>
-                    ))}
+                  {inspectorPanels(mode, dialogue).map((t) => (
+                    <button
+                      type="button"
+                      key={t}
+                      aria-pressed={tab === t}
+                      onClick={() => setTab(t)}
+                    >
+                      {panelLabel(t)}
+                    </button>
+                  ))}
                 </nav>
                 <div className="pro-panel-content" tabIndex={-1}>
                   {tab === "dialogue" && history && (

@@ -1,0 +1,109 @@
+[
+  {
+    "release": "R6 (pre-R8)",
+    "sha": "6478fc1",
+    "envelope": 8,
+    "features": [
+      "paint stroke",
+      "hidden raster",
+      "layer mask with stroke",
+      "Clone Stamp stroke",
+      "adjustment layer (schema 2)"
+    ],
+    "notSupportedByRelease": [
+      "Smart Filter with mask (schema 3): Unsupported or oversized Pro document (up to 48 layers / 16.8 megapixels / 16384",
+      "advanced gradient layer: gradient.advancedGradient is not a function",
+      "advanced layer style: effects.advancedEffect is not a function",
+      "bitmap Pattern Overlay (v3): effects.advancedEffect is not a function"
+    ],
+    "originalReader": "reads R11 output"
+  },
+  {
+    "release": "R7 (pre-R8)",
+    "sha": "02eb697",
+    "envelope": 8,
+    "features": [
+      "paint stroke",
+      "hidden raster",
+      "layer mask with stroke",
+      "Clone Stamp stroke",
+      "adjustment layer (schema 2)"
+    ],
+    "notSupportedByRelease": [
+      "Smart Filter with mask (schema 3): Unsupported or oversized Pro document (up to 48 layers / 16.8 megapixels / 16384",
+      "advanced gradient layer: gradient.advancedGradient is not a function",
+      "advanced layer style: effects.advancedEffect is not a function",
+      "bitmap Pattern Overlay (v3): effects.advancedEffect is not a function"
+    ],
+    "originalReader": "reads R11 output"
+  },
+  {
+    "release": "R8",
+    "sha": "5f9c537",
+    "envelope": 9,
+    "features": [
+      "paint stroke",
+      "hidden raster",
+      "layer mask with stroke",
+      "Clone Stamp stroke",
+      "adjustment layer (schema 2)",
+      "Smart Filter with mask (schema 3)",
+      "advanced gradient layer",
+      "advanced layer style"
+    ],
+    "notSupportedByRelease": ["bitmap Pattern Overlay (v3): Invalid advanced layer style."],
+    "originalReader": "reads R11 output"
+  },
+  {
+    "release": "PR #21",
+    "sha": "db78593",
+    "envelope": 9,
+    "features": [
+      "paint stroke",
+      "hidden raster",
+      "layer mask with stroke",
+      "Clone Stamp stroke",
+      "adjustment layer (schema 2)",
+      "Smart Filter with mask (schema 3)",
+      "advanced gradient layer",
+      "advanced layer style"
+    ],
+    "notSupportedByRelease": ["bitmap Pattern Overlay (v3): Invalid advanced layer style."],
+    "originalReader": "reads R11 output"
+  },
+  {
+    "release": "R9",
+    "sha": "401e925",
+    "envelope": 9,
+    "features": [
+      "paint stroke",
+      "hidden raster",
+      "layer mask with stroke",
+      "Clone Stamp stroke",
+      "adjustment layer (schema 2)",
+      "Smart Filter with mask (schema 3)",
+      "advanced gradient layer",
+      "advanced layer style"
+    ],
+    "notSupportedByRelease": ["bitmap Pattern Overlay (v3): Invalid advanced layer style."],
+    "originalReader": "reads R11 output"
+  },
+  {
+    "release": "R10",
+    "sha": "aa7e199",
+    "envelope": 9,
+    "features": [
+      "paint stroke",
+      "hidden raster",
+      "layer mask with stroke",
+      "Clone Stamp stroke",
+      "adjustment layer (schema 2)",
+      "Smart Filter with mask (schema 3)",
+      "advanced gradient layer",
+      "advanced layer style",
+      "bitmap Pattern Overlay (v3)"
+    ],
+    "notSupportedByRelease": [],
+    "originalReader": "reads R11 output"
+  }
+]

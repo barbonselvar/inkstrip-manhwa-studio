@@ -104,7 +104,7 @@ export class OcrRuntime {
       image.data.length !== image.width * image.height * 4
     )
       throw Error(
-        "OCR supports a source-resolution region up to4MP. Select a smaller region; artwork is never resized silently.",
+        "OCR supports a source-resolution region up to 4MP. Select a smaller region; artwork is never resized silently.",
       );
     this.cancel();
     const serial = this.serial,
@@ -213,7 +213,7 @@ export class OcrRuntime {
         }
       if (regions.length > 200)
         throw Error(
-          "OCR found more than200 regions. Select a smaller area before adding a review queue.",
+          "OCR found more than 200 regions. Select a smaller area before adding a review queue.",
         );
       return {
         regions,

@@ -130,7 +130,7 @@ test("new format rejects field injection and advanced records on legacy schemas,
   e.gradient = advancedGradient();
   delete e.version;
   d.layers[0]!.effects = [e];
-  assert.throws(() => validateDocument(d), /schema3|version2/);
+  assert.throws(() => validateDocument(d), /schema 3|version 2/);
 });
 
 test("Chapter backup recovery keeps schema3 filter/gradient/style metadata and original asset bytes", async () => {

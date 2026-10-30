@@ -41,7 +41,7 @@ export function smartTilePlan(
 ) {
   validateSmartWork(width, height, [{ id: "tile", enabled: true, operation }]);
   if (!Number.isInteger(tileSize) || tileSize < 16 || tileSize > 512)
-    throw Error("Filter tile size must be16–512 pixels.");
+    throw Error("Filter tile size must be 16–512 pixels.");
   const halo = smartHalo(operation),
     tiles: SmartTile[] = [];
   if (halo === undefined || (width <= tileSize && height <= tileSize))

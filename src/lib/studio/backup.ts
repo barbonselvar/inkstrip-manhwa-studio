@@ -118,7 +118,7 @@ export function encodeBackup(data: ProjectData, exportedAt = Date.now()): Blob {
   };
   const json = new TextEncoder().encode(JSON.stringify(header));
   if (json.length > MAX_HEADER)
-    throw Error("Backup metadata exceeds32MB. Save individual native documents instead.");
+    throw Error("Backup metadata exceeds 32MB. Save individual native documents instead.");
   const length = new Uint8Array(4);
   new DataView(length.buffer).setUint32(0, json.length);
   return new Blob([MAGIC, length, json, ...parts], { type: "application/octet-stream" });

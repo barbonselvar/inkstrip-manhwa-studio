@@ -1,0 +1,616 @@
+[
+  {
+    "suite": "bench:raster:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "bench:raster:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 1,
+    "signal": null,
+    "seconds": 30.59,
+    "log": "/workspace/r10-evidence/f-matrix/bench-raster-browser.log"
+  },
+  {
+    "suite": "test:r3:browser",
+    "base": "http://127.0.0.1:8080",
+    "args": ["run", "test:r3:browser", "--", "http://127.0.0.1:8080"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 1,
+    "signal": null,
+    "seconds": 294.13,
+    "log": "/workspace/r10-evidence/f-matrix/test-r3-browser.log"
+  },
+  {
+    "suite": "test:r10:long-pages:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r10:long-pages:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 100.38,
+    "log": "/workspace/r10-evidence/f-matrix/test-r10-long-pages-browser.log"
+  },
+  {
+    "suite": "test:studio:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:studio:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 1,
+    "signal": null,
+    "seconds": 6.48,
+    "log": "/workspace/r10-evidence/f-matrix/test-studio-browser.log"
+  },
+  {
+    "suite": "test:editor:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:editor:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 26.58,
+    "log": "/workspace/r10-evidence/f-matrix/test-editor-browser.log"
+  },
+  {
+    "suite": "test:r10:audit:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r10:audit:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 40.48,
+    "log": "/workspace/r10-evidence/f-matrix/test-r10-audit-browser.log"
+  },
+  {
+    "suite": "test:retouch:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:retouch:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 11.62,
+    "log": "/workspace/r10-evidence/f-matrix/test-retouch-browser.log"
+  },
+  {
+    "suite": "test:adjustments:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:adjustments:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 27.8,
+    "log": "/workspace/r10-evidence/f-matrix/test-adjustments-browser.log"
+  },
+  {
+    "suite": "test:workflow:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:workflow:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 32.08,
+    "log": "/workspace/r10-evidence/f-matrix/test-workflow-browser.log"
+  },
+  {
+    "suite": "test:ui:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:ui:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 34.83,
+    "log": "/workspace/r10-evidence/f-matrix/test-ui-browser.log"
+  },
+  {
+    "suite": "test:layers:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:layers:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 66.17,
+    "log": "/workspace/r10-evidence/f-matrix/test-layers-browser.log"
+  },
+  {
+    "suite": "test:pro:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:pro:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 85.61,
+    "log": "/workspace/r10-evidence/f-matrix/test-pro-browser.log"
+  },
+  {
+    "suite": "test:geometry:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:geometry:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 42.76,
+    "log": "/workspace/r10-evidence/f-matrix/test-geometry-browser.log"
+  },
+  {
+    "suite": "test:repair:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:repair:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 58.47,
+    "log": "/workspace/r10-evidence/f-matrix/test-repair-browser.log"
+  },
+  {
+    "suite": "test:color:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:color:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 45.3,
+    "log": "/workspace/r10-evidence/f-matrix/test-color-browser.log"
+  },
+  {
+    "suite": "test:transform:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:transform:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 59.28,
+    "log": "/workspace/r10-evidence/f-matrix/test-transform-browser.log"
+  },
+  {
+    "suite": "test:r6:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r6:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 129.26,
+    "log": "/workspace/r10-evidence/f-matrix/test-r6-browser.log"
+  },
+  {
+    "suite": "test:r8:foundation:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r8:foundation:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 10.47,
+    "log": "/workspace/r10-evidence/f-matrix/test-r8-foundation-browser.log"
+  },
+  {
+    "suite": "test:r6:layers:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r6:layers:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 192.22,
+    "log": "/workspace/r10-evidence/f-matrix/test-r6-layers-browser.log"
+  },
+  {
+    "suite": "test:r8:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r8:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 83.05,
+    "log": "/workspace/r10-evidence/f-matrix/test-r8-browser.log"
+  },
+  {
+    "suite": "test:r8:processing:browser",
+    "base": "http://127.0.0.1:8080",
+    "args": ["run", "test:r8:processing:browser", "--", "http://127.0.0.1:8080"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 3.54,
+    "log": "/workspace/r10-evidence/f-matrix/test-r8-processing-browser.log"
+  },
+  {
+    "suite": "test:r8:styles:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r8:styles:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 42.94,
+    "log": "/workspace/r10-evidence/f-matrix/test-r8-styles-browser.log"
+  },
+  {
+    "suite": "test:r8:recovery:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r8:recovery:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 27.77,
+    "log": "/workspace/r10-evidence/f-matrix/test-r8-recovery-browser.log"
+  },
+  {
+    "suite": "test:r8:gradient:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r8:gradient:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 68.78,
+    "log": "/workspace/r10-evidence/f-matrix/test-r8-gradient-browser.log"
+  },
+  {
+    "suite": "test:appearance:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:appearance:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 51.54,
+    "log": "/workspace/r10-evidence/f-matrix/test-appearance-browser.log"
+  },
+  {
+    "suite": "test:vector:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:vector:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 46.41,
+    "log": "/workspace/r10-evidence/f-matrix/test-vector-browser.log"
+  },
+  {
+    "suite": "test:compound:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:compound:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 72.02,
+    "log": "/workspace/r10-evidence/f-matrix/test-compound-browser.log"
+  },
+  {
+    "suite": "test:pathfinder:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:pathfinder:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 92.14,
+    "log": "/workspace/r10-evidence/f-matrix/test-pathfinder-browser.log"
+  },
+  {
+    "suite": "test:artboards:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:artboards:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 49.82,
+    "log": "/workspace/r10-evidence/f-matrix/test-artboards-browser.log"
+  },
+  {
+    "suite": "test:preview:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:preview:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 23.5,
+    "log": "/workspace/r10-evidence/f-matrix/test-preview-browser.log"
+  },
+  {
+    "suite": "test:production:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": [
+      "run",
+      "test:production:browser",
+      "--",
+      "http://127.0.0.1:8082",
+      "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9"
+    ],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 53.64,
+    "log": "/workspace/r10-evidence/f-matrix/test-production-browser.log"
+  },
+  {
+    "suite": "test:vector-final:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:vector-final:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 114.29,
+    "log": "/workspace/r10-evidence/f-matrix/test-vector-final-browser.log"
+  },
+  {
+    "suite": "test:raster-refinement:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:raster-refinement:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 91.9,
+    "log": "/workspace/r10-evidence/f-matrix/test-raster-refinement-browser.log"
+  },
+  {
+    "suite": "test:dialogue:ocr",
+    "base": "http://127.0.0.1:8080",
+    "args": ["run", "test:dialogue:ocr", "--", "http://127.0.0.1:8080"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 11.41,
+    "log": "/workspace/r10-evidence/f-matrix/test-dialogue-ocr.log"
+  },
+  {
+    "suite": "test:homepage:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:homepage:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 57.64,
+    "log": "/workspace/r10-evidence/f-matrix/test-homepage-browser.log"
+  },
+  {
+    "suite": "test:dialogue:workflow",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:dialogue:workflow", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 31.49,
+    "log": "/workspace/r10-evidence/f-matrix/test-dialogue-workflow.log"
+  },
+  {
+    "suite": "test:dialogue:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:dialogue:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 32.38,
+    "log": "/workspace/r10-evidence/f-matrix/test-dialogue-browser.log"
+  },
+  {
+    "suite": "test:dialogue:render",
+    "base": "http://127.0.0.1:8080",
+    "args": ["run", "test:dialogue:render", "--", "http://127.0.0.1:8080"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 3.84,
+    "log": "/workspace/r10-evidence/f-matrix/test-dialogue-render.log"
+  },
+  {
+    "suite": "test:dialogue:security",
+    "base": "http://127.0.0.1:8080",
+    "args": ["run", "test:dialogue:security", "--", "http://127.0.0.1:8080"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 4.96,
+    "log": "/workspace/r10-evidence/f-matrix/test-dialogue-security.log"
+  },
+  {
+    "suite": "test:chapter-import:browser",
+    "base": "http://127.0.0.1:8080",
+    "args": ["run", "test:chapter-import:browser", "--", "http://127.0.0.1:8080"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 39.21,
+    "log": "/workspace/r10-evidence/f-matrix/test-chapter-import-browser.log"
+  },
+  {
+    "suite": "test:r2:gesture:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r2:gesture:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 13.89,
+    "log": "/workspace/r10-evidence/f-matrix/test-r2-gesture-browser.log"
+  },
+  {
+    "suite": "test:r2:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r2:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 100.54,
+    "log": "/workspace/r10-evidence/f-matrix/test-r2-browser.log"
+  },
+  {
+    "suite": "test:r5:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r5:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 92.47,
+    "log": "/workspace/r10-evidence/f-matrix/test-r5-browser.log"
+  },
+  {
+    "suite": "test:chapter-display:browser",
+    "base": "http://127.0.0.1:8080",
+    "args": ["run", "test:chapter-display:browser", "--", "http://127.0.0.1:8080"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 58.17,
+    "log": "/workspace/r10-evidence/f-matrix/test-chapter-display-browser.log"
+  },
+  {
+    "suite": "test:vector-hidden:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:vector-hidden:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 28.65,
+    "log": "/workspace/r10-evidence/f-matrix/test-vector-hidden-browser.log"
+  },
+  {
+    "suite": "test:raster-advanced:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:raster-advanced:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 34.07,
+    "log": "/workspace/r10-evidence/f-matrix/test-raster-advanced-browser.log"
+  },
+  {
+    "suite": "test:pr21-r8:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:pr21-r8:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 31.47,
+    "log": "/workspace/r10-evidence/f-matrix/test-pr21-r8-browser.log"
+  },
+  {
+    "suite": "test:r7:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r7:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 244.85,
+    "log": "/workspace/r10-evidence/f-matrix/test-r7-browser.log"
+  },
+  {
+    "suite": "test:r9:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r9:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 52.49,
+    "log": "/workspace/r10-evidence/f-matrix/test-r9-browser.log"
+  },
+  {
+    "suite": "test:r9:svg:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r9:svg:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 10.29,
+    "log": "/workspace/r10-evidence/f-matrix/test-r9-svg-browser.log"
+  },
+  {
+    "suite": "test:r9:integration:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r9:integration:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 42.45,
+    "log": "/workspace/r10-evidence/f-matrix/test-r9-integration-browser.log"
+  },
+  {
+    "suite": "test:r10:opening:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r10:opening:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 36.33,
+    "log": "/workspace/r10-evidence/f-matrix/test-r10-opening-browser.log"
+  },
+  {
+    "suite": "test:r10:recovery:browser",
+    "base": "http://127.0.0.1:8080",
+    "args": ["run", "test:r10:recovery:browser", "--", "http://127.0.0.1:8080"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 111.9,
+    "log": "/workspace/r10-evidence/f-matrix/test-r10-recovery-browser.log"
+  },
+  {
+    "suite": "test:r10:masks:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r10:masks:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 126.51,
+    "log": "/workspace/r10-evidence/f-matrix/test-r10-masks-browser.log"
+  },
+  {
+    "suite": "test:r10:inspector:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r10:inspector:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 36.18,
+    "log": "/workspace/r10-evidence/f-matrix/test-r10-inspector-browser.log"
+  },
+  {
+    "suite": "test:r10:mobile:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r10:mobile:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 33.78,
+    "log": "/workspace/r10-evidence/f-matrix/test-r10-mobile-browser.log"
+  },
+  {
+    "suite": "test:r10:patterns:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r10:patterns:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 104.34,
+    "log": "/workspace/r10-evidence/f-matrix/test-r10-patterns-browser.log"
+  },
+  {
+    "suite": "test:r10:split:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r10:split:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 45.52,
+    "log": "/workspace/r10-evidence/f-matrix/test-r10-split-browser.log"
+  },
+  {
+    "suite": "test:r11:browser",
+    "base": "http://127.0.0.1:8082",
+    "args": ["run", "test:r11:browser", "--", "http://127.0.0.1:8082"],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 0,
+    "signal": null,
+    "seconds": 101.67,
+    "log": "/workspace/r10-evidence/f-matrix/test-r11-browser.log"
+  },
+  {
+    "suite": "test:production:browser-enhanced",
+    "base": "http://127.0.0.1:8082",
+    "args": [
+      "run",
+      "test:production:browser",
+      "--",
+      "http://127.0.0.1:8082",
+      "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+      "--raster",
+      "--ai"
+    ],
+    "sha": "ed1dfdd5ac80d11290029e177aeef9aa8f15f1b9",
+    "exitCode": 1,
+    "signal": null,
+    "seconds": 81.27,
+    "log": "/workspace/r10-evidence/f-matrix/test-production-browser-enhanced.log"
+  }
+]

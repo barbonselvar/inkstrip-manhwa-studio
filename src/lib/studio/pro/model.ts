@@ -501,7 +501,7 @@ export function validateDocument(d: ProDocument) {
     if (
       Object.keys(d).some((k) => !allowed.includes(k) && !(d.version === 3 && k === "styleLight"))
     )
-      throw Error("Unknown schema2 document field.");
+      throw Error("Unknown schema 2 document field.");
   }
   if (
     d.source !== undefined &&
@@ -533,7 +533,7 @@ export function validateDocument(d: ProDocument) {
     }
   }
   if (d.styleLight !== undefined && (d.version !== 3 || !finite(d.styleLight, -360, 360)))
-    throw Error("Shared style light requires schema3 and a valid angle.");
+    throw Error("Shared style light requires schema 3 and a valid angle.");
   for (let i = 0; i < d.layers.length; i++) {
     const l = d.layers[i]!;
     if (l?.kind === "adjustment" && !l.clipped) {
@@ -577,12 +577,12 @@ export function validateDocument(d: ProDocument) {
           (k) => !allowed.includes(k) && !(d.version === 3 && k === "smartFilters"),
         )
       )
-        throw Error("Unknown schema2 layer field.");
+        throw Error("Unknown schema 2 layer field.");
     }
     if (l.adjustmentLayer !== undefined) {
       if (d.version < 2 || l.kind !== "adjustment")
         throw Error(
-          "Persistent color adjustments require document schema2 and an adjustment layer.",
+          "Persistent color adjustments require document schema 2 and an adjustment layer.",
         );
       validateAdjustmentLayer(l.adjustmentLayer);
       if (
@@ -634,7 +634,7 @@ export function validateDocument(d: ProDocument) {
     if (l.smartFilters !== undefined) {
       if (d.version !== 3 || !["raster", "paint", "gradient", "shape", "text"].includes(l.kind))
         throw Error(
-          "Smart Filters require schema3 and an artwork layer. Groups and backdrop adjustments are not filter targets.",
+          "Smart Filters require schema 3 and an artwork layer. Groups and backdrop adjustments are not filter targets.",
         );
       if (l.smartFilters.length && (l.vectorOverflow || l.textPath || l.appearance))
         throw Error(
@@ -649,7 +649,7 @@ export function validateDocument(d: ProDocument) {
       (l.gradient?.version === 2 ||
         l.effects?.some((e) => e.version !== undefined || e.gradient?.version === 2))
     )
-      throw Error("Advanced styles and gradients require document schema3.");
+      throw Error("Advanced styles and gradients require document schema 3.");
     if (l.kind === "adjustment" && l.effects?.length)
       throw new Error("Adjustment layers process the backdrop and cannot have artwork effects.");
     ids.add(l.id);
@@ -726,7 +726,7 @@ export function validateDocument(d: ProDocument) {
               .includes(k),
         )
       )
-        throw Error("Unknown schema2 mask field.");
+        throw Error("Unknown schema 2 mask field.");
       if (l.mask.placement !== undefined) {
         if (Array.isArray(l.mask.placement)) validateAffineMatrix(l.mask.placement);
         else {
@@ -888,7 +888,7 @@ export function validateDocument(d: ProDocument) {
         ) > 128_000_000
     )
       throw Error(
-        "Visible Smart Filters exceed the128M native document kernel-work budget. Hide a filtered layer or reduce its radius; original data is unchanged.",
+        "Visible Smart Filters exceed the 128M native document kernel-work budget. Hide a filtered layer or reduce its radius; original data is unchanged.",
       );
   }
 }
