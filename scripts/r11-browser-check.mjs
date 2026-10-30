@@ -255,13 +255,25 @@ for (const width of [1440, 768, 390, 360, 320]) {
     search = dialog.getByRole("combobox", { name: "Search commands", exact: true });
   await search.waitFor();
   assert.ok(await search.evaluate((e) => e === document.activeElement), "search has focus");
-  assert.ok(
-    await search.evaluate((e) => {
-      const r = e.getBoundingClientRect();
-      return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === e;
-    }),
-    "the palette is on top of the Studio, not hidden behind it",
-  );
+  // Radix toggles pointer-events on nested dialog layers during its open effects,
+  // and hit-testing honours pointer-events, so poll briefly; a palette stacked
+  // behind the Studio never passes.
+  await search
+    .evaluate(
+      (e) =>
+        new Promise((resolve, reject) => {
+          const deadline = performance.now() + 5000;
+          const check = () => {
+            const r = e.getBoundingClientRect();
+            if (document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === e)
+              resolve(true);
+            else if (performance.now() > deadline) reject(Error("covered"));
+            else requestAnimationFrame(check);
+          };
+          check();
+        }),
+    )
+    .catch(() => assert.fail("the palette is on top of the Studio, not hidden behind it"));
   // Disabled actions stay discoverable but cannot run.
   await search.fill("undo");
   const undo = dialog.getByRole("option").filter({ hasText: "Undo" }).first();
