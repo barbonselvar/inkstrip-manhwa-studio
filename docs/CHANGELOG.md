@@ -1,5 +1,13 @@
 # Inkstrip release changelog
 
+## R12 — security maintenance (PR #25)
+
+- `seroval` 1.6.9 → 1.6.12 (transitive via TanStack; lockfile only) fixes two moderate
+  SSR serialisation advisories.
+- `better-auth` advisories (1 critical, 2 high, 1 low) documented as not reachable: no
+  better-auth code ships to production and none of the required plugins are configured.
+  The 1.7.x fix needs a sign-in rewrite and is deferred. [Report](R12_SECURITY_REPORT.md).
+
 ## R11 — final validation, reliability and command palette (PR #24)
 
 - Opening a saved page releases images its document no longer references, so long-edited
