@@ -6,7 +6,7 @@
  */
 
 export type PickerMode = "single" | "multiple";
-export type PickerSource = "photos" | "files" | "drop" | "paste" | "recent";
+export type PickerSource = "photos" | "files" | "folder" | "drop" | "paste" | "recent";
 
 export type PickerStatus = "checking" | "ready" | "invalid";
 

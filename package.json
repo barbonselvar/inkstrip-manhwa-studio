@@ -97,7 +97,7 @@
     "test:r11:browser": "node scripts/r11-browser-check.mjs",
     "test:r11:native-compat": "node --experimental-strip-types --no-warnings scripts/r11-native-compat.mjs",
     "bench:r11:filter-memory": "node --experimental-strip-types scripts/r11-filter-memory-benchmark.mjs",
-    "test:picker:browser": "node scripts/image-picker-browser-check.mjs"
+    "test:picker:browser": "node --experimental-strip-types scripts/image-picker-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

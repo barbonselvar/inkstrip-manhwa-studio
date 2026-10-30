@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { imagePolicy } from "../image-policy.ts";
 import { needsSplit } from "../page-split.ts";
+import { patternPolicy } from "../pro/pattern-assets.ts";
 import {
   acceptsFile,
   canConfirm,
@@ -250,4 +251,18 @@ test("validation reuses the shared policy: real images pass, malformed and overs
   if (!big.ok) assert.match(big.reason, /encoded-file budget/);
 
   assert.equal(shortReason("Too big. Image was not decoded or imported."), "Too big.");
+});
+
+test("pattern swatches validate against the pattern importer's own budget", async () => {
+  const signal = new AbortController().signal;
+  const ok = await defaultValidate(await fixture("page.png"), signal, patternPolicy());
+  assert.deepEqual(ok, { ok: true, width: 512, height: 512 }, "512px is the inclusive limit");
+  const big = await defaultValidate(await fixture("batch-plane.png"), signal, patternPolicy());
+  assert.equal(big.ok, false);
+  const animated = await defaultValidate(
+    await fixture("animated.gif", "image/gif"),
+    signal,
+    patternPolicy(),
+  );
+  assert.equal(animated.ok, false, "one frame only");
 });

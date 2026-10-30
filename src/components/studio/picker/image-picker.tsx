@@ -10,6 +10,7 @@ import {
   Clock3,
   FileStack,
   FolderOpen,
+  FolderTree,
   ImageIcon,
   Images,
   Layers,
@@ -36,6 +37,7 @@ import { defaultValidate, type PickerValidation } from "@/lib/studio/picker/vali
 import {
   canConfirm,
   clearRecent,
+  compareNames,
   createPickerState,
   gridMove,
   pickerReducer,
@@ -73,6 +75,21 @@ const PREVIEW = 1600;
 let counter = 0;
 const uid = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(counter++).toString(36)}`;
 
+function supportsFolderPicker() {
+  if (typeof window === "undefined" || typeof HTMLInputElement === "undefined") return false;
+  // Phones expose the property on some engines but have no folder chooser.
+  return (
+    "webkitdirectory" in HTMLInputElement.prototype &&
+    !window.matchMedia?.("(pointer: coarse)").matches
+  );
+}
+const relativePath = (file: File) =>
+  (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
+function folderLabel(files: File[]) {
+  const top = files.length ? relativePath(files[0]!).split("/")[0] : "";
+  return top ? `Folder · ${top}` : "Folder";
+}
+
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -84,6 +101,7 @@ const sourceLabel: Record<PickerSource, string> = {
   files: "Files",
   drop: "Dropped",
   paste: "Pasted",
+  folder: "Folder",
   recent: "Recent",
 };
 
@@ -116,6 +134,12 @@ export function ImagePicker({
   const controller = useRef<AbortController | null>(null);
   const requested = useRef(new Set<string>());
   const photosInput = useRef<HTMLInputElement>(null);
+  const folderInput = useRef<HTMLInputElement>(null);
+  // Folder selection is a desktop affordance; decided after mount so SSR markup matches.
+  const [folders, setFolders] = useState(false);
+  useEffect(() => {
+    if (open) setFolders(mode === "multiple" && supportsFolderPicker());
+  }, [open, mode]);
   const filesInput = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const [focusIndex, setFocusIndex] = useState(0);
@@ -161,7 +185,11 @@ export function ImagePicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const addFiles = (files: File[], source: PickerSource, options: { select?: boolean } = {}) => {
+  const addFiles = (
+    files: File[],
+    source: PickerSource,
+    options: { select?: boolean; label?: string } = {},
+  ) => {
     if (!files.length) return;
     const batchId = uid("batch");
     const at = Date.now();
@@ -172,7 +200,9 @@ export function ImagePicker({
       source,
       batchId,
       at,
-      label: source === "recent" ? "Recently chosen" : `${sourceLabel[source]} · ${time}`,
+      label:
+        options.label ??
+        (source === "recent" ? "Recently chosen" : `${sourceLabel[source]} · ${time}`),
       ids: files.map(() => uid("img")),
       accept,
       select: options.select,
@@ -357,9 +387,12 @@ export function ImagePicker({
   };
 
   const fromInput = (source: PickerSource) => (event: ChangeEvent<HTMLInputElement>) => {
-    const files = [...(event.target.files ?? [])];
+    let files = [...(event.target.files ?? [])];
     event.target.value = "";
-    addFiles(files, source);
+    // A chosen folder arrives in arbitrary order; chapter folders are read page by page.
+    if (source === "folder")
+      files = files.sort((a, b) => compareNames(relativePath(a), relativePath(b)));
+    addFiles(files, source, source === "folder" ? { label: folderLabel(files) } : {});
     if (files.length) {
       setTab("photos");
       setCollection(null);
@@ -432,6 +465,12 @@ export function ImagePicker({
               target.focus();
             }
           }}
+          data-image-picker=""
+          onKeyDown={(event) => {
+            // Keys typed in the picker belong to it: host shortcuts (e.g. Raster Studio's
+            // Delete-layer or tool keys on window) must not react underneath the sheet.
+            event.stopPropagation();
+          }}
           onEscapeKeyDown={(event) => {
             // Escape closes the preview before the picker.
             if (preview) {
@@ -498,90 +537,116 @@ export function ImagePicker({
             </button>
           </header>
 
-          <div className="picker-tabs" role="tablist" aria-label="Picker views">
-            {(
-              [
-                ["photos", "Photos", Images],
-                ["collections", "Collections", Layers],
-                ["recent", "Recent", Clock3],
-                ["selected", count ? `Selected · ${count}` : "Selected", Check],
-              ] as const
-            ).map(([id, text, Icon]) => (
+          <div className="picker-toolbar">
+            <div className="picker-tabs" role="tablist" aria-label="Picker views">
+              {(
+                [
+                  ["photos", "Photos", Images],
+                  ["collections", "Collections", Layers],
+                  ["recent", "Recent", Clock3],
+                  ["selected", count ? `Selected · ${count}` : "Selected", Check],
+                ] as const
+              ).map(([id, text, Icon]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  id={`picker-tab-${id}`}
+                  aria-controls="picker-panel"
+                  aria-selected={tab === id}
+                  tabIndex={tab === id ? 0 : -1}
+                  className="picker-tab press focus-ring"
+                  onClick={() => {
+                    setTab(id);
+                    setCollection(null);
+                    setFocusIndex(0);
+                  }}
+                  onKeyDown={(event) => {
+                    const order: Tab[] = ["photos", "collections", "recent", "selected"];
+                    const at = order.indexOf(tab);
+                    const delta =
+                      event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+                    if (!delta) return;
+                    event.preventDefault();
+                    const next = order[(at + delta + order.length) % order.length]!;
+                    setTab(next);
+                    setCollection(null);
+                    (
+                      event.currentTarget.parentElement?.querySelector(
+                        `#picker-tab-${next}`,
+                      ) as HTMLElement | null
+                    )?.focus();
+                  }}
+                >
+                  <Icon className="size-4" aria-hidden />
+                  <span>{text}</span>
+                </button>
+              ))}
+            </div>
+            <div className="picker-sources">
               <button
-                key={id}
                 type="button"
-                role="tab"
-                id={`picker-tab-${id}`}
-                aria-controls="picker-panel"
-                aria-selected={tab === id}
-                tabIndex={tab === id ? 0 : -1}
-                className="picker-tab press focus-ring"
-                onClick={() => {
-                  setTab(id);
-                  setCollection(null);
-                  setFocusIndex(0);
-                }}
-                onKeyDown={(event) => {
-                  const order: Tab[] = ["photos", "collections", "recent", "selected"];
-                  const at = order.indexOf(tab);
-                  const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
-                  if (!delta) return;
-                  event.preventDefault();
-                  const next = order[(at + delta + order.length) % order.length]!;
-                  setTab(next);
-                  setCollection(null);
-                  (
-                    event.currentTarget.parentElement?.querySelector(
-                      `#picker-tab-${next}`,
-                    ) as HTMLElement | null
-                  )?.focus();
-                }}
+                className="picker-source press focus-ring"
+                disabled={disabled}
+                onClick={() => photosInput.current?.click()}
               >
-                <Icon className="size-4" aria-hidden />
-                <span>{text}</span>
+                <ImageIcon className="size-4" aria-hidden /> Photo library
               </button>
-            ))}
-          </div>
-
-          <div className="picker-sources">
-            <button
-              type="button"
-              className="picker-source press focus-ring"
-              disabled={disabled}
-              onClick={() => photosInput.current?.click()}
-            >
-              <ImageIcon className="size-4" aria-hidden /> Photo library
-            </button>
-            <button
-              type="button"
-              className="picker-source press focus-ring"
-              disabled={disabled}
-              onClick={() => filesInput.current?.click()}
-            >
-              <FolderOpen className="size-4" aria-hidden /> Browse files
-            </button>
-            <input
-              ref={photosInput}
-              type="file"
-              accept={photoAccept}
-              multiple={mode === "multiple"}
-              className="sr-only"
-              tabIndex={-1}
-              aria-label="Choose from photo library"
-              data-picker-input="photos"
-              onChange={fromInput("photos")}
-            />
-            <input
-              ref={filesInput}
-              type="file"
-              accept={accept}
-              multiple={mode === "multiple"}
-              className="sr-only"
-              tabIndex={-1}
-              aria-label="Choose image files"
-              data-picker-input="files"
-              onChange={fromInput("files")}
-            />
+              <button
+                type="button"
+                className="picker-source press focus-ring"
+                disabled={disabled}
+                onClick={() => filesInput.current?.click()}
+              >
+                <FolderOpen className="size-4" aria-hidden /> Browse files
+              </button>
+              {folders ? (
+                <button
+                  type="button"
+                  className="picker-source press focus-ring"
+                  disabled={disabled}
+                  onClick={() => folderInput.current?.click()}
+                >
+                  <FolderTree className="size-4" aria-hidden /> Open folder
+                </button>
+              ) : null}
+              {folders ? (
+                <input
+                  ref={folderInput}
+                  type="file"
+                  // Non-standard but supported by Chromium, Firefox and desktop Safari.
+                  {...{ webkitdirectory: "" }}
+                  multiple
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-label="Choose an image folder"
+                  data-picker-input="folder"
+                  onChange={fromInput("folder")}
+                />
+              ) : null}
+              <input
+                ref={photosInput}
+                type="file"
+                accept={photoAccept}
+                multiple={mode === "multiple"}
+                className="sr-only"
+                tabIndex={-1}
+                aria-label="Choose from photo library"
+                data-picker-input="photos"
+                onChange={fromInput("photos")}
+              />
+              <input
+                ref={filesInput}
+                type="file"
+                accept={accept}
+                multiple={mode === "multiple"}
+                className="sr-only"
+                tabIndex={-1}
+                aria-label="Choose image files"
+                data-picker-input="files"
+                onChange={fromInput("files")}
+              />
+            </div>
           </div>
 
           {state.notice ? (

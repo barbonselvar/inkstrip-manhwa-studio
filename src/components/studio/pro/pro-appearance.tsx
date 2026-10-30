@@ -1,3 +1,7 @@
+import { useState } from "react";
+import { ImagePicker } from "../picker/image-picker";
+import { defaultValidate, type PickerValidation } from "@/lib/studio/picker/validate";
+import { PATTERN_TYPE_ERROR, PATTERN_TYPES, patternPolicy } from "@/lib/studio/pro/pattern-assets";
 import { AdvancedGradientStops } from "./pro-gradient-stops";
 import { BLEND_LABELS } from "@/lib/studio/pro/blend";
 import { Button } from "@/components/ui/button";
@@ -325,21 +329,7 @@ export function ProAppearance({
                               ))}
                             </select>
                           </label>
-                          {onPatternImport && (
-                            <label className="pro-field">
-                              Import bitmap pattern (up to 512px per side / 2MB)
-                              <input
-                                type="file"
-                                accept="image/png,image/jpeg,image/webp"
-                                aria-label="Import bitmap pattern"
-                                onChange={(ev) => {
-                                  const file = ev.target.files?.[0];
-                                  ev.target.value = "";
-                                  if (file) onPatternImport(file);
-                                }}
-                              />
-                            </label>
-                          )}
+                          {onPatternImport && <PatternImport onImport={onPatternImport} />}
                           <label className="pro-field" hidden={e.pattern.kind === "bitmap"}>
                             Pattern second color
                             <input
@@ -565,5 +555,56 @@ export function ProAppearance({
           </ToolSection>
         ))}
     </>
+  );
+}
+
+const PATTERN_ACCEPT = PATTERN_TYPES.join(",");
+async function validatePattern(file: File, signal: AbortSignal): Promise<PickerValidation> {
+  if (!PATTERN_TYPES.includes(file.type)) return { ok: false, reason: PATTERN_TYPE_ERROR };
+  return defaultValidate(file, signal, patternPolicy());
+}
+
+/** Bitmap pattern import through the shared picker; the importer re-validates. */
+function PatternImport({ onImport }: { onImport: (file: File) => void }) {
+  const [picking, setPicking] = useState(false);
+  return (
+    <div className="pro-field">
+      <span>Import bitmap pattern (up to 512px per side / 2MB)</span>
+      <button
+        type="button"
+        className="field"
+        aria-haspopup="dialog"
+        onClick={() => setPicking(true)}
+      >
+        Choose pattern image
+      </button>
+      {/* Direct single-file path into the same handler (automation). */}
+      <input
+        type="file"
+        accept={PATTERN_ACCEPT}
+        aria-label="Import bitmap pattern"
+        className="sr-only"
+        tabIndex={-1}
+        onChange={(ev) => {
+          const file = ev.target.files?.[0];
+          ev.target.value = "";
+          if (file) onImport(file);
+        }}
+      />
+      <ImagePicker
+        open={picking}
+        onOpenChange={setPicking}
+        mode="single"
+        title="Bitmap pattern"
+        description="Choose one PNG, JPEG or WebP tile up to 512px per side and 2MB. It is used as-is."
+        accept={PATTERN_ACCEPT}
+        photoAccept={PATTERN_ACCEPT}
+        validate={validatePattern}
+        confirmLabel={() => "Use pattern"}
+        onConfirm={([file]) => {
+          if (file) onImport(file);
+        }}
+      />
+    </div>
   );
 }

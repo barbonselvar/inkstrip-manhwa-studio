@@ -2,16 +2,21 @@
  * Files enter through the picker's own file inputs, exactly as the system picker
  * delivers them; imports run through the unchanged pipeline and IndexedDB. */
 import assert from "node:assert/strict";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { chromium, devices } from "playwright";
+import { proBrowserFixtures } from "./pro-browser-fixtures.mjs";
+import { fromPanel } from "../src/lib/studio/pro/model.ts";
 
 const base = process.argv[2] ?? "http://127.0.0.1:8080";
 assert.ok(["localhost", "127.0.0.1"].includes(new URL(base).hostname));
 const shots = "screenshots/image-picker";
+const scratch = process.env.PICKER_QA_DIR ?? `${tmpdir()}/inkstrip-picker-qa`;
 await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
 const results = [],
   errors = [];
+const fx = proBrowserFixtures(base, errors);
 const fixture = (name) => readFile(`src/lib/studio/fixtures/import/${name}`);
 const png = async (name, source = "original.png") => ({
   name,
@@ -217,12 +222,36 @@ await check("Raster Studio import uses single-selection mode and adds one layer"
       .getByRole("button", { name, exact: true });
   await tab("History").click();
   const before = await p.locator(".pro-history-list li").count();
+  const layers = () => p.locator(".pro-layer-row, [data-layer-id]").count();
+  const layersBefore = await layers();
   await tab("Assets").click();
-  await p.getByRole("button", { name: "Import image / SVG / native", exact: true }).click();
+  const importButton = p.getByRole("button", { name: "Import image / SVG / native", exact: true });
+  await importButton.click();
   const single = p.getByRole("dialog", { name: "Import into Raster Studio", exact: true });
   await single.waitFor();
   await single.locator('[data-picker-input="files"]').setInputFiles([await png("layer.png")]);
   await settle(p);
+  // Keys pressed inside the picker must not reach Raster Studio's window shortcuts
+  // (Delete removes the active layer, letters switch tools, arrows nudge).
+  const tilesBefore = await single.locator(".picker-tile").count();
+  await single.locator('[data-role="toggle"]').first().focus();
+  for (const key of ["ArrowLeft", "v", "b", "Delete"]) await p.keyboard.press(key);
+  assert.equal(
+    await single.locator(".picker-tile").count(),
+    tilesBefore - 1,
+    "Delete removed one picker tile",
+  );
+  await p.keyboard.press("Escape");
+  await single.waitFor({ state: "detached" });
+  await tab("History").click();
+  assert.equal(await p.locator(".pro-history-list li").count(), before, "no history step leaked");
+  assert.equal(await layers(), layersBefore, "no layer removed underneath the picker");
+  await tab("Assets").click();
+  await importButton.click();
+  await single.waitFor();
+  await single.getByRole("tab", { name: "Recent" }).click();
+  await settle(p);
+  await single.getByRole("tab", { name: "Photos" }).click();
   const gif = { name: "anim.gif", mimeType: "image/gif", buffer: await fixture("original.gif") };
   await single.locator('[data-picker-input="files"]').setInputFiles([gif]);
   await single
@@ -243,10 +272,54 @@ await check("Raster Studio import uses single-selection mode and adds one layer"
     before,
   );
   assert.match(await p.locator(".pro-history-list li").last().innerText(), /./);
+
   await p
     .getByRole("button", { name: "Back to chapter from Pro Studio", exact: true })
     .click()
     .catch(() => {});
+});
+
+await check("Raster pattern swatch import uses the picker with the pattern budget", async () => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const p = await context.newPage();
+  const source = await fx.start(p);
+  await fx.open(p);
+  await fx.load(p, fromPanel({ id: "pattern", name: "Pattern", width: 128, height: 96 }), source);
+  await fx.tab(p, "Properties");
+  await p.getByRole("button", { name: "Layer styles and Smart Filters", exact: true }).click();
+  const styles = p.getByRole("dialog", { name: "Layer styles and Smart Filters", exact: true });
+  // The styles editor re-renders until its composite preview settles.
+  await p.waitForFunction(() => {
+    const c = document.querySelector('[aria-label="Layer properties composite preview"]'),
+      apply = [...document.querySelectorAll(".r8-lab button")].find(
+        (b) => b.textContent === "Apply layer properties",
+      );
+    return c?.width > 0 && c.getAttribute("aria-busy") === "false" && apply && !apply.disabled;
+  });
+  await styles.getByLabel("Enable Pattern Overlay", { exact: true }).check();
+  await styles.getByRole("button", { name: "Choose pattern image", exact: true }).click();
+  const pattern = p.getByRole("dialog", { name: "Bitmap pattern", exact: true });
+  await pattern.waitFor();
+  await pattern
+    .locator('[data-picker-input="files"]')
+    .setInputFiles([await png("huge-tile.png", "batch-plane.png")]);
+  await settle(p);
+  assert.match(
+    await pattern.locator('.picker-tile[data-status="invalid"]').innerText(),
+    /512px|dimensions|megapixel/i,
+  );
+  assert.ok(await pattern.getByRole("button", { name: "Use pattern", exact: true }).isDisabled());
+  await pattern.locator('[data-picker-input="files"]').setInputFiles([await png("tile.png")]);
+  await settle(p);
+  await pattern.getByRole("button", { name: "Use pattern", exact: true }).click();
+  await pattern.waitFor({ state: "detached" });
+  await styles
+    .getByText("Bitmap pattern imported into this editable draft. Apply to save it.", {
+      exact: true,
+    })
+    .waitFor();
+  await styles.getByRole("button", { name: "Cancel layer properties", exact: true }).click();
+  await context.close();
 });
 
 for (const [width, height, touch] of [
@@ -319,6 +392,36 @@ for (const [width, height, touch] of [
     await p.context().close();
   });
 }
+
+await check("desktop folder source imports a chapter folder in natural page order", async () => {
+  const p = await page({ viewport: { width: 1280, height: 860 } });
+  const dir = `${scratch}/chapter-07`;
+  await rm(dir, { recursive: true, force: true });
+  await mkdir(dir, { recursive: true });
+  for (const [name, source] of [
+    ["10.png", "page.png"],
+    ["2.png", "original.png"],
+    ["1.png", "batch-plane.png"],
+  ])
+    await writeFile(`${dir}/${name}`, await fixture(source));
+  await writeFile(`${dir}/notes.txt`, "credits");
+  await openPicker(p);
+  await picker(p).getByRole("button", { name: "Open folder", exact: true }).waitFor();
+  await picker(p).locator('[data-picker-input="folder"]').setInputFiles(dir);
+  await settle(p);
+  await picker(p)
+    .getByRole("status")
+    .getByText(/1 file not supported here/)
+    .waitFor();
+  await picker(p).getByRole("tab", { name: "Collections" }).click();
+  await picker(p).getByText("Folder · chapter-07", { exact: true }).waitFor();
+  await picker(p).getByRole("button", { name: "Add 3 images", exact: true }).click();
+  await p.waitForFunction(
+    () => document.querySelectorAll('[aria-label^="Edit Image "]').length === 3,
+  );
+  assert.deepEqual(await panelNames(p), ["1.png", "2.png", "10.png"]);
+  await p.context().close();
+});
 
 await check("reduced motion disables sheet animation", async () => {
   const p = await page({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });

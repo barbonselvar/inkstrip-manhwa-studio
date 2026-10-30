@@ -194,6 +194,12 @@
   background: var(--surface-light);
 }
 
+.picker-toolbar {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  min-width: 0;
+}
 .picker-sources {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -736,24 +742,25 @@
   .picker-header {
     padding: 1.25rem 1.25rem 0.75rem;
   }
-  .picker-header > div:first-child {
-    padding-right: 19rem;
-  }
   .picker-title {
     font-size: 1.5rem;
   }
+  .picker-toolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0 1.25rem;
+  }
   .picker-tabs {
-    margin: 0 1.25rem;
-    align-self: flex-start;
+    margin: 0;
   }
   .picker-tab {
     flex: 0 0 auto;
     padding: 0 1rem;
   }
   .picker-sources {
-    position: absolute;
-    top: 1.25rem;
-    right: 4.5rem;
     display: flex;
     padding: 0;
   }
