@@ -47,16 +47,28 @@ could only be compared fairly with real inference on representative images.
 **Measurement.** `npm run bench:r13:ai` drives the app's own `EnhancementEngine` and
 worker with the pinned weights:
 
-- **Images:** the nine original gallery artworks; their provenance is in
-  `public/gallery`.
-- **Method:** halve each image, restore it 2×, and compare luma PSNR against the
-  original and against bicubic.
+- **Images:** 256×256 centre crops of three original gallery artworks; their provenance
+  is in `public/gallery`.
+- **Method:** halve each crop, restore it 2×, and compare luma PSNR against the original
+  and against bicubic.
 - **Presets:** a fidelity preset (no extra filters) and the app's default preset.
 
-huggingface.co is blocked in the development sandbox, so the benchmark runs in the
-_Raster continuity_ CI job (informational, `continue-on-error`) and publishes
-`r13-ai-quality.json`. No model is replaced in R13: that needs this benchmark plus an
-alternative evaluated under the same harness, and none has been.
+huggingface.co is blocked in the development sandbox, so the benchmark runs as its own
+informational job in the _External release verification_ workflow. It has a step
+timeout and `continue-on-error`, prints each result as it completes, and publishes
+`r13-ai-quality.json`.
+
+**Finding: in-browser inference speed.** The first CI attempt restored nine
+360×480 images (0.17 MP each). It had not finished after 24 minutes on a GitHub
+runner, which is more than 2 minutes per 0.17 MP. The worker runs ONNX Runtime WASM
+single-threaded (`numThreads = 1`). Multi-threading needs cross-origin isolation
+(COOP/COEP), which would block the platform's third-party script and embeds, so R13
+does not change it. Images near the 4 MP cap can therefore take a very long time on CPU.
+This is documented as a limitation; WebGPU execution or a lighter model are the
+candidates to evaluate next.
+
+No model is replaced in R13: that needs this benchmark plus an alternative evaluated
+under the same harness, and none has been.
 
 ## Phase 2: Raster responsiveness
 
@@ -218,6 +230,8 @@ compatibility, import safety, history pixels, and long pages.
 - No physical Android or iOS device testing.
 - The AI model choice is unevaluated against alternatives until the CI benchmark
   reports and an alternative is run under the same harness.
+- In-browser AI enhancement is slow on CPU: more than 2 minutes per 0.17 MP on a CI
+  runner, single-threaded WASM. WebGPU or a lighter model are follow-ups.
 - Heavy-document strokes still spend about 100 ms in the full-record IndexedDB read
   during save. Removing it is a schema change, deferred.
 - Opening a document near the 100 k-point cap takes about 4.5 s, dominated by
