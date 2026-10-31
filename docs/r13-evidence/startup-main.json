@@ -1,0 +1,298 @@
+{
+  "base": "http://127.0.0.1:8081",
+  "runs": 3,
+  "report": {
+    "1440-home": {
+      "homeMs": {
+        "p50": 1658,
+        "p95": 1876.7
+      },
+      "fcp": {
+        "p50": 432,
+        "p95": 601.2
+      },
+      "domInteractive": {
+        "p50": 419.5,
+        "p95": 587.7
+      },
+      "longTaskMs": {
+        "p50": 198,
+        "p95": 207
+      },
+      "heapMB": {
+        "p50": 9.5,
+        "p95": 9.5
+      },
+      "homeNet": {
+        "requests": 21,
+        "totalKB": 546,
+        "jsKB": 216,
+        "big": [
+          "index-B0KaKDeZ.js:106KB",
+          "fantasy-360.webp:61KB",
+          "murim-360.webp:55KB",
+          "romance-360.webp:63KB",
+          "manga-360.webp:57KB",
+          "medieval-360.webp:54KB"
+        ]
+      }
+    },
+    "1440-chapter": {
+      "homeMs": {
+        "p50": 1546,
+        "p95": 1910.5
+      },
+      "fcp": {
+        "p50": 368,
+        "p95": 407.6
+      },
+      "domInteractive": {
+        "p50": 332.1,
+        "p95": 366.9
+      },
+      "chapterOpenMs": {
+        "p50": 1999,
+        "p95": 2511.1
+      },
+      "longTaskMs": {
+        "p50": 170,
+        "p95": 681.2
+      },
+      "heapMB": {
+        "p50": 9.5,
+        "p95": 9.5
+      },
+      "homeNet": {
+        "requests": 26,
+        "totalKB": 648,
+        "jsKB": 216,
+        "big": [
+          "index-B0KaKDeZ.js:106KB",
+          "murim-360.webp:55KB",
+          "fantasy-360.webp:61KB",
+          "medieval-360.webp:54KB",
+          "manga-360.webp:57KB",
+          "romance-360.webp:63KB",
+          "action-360.webp:66KB"
+        ]
+      },
+      "chapterNet": {
+        "requests": 7,
+        "totalKB": 251,
+        "jsKB": 43,
+        "big": [
+          "horror-360.webp:51KB",
+          "adventure-360.webp:71KB",
+          "scifi-360.webp:63KB"
+        ]
+      }
+    },
+    "1440-raster": {
+      "homeMs": {
+        "p50": 1528,
+        "p95": 1606.3
+      },
+      "fcp": {
+        "p50": 396,
+        "p95": 432
+      },
+      "domInteractive": {
+        "p50": 385.1,
+        "p95": 418.1
+      },
+      "chapterOpenMs": {
+        "p50": 2238,
+        "p95": 2289.3
+      },
+      "rasterOpenMs": {
+        "p50": 1407,
+        "p95": 1517.7
+      },
+      "longTaskMs": {
+        "p50": 826,
+        "p95": 1078
+      },
+      "heapMB": {
+        "p50": 22,
+        "p95": 22
+      },
+      "homeNet": {
+        "requests": 22,
+        "totalKB": 518,
+        "jsKB": 216,
+        "big": [
+          "index-B0KaKDeZ.js:106KB",
+          "manga-360.webp:57KB",
+          "medieval-360.webp:54KB",
+          "fantasy-360.webp:61KB",
+          "romance-360.webp:63KB"
+        ]
+      },
+      "chapterNet": {
+        "requests": 11,
+        "totalKB": 381,
+        "jsKB": 43,
+        "big": [
+          "murim-360.webp:55KB",
+          "action-360.webp:66KB",
+          "scifi-360.webp:63KB",
+          "horror-360.webp:51KB",
+          "adventure-360.webp:71KB"
+        ]
+      },
+      "rasterNet": {
+        "requests": 3,
+        "totalKB": 116,
+        "jsKB": 115,
+        "big": [
+          "pro-workspace-BukwklWO.js:107KB"
+        ]
+      }
+    },
+    "390-home": {
+      "homeMs": {
+        "p50": 1607,
+        "p95": 1654.7
+      },
+      "fcp": {
+        "p50": 364,
+        "p95": 403.6
+      },
+      "domInteractive": {
+        "p50": 360.7,
+        "p95": 402.2
+      },
+      "longTaskMs": {
+        "p50": 51,
+        "p95": 51
+      },
+      "heapMB": {
+        "p50": 9.5,
+        "p95": 9.5
+      },
+      "homeNet": {
+        "requests": 19,
+        "totalKB": 429,
+        "jsKB": 216,
+        "big": [
+          "index-B0KaKDeZ.js:106KB",
+          "manga-360.webp:57KB",
+          "murim-360.webp:55KB",
+          "fantasy-360.webp:61KB"
+        ]
+      }
+    },
+    "390-chapter": {
+      "homeMs": {
+        "p50": 1483,
+        "p95": 1573
+      },
+      "fcp": {
+        "p50": 404,
+        "p95": 465.2
+      },
+      "domInteractive": {
+        "p50": 408.4,
+        "p95": 454.5
+      },
+      "chapterOpenMs": {
+        "p50": 1868,
+        "p95": 2228
+      },
+      "longTaskMs": {
+        "p50": 77,
+        "p95": 113
+      },
+      "heapMB": {
+        "p50": 9.5,
+        "p95": 9.5
+      },
+      "homeNet": {
+        "requests": 16,
+        "totalKB": 256,
+        "jsKB": 216,
+        "big": [
+          "index-B0KaKDeZ.js:106KB"
+        ]
+      },
+      "chapterNet": {
+        "requests": 17,
+        "totalKB": 643,
+        "jsKB": 43,
+        "big": [
+          "medieval-360.webp:54KB",
+          "fantasy-360.webp:61KB",
+          "murim-360.webp:55KB",
+          "romance-360.webp:63KB",
+          "manga-360.webp:57KB",
+          "action-360.webp:66KB",
+          "horror-360.webp:51KB",
+          "scifi-360.webp:63KB",
+          "adventure-360.webp:71KB"
+        ]
+      }
+    },
+    "390-raster": {
+      "homeMs": {
+        "p50": 1636,
+        "p95": 1691.8
+      },
+      "fcp": {
+        "p50": 400,
+        "p95": 511.6
+      },
+      "domInteractive": {
+        "p50": 378.8,
+        "p95": 495.8
+      },
+      "chapterOpenMs": {
+        "p50": 1775,
+        "p95": 1780.4
+      },
+      "rasterOpenMs": {
+        "p50": 1382,
+        "p95": 1391.9
+      },
+      "longTaskMs": {
+        "p50": 450,
+        "p95": 464.4
+      },
+      "heapMB": {
+        "p50": 22,
+        "p95": 22
+      },
+      "homeNet": {
+        "requests": 16,
+        "totalKB": 256,
+        "jsKB": 216,
+        "big": [
+          "index-B0KaKDeZ.js:106KB"
+        ]
+      },
+      "chapterNet": {
+        "requests": 17,
+        "totalKB": 643,
+        "jsKB": 43,
+        "big": [
+          "murim-360.webp:55KB",
+          "fantasy-360.webp:61KB",
+          "romance-360.webp:63KB",
+          "medieval-360.webp:54KB",
+          "manga-360.webp:57KB",
+          "action-360.webp:66KB",
+          "horror-360.webp:51KB",
+          "adventure-360.webp:71KB",
+          "scifi-360.webp:63KB"
+        ]
+      },
+      "rasterNet": {
+        "requests": 3,
+        "totalKB": 116,
+        "jsKB": 115,
+        "big": [
+          "pro-workspace-BukwklWO.js:107KB"
+        ]
+      }
+    }
+  }
+}

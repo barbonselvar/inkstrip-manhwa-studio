@@ -1,5 +1,21 @@
 # Inkstrip release changelog
 
+## R13 — performance, AI quality and stability
+
+- **Faster Raster editing in long sessions.** Each edit no longer re-serializes every
+  history snapshot. On a heavy document, a brush stroke blocks the main thread for
+  143 ms instead of 357 ms, and a redo for 67 ms instead of 150 ms.
+- **Edits survive mobile backgrounding.** An edit made just before switching apps is saved
+  when the page is hidden or unloaded. Previously it could be lost if the tab was
+  discarded.
+- **Faster page transitions.** A new chapter opens in 78 ms instead of 443 ms after
+  Create. Raster Studio opens in about 1.0 s instead of 1.8 s.
+- **Long chapters.** A 160-page chapter shows its first screen in 2.1 s instead of 2.5 s,
+  because page thumbnails decode lazily.
+- **AI quality benchmark.** A real-inference benchmark on the original gallery artwork now
+  runs in CI. The model is unchanged.
+- No native format, limit, model or visual change. [Report](R13_PERFORMANCE_REPORT.md).
+
 ## R12 — security maintenance (PR #25)
 
 - `seroval` 1.6.9 → 1.6.12 (transitive via TanStack; lockfile only) fixes two moderate
