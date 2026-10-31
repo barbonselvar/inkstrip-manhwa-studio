@@ -373,3 +373,24 @@ jobs:
             --title "Inkstrip apps $VERSION" \
             --notes-file notes.md \
             --verify-tag $flags
+      # Post-publish verification against the LIVE site and the public download links.
+      - uses: actions/checkout@v4
+        with:
+          path: src
+      - uses: actions/setup-node@v4
+        if: ${{ !contains(needs.version.outputs.version, '-') }}
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Verify production Download App dialog and public downloads
+        if: ${{ !contains(needs.version.outputs.version, '-') }}
+        working-directory: src
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          node apps/scripts/verify-download-dialog.mjs "app-v$VERSION" "$GITHUB_WORKSPACE/release" "$GITHUB_WORKSPACE/download-check"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: inkstrip-release-verification
+          path: download-check/
+          if-no-files-found: warn
