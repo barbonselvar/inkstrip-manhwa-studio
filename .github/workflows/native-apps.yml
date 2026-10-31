@@ -146,13 +146,13 @@ jobs:
     needs: android-build
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    strategy:  # TEMPORARY experiment: does stopping continuous home-screen rendering stop the crash?
+    strategy:  # TEMPORARY experiment: in-guest software WebView vs canary emulator
       fail-fast: false
       matrix:
         sample: [1, 2, 3, 4]
         cfg:
-          - { id: quiet-motion, api: 34, gpu: "-gpu guest", appearance: quiet }
-          - { id: lowpower, api: 34, gpu: "-gpu guest", appearance: lowpower }
+          - { id: webview-swgl, channel: stable, wvflags: "--disable-gpu --disable-gpu-compositing" }
+          - { id: canary-emulator, channel: canary, wvflags: "" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -170,7 +170,8 @@ jobs:
       - name: Install, launch and smoke-test on an Android 14 emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: ${{ matrix.cfg.api }}
+          api-level: 34
+          channel: ${{ matrix.cfg.channel }}
           target: google_apis
           arch: x86_64
           profile: pixel_6
@@ -179,8 +180,8 @@ jobs:
           disable-animations: true
           # Guest-side rendering: host SwiftShader crashed the emulator process when the
           # studio's blurred (backdrop-filter) dialogs opened.
-          emulator-options: -no-window ${{ matrix.cfg.gpu }} -noaudio -no-boot-anim -no-snapshot -camera-back none
-          script: INKSTRIP_TEST_APPEARANCE=${{ matrix.cfg.appearance }} bash apps/scripts/android-device-test.sh
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
+          script: INKSTRIP_TEST_WEBVIEW_FLAGS="${{ matrix.cfg.wvflags }}" bash apps/scripts/android-device-test.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:

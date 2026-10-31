@@ -29,6 +29,7 @@ host_diagnostics() {
   echo "--- kernel log (OOM / kills / faults)"
   sudo dmesg -T 2>/dev/null | grep -iE "oom|killed process|out of memory|segfault|general protection|traps:|qemu" | tail -n 25 || true
   echo "--- emulator crash reports"
+  find /tmp/android-runner "$HOME/.android" -newer "$OUT/host-monitor.txt" -type f 2>/dev/null | grep -v '/avd/' | head -30
   find /tmp/android-runner -type f -newer "$OUT/host-monitor.txt" -size +1k 2>/dev/null | head -20 | while read -r f; do
     echo "$f ($(stat -c %s "$f") bytes)"
     strings -n 10 "$f" 2>/dev/null | grep -iE "gfxstream|swiftshader|lavapipe|vulkan|libGLES|libEGL|signal|SIG[A-Z]+|abort|assert" | sort -u | head -15
@@ -69,6 +70,11 @@ launch() {
   adb shell cat /proc/net/unix | grep -i devtools || true
 }
 
+if [ -n "${INKSTRIP_TEST_WEBVIEW_FLAGS:-}" ]; then
+  # Debuggable apps read WebView switches from this file (test-environment only).
+  echo "_ $INKSTRIP_TEST_WEBVIEW_FLAGS" | adb shell "cat > /data/local/tmp/webview-command-line"
+  echo "WebView test flags: $(adb shell cat /data/local/tmp/webview-command-line)"
+fi
 adb logcat -c || true
 # Stream logcat for the whole run so a crash is captured even if the device disappears.
 "$ADB_BIN" logcat -v threadtime > "$OUT/android-logcat-stream.txt" 2>&1 &
