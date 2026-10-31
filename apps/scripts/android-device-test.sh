@@ -78,7 +78,7 @@ adb shell getprop ro.build.version.release | sed 's/^/Android /' | tee "$OUT/and
 adb shell dumpsys package com.google.android.webview | grep -m1 versionName | sed 's/^ */WebView /' | tee -a "$OUT/android-device.txt"
 
 launch
-node apps/scripts/native-smoke.mjs --platform android --phase main --out "$OUT" --timeout 240 || status=1
+node apps/scripts/native-smoke.mjs --platform android --phase main --out "$OUT" --timeout 240 --appearance emulator || status=1
 adb shell dumpsys meminfo "$PKG" | grep -E "TOTAL PSS|TOTAL RSS|TOTAL:" | tee "$OUT/android-memory.txt" || true
 
 if ! adb get-state >/dev/null 2>&1; then

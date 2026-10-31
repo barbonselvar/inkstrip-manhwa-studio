@@ -32,6 +32,11 @@ const { values: args } = parseArgs({
     out: { type: "string", default: "native-smoke" },
     port: { type: "string", default: "9222" },
     timeout: { type: "string", default: "180" },
+    // "emulator": apply the studio's own low-power Appearance preference (Motion quiet,
+    // Atmosphere off, Transparency solid) before testing. The CI Android emulator's
+    // software GPU renderer crashes while compositing CSS backdrop-filter blur; see
+    // docs/NATIVE_APPS.md ("Android emulator stability"). Functional checks are unchanged.
+    appearance: { type: "string", default: "default" },
   },
 });
 const platform = args.platform;
@@ -297,6 +302,28 @@ async function main() {
     loaded.href.startsWith(APP_ORIGIN),
     loaded,
   );
+  if (args.phase === "main" && args.appearance === "emulator") {
+    const preset = { motion: "quiet", atmosphere: false, transparency: false };
+    await cdp
+      .eval(
+        `localStorage.setItem("inkstrip-studio-appearance-v1", ${JSON.stringify(JSON.stringify(preset))}); setTimeout(() => location.reload(), 50); return true;`,
+      )
+      .catch(() => {});
+    await sleep(3000);
+    const applied = await settle(() =>
+      cdp.eval(
+        page(
+          `await waitFor(() => document.readyState === "complete" && document.documentElement.dataset.transparency, 60000, "appearance"); const d = document.documentElement.dataset; return { motion: d.studioMotion, atmosphere: d.atmosphere, transparency: d.transparency };`,
+        ),
+        90000,
+      ),
+    );
+    record(
+      "Emulator appearance profile applied (quiet motion, solid transparency)",
+      applied.motion === "quiet" && applied.transparency === "solid",
+      applied,
+    );
+  }
   await cdp.screenshot(`${args.phase}-01-home`);
 
   // 2. Native shell markers.
