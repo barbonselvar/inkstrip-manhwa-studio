@@ -10,6 +10,7 @@ import { Modal } from "@/components/ui/modal";
 import { useStudio } from "@/lib/studio/store";
 import { countLabel, formatDay } from "@/lib/utils";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { usePreloadChapterRoute } from "@/lib/studio/route-preload";
 import {
   ArrowUpRight,
   BookOpen,
@@ -61,6 +62,7 @@ export function Library() {
   }, [hasProjects]);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  usePreloadChapterRoute(open);
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
