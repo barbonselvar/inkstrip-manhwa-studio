@@ -12,3 +12,5 @@ and `npm run check:build`. No deployment command is included in CI.
 [AI enhancement, privacy, limits, recovery, and integration testing](AI_ENHANCEMENT.md)
 
 [Configuration audit](CONFIGURATION_AUDIT.md)
+
+[Android APK and Windows EXE apps: build, signing and release](docs/NATIVE_APPS.md)
