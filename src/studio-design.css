@@ -2680,3 +2680,104 @@ html[data-studio-motion="quiet"] .depth-surface:hover > .project-shelf-card.proj
   max-height: 60dvh;
   max-width: 100%;
 }
+
+/* Download App dialog (homepage) */
+.download-app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 0.75rem;
+}
+.download-app-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  min-width: 0;
+}
+.download-app-card[data-suggested] {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+}
+.download-app-card header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.download-app-card h3 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--color-fg);
+}
+.download-app-tag {
+  margin-left: auto;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+.download-app-req,
+.download-app-status,
+.download-app-note,
+.download-app-meta {
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+.download-app-meta {
+  color: var(--color-subtle);
+}
+.download-app-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  margin-top: 0.25rem;
+  padding: 0 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.download-app-action:hover {
+  filter: brightness(1.05);
+}
+.download-app-badge {
+  align-self: flex-start;
+  font-size: 0.68rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+}
+.download-app-badge.signed {
+  color: var(--color-accent);
+}
+.download-app-badge.test {
+  color: #f2c879;
+  border-color: #f2c87955;
+}
+.download-app-hash summary {
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--color-subtle);
+}
+.download-app-hash code {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.68rem;
+  overflow-wrap: anywhere;
+  color: var(--color-muted);
+}
+.download-app-footer {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  color: var(--color-subtle);
+}
+.download-app-footer a {
+  color: var(--color-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

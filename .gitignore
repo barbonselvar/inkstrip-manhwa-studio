@@ -12,3 +12,11 @@ dist/
 .vercel/
 node_modules/
 build-error.log
+
+# Native app shells (apps/)
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+apps/android/android/app/src/main/assets/public/
+apps/android/android/app/src/main/assets/capacitor.config.json
+apps/android/android/app/src/main/assets/capacitor.plugins.json
+apps/android/android/capacitor-cordova-android-plugins/

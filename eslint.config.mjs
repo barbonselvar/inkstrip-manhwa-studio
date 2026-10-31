@@ -15,6 +15,8 @@ export default tseslint.config(
       ".nitro/**",
       "node_modules/**",
       "src/routeTree.gen.ts",
+      "apps/android/android/**",
+      "apps/desktop/src-tauri/**",
     ],
   },
   js.configs.recommended,

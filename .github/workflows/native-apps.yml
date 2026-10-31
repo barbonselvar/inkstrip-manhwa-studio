@@ -1,0 +1,321 @@
+name: Native apps (Android APK + Windows EXE)
+
+# Builds the Android (Capacitor) and Windows (Tauri) shells, installs and smoke-tests
+# each real binary (Android emulator, Windows runner), and — only for an `app-v*` tag —
+# publishes the verified installers to a GitHub Release that the website's
+# "Download App" dialog reads. Pull requests and branch pushes only upload
+# downloadable workflow artifacts; nothing is released or deployed from them.
+#
+# Signing secrets are optional (see docs/NATIVE_APPS.md). Without them the
+# workflow produces clearly labelled test builds:
+#   Inkstrip-<v>-android-test.apk                (debug-signed)
+#   Inkstrip-<v>-windows-x64-setup-unsigned.exe  (no Authenticode signature)
+
+on:
+  pull_request:
+    paths:
+      - "apps/**"
+      - ".github/workflows/native-apps.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - ".github/workflows/native-apps.yml"
+    tags: ["app-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-apps-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  NODE_VERSION: "24"
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      code: ${{ steps.v.outputs.code }}
+      release: ${{ steps.v.outputs.release }}
+    steps:
+      - id: v
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/app-v* ]]; then
+            version="${GITHUB_REF#refs/tags/app-v}"
+            if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+              echo "::error::Tag must look like app-v1.2.3 (got $GITHUB_REF)"; exit 1
+            fi
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            version="1.0.0"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # Monotonic Android versionCode.
+          echo "code=$(( 1000 + GITHUB_RUN_NUMBER ))" >> "$GITHUB_OUTPUT"
+
+  android-build:
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/android/package-lock.json
+      - name: Install Capacitor and sync the Android project
+        working-directory: apps/android
+        run: |
+          npm ci --no-audit --no-fund
+          npx cap sync android
+      - name: Decode release keystore
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/inkstrip-release.jks"
+          echo "INKSTRIP_KEYSTORE_PATH=$RUNNER_TEMP/inkstrip-release.jks" >> "$GITHUB_ENV"
+      - name: Build APK
+        working-directory: apps/android/android
+        env:
+          INKSTRIP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          INKSTRIP_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          INKSTRIP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          props="-PinkstripVersionName=$VERSION -PinkstripVersionCode=${{ needs.version.outputs.code }}"
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          if [ "$HAS_KEYSTORE" = "true" ]; then
+            ./gradlew --no-daemon $props assembleRelease assembleDebug
+            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/dist/Inkstrip-$VERSION-android.apk"
+            # Debuggable twin of the same commit, used only for the WebView smoke test.
+            mkdir -p "$GITHUB_WORKSPACE/dist/test"
+            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/dist/test/"
+          else
+            ./gradlew --no-daemon $props assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/dist/Inkstrip-$VERSION-android-test.apk"
+          fi
+          rm -f "$RUNNER_TEMP/inkstrip-release.jks"
+      - name: Verify APK (signature, package, SDK levels, permissions)
+        run: |
+          set -euo pipefail
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          apk=$(ls dist/*.apk)
+          "$BT/apksigner" verify --verbose --print-certs "$apk" | tee dist/apk-signature.txt
+          "$BT/aapt2" dump badging "$apk" | tee dist/apk-badging.txt
+          grep -q "package: name='app.inkstrip.studio'" dist/apk-badging.txt
+          grep -q "application-label:'Inkstrip'" dist/apk-badging.txt
+          grep -q "minSdkVersion:'24'" dist/apk-badging.txt
+          grep -q "targetSdkVersion:'36'" dist/apk-badging.txt
+          perms=$("$BT/aapt2" dump permissions "$apk" | tee dist/apk-permissions.txt | grep -o "name='[^']*'" | sort -u | tr '\n' ' ')
+          echo "Permissions: $perms"
+          for p in $perms; do
+            case "$p" in
+              "name='android.permission.INTERNET'"|"name='android.permission.WRITE_EXTERNAL_STORAGE'"|"name='app.inkstrip.studio.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'") ;;
+              *) echo "::error::Unexpected permission $p"; exit 1 ;;
+            esac
+          done
+          grep -q "WRITE_EXTERNAL_STORAGE.*maxSdkVersion='28'" dist/apk-permissions.txt
+          (cd dist && sha256sum *.apk | tee apk.sha256)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: inkstrip-android
+          path: |
+            dist/*.apk
+            dist/test/*.apk
+            dist/apk-*.txt
+            dist/apk.sha256
+          if-no-files-found: error
+
+  android-device-test:
+    needs: android-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: inkstrip-android
+          path: dist
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install, launch and smoke-test on an Android 14 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: bash apps/scripts/android-device-test.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: inkstrip-android-device-test
+          path: native-smoke/
+          if-no-files-found: warn
+
+  windows-build:
+    needs: version
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      HAS_CERT: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+      - name: Install Tauri CLI
+        working-directory: apps/desktop
+        run: npm ci --no-audit --no-fund
+      - name: Unit tests (navigation allow-list)
+        working-directory: apps/desktop/src-tauri
+        run: cargo test --locked
+      - name: Import code-signing certificate
+        if: env.HAS_CERT == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP "inkstrip-cert.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $pw = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $pw
+          Remove-Item $pfx
+          $cfg = @{ bundle = @{ windows = @{ certificateThumbprint = $cert.Thumbprint; digestAlgorithm = "sha256"; timestampUrl = "http://timestamp.digicert.com" } } } | ConvertTo-Json -Depth 5 -Compress
+          Set-Content -Path (Join-Path $env:RUNNER_TEMP "signing.json") -Value $cfg
+      - name: Build NSIS installer
+        working-directory: apps/desktop
+        shell: pwsh
+        run: |
+          $cfg = @{ version = $env:VERSION } | ConvertTo-Json -Compress
+          Set-Content -Path (Join-Path $env:RUNNER_TEMP "version.json") -Value $cfg
+          $configs = @("--config", (Join-Path $env:RUNNER_TEMP "version.json"))
+          if ($env:HAS_CERT -eq "true") { $configs += @("--config", (Join-Path $env:RUNNER_TEMP "signing.json")) }
+          npx tauri build --ci @configs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\dist" | Out-Null
+          $setup = Get-ChildItem "src-tauri\target\release\bundle\nsis\*-setup.exe" | Select-Object -First 1
+          $suffix = if ($env:HAS_CERT -eq "true") { "" } else { "-unsigned" }
+          Copy-Item $setup.FullName "$env:GITHUB_WORKSPACE\dist\Inkstrip-$env:VERSION-windows-x64-setup$suffix.exe"
+      - name: Verify installer (size, PE header, signature)
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem dist\*.exe | Select-Object -First 1
+          $bytes = [IO.File]::ReadAllBytes($exe.FullName)
+          if ($bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) { throw "Not a PE executable" }
+          "{0}  {1:N1} MB" -f $exe.Name, ($exe.Length / 1MB)
+          $sig = Get-AuthenticodeSignature $exe.FullName
+          "Authenticode: $($sig.Status) $($sig.SignerCertificate.Subject)" | Tee-Object dist\exe-signature.txt
+          if ($env:HAS_CERT -eq "true" -and $sig.Status -ne "Valid") { throw "Installer signature is not valid" }
+          (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower() + "  " + $exe.Name | Tee-Object dist\exe.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: inkstrip-windows
+          path: |
+            dist/*.exe
+            dist/exe-signature.txt
+            dist/exe.sha256
+          if-no-files-found: error
+
+  windows-device-test:
+    needs: windows-build
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: inkstrip-windows
+          path: dist
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install silently, launch and smoke-test
+        shell: pwsh
+        run: ./apps/scripts/windows-device-test.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: inkstrip-windows-device-test
+          path: native-smoke/
+          if-no-files-found: warn
+
+  release:
+    # Publishes only for an explicit app-v* tag, after both installers passed their device tests.
+    if: needs.version.outputs.release == 'true'
+    needs: [version, android-build, android-device-test, windows-build, windows-device-test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Collect installers and checksums
+        run: |
+          set -euo pipefail
+          mkdir release
+          cp artifacts/inkstrip-android/*.apk artifacts/inkstrip-windows/*.exe release/
+          (cd release && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          android_tests=$(jq -r '.[] | "- \(if .ok then "✅" elif .required then "❌" else "⚠️" end) \(.name)"' artifacts/inkstrip-android-device-test/android-*-results.json)
+          windows_tests=$(jq -r '.[] | "- \(if .ok then "✅" elif .required then "❌" else "⚠️" end) \(.name)"' artifacts/inkstrip-windows-device-test/windows-*-results.json)
+          apk=$(ls release/*.apk); exe=$(ls release/*.exe)
+          {
+            echo "Installable Inkstrip apps built from \`${GITHUB_SHA::7}\`. Both load the production studio at https://inkstrip-manhwa-studio.vercel.app."
+            echo
+            echo "| Platform | File | Signing |"
+            echo "|---|---|---|"
+            if [[ "$apk" == *-test.apk ]]; then s="**Test build** — debug key, not for Play Store"; else s="Release key"; fi
+            echo "| Android 7.0+ | \`$(basename "$apk")\` | $s |"
+            if [[ "$exe" == *-unsigned.exe ]]; then s="**Test build** — unsigned, SmartScreen will warn"; else s="Authenticode signed"; fi
+            echo "| Windows 10/11 x64 | \`$(basename "$exe")\` | $s |"
+            echo
+            echo "### Automated device tests (emulator / CI runner, not physical devices)"
+            echo "**Android 14 emulator**"; echo "$android_tests"; echo
+            echo "**Windows Server runner (WebView2)**"; echo "$windows_tests"; echo
+            echo "Verify downloads with \`SHA256SUMS.txt\`. See docs/NATIVE_APPS.md for install and signing details."
+          } > notes.md
+      - name: Create GitHub Release
+        run: |
+          flags=""
+          if [[ "$VERSION" == *-* ]]; then flags="--prerelease"; fi
+          gh release create "app-v$VERSION" release/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Inkstrip apps $VERSION" \
+            --notes-file notes.md \
+            --verify-tag $flags
