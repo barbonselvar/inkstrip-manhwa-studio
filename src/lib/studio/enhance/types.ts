@@ -54,3 +54,17 @@ export const ENHANCE_PRESETS = {
   "manga-ink": { denoise: 5, sharpen: 0, color: false, artifacts: false, inkGaps: true },
   "legacy-cleanup": { denoise: 15, sharpen: 15, color: false, artifacts: true, inkGaps: false },
 } as const;
+
+/** Compare effective settings, including defaults used by legacy callers. Object
+ * insertion order or selecting the default model explicitly is not a new recipe. */
+export function enhancementSettingsKey(options: EnhanceOptions) {
+  return JSON.stringify([
+    options.model ?? "swin2sr",
+    options.scale,
+    options.denoise,
+    options.sharpen,
+    options.color,
+    options.artifacts,
+    options.inkGaps ?? false,
+  ]);
+}

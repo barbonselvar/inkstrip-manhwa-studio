@@ -15,6 +15,7 @@ import {
   DEFAULT_ENHANCE,
   ENHANCE_PRESETS,
   enhancementSize,
+  enhancementSettingsKey,
   type EnhanceOptions,
   type EnhanceProgress,
   type EnhanceResult,
@@ -43,7 +44,7 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
   const mounted = useRef(true);
   const preview = previews[index];
   const settingsChanged = previews.some(
-    (item) => JSON.stringify(item.options) !== JSON.stringify(options),
+    (item) => enhancementSettingsKey(item.options) !== enhancementSettingsKey(options),
   );
   const replace = useStudio((state) => state.replacePanelImage);
   const restore = useStudio((state) => state.restorePanel);

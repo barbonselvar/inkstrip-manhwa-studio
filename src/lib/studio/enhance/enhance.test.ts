@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   enhancementSize,
+  enhancementSettingsKey,
   validateEnhanceOptions,
   DEFAULT_ENHANCE,
   ENHANCE_PRESETS,
@@ -169,4 +170,15 @@ test("ink restoration preserves color, transparent edges, larger holes and bad-b
     assert.deepEqual(pixels, before);
   }
   assert.throws(() => repairInkGaps(new Uint8ClampedArray(12), 13, 13), /buffer/);
+});
+
+test("preview guards compare effective recipes so reverting default options restores Apply", () => {
+  const key = enhancementSettingsKey(DEFAULT_ENHANCE);
+  assert.equal(
+    enhancementSettingsKey({ ...DEFAULT_ENHANCE, model: "swin2sr", inkGaps: false }),
+    key,
+  );
+  assert.notEqual(enhancementSettingsKey({ ...DEFAULT_ENHANCE, model: "realesrgan-anime" }), key);
+  assert.notEqual(enhancementSettingsKey({ ...DEFAULT_ENHANCE, denoise: 10 }), key);
+  assert.notEqual(enhancementSettingsKey({ ...DEFAULT_ENHANCE, inkGaps: true }), key);
 });
