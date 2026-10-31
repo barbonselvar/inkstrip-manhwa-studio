@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Inkstrip",
+  "mainBinaryName": "Inkstrip",
+  "version": "1.0.0",
+  "identifier": "app.inkstrip.studio",
+  "build": {
+    "frontendDist": "../launcher"
+  },
+  "app": {
+    "windows": [],
+    "withGlobalTauri": false,
+    "security": {
+      "csp": null,
+      "capabilities": []
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "Inkstrip",
+    "shortDescription": "Inkstrip Manhwa Studio",
+    "longDescription": "Organize manhwa projects and chapters, edit panels in Raster Studio, restore art with AI, stitch vertical pages, and export.",
+    "category": "GraphicsAndDesign",
+    "copyright": "Inkstrip",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "displayLanguageSelector": false,
+        "startMenuFolder": "Inkstrip"
+      }
+    }
+  }
+}

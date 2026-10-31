@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Inkstrip</string>
+    <string name="title_activity_main">Inkstrip</string>
+    <string name="package_name">app.inkstrip.studio</string>
+    <string name="custom_url_scheme">app.inkstrip.studio</string>
+</resources>

@@ -4,6 +4,7 @@ import { ArtworkCover } from "./design/artwork-cover";
 import { DepthSurface } from "./design/depth-surface";
 import { AppearanceButton } from "./design/preferences";
 import { Wordmark } from "./chrome";
+import { DownloadAppButton } from "./download-app";
 import { storageMessage } from "@/lib/studio/db";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -184,6 +185,7 @@ export function Library() {
                 <Upload className="size-4" />
                 {restoring ? "Restoring…" : "Restore backup"}
               </button>
+              <DownloadAppButton className="hero-secondary focus-ring" />
               <input
                 ref={backupInput}
                 type="file"
