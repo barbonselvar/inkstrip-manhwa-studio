@@ -13,7 +13,18 @@ const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] }
 const p = await browser.newPage();
 p.setDefaultTimeout(600000);
 await p.goto(base);
-const result = await p.evaluate(async () => {
+// A dev server may re-optimize dependencies on first use and reload the page; retry once.
+async function evaluateOnce(fn) {
+  try {
+    return await p.evaluate(fn);
+  } catch (error) {
+    if (!/Execution context was destroyed|navigation/i.test(String(error))) throw error;
+    await p.waitForLoadState("load");
+    await p.waitForTimeout(2000);
+    return p.evaluate(fn);
+  }
+}
+const result = await evaluateOnce(async () => {
   const { EnhancementEngine } = await import("/src/lib/studio/enhance/client.ts");
   const names = [
     "action",

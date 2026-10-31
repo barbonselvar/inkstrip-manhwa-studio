@@ -1,5 +1,5 @@
 /** Local browser QA only. Production continues to use ../vite.config.ts.
- * OCR's nested worker entry is not discovered by Vite's initial page crawl.
+ * OCR's and AI enhancement's nested worker entries are not discovered by Vite's initial page crawl.
  * Pre-bundle its dependencies at startup so first inference cannot reload a
  * page that is already executing an unchanged browser test. */
 import original from "../vite.config.ts";
@@ -11,7 +11,13 @@ export default async (env) => {
     optimizeDeps: {
       ...config.optimizeDeps,
       include: [
-        ...new Set([...(config.optimizeDeps?.include ?? []), "tesseract.js", "idb-keyval"]),
+        ...new Set([
+          ...(config.optimizeDeps?.include ?? []),
+          "tesseract.js",
+          "idb-keyval",
+          // The AI worker's runtime (R13 AI benchmark): discovered late, it reloaded the page.
+          "onnxruntime-web/wasm",
+        ]),
       ],
     },
   };
