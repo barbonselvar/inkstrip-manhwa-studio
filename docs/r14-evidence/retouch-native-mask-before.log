@@ -1,0 +1,19 @@
+{"width":513,"height":437,"outsidePixels":148197,"outsideChanged":1485,"insideChanged":75984,"ms":2053}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: all native unselected pixels, including subtract holes, must remain byte-exact
+
+1485 !== 0
+
+    at file:///workspace/inkstrip-r14/scripts/r14/retouch-precision-check.mjs:77:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1485,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

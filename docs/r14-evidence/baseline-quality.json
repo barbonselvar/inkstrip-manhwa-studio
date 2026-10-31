@@ -1,0 +1,38 @@
+{
+  "model": "Xenova/swin2SR-classical-sr-x2-64@93dfc90 (pinned)",
+  "firstRunIncludingModelLoadMs": 48224,
+  "rows": [
+    {
+      "name": "action",
+      "size": "128x128 -> 256x256",
+      "bicubic": 25.69,
+      "fidelity": 26.56,
+      "appDefaultMs": 35753,
+      "appDefault": 25.53
+    },
+    {
+      "name": "manga",
+      "size": "128x128 -> 256x256",
+      "bicubic": 20.76,
+      "fidelityMs": 31920,
+      "fidelity": 21.38,
+      "appDefaultMs": 32556,
+      "appDefault": 20.75
+    },
+    {
+      "name": "romance",
+      "size": "128x128 -> 256x256",
+      "bicubic": 24.46,
+      "fidelityMs": 32214,
+      "fidelity": 25.07,
+      "appDefaultMs": 32520,
+      "appDefault": 24.31
+    }
+  ],
+  "meanPsnrY": {
+    "bicubic": 23.64,
+    "fidelity": 24.34,
+    "appDefault": 23.53,
+    "bicubicOnDefaultSubset": 25.69
+  }
+}

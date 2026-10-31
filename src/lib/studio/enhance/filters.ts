@@ -5,9 +5,9 @@ export function cleanPixels(
   height: number,
   amount: number,
 ) {
-  const source = data.slice();
   const strength = Math.max(0, Math.min(40, amount)) / 100;
   if (!strength) return;
+  const source = data.slice();
   for (let y = 1; y < height - 1; y++) {
     for (let x = 1; x < width - 1; x++) {
       const p = (y * width + x) * 4;
@@ -35,8 +35,9 @@ export function finishPixels(
   sharpen: number,
   color: boolean,
 ) {
-  const source = data.slice();
   const strength = Math.max(0, Math.min(40, sharpen)) / 100;
+  if (!strength && !color) return;
+  const source = data.slice();
   for (let y = 0; y < height; y++)
     for (let x = 0; x < width; x++) {
       const p = (y * width + x) * 4;

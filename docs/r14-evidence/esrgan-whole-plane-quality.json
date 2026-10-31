@@ -1,0 +1,60 @@
+{
+  "model": "tidus2102/Real-ESRGAN@c9a1cd990b587ccf20be2373fad8eb021e24ab01/RealESR-AnimeVideo-v3_x4.onnx",
+  "note": "Converted third-party artifact; output reduced to 2x for same-input comparison. Not adopted.",
+  "rows": [
+    {
+      "name": "action",
+      "input": [
+        128,
+        128
+      ],
+      "nativeOutput": [
+        512,
+        512
+      ],
+      "comparisonOutput": [
+        256,
+        256
+      ],
+      "psnrY": 26.69187674949796,
+      "modelLoadMs": 1103.7000000000698,
+      "inferenceMs": 797.3999999999069
+    },
+    {
+      "name": "manga",
+      "input": [
+        128,
+        128
+      ],
+      "nativeOutput": [
+        512,
+        512
+      ],
+      "comparisonOutput": [
+        256,
+        256
+      ],
+      "psnrY": 21.150463308939887,
+      "modelLoadMs": 0,
+      "inferenceMs": 744.4000000000233
+    },
+    {
+      "name": "romance",
+      "input": [
+        128,
+        128
+      ],
+      "nativeOutput": [
+        512,
+        512
+      ],
+      "comparisonOutput": [
+        256,
+        256
+      ],
+      "psnrY": 25.219790473655515,
+      "modelLoadMs": 0,
+      "inferenceMs": 783.5
+    }
+  ]
+}

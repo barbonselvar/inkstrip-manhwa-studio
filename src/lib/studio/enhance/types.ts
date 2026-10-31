@@ -1,7 +1,9 @@
-export const ENHANCE_MAX_AREA = 4_000_000,
-  ENHANCE_MAX_SIDE = 4096;
+import { enhancementPlan } from "./plan.ts";
+import type { EnhanceModel } from "./models.ts";
+export { ENHANCE_MAX_AREA, ENHANCE_MAX_SIDE } from "./plan.ts";
 export type EnhanceOptions = {
-  scale: 1 | 2;
+  scale: 1 | 2 | 4;
+  model?: EnhanceModel;
   denoise: number;
   sharpen: number;
   color: boolean;
@@ -9,10 +11,10 @@ export type EnhanceOptions = {
 };
 export const DEFAULT_ENHANCE: EnhanceOptions = {
   scale: 2,
-  denoise: 15,
-  sharpen: 15,
+  denoise: 0,
+  sharpen: 0,
   color: false,
-  artifacts: true,
+  artifacts: false,
 };
 export type EnhanceProgress = { stage: string; done: number; total: number };
 export type EnhanceResult = { blob: Blob; width: number; height: number };
@@ -22,20 +24,29 @@ export type WorkerReply =
   | { type: "error"; error: string };
 
 export function enhancementSize(width: number, height: number, scale: number) {
-  if (
-    !Number.isInteger(width) ||
-    !Number.isInteger(height) ||
-    width < 1 ||
-    height < 1 ||
-    ![1, 2].includes(scale)
-  ) {
-    throw new Error("Invalid image dimensions or scale.");
-  }
-  // Also bound the 2× intermediate canvas when the requested final size is 1×.
-  if (width * height > ENHANCE_MAX_AREA || Math.max(width, height) > ENHANCE_MAX_SIDE) {
-    throw new Error(
-      "This image exceeds the on-device AI limit (4 megapixels / 4096px per side). Original unchanged.",
-    );
-  }
-  return { width: width * scale, height: height * scale };
+  const { width: w, height: h } = enhancementPlan(width, height, scale);
+  return { width: w, height: h };
 }
+export function validateEnhanceOptions(options: EnhanceOptions) {
+  if (
+    !options ||
+    ![1, 2, 4].includes(options.scale) ||
+    (options.model !== undefined &&
+      options.model !== "swin2sr" &&
+      options.model !== "realesrgan-anime") ||
+    !Number.isFinite(options.denoise) ||
+    options.denoise < 0 ||
+    options.denoise > 40 ||
+    !Number.isFinite(options.sharpen) ||
+    options.sharpen < 0 ||
+    options.sharpen > 40 ||
+    typeof options.color !== "boolean" ||
+    typeof options.artifacts !== "boolean"
+  )
+    throw Error("Invalid AI enhancement settings.");
+}
+export const ENHANCE_PRESETS = {
+  fidelity: { denoise: 0, sharpen: 0, color: false, artifacts: false },
+  "gentle-cleanup": { denoise: 10, sharpen: 5, color: false, artifacts: false },
+  "legacy-cleanup": { denoise: 15, sharpen: 15, color: false, artifacts: true },
+} as const;

@@ -1,0 +1,50 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "realFastAnime4x": true,
+      "actualPixelComparison": true,
+      "alpha": "covered by inference-check",
+      "applyRecoverSourceExact": true,
+      "rasterOpen": true,
+      "noOverflow": true
+    },
+    {
+      "width": 768,
+      "realFastAnime4x": true,
+      "actualPixelComparison": true,
+      "alpha": "covered by inference-check",
+      "applyRecoverSourceExact": true,
+      "rasterOpen": true,
+      "noOverflow": true
+    },
+    {
+      "width": 390,
+      "realFastAnime4x": true,
+      "actualPixelComparison": true,
+      "alpha": "covered by inference-check",
+      "applyRecoverSourceExact": true,
+      "rasterOpen": true,
+      "noOverflow": true
+    },
+    {
+      "width": 360,
+      "realFastAnime4x": true,
+      "actualPixelComparison": true,
+      "alpha": "covered by inference-check",
+      "applyRecoverSourceExact": true,
+      "rasterOpen": true,
+      "noOverflow": true
+    },
+    {
+      "width": 320,
+      "realFastAnime4x": true,
+      "actualPixelComparison": true,
+      "alpha": "covered by inference-check",
+      "applyRecoverSourceExact": true,
+      "rasterOpen": true,
+      "noOverflow": true
+    }
+  ],
+  "errors": []
+}

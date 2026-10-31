@@ -13,11 +13,13 @@ import { Modal } from "@/components/ui/modal";
 import { EnhancementEngine } from "@/lib/studio/enhance/client";
 import {
   DEFAULT_ENHANCE,
+  ENHANCE_PRESETS,
   enhancementSize,
   type EnhanceOptions,
   type EnhanceProgress,
   type EnhanceResult,
 } from "@/lib/studio/enhance/types";
+import { ENHANCE_MODELS, type EnhanceModel } from "@/lib/studio/enhance/models";
 import { getBlob, storageMessage } from "@/lib/studio/db";
 import { useStudio } from "@/lib/studio/store";
 import type { Panel } from "@/lib/studio/types";
@@ -33,6 +35,7 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
   const [previews, setPreviews] = useState<Preview[]>([]);
   const [index, setIndex] = useState(0);
   const [split, setSplit] = useState(50);
+  const [actualSize, setActualSize] = useState(false);
   const [urls, setUrls] = useState<{ before: string; after: string } | null>(null);
   const [message, setMessage] = useState("");
   const engine = useRef<EnhancementEngine | null>(null);
@@ -76,15 +79,17 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
     try {
       // Bound retained batch previews on memory-constrained phones.
       if (panels.length > 12) throw new Error("Select up to 12 images per batch.");
-      let pixels = 0;
+      let pixels = 0,
+        outputPixels = 0;
       for (const panel of panels) {
         const source = panel;
-        enhancementSize(source.width, source.height, options.scale);
+        const planned = enhancementSize(source.width, source.height, options.scale);
+        outputPixels += planned.width * planned.height;
         pixels += source.width * source.height;
       }
-      if (pixels > 8_000_000)
+      if (pixels > 8_000_000 || outputPixels > 32_000_000)
         throw new Error(
-          "This batch exceeds 8 megapixels. Select fewer images to keep your phone responsive.",
+          "This batch exceeds 8 source or 32 output megapixels. Select fewer images to keep memory bounded.",
         );
       for (let i = 0; i < panels.length; i++) {
         if (cancelled.current) break;
@@ -178,21 +183,68 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
     >
       <div className="ai-intro">
         <Sparkles className="size-5 text-accent" />
-        <p>Real Swin2SR restoration, on your device. No image uploads or API keys.</p>
+        <p>Real, local neural restoration. No image uploads or API keys.</p>
       </div>
       <p className="mt-3 text-xs text-muted">
-        First use downloads about 65 MB of AI assets. Processing can take several minutes on a
-        phone. Review fine text: AI may change small details. Your original is always kept.
+        {options.model === "realesrgan-anime"
+          ? "Fast Anime downloads about 14 MB of model/runtime assets."
+          : "Swin2SR downloads about 65 MB of model/runtime assets and can be slow on a phone."}{" "}
+        Review faces and fine text: neural enhancement can change small details. Identity
+        preservation is not guaranteed. Your original is always kept.
       </p>
       <fieldset disabled={locked} className="enhance-options mt-5 grid grid-cols-2 gap-4">
         <label className="text-sm text-muted">
+          AI model
+          <select
+            aria-label="Enhancement model"
+            className="field mt-2"
+            value={options.model ?? "swin2sr"}
+            onChange={(e) => setOptions({ ...options, model: e.target.value as EnhanceModel })}
+          >
+            {Object.entries(ENHANCE_MODELS).map(([id, model]) => (
+              <option key={id} value={id}>
+                {model.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm text-muted">
+          Restoration preset
+          <select
+            aria-label="Restoration preset"
+            className="field mt-2"
+            value={
+              Object.entries(ENHANCE_PRESETS).find(
+                ([, p]) =>
+                  p.denoise === options.denoise &&
+                  p.sharpen === options.sharpen &&
+                  p.color === options.color &&
+                  p.artifacts === options.artifacts,
+              )?.[0] ?? "custom"
+            }
+            onChange={(e) => {
+              const p = ENHANCE_PRESETS[e.target.value as keyof typeof ENHANCE_PRESETS];
+              if (p) setOptions({ ...options, ...p });
+            }}
+          >
+            <option value="fidelity">Fidelity · preserve colors and edges</option>
+            <option value="gentle-cleanup">Gentle line cleanup</option>
+            <option value="legacy-cleanup">Legacy cleanup</option>
+            <option value="custom" disabled>
+              Custom
+            </option>
+          </select>
+        </label>
+        <label className="text-sm text-muted">
           Output size
           <select
+            aria-label="Output size"
             className="field mt-2"
             value={options.scale}
-            onChange={(e) => setOptions({ ...options, scale: Number(e.target.value) as 1 | 2 })}
+            onChange={(e) => setOptions({ ...options, scale: Number(e.target.value) as 1 | 2 | 4 })}
           >
             <option value={2}>2× upscale</option>
+            <option value={4}>4× upscale · up to 1 MP source</option>
             <option value={1}>Original size · restore</option>
           </select>
         </label>
@@ -240,10 +292,16 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
         </div>
       </fieldset>
       <p className="mt-3 text-xs text-subtle">
-        Runs on the current accepted image, including saved crops. Neural 2× reconstruction with
+        Runs on the current accepted image, including saved crops. Neural reconstruction with
         edge-aware noise/artifact cleanup and conservative sharpening. Color boost is optional; no
-        generative redraw.
+        automatic character identity matching.
       </p>
+      {options.scale === 4 && (
+        <p className="mt-3 text-xs text-muted">
+          4× stays within 16 output megapixels. Swin2SR uses two real model passes; Fast Anime uses
+          one native 4× pass. Review artifacts before applying.
+        </p>
+      )}
       {running ? (
         <div className="ai-progress mt-5" role="status" aria-live="polite">
           <div className="flex justify-between gap-3 text-sm">
@@ -293,19 +351,39 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
               </Button>
             </div>
           </div>
-          <div
-            className="compare-view"
-            style={{ aspectRatio: `${preview.after.width} / ${preview.after.height}` }}
+          <Button
+            variant="ghost"
+            aria-pressed={actualSize}
+            onClick={() => setActualSize(!actualSize)}
           >
-            <img src={urls.before} alt="Original artwork" />
-            <img
-              src={urls.after}
-              alt="AI enhanced artwork"
-              style={{ clipPath: `inset(0 0 0 ${split}%)` }}
-            />
-            <div className="compare-line" style={{ left: `${split}%` }} />
-            <span className="compare-label compare-before">Original</span>
-            <span className="compare-label compare-after">Enhanced</span>
+            {actualSize ? "Fit comparison" : "100% comparison"}
+          </Button>
+          <div className="ai-compare-scroll">
+            <div
+              className="compare-view"
+              style={{
+                aspectRatio: `${preview.after.width} / ${preview.after.height}`,
+                ...(actualSize
+                  ? {
+                      width: preview.after.width,
+                      height: preview.after.height,
+                      maxWidth: "none",
+                      maxHeight: "none",
+                      boxSizing: "content-box" as const,
+                    }
+                  : {}),
+              }}
+            >
+              <img src={urls.before} alt="Original artwork" />
+              <img
+                src={urls.after}
+                alt="AI enhanced artwork"
+                style={{ clipPath: `inset(0 0 0 ${split}%)` }}
+              />
+              <div className="compare-line" style={{ left: `${split}%` }} />
+              <span className="compare-label compare-before">Original</span>
+              <span className="compare-label compare-after">Enhanced</span>
+            </div>
           </div>
           <label className="mt-3 block text-xs text-muted">
             Before / after · drag to compare

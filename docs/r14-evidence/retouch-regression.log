@@ -1,0 +1,5 @@
+
+> test:retouch:browser
+> node scripts/retouch-browser-check.mjs
+
+Retouch worker, mask, output pixels, accepted save, original bytes, reload, face selection: PASS

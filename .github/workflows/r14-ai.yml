@@ -1,0 +1,43 @@
+name: R14 real AI editing checks
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: r14-ai-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  inference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Prepare evidence directories
+        run: sudo install -d -m 0755 -o "$(id -u)" -g "$(id -g)" /workspace/r14-evidence /workspace/screenshots
+      - name: Start source QA server
+        run: |
+          VITE_AUTH_ENABLED=false npm run dev -- --config scripts/vite-browser-qa.config.mjs > /workspace/r14-evidence/dev.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8080/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /workspace/r14-evidence/dev.log
+          exit 1
+      - name: Real pinned Fast Anime, transactions and five viewport widths
+        run: npm run test:r14:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r14-real-inference
+          path: |
+            /workspace/r14-evidence
+            /workspace/screenshots/r14-*.png
+          if-no-files-found: warn

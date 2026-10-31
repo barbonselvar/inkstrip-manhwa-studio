@@ -7,6 +7,7 @@ const scope = self as unknown as DedicatedWorkerGlobalScope;
 let original: ImageBitmap | null = null,
   context: OffscreenCanvas | null = null,
   mask: OffscreenCanvas | null = null;
+let selected: Selection[] = [];
 let region = { x: 0, y: 0, size: 1 };
 const ctx = (c: OffscreenCanvas) => {
   const x = c.getContext("2d", { willReadFrequently: true });
@@ -39,17 +40,11 @@ async function compose(generated: Blob) {
       region.size,
       region.size,
     );
-    ac.drawImage(
-      mask,
-      0,
-      0,
-      mask.width,
-      mask.height,
-      region.x - x,
-      region.y - y,
-      region.size,
-      region.size,
-    );
+    // The synthesis context is reduced, but edit ownership is always native.
+    // Resizing its mask leaked edits across hard edges and into subtract holes.
+    ac.setTransform(1, 0, 0, 1, -x, -y);
+    paintSelection(ac, selected, original.width, original.height);
+    ac.resetTransform();
     const changed = pc.getImageData(0, 0, w, h),
       weights = ac.getImageData(0, 0, w, h),
       base = fc.getImageData(x, y, w, h);
@@ -87,6 +82,7 @@ scope.onmessage = async ({
         "Retouch supports up to 16 megapixels and 16384px per side. Split a larger image first.",
       );
     const box = selectionBox(data.strokes!);
+    selected = data.strokes!;
     const width = original.width,
       height = original.height;
     const pad = Math.max(
