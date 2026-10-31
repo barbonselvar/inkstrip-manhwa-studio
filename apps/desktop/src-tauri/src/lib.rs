@@ -24,6 +24,20 @@ fn is_app_url(url: &Url) -> bool {
     }
 }
 
+/// WRY's default WebView2 switches (kept when we add our own; see wry's webview2 module).
+const WEBVIEW2_DEFAULT_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection";
+
+/// Opt-in test hook used by CI (`apps/scripts/windows-device-test.ps1`): when
+/// `INKSTRIP_WEBVIEW2_DEBUG_PORT` holds a port number, WebView2 exposes the DevTools
+/// protocol on 127.0.0.1 so the installed app can be driven end to end. WRY always
+/// passes explicit browser arguments, which makes WebView2 ignore the standard
+/// `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` variable, hence this dedicated switch.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn webview2_args(debug_port: Option<String>) -> Option<String> {
+    let port: u16 = debug_port?.trim().parse().ok().filter(|p| *p >= 1024)?;
+    Some(format!("{WEBVIEW2_DEFAULT_ARGS} --remote-debugging-port={port}"))
+}
+
 fn open_externally(url: &Url) {
     if matches!(url.scheme(), "http" | "https" | "mailto") {
         let _ = tauri_plugin_opener::open_url(url.as_str(), None::<&str>);
@@ -46,7 +60,13 @@ pub fn run() {
             let marker = format!(
                 "Object.defineProperty(window, '__INKSTRIP_DESKTOP__', {{ value: Object.freeze({{ platform: 'windows', version: '{version}' }}) }});"
             );
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+            let builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()));
+            #[cfg(windows)]
+            let builder = match webview2_args(std::env::var("INKSTRIP_WEBVIEW2_DEBUG_PORT").ok()) {
+                Some(args) => builder.additional_browser_args(&args),
+                None => builder,
+            };
+            builder
                 .title("Inkstrip")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(800.0, 560.0)
@@ -82,6 +102,17 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn debug_port_hook_is_opt_in_and_validated() {
+        assert_eq!(webview2_args(None), None);
+        assert_eq!(webview2_args(Some("".into())), None);
+        assert_eq!(webview2_args(Some("80".into())), None);
+        assert_eq!(webview2_args(Some("9222; --evil".into())), None);
+        let args = webview2_args(Some("9222".into())).unwrap();
+        assert!(args.starts_with(WEBVIEW2_DEFAULT_ARGS));
+        assert!(args.ends_with(" --remote-debugging-port=9222"));
+    }
 
     #[test]
     fn only_production_and_local_urls_stay_in_app() {

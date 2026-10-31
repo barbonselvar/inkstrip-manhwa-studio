@@ -23,12 +23,20 @@ launch() {
     sleep 1
   done
   echo "pid=$pid"
-  adb forward --remove-all || true
-  for _ in $(seq 1 60); do
-    adb shell cat /proc/net/unix | grep -q "webview_devtools_remote_$pid" && break
-    sleep 1
+  # The WebView creates its DevTools socket lazily; keep re-forwarding to the current
+  # pid until the endpoint answers.
+  for _ in $(seq 1 90); do
+    pid=$(adb shell pidof "$PKG" | tr -d '\r')
+    adb forward --remove-all >/dev/null 2>&1 || true
+    if [ -n "$pid" ] && adb forward tcp:9222 "localabstract:webview_devtools_remote_$pid" >/dev/null 2>&1 \
+      && curl -sf -m 3 http://127.0.0.1:9222/json/version >/dev/null; then
+      echo "DevTools ready for pid $pid"
+      return 0
+    fi
+    sleep 2
   done
-  adb forward tcp:9222 "localabstract:webview_devtools_remote_$pid"
+  echo "DevTools socket never appeared"
+  adb shell cat /proc/net/unix | grep -i devtools || true
 }
 
 adb logcat -c || true

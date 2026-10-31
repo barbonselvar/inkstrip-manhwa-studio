@@ -36,9 +36,9 @@ if (Test-Path $app) {
 function Start-Inkstrip {
   Get-Process Inkstrip -ErrorAction SilentlyContinue | Stop-Process -Force
   Start-Sleep 2
-  $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--remote-debugging-port=9222"
+  $env:INKSTRIP_WEBVIEW2_DEBUG_PORT = "9222"
   $proc = Start-Process $app -PassThru
-  Remove-Item Env:\WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
+  Remove-Item Env:\INKSTRIP_WEBVIEW2_DEBUG_PORT
   return $proc
 }
 

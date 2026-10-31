@@ -186,13 +186,32 @@ async function main() {
   await cdp.send("Page.enable").catch(() => {});
 
   // 1. The production app actually rendered inside the native shell.
-  const loaded = await cdp.eval(
-    page(`
+  // The target can be attached while the page is still navigating; retry until it settles.
+  const settle = async (fn) => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        if (
+          attempt >= 30 ||
+          !/context was destroyed|Cannot find context|Inspected target navigated/i.test(
+            error.message,
+          )
+        )
+          throw error;
+        await sleep(2000);
+      }
+    }
+  };
+  const loaded = await settle(() =>
+    cdp.eval(
+      page(`
       await waitFor(() => document.readyState === "complete", 60000, "document load");
       await waitFor(() => document.querySelector(".hero-title, main#workspace, .studio-layout"), 60000, "Inkstrip UI");
       return { href: location.href, title: document.title, text: document.body.innerText.slice(0, 200), ua: navigator.userAgent };
     `),
-    90000,
+      90000,
+    ),
   );
   record(
     "Production web app loads inside the app window",
