@@ -167,8 +167,12 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          ram-size: 4096M
+          disk-size: 6000M
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          # Guest-side rendering: host SwiftShader crashed the emulator process when the
+          # studio's blurred (backdrop-filter) dialogs opened.
+          emulator-options: -no-window -gpu guest -noaudio -no-boot-anim -no-snapshot -camera-back none
           script: bash apps/scripts/android-device-test.sh
       - uses: actions/upload-artifact@v4
         if: always()

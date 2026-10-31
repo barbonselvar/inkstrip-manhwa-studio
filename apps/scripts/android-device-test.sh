@@ -7,6 +7,8 @@ PKG=app.inkstrip.studio
 OUT=native-smoke
 mkdir -p "$OUT"
 status=0
+# Fail fast instead of hanging if the emulator goes away.
+adb() { timeout 120 command adb "$@"; }
 
 shipped=$(ls dist/*.apk | head -1)
 # A release-signed APK has WebView debugging off, so the CDP smoke test runs on the
@@ -40,6 +42,9 @@ launch() {
 }
 
 adb logcat -c || true
+# Stream logcat for the whole run so a crash is captured even if the device disappears.
+command adb logcat -v threadtime > "$OUT/android-logcat-stream.txt" 2>&1 &
+LOGCAT_PID=$!
 adb install -r "$testapk" || exit 1
 adb shell getprop ro.build.version.release | sed 's/^/Android /' | tee "$OUT/android-device.txt"
 adb shell dumpsys package com.google.android.webview | grep -m1 versionName | sed 's/^ */WebView /' | tee -a "$OUT/android-device.txt"
@@ -48,6 +53,11 @@ launch
 node apps/scripts/native-smoke.mjs --platform android --phase main --out "$OUT" --timeout 240 || status=1
 adb shell dumpsys meminfo "$PKG" | grep -E "TOTAL PSS|TOTAL RSS|TOTAL:" | tee "$OUT/android-memory.txt" || true
 
+if ! adb get-state >/dev/null 2>&1; then
+  echo "FAIL  Emulator is no longer reachable after the main phase (see android-logcat-stream.txt)"
+  kill "$LOGCAT_PID" 2>/dev/null || true
+  exit 1
+fi
 launch
 node apps/scripts/native-smoke.mjs --platform android --phase verify-restart --out "$OUT" --timeout 240 || status=1
 adb exec-out screencap -p > "$OUT/android-screen.png" || true
@@ -66,6 +76,7 @@ if [ "$testapk" != "$shipped" ]; then
   adb exec-out screencap -p > "$OUT/android-release-screen.png" || true
 fi
 
+kill "$LOGCAT_PID" 2>/dev/null || true
 adb logcat -d > "$OUT/android-logcat.txt" || true
 if grep -E "FATAL EXCEPTION.*|AndroidRuntime: Process: $PKG" "$OUT/android-logcat.txt"; then
   echo "FAIL  App crashed (see android-logcat.txt)"; status=1
