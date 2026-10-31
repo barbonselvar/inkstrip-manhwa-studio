@@ -11,6 +11,55 @@ status=0
 ADB_BIN=$(type -P adb)
 adb() { timeout 120 "$ADB_BIN" "$@"; }
 
+# Host-side health monitor: the emulator runs on the runner, so record host memory and
+# the emulator process every 5 s. If the device disappears, host_diagnostics prints the
+# evidence (kernel OOM kills, segfaults, crash dumps) straight into the job log.
+QEMU_PID=$(pgrep -f 'qemu-system-x86_64' | head -1 || true)
+(
+  while true; do
+    echo "$(date +%T) mem[$(free -m | awk 'NR==2{print "used="$3"M avail="$7"M"}')] swap[$(free -m | awk 'NR==3{print $3"M"}')] qemu[$(ps -o rss=,pcpu= -p "$QEMU_PID" 2>/dev/null | awk '{printf "rss=%dM cpu=%s%%", $1/1024, $2}' || echo gone)]"
+    sleep 5
+  done
+) > "$OUT/host-monitor.txt" 2>&1 &
+MONITOR_PID=$!
+host_diagnostics() {
+  echo "::group::Host diagnostics (emulator pid $QEMU_PID)"
+  if kill -0 "$QEMU_PID" 2>/dev/null; then echo "emulator process: alive"; else echo "emulator process: GONE"; fi
+  echo "--- last host samples"; tail -n 12 "$OUT/host-monitor.txt"
+  echo "--- kernel log (OOM / kills / faults)"
+  sudo dmesg -T 2>/dev/null | grep -iE "oom|killed process|out of memory|segfault|general protection|traps:|qemu" | tail -n 25 || true
+  echo "--- emulator crash reports"
+  find /tmp/android-runner "$HOME/.android" -newer "$OUT/host-monitor.txt" -type f 2>/dev/null | grep -v '/avd/' | head -30
+  find /tmp/android-runner -type f -newer "$OUT/host-monitor.txt" -size +1k 2>/dev/null | head -20 | while read -r f; do
+    echo "$f ($(stat -c %s "$f") bytes)"
+    strings -n 10 "$f" 2>/dev/null | grep -iE "gfxstream|swiftshader|lavapipe|vulkan|libGLES|libEGL|signal|SIG[A-Z]+|abort|assert" | sort -u | head -15
+  done
+  echo "::endgroup::"
+}
+# Writes $OUT/outcome.txt for the workflow's retry gate:
+#   pass           every check passed
+#   app-failure    a functional check failed or the app crashed  -> never retried
+#   infra-failure  nothing failed functionally, but the emulator/DevTools broke -> fresh emulator
+write_outcome() {
+  local outcome=pass
+  if [ "$status" -ne 0 ] || [ "${1:-}" = "lost" ]; then
+    outcome=infra-failure
+    if node -e '
+      const fs = require("fs");
+      const dir = process.argv[1];
+      const failed = fs.readdirSync(dir).filter((f) => /^android-.*-results\.json$/.test(f))
+        .flatMap((f) => JSON.parse(fs.readFileSync(dir + "/" + f, "utf8")))
+        .filter((r) => r.required && !r.ok && r.name !== "Smoke run completed");
+      for (const r of failed) console.log("functional failure: " + r.name);
+      process.exit(failed.length ? 0 : 1);
+    ' "$OUT"; then outcome=app-failure; fi
+    [ "${APP_FAILURE:-0}" = "1" ] && outcome=app-failure
+  fi
+  echo "$outcome" > "$OUT/outcome.txt"
+  echo "Outcome: $outcome"
+}
+echo "Emulator host process: ${QEMU_PID:-not found}; host: $(nproc) vCPU, $(free -m | awk 'NR==2{print $2}') MB RAM"
+
 shipped=$(ls dist/*.apk | head -1)
 # A release-signed APK has WebView debugging off, so the CDP smoke test runs on the
 # debug build of the same commit and the signed APK gets an install/launch check.
@@ -51,12 +100,15 @@ adb shell getprop ro.build.version.release | sed 's/^/Android /' | tee "$OUT/and
 adb shell dumpsys package com.google.android.webview | grep -m1 versionName | sed 's/^ */WebView /' | tee -a "$OUT/android-device.txt"
 
 launch
-node apps/scripts/native-smoke.mjs --platform android --phase main --out "$OUT" --timeout 240 || status=1
+node apps/scripts/native-smoke.mjs --platform android --phase main --out "$OUT" --timeout 240 --appearance emulator || status=1
 adb shell dumpsys meminfo "$PKG" | grep -E "TOTAL PSS|TOTAL RSS|TOTAL:" | tee "$OUT/android-memory.txt" || true
 
 if ! adb get-state >/dev/null 2>&1; then
   echo "FAIL  Emulator is no longer reachable after the main phase (see android-logcat-stream.txt)"
-  kill "$LOGCAT_PID" 2>/dev/null || true
+  host_diagnostics
+  kill "$LOGCAT_PID" "$MONITOR_PID" 2>/dev/null || true
+  status=1
+  write_outcome lost
   exit 1
 fi
 launch
@@ -72,14 +124,16 @@ if [ "$testapk" != "$shipped" ]; then
   if adb shell pidof "$PKG" >/dev/null && adb shell dumpsys activity activities | grep -q "mResumedActivity.*$PKG"; then
     echo "PASS  Signed APK installs and stays in the foreground"
   else
-    echo "FAIL  Signed APK did not stay in the foreground"; status=1
+    echo "FAIL  Signed APK did not stay in the foreground"; status=1; APP_FAILURE=1
   fi
   adb exec-out screencap -p > "$OUT/android-release-screen.png" || true
 fi
 
-kill "$LOGCAT_PID" 2>/dev/null || true
+host_diagnostics
+kill "$LOGCAT_PID" "$MONITOR_PID" 2>/dev/null || true
 adb logcat -d > "$OUT/android-logcat.txt" || true
-if grep -E "FATAL EXCEPTION.*|AndroidRuntime: Process: $PKG" "$OUT/android-logcat.txt"; then
-  echo "FAIL  App crashed (see android-logcat.txt)"; status=1
+if grep -E "AndroidRuntime: Process: $PKG\b" "$OUT/android-logcat.txt"; then
+  echo "FAIL  App crashed (see android-logcat.txt)"; status=1; APP_FAILURE=1
 fi
+write_outcome
 exit $status

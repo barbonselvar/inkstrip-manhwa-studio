@@ -32,6 +32,11 @@ const { values: args } = parseArgs({
     out: { type: "string", default: "native-smoke" },
     port: { type: "string", default: "9222" },
     timeout: { type: "string", default: "180" },
+    // "emulator": apply the studio's own low-power Appearance preference (Motion quiet,
+    // Atmosphere off, Transparency solid) before testing. The CI Android emulator's
+    // software GPU renderer crashes while compositing CSS backdrop-filter blur; see
+    // docs/NATIVE_APPS.md ("Android emulator stability"). Functional checks are unchanged.
+    appearance: { type: "string", default: "default" },
   },
 });
 const platform = args.platform;
@@ -42,6 +47,16 @@ mkdirSync(outDir, { recursive: true });
 const endpoint = `http://127.0.0.1:${args.port}`;
 const results = [];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** Every DevTools call is bounded so a wedged WebView can never hang a run silently. */
+function withTimeout(promise, ms, what) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${what} timed out after ${ms} ms`)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
 
 function record(name, ok, detail, { required = true } = {}) {
   results.push({ name, ok, required, detail });
@@ -97,7 +112,9 @@ class Cdp {
     this.ws.send(JSON.stringify({ id, method, params }));
     return new Promise((resolve, reject) => this.pending.set(id, { resolve, reject, method }));
   }
-  async eval(expression, timeoutMs = 60000) {
+  // The CI Android emulator is CPU-only (software rendering on 3 cores), so its page
+  // main thread can be busy for tens of seconds; give it more headroom than desktop.
+  async eval(expression, timeoutMs = platform === "android" ? 150000 : 60000) {
     const run = this.send("Runtime.evaluate", {
       expression: `(async () => { ${expression} })()`,
       awaitPromise: true,
@@ -116,11 +133,29 @@ class Cdp {
     return res.result.value;
   }
   async screenshot(name) {
+    const file = join(outDir, `${platform}-${name}.png`);
     try {
-      const { data } = await this.send("Page.captureScreenshot", { format: "png" });
-      writeFileSync(join(outDir, `${platform}-${name}.png`), Buffer.from(data, "base64"));
+      if (platform === "android") {
+        // System capture via SurfaceFlinger. Page.captureScreenshot forces a WebView
+        // compositor readback through the emulator's host renderer, which hung or killed
+        // the CI emulator (see docs/NATIVE_APPS.md, "Android emulator stability").
+        writeFileSync(
+          file,
+          execFileSync("adb", ["exec-out", "screencap", "-p"], {
+            timeout: 20000,
+            maxBuffer: 64 << 20,
+          }),
+        );
+        return;
+      }
+      const { data } = await withTimeout(
+        this.send("Page.captureScreenshot", { format: "png" }),
+        20000,
+        "screenshot",
+      );
+      writeFileSync(file, Buffer.from(data, "base64"));
     } catch (e) {
-      console.log(`(screenshot ${name} failed: ${e.message})`);
+      console.log(`(screenshot ${name} skipped: ${e.message})`);
     }
   }
   close() {
@@ -190,18 +225,29 @@ function findDownloaded(fileName) {
   return hit ? join(dir, hit) : null;
 }
 
+/** Points the DevTools forward at the app's current process (its socket is named by pid). */
+function reforward() {
+  if (platform !== "android") return;
+  try {
+    const pid = adb("shell", "pidof", "app.inkstrip.studio");
+    if (!pid) return;
+    execFileSync("adb", ["forward", "--remove", `tcp:${args.port}`], { stdio: "ignore" });
+    adb("forward", `tcp:${args.port}`, `localabstract:webview_devtools_remote_${pid}`);
+    console.log(`(re-forwarded DevTools to pid ${pid})`);
+  } catch (e) {
+    console.log(`(re-forward failed: ${e.message})`);
+  }
+}
+
 function pressBack() {
   adb("shell", "input", "keyevent", "4");
 }
 
 // ---------------------------------------------------------------- checks
 async function main() {
-  const target = await findAppTarget(Number(args.timeout) * 1000);
-  console.log(`Attached to ${target.url}`);
-  const cdp = await Cdp.connect(target.webSocketDebuggerUrl);
-  await cdp.send("Page.enable").catch(() => {});
-
-  // 1. The production app actually rendered inside the native shell.
+  // Attach to the app's WebView. On a cold first launch the app process can restart
+  // after the DevTools forward was set up; only this attach step is retried (each time
+  // re-forwarding to the current process). Every app check below runs exactly once.
   // The target can be attached while the page is still navigating; retry until it settles.
   const settle = async (fn) => {
     for (let attempt = 0; ; attempt++) {
@@ -219,21 +265,67 @@ async function main() {
       }
     }
   };
-  const loaded = await settle(() =>
-    cdp.eval(
-      page(`
-      await waitFor(() => document.readyState === "complete", 60000, "document load");
-      await waitFor(() => document.querySelector(".hero-title, main#workspace, .studio-layout"), 60000, "Inkstrip UI");
-      return { href: location.href, title: document.title, text: document.body.innerText.slice(0, 200), ua: navigator.userAgent };
-    `),
-      90000,
-    ),
-  );
+  let cdp = null;
+  let loaded = null;
+  const attachDeadline = Date.now() + Number(args.timeout) * 1000;
+  for (let attempt = 1; !loaded; attempt++) {
+    try {
+      const target = await findAppTarget(
+        Math.max(15000, Math.min(60000, attachDeadline - Date.now())),
+      );
+      console.log(`Attached to ${target.url}`);
+      cdp = await withTimeout(Cdp.connect(target.webSocketDebuggerUrl), 15000, "DevTools connect");
+      await withTimeout(cdp.send("Page.enable"), 15000, "Page.enable").catch(() => {});
+      loaded = await settle(() =>
+        cdp.eval(
+          page(`
+          await waitFor(() => document.readyState === "complete", 60000, "document load");
+          await waitFor(() => document.querySelector(".hero-title, main#workspace, .studio-layout"), 60000, "Inkstrip UI");
+          return { href: location.href, title: document.title, text: document.body.innerText.slice(0, 200), ua: navigator.userAgent };
+        `),
+          90000,
+        ),
+      );
+    } catch (error) {
+      try {
+        cdp?.close();
+      } catch {
+        /* already closed */
+      }
+      cdp = null;
+      if (attempt >= 4 || Date.now() > attachDeadline) throw error;
+      console.log(`(attach attempt ${attempt} failed: ${error.message}; retrying)`);
+      reforward();
+      await sleep(3000);
+    }
+  }
   record(
     "Production web app loads inside the app window",
     loaded.href.startsWith(APP_ORIGIN),
     loaded,
   );
+  if (args.phase === "main" && args.appearance === "emulator") {
+    const preset = { motion: "quiet", atmosphere: false, transparency: false };
+    await cdp
+      .eval(
+        `localStorage.setItem("inkstrip-studio-appearance-v1", ${JSON.stringify(JSON.stringify(preset))}); setTimeout(() => location.reload(), 50); return true;`,
+      )
+      .catch(() => {});
+    await sleep(3000);
+    const applied = await settle(() =>
+      cdp.eval(
+        page(
+          `await waitFor(() => document.readyState === "complete" && document.documentElement.dataset.transparency, 60000, "appearance"); const d = document.documentElement.dataset; return { motion: d.studioMotion, atmosphere: d.atmosphere, transparency: d.transparency };`,
+        ),
+        90000,
+      ),
+    );
+    record(
+      "Emulator appearance profile applied (quiet motion, solid transparency)",
+      applied.motion === "quiet" && applied.transparency === "solid",
+      applied,
+    );
+  }
   await cdp.screenshot(`${args.phase}-01-home`);
 
   // 2. Native shell markers.
