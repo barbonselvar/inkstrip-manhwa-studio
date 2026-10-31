@@ -719,6 +719,32 @@ export default function ProWorkspace({
     return () => window.removeEventListener("beforeunload", warn);
   }, []);
   useEffect(() => {
+    // Mobile browsers discard background tabs without beforeunload, and the 500 ms
+    // autosave debounce may never run. Write an unsaved edit as soon as the page is
+    // hidden, frozen or unloaded; persist() queues behind any in-flight save.
+    const flush = (event: Event) => {
+      if (event.type === "visibilitychange" && document.visibilityState !== "hidden") return;
+      const doc = historyRef.current?.present.doc;
+      if (!doc || !sessionRef.current || closeInProgress.current || busyRef.current) return;
+      if (isSaved(doc)) return;
+      void persist(doc).catch((e) => {
+        if (alive.current && sessionRef.current?.document.panelId === doc.panelId) {
+          setError(saveFailure(e).message);
+          setStatus("Draft not saved. Export a native backup.");
+        }
+      });
+    };
+    document.addEventListener("visibilitychange", flush);
+    document.addEventListener("freeze", flush);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", flush);
+      document.removeEventListener("freeze", flush);
+      window.removeEventListener("pagehide", flush);
+    };
+    // isSaved reads refs only; persist is stable.
+  }, [persist]);
+  useEffect(() => {
     if (!assetEpoch || !sessionRef.current) return;
     let current = true;
     setReady(0);
