@@ -112,7 +112,9 @@ class Cdp {
     this.ws.send(JSON.stringify({ id, method, params }));
     return new Promise((resolve, reject) => this.pending.set(id, { resolve, reject, method }));
   }
-  async eval(expression, timeoutMs = 60000) {
+  // The CI Android emulator is CPU-only (software rendering on 3 cores), so its page
+  // main thread can be busy for tens of seconds; give it more headroom than desktop.
+  async eval(expression, timeoutMs = platform === "android" ? 150000 : 60000) {
     const run = this.send("Runtime.evaluate", {
       expression: `(async () => { ${expression} })()`,
       awaitPromise: true,
