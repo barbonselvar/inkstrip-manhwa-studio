@@ -11,6 +11,28 @@ status=0
 ADB_BIN=$(type -P adb)
 adb() { timeout 120 "$ADB_BIN" "$@"; }
 
+# Host-side health monitor: the emulator runs on the runner, so record host memory and
+# the emulator process every 5 s. If the device disappears, host_diagnostics prints the
+# evidence (kernel OOM kills, segfaults, crash dumps) straight into the job log.
+QEMU_PID=$(pgrep -f 'qemu-system-x86_64' | head -1 || true)
+(
+  while true; do
+    echo "$(date +%T) mem[$(free -m | awk 'NR==2{print "used="$3"M avail="$7"M"}')] swap[$(free -m | awk 'NR==3{print $3"M"}')] qemu[$(ps -o rss=,pcpu= -p "$QEMU_PID" 2>/dev/null | awk '{printf "rss=%dM cpu=%s%%", $1/1024, $2}' || echo gone)]"
+    sleep 5
+  done
+) > "$OUT/host-monitor.txt" 2>&1 &
+MONITOR_PID=$!
+host_diagnostics() {
+  echo "::group::Host diagnostics (emulator pid $QEMU_PID)"
+  if kill -0 "$QEMU_PID" 2>/dev/null; then echo "emulator process: alive"; else echo "emulator process: GONE"; fi
+  echo "--- last host samples"; tail -n 12 "$OUT/host-monitor.txt"
+  echo "--- kernel log (OOM / kills / faults)"
+  sudo dmesg -T 2>/dev/null | grep -iE "oom|killed process|out of memory|segfault|general protection|traps:|qemu" | tail -n 25 || true
+  echo "--- emulator crash reports"; ls -la /tmp/android-runner/ 2>/dev/null || true
+  echo "::endgroup::"
+}
+echo "Emulator host process: ${QEMU_PID:-not found}; host: $(nproc) vCPU, $(free -m | awk 'NR==2{print $2}') MB RAM"
+
 shipped=$(ls dist/*.apk | head -1)
 # A release-signed APK has WebView debugging off, so the CDP smoke test runs on the
 # debug build of the same commit and the signed APK gets an install/launch check.
@@ -56,6 +78,7 @@ adb shell dumpsys meminfo "$PKG" | grep -E "TOTAL PSS|TOTAL RSS|TOTAL:" | tee "$
 
 if ! adb get-state >/dev/null 2>&1; then
   echo "FAIL  Emulator is no longer reachable after the main phase (see android-logcat-stream.txt)"
+  host_diagnostics
   kill "$LOGCAT_PID" 2>/dev/null || true
   exit 1
 fi
@@ -77,7 +100,8 @@ if [ "$testapk" != "$shipped" ]; then
   adb exec-out screencap -p > "$OUT/android-release-screen.png" || true
 fi
 
-kill "$LOGCAT_PID" 2>/dev/null || true
+host_diagnostics
+kill "$LOGCAT_PID" "$MONITOR_PID" 2>/dev/null || true
 adb logcat -d > "$OUT/android-logcat.txt" || true
 if grep -E "FATAL EXCEPTION.*|AndroidRuntime: Process: $PKG" "$OUT/android-logcat.txt"; then
   echo "FAIL  App crashed (see android-logcat.txt)"; status=1
