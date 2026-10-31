@@ -28,9 +28,14 @@ host_diagnostics() {
   echo "--- last host samples"; tail -n 12 "$OUT/host-monitor.txt"
   echo "--- kernel log (OOM / kills / faults)"
   sudo dmesg -T 2>/dev/null | grep -iE "oom|killed process|out of memory|segfault|general protection|traps:|qemu" | tail -n 25 || true
-  echo "--- emulator crash reports"; ls -la /tmp/android-runner/ 2>/dev/null || true
+  echo "--- emulator crash reports"
+  find /tmp/android-runner -type f -newer "$OUT/host-monitor.txt" -size +1k 2>/dev/null | head -20 | while read -r f; do
+    echo "$f ($(stat -c %s "$f") bytes)"
+    strings -n 10 "$f" 2>/dev/null | grep -iE "gfxstream|swiftshader|lavapipe|vulkan|libGLES|libEGL|signal|SIG[A-Z]+|abort|assert" | sort -u | head -15
+  done
   echo "::endgroup::"
 }
+echo "Soft keyboard: $(adb shell getprop qemu.hw.mainkeys 2>/dev/null) hw.keyboard=$(adb shell getprop ro.kernel.qemu.keyboard 2>/dev/null); IMEs: $(adb shell ime list -s 2>/dev/null | tr '\n' ' ')"
 echo "Emulator host process: ${QEMU_PID:-not found}; host: $(nproc) vCPU, $(free -m | awk 'NR==2{print $2}') MB RAM"
 
 shipped=$(ls dist/*.apk | head -1)
