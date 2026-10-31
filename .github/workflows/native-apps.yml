@@ -146,10 +146,15 @@ jobs:
     needs: android-build
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    strategy:  # TEMPORARY diagnosis: sample the emulator failure 3x in parallel
+    strategy:  # TEMPORARY diagnosis: compare emulator rendering configs, 3 samples each
       fail-fast: false
       matrix:
         sample: [1, 2, 3]
+        cfg:
+          - { id: a34-swiftshader-novulkan, api: 34, gpu: "-gpu swiftshader_indirect -feature -Vulkan" }
+          - { id: a34-guest-novulkan, api: 34, gpu: "-gpu guest -feature -Vulkan" }
+          - { id: a33-swiftshader, api: 33, gpu: "-gpu swiftshader_indirect" }
+          - { id: a35-swiftshader-novulkan, api: 35, gpu: "-gpu swiftshader_indirect -feature -Vulkan" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -167,7 +172,7 @@ jobs:
       - name: Install, launch and smoke-test on an Android 14 emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: ${{ matrix.cfg.api }}
           target: google_apis
           arch: x86_64
           profile: pixel_6
@@ -176,12 +181,12 @@ jobs:
           disable-animations: true
           # Guest-side rendering: host SwiftShader crashed the emulator process when the
           # studio's blurred (backdrop-filter) dialogs opened.
-          emulator-options: -no-window -gpu guest -noaudio -no-boot-anim -no-snapshot -camera-back none
+          emulator-options: -no-window ${{ matrix.cfg.gpu }} -noaudio -no-boot-anim -no-snapshot -camera-back none
           script: bash apps/scripts/android-device-test.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: inkstrip-android-device-test-${{ matrix.sample }}
+          name: inkstrip-android-device-test-${{ matrix.cfg.id }}-${{ matrix.sample }}
           path: native-smoke/
           if-no-files-found: warn
 
