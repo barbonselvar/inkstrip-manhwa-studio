@@ -131,6 +131,9 @@ The smoke test checks that:
   available (WebGPU is reported),
 - creating a project opens the Chapter workspace,
 - importing two images renders the panels,
+- real Fast Anime neural inference runs through the installed app's Enhance UI on
+  an additional 64 × 96 fixture, produces a 128 × 192 preview without changing
+  the source, applies it, and recovers the byte-identical original,
 - Raster Studio opens on an imported panel,
 - an `<a download>` blob export lands in Downloads with byte-identical
   SHA-256,

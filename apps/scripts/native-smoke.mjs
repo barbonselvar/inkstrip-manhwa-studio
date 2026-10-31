@@ -151,6 +151,22 @@ const PAGE_HELPERS = String.raw`
     return await new Promise((r) => c.toBlob(r, "image/png"));
   };
   const sha256 = async (blob) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", await blob.arrayBuffer()))].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const aiPanel = async () => {
+    const db = await new Promise((resolve, reject) => {
+      const req = indexedDB.open("inkstrip");
+      req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error);
+    });
+    try {
+      const read = (store, key) => new Promise((resolve, reject) => {
+        const req = key === undefined ? db.transaction(store).objectStore(store).getAll() : db.transaction(store).objectStore(store).get(key);
+        req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error);
+      });
+      const panel = (await read("panels")).find((p) => p.name === "native-ai.png");
+      if (!panel) throw new Error("Native AI fixture missing");
+      const stored = await read("blobs", panel.blobId);
+      return { id: panel.id, blobId: panel.blobId, width: panel.width, height: panel.height, original: panel.original, hash: await sha256(stored.blob ?? stored) };
+    } finally { db.close(); }
+  };
 `;
 const page = (body) => `${PAGE_HELPERS}\n${body}`;
 
@@ -399,6 +415,7 @@ async function main() {
         const input = document.querySelector("input[type=file][multiple]");
         const dt = new DataTransfer();
         for (let i = 1; i <= 2; i++) dt.items.add(new File([await makePng(720, 1100, i)], "smoke-panel-" + i + ".png", { type: "image/png" }));
+        dt.items.add(new File([await makePng(64, 96, 7)], "native-ai.png", { type: "image/png" }));
         input.files = dt.files;
         input.dispatchEvent(new Event("change", { bubbles: true }));
         await waitFor(() => [...document.querySelectorAll("img")].filter((img) => img.complete && img.naturalWidth >= 100 && (img.src.startsWith("blob:") || img.src.startsWith("data:"))).length >= 2, 60000, "imported panels");
@@ -413,6 +430,58 @@ async function main() {
       imported,
     );
     await cdp.screenshot(`${args.phase}-03-imported`);
+
+    // Real on-device inference through the shipped UI/worker, not a capability probe
+    // or injected inference stub. Keep the two full-size import fixtures unchanged.
+    const aiStarted = Date.now();
+    let ai;
+    try {
+      ai = await cdp.eval(
+        page(`
+        const before = await waitFor(aiPanel, 15000, "AI fixture persistence");
+        const open = await waitFor(() => document.querySelector('[aria-label="AI Enhance native-ai.png"]'), 15000, "AI action");
+        open.click();
+        const select = await waitFor(() => document.querySelector('select[aria-label="Enhancement model"]'), 15000, "model selector");
+        select.value = "realesrgan-anime"; select.dispatchEvent(new Event("change", { bubbles: true }));
+        await waitFor(() => document.querySelector("[role=dialog]")?.textContent.includes("Fast Anime downloads"), 10000, "model settings update");
+        byText("[role=dialog] button", "Enhance image").click();
+        await waitFor(() => /Ready to compare/.test(document.querySelector(".ai-message")?.textContent ?? ""), 240000, "real neural preview");
+        const image = await waitFor(() => { const i = document.querySelector('img[alt="AI enhanced artwork"]'); return i?.complete && i.naturalWidth ? i : null; }, 15000, "preview pixels");
+        const preview = { width: image.naturalWidth, height: image.naturalHeight, model: select.value };
+        const unchanged = await aiPanel();
+        byText("[role=dialog] button", "Apply 1 preview(s)").click();
+        await waitFor(() => /Applied 1 image/.test(document.querySelector(".ai-message")?.textContent ?? ""), 15000, "AI save");
+        const applied = await aiPanel();
+        byText("[role=dialog] button", "Recover originals").click();
+        await waitFor(() => /Restored 1 original/.test(document.querySelector(".ai-message")?.textContent ?? ""), 15000, "original recovery");
+        const recovered = await aiPanel();
+        document.querySelector('[role=dialog] button[aria-label="Close"]').click();
+        return { before, unchanged, preview, applied, recovered };
+      `),
+        300000,
+      );
+    } catch (error) {
+      ai = { error: error.message };
+    }
+    record(
+      "Real Fast Anime inference, preview, Apply and byte-exact original recovery",
+      !!ai.before &&
+        ai.preview?.model === "realesrgan-anime" &&
+        ai.preview.width === 128 &&
+        ai.preview.height === 192 &&
+        ai.unchanged.hash === ai.before.hash &&
+        ai.unchanged.blobId === ai.before.blobId &&
+        ai.applied.width === 128 &&
+        ai.applied.height === 192 &&
+        ai.applied.original?.blobId === ai.before.blobId &&
+        ai.applied.blobId !== ai.before.blobId &&
+        ai.recovered.hash === ai.before.hash &&
+        ai.recovered.blobId === ai.before.blobId &&
+        ai.recovered.width === 64 &&
+        ai.recovered.height === 96,
+      { ...ai, elapsedMs: Date.now() - aiStarted },
+    );
+    await cdp.screenshot(`${args.phase}-03-ai-recovered`);
 
     // 8. Raster Studio opens on the imported panel.
     const editor = await cdp
