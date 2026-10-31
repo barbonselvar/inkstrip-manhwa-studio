@@ -2673,3 +2673,10 @@ html[data-studio-motion="quiet"] .depth-surface:hover > .project-shelf-card.proj
 .editor-shell .panel-image-target {
   scroll-margin-block: 6rem;
 }
+
+/* Scroll only the comparison at native pixel scale; mobile dialog stays bounded. */
+.ai-compare-scroll {
+  overflow: auto;
+  max-height: 60dvh;
+  max-width: 100%;
+}

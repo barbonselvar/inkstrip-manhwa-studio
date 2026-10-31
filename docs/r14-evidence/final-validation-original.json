@@ -1,0 +1,239 @@
+{
+  "sourceSha": "981f4065445db525eb7d6579ec7a9547f4f04b71",
+  "stage": "finished",
+  "results": [
+    {
+      "label": "unit",
+      "args": ["npm", "test"],
+      "exitCode": 0,
+      "seconds": 22.6,
+      "log": "/workspace/r14-evidence/final-unit.log"
+    },
+    {
+      "label": "typecheck",
+      "args": ["npm", "run", "typecheck"],
+      "exitCode": 0,
+      "seconds": 11.58,
+      "log": "/workspace/r14-evidence/final-typecheck.log"
+    },
+    {
+      "label": "lint",
+      "args": ["npm", "run", "lint"],
+      "exitCode": 0,
+      "seconds": 8.89,
+      "log": "/workspace/r14-evidence/final-lint.log"
+    },
+    {
+      "label": "build",
+      "args": ["npm", "run", "build"],
+      "exitCode": 0,
+      "seconds": 3.98,
+      "log": "/workspace/r14-evidence/final-build.log"
+    },
+    {
+      "label": "preview",
+      "args": ["npm", "run", "preview:restart"],
+      "exitCode": 0,
+      "seconds": 1.04,
+      "log": "/workspace/r14-evidence/final-preview.log"
+    },
+    {
+      "label": "check-build",
+      "args": ["npm", "run", "check:build"],
+      "exitCode": 0,
+      "seconds": 0.16,
+      "log": "/workspace/r14-evidence/final-check-build.log"
+    },
+    {
+      "label": "check-auth",
+      "args": ["npm", "run", "check:auth"],
+      "exitCode": 0,
+      "seconds": 0.18,
+      "log": "/workspace/r14-evidence/final-check-auth.log"
+    },
+    {
+      "label": "native-compat",
+      "args": ["npm", "run", "test:r11:native-compat"],
+      "exitCode": 0,
+      "seconds": 1.17,
+      "log": "/workspace/r14-evidence/final-native-compat.log"
+    },
+    {
+      "label": "r14-ui",
+      "args": ["npm", "run", "test:r14:browser", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 36.69,
+      "log": "/workspace/r14-evidence/final-r14-ui.log"
+    },
+    {
+      "label": "characters",
+      "args": ["npm", "run", "test:r14:characters", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 17.79,
+      "log": "/workspace/r14-evidence/final-characters.log"
+    },
+    {
+      "label": "retouch-mask",
+      "args": ["npm", "run", "test:r14:retouch", "--", "http://127.0.0.1:8080"],
+      "exitCode": 1,
+      "seconds": 0.81,
+      "log": "/workspace/r14-evidence/final-retouch-mask.log"
+    },
+    {
+      "label": "retouch",
+      "args": ["npm", "run", "test:retouch:browser", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 4.61,
+      "log": "/workspace/r14-evidence/final-retouch.log"
+    },
+    {
+      "label": "studio-ai",
+      "args": ["npm", "run", "test:studio:browser", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 45.1,
+      "log": "/workspace/r14-evidence/final-studio-ai.log"
+    },
+    {
+      "label": "editor",
+      "args": ["npm", "run", "test:editor:browser", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 15.67,
+      "log": "/workspace/r14-evidence/final-editor.log"
+    },
+    {
+      "label": "chapter-import",
+      "args": ["npm", "run", "test:chapter-import:browser", "--", "http://127.0.0.1:8080"],
+      "exitCode": 0,
+      "seconds": 27.3,
+      "log": "/workspace/r14-evidence/final-chapter-import.log"
+    },
+    {
+      "label": "r11",
+      "args": ["npm", "run", "test:r11:browser", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 47.07,
+      "log": "/workspace/r14-evidence/final-r11.log"
+    },
+    {
+      "label": "r6-layers",
+      "args": ["npm", "run", "test:r6:layers:browser", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 98.6,
+      "log": "/workspace/r14-evidence/final-r6-layers.log"
+    },
+    {
+      "label": "r8-recovery",
+      "args": ["npm", "run", "test:r8:recovery:browser", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 12.72,
+      "log": "/workspace/r14-evidence/final-r8-recovery.log"
+    },
+    {
+      "label": "r9-integration",
+      "args": ["npm", "run", "test:r9:integration:browser", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 27.16,
+      "log": "/workspace/r14-evidence/final-r9-integration.log"
+    },
+    {
+      "label": "r10-masks",
+      "args": ["npm", "run", "test:r10:masks:browser", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 68.18,
+      "log": "/workspace/r14-evidence/final-r10-masks.log"
+    },
+    {
+      "label": "r10-patterns",
+      "args": ["npm", "run", "test:r10:patterns:browser", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 52.75,
+      "log": "/workspace/r14-evidence/final-r10-patterns.log"
+    },
+    {
+      "label": "dialogue-ocr",
+      "args": ["npm", "run", "test:dialogue:ocr", "--", "http://127.0.0.1:8080"],
+      "exitCode": 0,
+      "seconds": 6.6,
+      "log": "/workspace/r14-evidence/final-dialogue-ocr.log"
+    },
+    {
+      "label": "dialogue-render",
+      "args": ["npm", "run", "test:dialogue:render", "--", "http://127.0.0.1:8080"],
+      "exitCode": 0,
+      "seconds": 1.71,
+      "log": "/workspace/r14-evidence/final-dialogue-render.log"
+    },
+    {
+      "label": "dialogue-workflow",
+      "args": ["npm", "run", "test:dialogue:workflow", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 9.24,
+      "log": "/workspace/r14-evidence/final-dialogue-workflow.log"
+    },
+    {
+      "label": "lifecycle",
+      "args": ["npm", "run", "test:r13:lifecycle:browser", "--", "http://127.0.0.1:8080"],
+      "exitCode": 0,
+      "seconds": 12.38,
+      "log": "/workspace/r14-evidence/final-lifecycle.log"
+    },
+    {
+      "label": "production-local",
+      "args": [
+        "npm",
+        "run",
+        "test:production:browser",
+        "--",
+        "http://127.0.0.1:8082",
+        "981f4065445db525eb7d6579ec7a9547f4f04b71",
+        "--raster",
+        "--ai"
+      ],
+      "exitCode": 0,
+      "seconds": 67.23,
+      "log": "/workspace/r14-evidence/final-production-local.log"
+    },
+    {
+      "label": "inference-parity",
+      "args": [
+        "npm",
+        "run",
+        "test:r14:inference",
+        "--",
+        "http://127.0.0.1:8080",
+        "http://127.0.0.1:8083"
+      ],
+      "exitCode": 0,
+      "seconds": 73.06,
+      "log": "/workspace/r14-evidence/final-inference-parity.log"
+    },
+    {
+      "label": "smoke-dev",
+      "args": [
+        "node",
+        "scripts/browser-smoke.mjs",
+        "http://127.0.0.1:8080",
+        "/workspace/screenshots/r14-final-dev.png"
+      ],
+      "exitCode": 0,
+      "seconds": 4.57,
+      "log": "/workspace/r14-evidence/final-smoke-dev.log"
+    },
+    {
+      "label": "smoke-built",
+      "args": [
+        "node",
+        "scripts/browser-smoke.mjs",
+        "http://127.0.0.1:8081",
+        "/workspace/screenshots/r14-final-built.png",
+        "--baseline",
+        "/workspace/screenshots/r14-final-dev.json"
+      ],
+      "exitCode": 0,
+      "seconds": 5.87,
+      "log": "/workspace/r14-evidence/final-smoke-built.log"
+    }
+  ],
+  "passed": 28,
+  "failed": ["retouch-mask"]
+}

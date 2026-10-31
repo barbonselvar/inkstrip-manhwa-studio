@@ -1,0 +1,10 @@
+
+> test:r11:native-compat
+> node --experimental-strip-types --no-warnings scripts/r11-native-compat.mjs
+
+R6 (pre-R8) 6478fc1: envelope 8, 5 features, reads R11 output
+R7 (pre-R8) 02eb697: envelope 8, 5 features, reads R11 output
+R8 5f9c537: envelope 9, 8 features, reads R11 output
+PR #21 db78593: envelope 9, 8 features, reads R11 output
+R9 401e925: envelope 9, 8 features, reads R11 output
+R10 aa7e199: envelope 9, 9 features, reads R11 output

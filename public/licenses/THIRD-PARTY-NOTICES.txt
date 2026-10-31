@@ -1,5 +1,5 @@
-INKSTRIP — THIRD-PARTY NOTICES FOR IMAGE IMPORT DECODERS
-=========================================================
+INKSTRIP — THIRD-PARTY NOTICES FOR IMAGE DECODERS AND ON-DEVICE AI
+====================================================================
 
 Inkstrip converts HEIC/HEIF, TIFF and JPEG XL images in your browser with the
 open-source components below. They run only on your device; no image is uploaded.
@@ -79,6 +79,22 @@ Corresponding Source (LGPL-3.0 section 4(d) and GPL-3.0 section 6):
     /licenses/pako-MIT.txt
   * fast-png 8.0.0 — Copyright (c) 2015 Michaël Zasso — MIT — /licenses/fast-png-MIT.txt
   * iobuffer 6.0.1 — Copyright (c) 2015 Michaël Zasso — MIT — /licenses/iobuffer-MIT.txt
+
+
+4. On-device AI enhancement
+---------------------------
+Model weights are downloaded from the pinned sources below only when AI Enhance is
+used, verified by size and SHA-256, and run in your browser; no image is uploaded.
+  * ONNX Runtime Web 1.22.0 (inference runtime, served from /assets/) —
+    Copyright (c) Microsoft Corporation — MIT — /licenses/onnxruntime-web-MIT.txt
+  * Swin2SR classical x2 (fidelity upscaler) — Copyright (c) the Swin2SR and SwinIR
+    Authors — Apache License 2.0 — /licenses/Swin2SR-Apache-2.0.txt;
+    ONNX weights: huggingface.co/Xenova/swin2SR-classical-sr-x2-64 at revision
+    93dfc9089abda257351d3a58d5771e2c1ff69442
+  * Real-ESRGAN RealESR-AnimeVideo-v3 x4 (fast anime upscaler) — Copyright (c) 2021,
+    Xintao Wang — BSD 3-Clause — /licenses/Real-ESRGAN-BSD-3-Clause.txt;
+    ONNX weights: huggingface.co/tidus2102/Real-ESRGAN at revision
+    c9a1cd990b587ccf20be2373fad8eb021e24ab01
 
 
 These components are provided "AS IS", WITHOUT WARRANTY OF ANY KIND, as stated

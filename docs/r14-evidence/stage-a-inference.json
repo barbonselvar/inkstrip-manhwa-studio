@@ -1,0 +1,123 @@
+[
+  {
+    "baseline": {
+      "scale": 1,
+      "width": 24,
+      "height": 16,
+      "alphaExact": true,
+      "sourceExact": true,
+      "ms": 15598.699999999953,
+      "progress": {
+        "stage": "Finishing colors and edges",
+        "done": 1,
+        "total": 1
+      }
+    },
+    "current": {
+      "model": "swin2sr",
+      "scale": 1,
+      "width": 24,
+      "height": 16,
+      "alphaExact": true,
+      "sourceExact": true,
+      "ms": 15314,
+      "progress": {
+        "stage": "Finishing colors and edges",
+        "done": 1,
+        "total": 1
+      }
+    },
+    "existingPixelsExact": true
+  },
+  {
+    "baseline": {
+      "scale": 2,
+      "width": 48,
+      "height": 32,
+      "alphaExact": true,
+      "sourceExact": true,
+      "ms": 11500.5,
+      "progress": {
+        "stage": "Finishing colors and edges",
+        "done": 1,
+        "total": 1
+      }
+    },
+    "current": {
+      "model": "swin2sr",
+      "scale": 2,
+      "width": 48,
+      "height": 32,
+      "alphaExact": true,
+      "sourceExact": true,
+      "ms": 10870.399999999907,
+      "progress": {
+        "stage": "Finishing colors and edges",
+        "done": 1,
+        "total": 1
+      }
+    },
+    "existingPixelsExact": true
+  },
+  {
+    "model": "swin2sr",
+    "scale": 4,
+    "width": 96,
+    "height": 64,
+    "alphaExact": true,
+    "sourceExact": true,
+    "ms": 13312.100000000093,
+    "progress": {
+      "stage": "Finishing colors and edges",
+      "done": 2,
+      "total": 2
+    }
+  },
+  {
+    "model": "realesrgan-anime",
+    "scale": 1,
+    "width": 24,
+    "height": 16,
+    "alphaExact": true,
+    "sourceExact": true,
+    "ms": 1011.7999999998137,
+    "progress": {
+      "stage": "Finishing colors and edges",
+      "done": 1,
+      "total": 1
+    }
+  },
+  {
+    "model": "realesrgan-anime",
+    "scale": 2,
+    "width": 48,
+    "height": 32,
+    "alphaExact": true,
+    "sourceExact": true,
+    "ms": 339.9000000001397,
+    "progress": {
+      "stage": "Finishing colors and edges",
+      "done": 1,
+      "total": 1
+    }
+  },
+  {
+    "model": "realesrgan-anime",
+    "scale": 4,
+    "width": 96,
+    "height": 64,
+    "alphaExact": true,
+    "sourceExact": true,
+    "ms": 249.5,
+    "progress": {
+      "stage": "Finishing colors and edges",
+      "done": 1,
+      "total": 1
+    }
+  },
+  {
+    "corruptCacheRecovered": true,
+    "cancelled": true,
+    "oversizedOutputRefused": true
+  }
+]

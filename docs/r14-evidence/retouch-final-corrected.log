@@ -1,0 +1,5 @@
+
+> test:r14:retouch
+> node scripts/r14/retouch-precision-check.mjs
+
+{"width":513,"height":437,"outsidePixels":148197,"outsideChanged":0,"insideChanged":75984,"ms":432.29999999981374}
