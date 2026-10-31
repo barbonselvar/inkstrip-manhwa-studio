@@ -158,7 +158,7 @@ import {
   type CloneSource,
   type Region,
 } from "@/lib/studio/pro/model";
-import { createHistory, record, undo, redo, type History } from "@/lib/studio/editor/history";
+import { createHistory, record, undo, redo, same, type History } from "@/lib/studio/editor/history";
 import { isLocked, ungroupLayers } from "@/lib/studio/pro/operations";
 import { ProLayers } from "./pro-layers";
 import {
@@ -419,10 +419,14 @@ export default function ProWorkspace({
     saveTail = useRef<Promise<unknown>>(Promise.resolve()),
     pendingSaves = useRef(0),
     lastSaveFailure = useRef<{ panelId: string; message: string } | null>(null),
-    lastSaved = useRef(""),
+    /** The last durable document. Compared with `same`, which serializes each immutable
+     * snapshot at most once instead of on every history change. */
+    lastSaved = useRef<ProDocument | null>(null),
     generation = useRef(0),
     busyRef = useRef(false),
     operationRun = useRef(0);
+  const isSaved = (doc: ProDocument | undefined) =>
+    !!doc && !!lastSaved.current && same(doc, lastSaved.current);
   const project = useStudio((s) => s.projects.find((p) => p.id === projectId)),
     livePanel = useStudio((s) => s.panels.find((p) => p.id === panel.id));
   const changeRulers = (value: boolean) => {
@@ -573,7 +577,7 @@ export default function ProWorkspace({
         if (active) {
           install(recovered, "Recovered Pro draft");
           setLoad({ state: "ready" });
-          lastSaved.current = JSON.stringify(recovered.document);
+          lastSaved.current = recovered.document;
           setSaved(true);
           setSaveError(null);
           setStatus(
@@ -647,7 +651,7 @@ export default function ProWorkspace({
         sessionRef.current = currentSession;
         if (alive.current) {
           setSession(currentSession);
-          lastSaved.current = JSON.stringify(document);
+          lastSaved.current = document;
         }
         return next;
       })
@@ -661,10 +665,7 @@ export default function ProWorkspace({
               setError((current) => (current === failed.message ? "" : current));
               lastSaveFailure.current = null;
             }
-            setSaved(
-              pendingSaves.current === 0 &&
-                JSON.stringify(historyRef.current?.present.doc) === lastSaved.current,
-            );
+            setSaved(pendingSaves.current === 0 && isSaved(historyRef.current?.present.doc));
             // An older acknowledgement may have persisted a state we already undid/redid.
             // Re-evaluate autosave even when history itself has not changed since that request.
             setSaveAcknowledgment((n) => n + 1);
@@ -689,8 +690,7 @@ export default function ProWorkspace({
   }, []);
   useEffect(() => {
     if (!history || !sessionRef.current || closeInProgress.current || busy) return;
-    const signature = JSON.stringify(history.present.doc);
-    const durable = signature === lastSaved.current && pendingSaves.current === 0;
+    const durable = isSaved(history.present.doc) && pendingSaves.current === 0;
     setSaved(durable);
     if (durable) setSaveError(null);
     if (durable || pendingSaves.current > 0) return;
@@ -709,8 +709,7 @@ export default function ProWorkspace({
     const warn = (e: BeforeUnloadEvent) => {
       if (
         historyRef.current &&
-        (pendingSaves.current > 0 ||
-          JSON.stringify(historyRef.current.present.doc) !== lastSaved.current)
+        (pendingSaves.current > 0 || !isSaved(historyRef.current.present.doc))
       ) {
         e.preventDefault();
         e.returnValue = "";
@@ -1792,7 +1791,7 @@ export default function ProWorkspace({
       setHist(
         record(h, { doc: document, label: "Use latest chapter image; retain earlier layers" }),
       );
-      lastSaved.current = JSON.stringify(document);
+      lastSaved.current = document;
       setSaved(true);
       setSaveError(null);
       setSelectedIds([base.id]);
