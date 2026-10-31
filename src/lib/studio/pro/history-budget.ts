@@ -1,10 +1,11 @@
-import type { History } from "../editor/history.ts";
+import { fingerprint, type History } from "../editor/history.ts";
 /** Conservative serialized-size accounting includes shared geometry repeatedly,
  * to conservatively limit older snapshots. Current work is never evicted.
  * The nearest Undo and Redo are always retained, even above the soft budget.
  * Blob assets remain in the separately bounded immutable source pool. */
 export function budgetHistory<T>(history: History<T>, maxBytes = 32 * 1024 * 1024): History<T> {
-  const size = (entry: T) => JSON.stringify(entry).length * 2;
+  // Cached per immutable snapshot: each entry is serialized once, not on every edit.
+  const size = (entry: T) => fingerprint(entry).length * 2;
   let bytes = size(history.present);
   const past: T[] = [],
     future: T[] = [];

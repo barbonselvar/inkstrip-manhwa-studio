@@ -94,3 +94,41 @@ jobs:
             /workspace/screenshots
             /tmp/preview.log
           if-no-files-found: warn
+
+  ai-quality:
+    # Informational: real Swin2SR inference is slow on CPU runners. Step-level
+    # timeout + continue-on-error so it can never cancel or fail a required check.
+    name: AI quality benchmark (informational)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Prepare isolated browser evidence directories
+        run: sudo install -d -m 0755 -o "$(id -u)" -g "$(id -g)" /workspace/screenshots
+      - name: Start the QA dev server
+        run: |
+          VITE_AUTH_ENABLED=false npm run dev -- --config scripts/vite-browser-qa.config.mjs > /tmp/ai-dev.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8080/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/ai-dev.log
+          exit 1
+      - name: Real-inference quality benchmark
+        continue-on-error: true
+        timeout-minutes: 30
+        run: npm run bench:r13:ai -- http://127.0.0.1:8080 /workspace/screenshots/r13-ai-quality.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-quality-evidence
+          path: |
+            /workspace/screenshots/r13-ai-quality.json
+            /tmp/ai-dev.log
+          if-no-files-found: warn

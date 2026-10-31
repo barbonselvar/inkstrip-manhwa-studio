@@ -1,0 +1,36 @@
+{
+  "source": "CI job 'AI quality benchmark (informational)', run 41199543792, job 124532434404, head 962a717, GitHub ubuntu-latest runner",
+  "model": "Xenova/swin2SR-classical-sr-x2-64@93dfc90 (pinned)",
+  "method": "256x256 centre crop of each 720x960 original gallery artwork, halved (canvas high-quality) to 128x128, restored 2x by the app's EnhancementEngine; luma PSNR (BT.601) against the crop; bicubic = canvas imageSmoothingQuality high",
+  "firstRunIncludingModelLoadMs": 30459,
+  "rows": [
+    {
+      "name": "action",
+      "size": "128x128 -> 256x256",
+      "bicubic": 25.69,
+      "fidelity": 26.56,
+      "appDefaultMs": 21531,
+      "appDefault": 25.53
+    },
+    {
+      "name": "manga",
+      "size": "128x128 -> 256x256",
+      "bicubic": 20.76,
+      "fidelityMs": 21185,
+      "fidelity": 21.38
+    },
+    {
+      "name": "romance",
+      "size": "128x128 -> 256x256",
+      "bicubic": 24.46,
+      "fidelityMs": 21323,
+      "fidelity": 25.07
+    }
+  ],
+  "meanPsnrY": {
+    "bicubic": 23.64,
+    "fidelity": 24.34,
+    "appDefault": 25.53,
+    "bicubicOnDefaultSubset": 25.69
+  }
+}

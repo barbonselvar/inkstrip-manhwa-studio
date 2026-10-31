@@ -46,7 +46,8 @@ import { rasterSplitBudget, splitChapterImage } from "@/lib/studio/page-split-cl
 
 const emptyUrls: string[] = [];
 
-const ProWorkspace = lazy(() => import("./pro/pro-workspace"));
+const loadProWorkspace = () => import("./pro/pro-workspace");
+const ProWorkspace = lazy(loadProWorkspace);
 
 export function ChapterStudio({ projectId, chapterId }: { projectId: string; chapterId: string }) {
   const project = useStudio((state) => state.projects.find((item) => item.id === projectId));
@@ -142,6 +143,16 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   const panelKey = list.map((panel) => panel.id).join(",");
   const stripKey = chapter?.strip?.createdAt ?? 0;
 
+  const hasImages = list.length > 0;
+  useEffect(() => {
+    // Raster Studio is the main editor: once there is an image to open, fetch its code
+    // while the browser is idle so "Open in Raster Studio" does not wait on the download.
+    if (!hasImages) return;
+    const idle = window.requestIdleCallback ?? ((run: () => void) => window.setTimeout(run, 1500));
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout;
+    const handle = idle(() => void loadProWorkspace().catch(() => undefined), { timeout: 4000 });
+    return () => cancel(handle);
+  }, [hasImages]);
   useEffect(() => {
     void loadMedia(chapterId);
   }, [loadMedia, chapterId, panelKey, stripKey]);

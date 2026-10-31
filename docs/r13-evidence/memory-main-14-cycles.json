@@ -1,0 +1,97 @@
+{
+  "base": "http://127.0.0.1:8083",
+  "cycles": 14,
+  "rows": [
+    {
+      "label": "start",
+      "heapMB": 5.6,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 1",
+      "heapMB": 8,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 2",
+      "heapMB": 8.2,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 3",
+      "heapMB": 8.6,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 4",
+      "heapMB": 8.7,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 5",
+      "heapMB": 8.8,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 6",
+      "heapMB": 8.9,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 7",
+      "heapMB": 8.9,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 8",
+      "heapMB": 9,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 9",
+      "heapMB": 9.2,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 10",
+      "heapMB": 9.2,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 11",
+      "heapMB": 9.3,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 12",
+      "heapMB": 9.3,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 13",
+      "heapMB": 9.4,
+      "urls": 1,
+      "workers": 0
+    },
+    {
+      "label": "cycle 14",
+      "heapMB": 9.4,
+      "urls": 1,
+      "workers": 0
+    }
+  ],
+  "errors": []
+}

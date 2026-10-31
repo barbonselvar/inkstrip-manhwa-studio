@@ -8,6 +8,7 @@ import { exportProject } from "@/lib/studio/backup-store";
 import { useStudio } from "@/lib/studio/store";
 import { countLabel } from "@/lib/utils";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { usePreloadChapterRoute } from "@/lib/studio/route-preload";
 import {
   BookOpen,
   ChevronLeft,
@@ -36,6 +37,8 @@ export function ProjectView({ projectId }: { projectId: string }) {
   const createChapter = useStudio((state) => state.createChapter);
   const deleteChapter = useStudio((state) => state.deleteChapter);
   const navigate = useNavigate();
+  // "New chapter" navigates programmatically; fetch that route's code while idle here.
+  usePreloadChapterRoute();
   const [creating, setCreating] = useState(false);
   const [backupState, setBackupState] = useState<"idle" | "busy" | "error">("idle");
   const [backupError, setBackupError] = useState("");

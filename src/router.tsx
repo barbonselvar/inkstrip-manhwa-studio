@@ -8,5 +8,7 @@ export function getRouter() {
     routeTree,
     rewrite: previewPathRewrite(),
     defaultErrorComponent: AppErrorComponent,
+    // Links fetch their route's code on hover/touch, before the click (routes have no loaders).
+    defaultPreload: "intent",
   });
 }
