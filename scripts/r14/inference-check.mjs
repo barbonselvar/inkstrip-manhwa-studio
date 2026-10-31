@@ -15,7 +15,7 @@ try {
     [current, base],
   ]) {
     page.setDefaultTimeout(180000);
-    await page.goto(url);
+    await page.goto(new URL("/gallery/provenance.json", url).href);
   }
   const run = async (page, model, scale) =>
     page.evaluate(

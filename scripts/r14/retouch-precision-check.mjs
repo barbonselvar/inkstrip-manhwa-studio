@@ -8,7 +8,7 @@ const base = process.argv[2] ?? "http://127.0.0.1:8080",
 try {
   const page = await browser.newPage();
   page.setDefaultTimeout(120000);
-  await page.goto(base);
+  await page.goto(new URL("/gallery/provenance.json", base).href);
   const result = await page.evaluate(async () => {
     const { retouchImage } = await import("/src/lib/studio/retouch/client.ts"),
       { paintSelection } = await import("/src/lib/studio/retouch/selection.ts");

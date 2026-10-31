@@ -1,0 +1,14 @@
+[
+  {
+    "scale": 4,
+    "changedChannels": 0,
+    "maxDifference": 0,
+    "pixels": 262144
+  },
+  {
+    "scale": 2,
+    "changedChannels": 0,
+    "maxDifference": 0,
+    "pixels": 65536
+  }
+]

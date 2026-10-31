@@ -30,6 +30,7 @@ async function evaluateOnce(fn) {
 }
 const result = await evaluateOnce(async () => {
   const { EnhancementEngine } = await import("/src/lib/studio/enhance/client.ts");
+  const { DEFAULT_ENHANCE } = await import("/src/lib/studio/enhance/types.ts");
   // In-browser Swin2SR is slow on CPU runners (>2 min per 0.17 MP in CI), so the
   // benchmark uses 256x256 centre crops of three artworks (128x128 restored 2x).
   const names = ["action", "manga", "romance"];
@@ -67,7 +68,7 @@ const result = await evaluateOnce(async () => {
   const engine = new EnhancementEngine();
   const presets = {
     fidelity: { scale: 2, denoise: 0, sharpen: 0, color: false, artifacts: false },
-    appDefault: { scale: 2, denoise: 15, sharpen: 15, color: false, artifacts: true },
+    appDefault: { ...DEFAULT_ENHANCE },
   };
   const rows = [];
   let modelLoadMs = 0;
