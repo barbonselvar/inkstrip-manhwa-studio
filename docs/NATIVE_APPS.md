@@ -138,12 +138,47 @@ The smoke test checks that:
 - an `<a download>` blob export lands in Downloads with byte-identical
   SHA-256,
 - localStorage, IndexedDB and the project survive an app restart,
-- on Android, back closes an open dialog and navigates back.
+- on Android, back closes an open dialog and navigates back,
+- on Android, the emulator appearance profile was applied (see below).
 
 Screenshots, logcat, memory figures and JSON results are uploaded as artifacts.
 
 These are **emulator / CI-runner** results, not tests on physical phones or
 consumer PCs.
+
+### Android emulator stability
+
+The first `app-v1.0.0` release run was blocked because the Android emulator
+process disappeared mid-test. This was diagnosed with host-side monitoring
+(memory, emulator process, kernel log) over about 40 sampled CI emulator
+sessions. The cause was **not** the app, memory, OOM kills or timeouts. Two
+separate emulator infrastructure problems were found:
+
+1. **Emulator renderer crash on CSS glass.** GitHub's runners have no GPU, so
+   the emulator (37.2.x, gfxstream with SwiftShader/lavapipe) renders on the
+   CPU. That renderer kills the whole emulator process while the WebView
+   composites the studio's `backdrop-filter` blur ("glass" dialogs and
+   panels).
+   - With blur on: about 60% of sessions crashed, at different steps, under
+     every GPU mode, API level (33/34/35) and keyboard setting tried.
+   - With the studio's own **Appearance → Transparency: Solid** (plus quiet
+     motion and atmosphere off): 0 crashes across 10 sessions.
+   - The Android emulator job therefore applies that saved Appearance
+     preference before testing (`--appearance emulator`, recorded as its own
+     check). Every functional check still runs unchanged. The default glass
+     appearance stays covered by the Windows/WebView2 device test.
+2. **DevTools screenshot readback hangs.** `Page.captureScreenshot` on the
+   emulator's WebView could hang indefinitely. Android evidence screenshots now
+   use `adb exec-out screencap`, and every DevTools call has a hard timeout.
+
+The harness also re-attaches if the app process restarts during its very first
+cold launch (the DevTools socket is named after the process ID). Only the attach
+step is retried; app checks run exactly once.
+
+If the emulator still disappears, the job log ends with a **Host diagnostics**
+block. It shows host memory, the emulator process state, kernel OOM/fault
+messages and any emulator crash reports, so infrastructure failures can be told
+apart from app failures.
 
 ### Publishing a release
 

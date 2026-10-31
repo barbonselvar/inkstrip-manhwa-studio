@@ -146,10 +146,6 @@ jobs:
     needs: android-build
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    strategy:  # TEMPORARY verification of the final configuration: 6 independent emulators
-      fail-fast: false
-      matrix:
-        sample: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -179,7 +175,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: inkstrip-android-device-test-${{ matrix.sample }}
+          name: inkstrip-android-device-test
           path: native-smoke/
           if-no-files-found: warn
 
