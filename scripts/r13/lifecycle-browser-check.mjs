@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { proBrowserFixtures } from "../pro-browser-fixtures.mjs";
-const base = process.argv[2] ?? "http://127.0.0.1:8081";
+const base = process.argv[2] ?? "http://127.0.0.1:8080";
 assert.ok(["localhost", "127.0.0.1"].includes(new URL(base).hostname));
 const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
 const errors = [];
