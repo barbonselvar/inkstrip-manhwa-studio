@@ -36,7 +36,6 @@ host_diagnostics() {
   done
   echo "::endgroup::"
 }
-echo "Soft keyboard: $(adb shell getprop qemu.hw.mainkeys 2>/dev/null) hw.keyboard=$(adb shell getprop ro.kernel.qemu.keyboard 2>/dev/null); IMEs: $(adb shell ime list -s 2>/dev/null | tr '\n' ' ')"
 echo "Emulator host process: ${QEMU_PID:-not found}; host: $(nproc) vCPU, $(free -m | awk 'NR==2{print $2}') MB RAM"
 
 shipped=$(ls dist/*.apk | head -1)
@@ -70,11 +69,6 @@ launch() {
   adb shell cat /proc/net/unix | grep -i devtools || true
 }
 
-if [ -n "${INKSTRIP_TEST_WEBVIEW_FLAGS:-}" ]; then
-  # Debuggable apps read WebView switches from this file (test-environment only).
-  echo "_ $INKSTRIP_TEST_WEBVIEW_FLAGS" | adb shell "cat > /data/local/tmp/webview-command-line"
-  echo "WebView test flags: $(adb shell cat /data/local/tmp/webview-command-line)"
-fi
 adb logcat -c || true
 # Stream logcat for the whole run so a crash is captured even if the device disappears.
 "$ADB_BIN" logcat -v threadtime > "$OUT/android-logcat-stream.txt" 2>&1 &
@@ -84,7 +78,7 @@ adb shell getprop ro.build.version.release | sed 's/^/Android /' | tee "$OUT/and
 adb shell dumpsys package com.google.android.webview | grep -m1 versionName | sed 's/^ */WebView /' | tee -a "$OUT/android-device.txt"
 
 launch
-node apps/scripts/native-smoke.mjs --platform android --phase main --out "$OUT" --timeout 240 --appearance "${INKSTRIP_TEST_APPEARANCE:-default}" || status=1
+node apps/scripts/native-smoke.mjs --platform android --phase main --out "$OUT" --timeout 240 || status=1
 adb shell dumpsys meminfo "$PKG" | grep -E "TOTAL PSS|TOTAL RSS|TOTAL:" | tee "$OUT/android-memory.txt" || true
 
 if ! adb get-state >/dev/null 2>&1; then

@@ -146,13 +146,10 @@ jobs:
     needs: android-build
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    strategy:  # TEMPORARY experiment: in-guest software WebView vs canary emulator
+    strategy:  # TEMPORARY verification of the final configuration: 6 independent emulators
       fail-fast: false
       matrix:
-        sample: [1, 2, 3, 4]
-        cfg:
-          - { id: webview-swgl, channel: stable, wvflags: "--disable-gpu --disable-gpu-compositing" }
-          - { id: canary-emulator, channel: canary, wvflags: "" }
+        sample: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -171,21 +168,18 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
-          channel: ${{ matrix.cfg.channel }}
           target: google_apis
           arch: x86_64
           profile: pixel_6
           ram-size: 4096M
           disk-size: 6000M
           disable-animations: true
-          # Guest-side rendering: host SwiftShader crashed the emulator process when the
-          # studio's blurred (backdrop-filter) dialogs opened.
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
-          script: INKSTRIP_TEST_WEBVIEW_FLAGS="${{ matrix.cfg.wvflags }}" bash apps/scripts/android-device-test.sh
+          script: bash apps/scripts/android-device-test.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: inkstrip-android-device-test-${{ matrix.cfg.id }}-${{ matrix.sample }}
+          name: inkstrip-android-device-test-${{ matrix.sample }}
           path: native-smoke/
           if-no-files-found: warn
 

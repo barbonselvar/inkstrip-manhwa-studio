@@ -32,9 +32,6 @@ const { values: args } = parseArgs({
     out: { type: "string", default: "native-smoke" },
     port: { type: "string", default: "9222" },
     timeout: { type: "string", default: "180" },
-    // Studio Appearance preset applied (as a user would, via the saved preference)
-    // before testing: "default" leaves the app untouched.
-    appearance: { type: "string", default: "default" },
   },
 });
 const platform = args.platform;
@@ -45,6 +42,16 @@ mkdirSync(outDir, { recursive: true });
 const endpoint = `http://127.0.0.1:${args.port}`;
 const results = [];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** Every DevTools call is bounded so a wedged WebView can never hang a run silently. */
+function withTimeout(promise, ms, what) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${what} timed out after ${ms} ms`)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
 
 function record(name, ok, detail, { required = true } = {}) {
   results.push({ name, ok, required, detail });
@@ -119,11 +126,29 @@ class Cdp {
     return res.result.value;
   }
   async screenshot(name) {
+    const file = join(outDir, `${platform}-${name}.png`);
     try {
-      const { data } = await this.send("Page.captureScreenshot", { format: "png" });
-      writeFileSync(join(outDir, `${platform}-${name}.png`), Buffer.from(data, "base64"));
+      if (platform === "android") {
+        // System capture via SurfaceFlinger. Page.captureScreenshot forces a WebView
+        // compositor readback through the emulator's host renderer, which hung or killed
+        // the CI emulator (see docs/NATIVE_APPS.md, "Android emulator stability").
+        writeFileSync(
+          file,
+          execFileSync("adb", ["exec-out", "screencap", "-p"], {
+            timeout: 20000,
+            maxBuffer: 64 << 20,
+          }),
+        );
+        return;
+      }
+      const { data } = await withTimeout(
+        this.send("Page.captureScreenshot", { format: "png" }),
+        20000,
+        "screenshot",
+      );
+      writeFileSync(file, Buffer.from(data, "base64"));
     } catch (e) {
-      console.log(`(screenshot ${name} failed: ${e.message})`);
+      console.log(`(screenshot ${name} skipped: ${e.message})`);
     }
   }
   close() {
@@ -202,7 +227,7 @@ async function main() {
   const target = await findAppTarget(Number(args.timeout) * 1000);
   console.log(`Attached to ${target.url}`);
   const cdp = await Cdp.connect(target.webSocketDebuggerUrl);
-  await cdp.send("Page.enable").catch(() => {});
+  await withTimeout(cdp.send("Page.enable"), 15000, "Page.enable").catch(() => {});
 
   // 1. The production app actually rendered inside the native shell.
   // The target can be attached while the page is still navigating; retry until it settles.
@@ -237,27 +262,6 @@ async function main() {
     loaded.href.startsWith(APP_ORIGIN),
     loaded,
   );
-  if (args.phase === "main" && args.appearance !== "default") {
-    const preset =
-      args.appearance === "lowpower"
-        ? { motion: "quiet", atmosphere: false, transparency: false }
-        : { motion: "quiet", atmosphere: true, transparency: true };
-    await cdp
-      .eval(
-        `localStorage.setItem("inkstrip-studio-appearance-v1", ${JSON.stringify(JSON.stringify(preset))}); setTimeout(() => location.reload(), 50); return true;`,
-      )
-      .catch(() => {});
-    await sleep(3000);
-    const applied = await settle(() =>
-      cdp.eval(
-        page(
-          `await waitFor(() => document.readyState === "complete" && document.querySelector(".hero-title, main#workspace"), 60000, "reload"); return { ...document.documentElement.dataset };`,
-        ),
-        90000,
-      ),
-    );
-    console.log(`Appearance preset ${args.appearance}: ${JSON.stringify(applied)}`);
-  }
   await cdp.screenshot(`${args.phase}-01-home`);
 
   // 2. Native shell markers.
