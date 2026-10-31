@@ -332,17 +332,35 @@ async function main() {
   if (platform === "android") {
     await cdp.eval(
       page(
-        `byText("button", "New project").click(); await waitFor(() => document.querySelector("[role=dialog]"), 10000, "dialog"); return true;`,
+        `byText("button", "New project").click(); await waitFor(() => document.querySelector("[role=dialog][data-state=open]"), 10000, "dialog"); return true;`,
       ),
     );
+    // The dialog autofocuses its title field, which opens the soft keyboard; Android
+    // routes the first back press to the keyboard (hide it), exactly as on a phone.
+    // Hide it first so this press reaches the app's back handler.
+    await cdp.eval(`document.activeElement?.blur(); return true;`);
+    adb("shell", "input", "keyevent", "111"); // ESCAPE closes the IME if still shown, never the app
+    await sleep(1000);
+    const stillOpen = await cdp.eval(
+      `return !!document.querySelector("[role=dialog][data-state=open]");`,
+    );
+    if (!stillOpen) {
+      // ESC already closed the dialog via the IME path; reopen to test the back key itself.
+      await cdp.eval(
+        page(
+          `byText("button", "New project").click(); await waitFor(() => document.querySelector("[role=dialog][data-state=open]"), 10000, "dialog"); document.activeElement?.blur(); return true;`,
+        ),
+      );
+      await sleep(800);
+    }
     pressBack();
     await sleep(1500);
     const afterBack = await cdp.eval(
-      `return { dialog: !!document.querySelector("[role=dialog]"), href: location.href };`,
+      `return { dialogOpen: !!document.querySelector("[role=dialog][data-state=open]"), href: location.href };`,
     );
     record(
-      "Android back closes an open dialog first",
-      !afterBack.dialog && afterBack.href.startsWith(APP_ORIGIN),
+      "Android back closes an open dialog first (app stays open)",
+      !afterBack.dialogOpen && afterBack.href.startsWith(APP_ORIGIN),
       afterBack,
     );
   }
@@ -412,13 +430,18 @@ async function main() {
     );
     await cdp.screenshot(`${args.phase}-04-editor`);
     if (platform === "android") {
-      const before = await cdp.eval(`return location.pathname;`);
+      const state = () =>
+        cdp.eval(
+          `return { path: location.pathname, editor: /Raster Studio/.test(document.body.innerText) };`,
+        );
+      const before = await state();
+      await cdp.eval(`document.activeElement?.blur(); return true;`);
       pressBack();
       await sleep(2000);
-      const after = await cdp.eval(`return location.pathname;`).catch(() => "(page reloaded)");
+      const after = await state().catch(() => ({ path: "(page reloaded)", editor: false }));
       record(
-        "Android back navigates back inside the app",
-        after !== before || after === "(page reloaded)",
+        "Android back leaves Raster Studio and stays in the app",
+        before.editor && (!after.editor || after.path !== before.path),
         { before, after },
         { required: false },
       );
