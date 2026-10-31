@@ -151,6 +151,9 @@ export function PanelImageActions({
             <img
               draggable={false}
               src={thumb}
+              // Long chapters: decode only rows near the viewport (size is reserved).
+              loading="lazy"
+              decoding="async"
               alt=""
               className="h-16 w-12 shrink-0 rounded-sm bg-paper object-cover object-top"
             />
