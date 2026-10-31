@@ -7,7 +7,9 @@ export async function makeReference(blob: Blob, strokes?: Selection[]) {
   try {
     if (source.width * source.height > 16_000_000)
       throw new Error("Reference input exceeds 16 megapixels.");
-    const box = strokes?.length ? selectionBox(strokes) : { left: 0, top: 0, right: 1, bottom: 1 };
+    const box = strokes?.length
+      ? selectionBox(strokes, source.width, source.height)
+      : { left: 0, top: 0, right: 1, bottom: 1 };
     const x = Math.floor(box.left * source.width),
       y = Math.floor(box.top * source.height),
       w = Math.max(1, Math.ceil((box.right - box.left) * source.width)),

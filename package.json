@@ -99,7 +99,14 @@
     "bench:r11:filter-memory": "node --experimental-strip-types scripts/r11-filter-memory-benchmark.mjs",
     "test:picker:browser": "node --experimental-strip-types scripts/image-picker-browser-check.mjs",
     "test:r13:lifecycle:browser": "node --experimental-strip-types scripts/r13/lifecycle-browser-check.mjs",
-    "bench:r13:ai": "node scripts/r13/ai-quality-benchmark.mjs"
+    "bench:r13:ai": "node scripts/r13/ai-quality-benchmark.mjs",
+    "test:r14:browser": "node scripts/r14/browser-check.mjs",
+    "test:r14:inference": "node scripts/r14/inference-check.mjs",
+    "test:r14:tiles": "node scripts/r14/tile-parity-check.mjs",
+    "test:r14:characters": "node scripts/r14/characters-browser-check.mjs",
+    "test:r14:prototypes": "node --test scripts/r14/assistant-prototype.test.mjs",
+    "test:r14:retouch": "node scripts/r14/retouch-precision-check.mjs",
+    "bench:r14:ai": "node scripts/r14/quality-benchmark.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

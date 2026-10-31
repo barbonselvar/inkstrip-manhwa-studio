@@ -1,0 +1,10 @@
+{
+  "expected": "UNE HISTOIRE À PARIS",
+  "text": "UNE HISTOIRE À PARIS\n",
+  "elapsedMs": 962.6000000000931,
+  "engine": "Tesseract.js7.0.0 / tessdata_fast",
+  "realFrenchWeights": true,
+  "prototypeOnly": true,
+  "nativeFrenchLanguageSupported": false,
+  "note": "Production French metadata needs an explicit compatibility strategy; no prototype regions were persisted. Machine translation remains unimplemented."
+}

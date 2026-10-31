@@ -35,3 +35,19 @@ test("texture repair reconstructs selected pixels from known context and keeps o
     textureRepair(base, new Uint8ClampedArray(base.length).fill(255), size, size),
   );
 });
+
+test("brush/reference bounds use native width-based radius on non-square panels", () => {
+  const brush: Selection = {
+    tool: "brush",
+    mode: "add",
+    size: 100,
+    feather: 0,
+    points: [{ x: 0.5, y: 0.5 }],
+  };
+  const wide = selectionBox([brush], 1200, 100);
+  assert.equal(wide.top, 0, "60px native radius covers the 100px image height");
+  assert.equal(wide.bottom, 1);
+  const tall = selectionBox([brush], 100, 1200);
+  assert.ok(Math.abs(tall.top - (0.5 - 5 / 1200)) < 1e-12);
+  assert.throws(() => selectionBox([brush], 0, 1200), /dimensions/);
+});

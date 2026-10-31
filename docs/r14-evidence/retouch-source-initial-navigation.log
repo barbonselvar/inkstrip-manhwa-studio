@@ -1,0 +1,15 @@
+
+> test:r14:retouch
+> node scripts/r14/retouch-precision-check.mjs http://127.0.0.1:8080
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: Execution context was destroyed, most likely because of a navigation.
+    at /workspace/inkstrip-r14/scripts/r14/retouch-precision-check.mjs:12:29 {
+  log: [],
+  name: 'Error'
+}
+
+Node.js v24.19.0

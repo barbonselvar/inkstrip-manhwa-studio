@@ -1,0 +1,126 @@
+{
+  "sourceSha": "30ac825a891754fb1ec5e094131f0f8e91b69d4c",
+  "stage": "finished",
+  "results": [
+    {
+      "label": "unit",
+      "args": ["npm", "test"],
+      "exitCode": 0,
+      "seconds": 23.81,
+      "log": "/workspace/r14-evidence/candidate-unit.log"
+    },
+    {
+      "label": "typecheck",
+      "args": ["npm", "run", "typecheck"],
+      "exitCode": 0,
+      "seconds": 13.12,
+      "log": "/workspace/r14-evidence/candidate-typecheck.log"
+    },
+    {
+      "label": "lint",
+      "args": ["npm", "run", "lint"],
+      "exitCode": 0,
+      "seconds": 9.17,
+      "log": "/workspace/r14-evidence/candidate-lint.log"
+    },
+    {
+      "label": "build",
+      "args": ["npm", "run", "build"],
+      "exitCode": 0,
+      "seconds": 3.86,
+      "log": "/workspace/r14-evidence/candidate-build.log"
+    },
+    {
+      "label": "preview",
+      "args": ["npm", "run", "preview:restart"],
+      "exitCode": 0,
+      "seconds": 1.37,
+      "log": "/workspace/r14-evidence/candidate-preview.log"
+    },
+    {
+      "label": "check-build",
+      "args": ["npm", "run", "check:build"],
+      "exitCode": 0,
+      "seconds": 0.14,
+      "log": "/workspace/r14-evidence/candidate-check-build.log"
+    },
+    {
+      "label": "check-auth",
+      "args": ["npm", "run", "check:auth"],
+      "exitCode": 0,
+      "seconds": 0.17,
+      "log": "/workspace/r14-evidence/candidate-check-auth.log"
+    },
+    {
+      "label": "r14-ui",
+      "args": ["npm", "run", "test:r14:browser", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 34.47,
+      "log": "/workspace/r14-evidence/candidate-r14-ui.log"
+    },
+    {
+      "label": "studio-ai",
+      "args": ["npm", "run", "test:studio:browser", "--", "http://127.0.0.1:8082"],
+      "exitCode": 0,
+      "seconds": 44.28,
+      "log": "/workspace/r14-evidence/candidate-studio-ai.log"
+    },
+    {
+      "label": "inference-parity",
+      "args": [
+        "npm",
+        "run",
+        "test:r14:inference",
+        "--",
+        "http://127.0.0.1:8080",
+        "http://127.0.0.1:8083"
+      ],
+      "exitCode": 0,
+      "seconds": 69.44,
+      "log": "/workspace/r14-evidence/candidate-inference-parity.log"
+    },
+    {
+      "label": "production-local",
+      "args": [
+        "npm",
+        "run",
+        "test:production:browser",
+        "--",
+        "http://127.0.0.1:8082",
+        "30ac825a891754fb1ec5e094131f0f8e91b69d4c",
+        "--raster",
+        "--ai"
+      ],
+      "exitCode": 0,
+      "seconds": 65.15,
+      "log": "/workspace/r14-evidence/candidate-production-local.log"
+    },
+    {
+      "label": "smoke-dev",
+      "args": [
+        "node",
+        "scripts/browser-smoke.mjs",
+        "http://127.0.0.1:8080",
+        "/workspace/screenshots/r14-candidate-dev.png"
+      ],
+      "exitCode": 0,
+      "seconds": 4.52,
+      "log": "/workspace/r14-evidence/candidate-smoke-dev.log"
+    },
+    {
+      "label": "smoke-built",
+      "args": [
+        "node",
+        "scripts/browser-smoke.mjs",
+        "http://127.0.0.1:8081",
+        "/workspace/screenshots/r14-candidate-built.png",
+        "--baseline",
+        "/workspace/screenshots/r14-candidate-dev.json"
+      ],
+      "exitCode": 0,
+      "seconds": 5.83,
+      "log": "/workspace/r14-evidence/candidate-smoke-built.log"
+    }
+  ],
+  "failed": []
+}

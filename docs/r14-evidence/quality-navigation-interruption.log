@@ -1,0 +1,15 @@
+R14AI {"name":"action","input":[128,128],"output":[256,256],"bicubic":{"psnrY":25.688213130140806,"rgbMAE":7.6193288167317705,"horizontalEdgeMAE":9.23175030637258},"swin2sr":{"psnrY":26.55745135212266,"rgbMAE":6.50244140625,"horizontalEdgeMAE":9.156075459558716,"ms":67396.8999999999},"realesrgan-anime":{"psnrY":26.69187674949796,"rgbMAE":7.4742584228515625,"horizontalEdgeMAE":8.323703446691054,"ms":2166.5}}
+R14AI {"name":"manga","input":[128,128],"output":[256,256],"bicubic":{"psnrY":20.760095651848083,"rgbMAE":16.098587036132812,"horizontalEdgeMAE":19.381894730392187},"swin2sr":{"psnrY":21.37512134354776,"rgbMAE":14.571502685546875,"horizontalEdgeMAE":18.955179702819006,"ms":41518},"realesrgan-anime":{"psnrY":21.150463308939887,"rgbMAE":15.501042683919271,"horizontalEdgeMAE":18.613000245098213,"ms":1422.6000000000931}}
+R14AI {"name":"romance","input":[128,128],"output":[256,256],"bicubic":{"psnrY":24.458311235962043,"rgbMAE":10.353383382161459,"horizontalEdgeMAE":13.69903074448566},"swin2sr":{"psnrY":25.073206227866464,"rgbMAE":9.348292032877604,"horizontalEdgeMAE":13.220657536765376,"ms":40067.89999999991},"realesrgan-anime":{"psnrY":25.219790473655515,"rgbMAE":10.152633666992188,"horizontalEdgeMAE":12.785242800245017,"ms":1388.3000000000466}}
+NETWORK 127.0.0.1 net::ERR_ABORTED
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: Execution context was destroyed, most likely because of a navigation.
+    at /workspace/inkstrip-r14/scripts/r14/quality-benchmark.mjs:46:26 {
+  log: [],
+  name: 'Error'
+}
+
+Node.js v24.19.0
