@@ -145,11 +145,7 @@ jobs:
   android-device-test:
     needs: android-build
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    strategy:  # TEMPORARY verification: 6 independent emulators
-      fail-fast: false
-      matrix:
-        sample: [1, 2, 3, 4, 5, 6]
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -164,23 +160,71 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Install, launch and smoke-test on an Android 14 emulator
+      # GitHub's runners have no GPU, so the emulator renders on the CPU and its host
+      # process sometimes dies or wedges (docs/NATIVE_APPS.md, "Android emulator
+      # stability"). One attempt must pass every check in a single session; only an
+      # infrastructure failure (no functional check failed) gets a fresh emulator,
+      # at most 3 attempts. A functional failure stops the job at the gate.
+      - name: Android 14 emulator - attempt 1
+        id: attempt1
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
           target: google_apis
           arch: x86_64
           profile: pixel_6
-          cores: 3
           ram-size: 4096M
           disk-size: 6000M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
           script: bash apps/scripts/android-device-test.sh
+      - name: Retry gate after attempt 1
+        if: steps.attempt1.outcome == 'failure'
+        run: bash apps/scripts/android-attempt-gate.sh 1
+      - name: Android 14 emulator - attempt 2 (fresh emulator)
+        id: attempt2
+        if: steps.attempt1.outcome == 'failure'
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          disk-size: 6000M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
+          script: bash apps/scripts/android-device-test.sh
+      - name: Retry gate after attempt 2
+        if: steps.attempt2.outcome == 'failure'
+        run: bash apps/scripts/android-attempt-gate.sh 2
+      - name: Android 14 emulator - attempt 3 (fresh emulator, final)
+        if: steps.attempt2.outcome == 'failure'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          disk-size: 6000M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
+          script: bash apps/scripts/android-device-test.sh
+      - name: Keep infrastructure-failure evidence
+        if: always()
+        run: |
+          if [ -d "$RUNNER_TEMP/android-infra-attempts" ]; then
+            mkdir -p native-smoke/infra-attempts
+            cp -r "$RUNNER_TEMP/android-infra-attempts/." native-smoke/infra-attempts/
+            ls native-smoke/infra-attempts
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: inkstrip-android-device-test-${{ matrix.sample }}
+          name: inkstrip-android-device-test
           path: native-smoke/
           if-no-files-found: warn
 
@@ -313,7 +357,10 @@ jobs:
             echo "| Windows 10/11 x64 | \`$(basename "$exe")\` | $s |"
             echo
             echo "### Automated device tests (emulator / CI runner, not physical devices)"
-            echo "**Android 14 emulator**"; echo "$android_tests"; echo
+            retries=$(ls -d artifacts/inkstrip-android-device-test/infra-attempts/attempt-* 2>/dev/null | wc -l)
+            echo "**Android 14 emulator**"; echo "$android_tests"
+            if [ "$retries" -gt 0 ]; then echo "_(passed on a fresh emulator after $retries emulator infrastructure failure(s); evidence in the workflow artifacts)_"; fi
+            echo
             echo "**Windows Server runner (WebView2)**"; echo "$windows_tests"; echo
             echo "Verify downloads with \`SHA256SUMS.txt\`. See docs/NATIVE_APPS.md for install and signing details."
           } > notes.md

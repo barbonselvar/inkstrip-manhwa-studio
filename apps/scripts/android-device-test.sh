@@ -36,6 +36,28 @@ host_diagnostics() {
   done
   echo "::endgroup::"
 }
+# Writes $OUT/outcome.txt for the workflow's retry gate:
+#   pass           every check passed
+#   app-failure    a functional check failed or the app crashed  -> never retried
+#   infra-failure  nothing failed functionally, but the emulator/DevTools broke -> fresh emulator
+write_outcome() {
+  local outcome=pass
+  if [ "$status" -ne 0 ] || [ "${1:-}" = "lost" ]; then
+    outcome=infra-failure
+    if node -e '
+      const fs = require("fs");
+      const dir = process.argv[1];
+      const failed = fs.readdirSync(dir).filter((f) => /^android-.*-results\.json$/.test(f))
+        .flatMap((f) => JSON.parse(fs.readFileSync(dir + "/" + f, "utf8")))
+        .filter((r) => r.required && !r.ok && r.name !== "Smoke run completed");
+      for (const r of failed) console.log("functional failure: " + r.name);
+      process.exit(failed.length ? 0 : 1);
+    ' "$OUT"; then outcome=app-failure; fi
+    [ "${APP_FAILURE:-0}" = "1" ] && outcome=app-failure
+  fi
+  echo "$outcome" > "$OUT/outcome.txt"
+  echo "Outcome: $outcome"
+}
 echo "Emulator host process: ${QEMU_PID:-not found}; host: $(nproc) vCPU, $(free -m | awk 'NR==2{print $2}') MB RAM"
 
 shipped=$(ls dist/*.apk | head -1)
@@ -84,7 +106,9 @@ adb shell dumpsys meminfo "$PKG" | grep -E "TOTAL PSS|TOTAL RSS|TOTAL:" | tee "$
 if ! adb get-state >/dev/null 2>&1; then
   echo "FAIL  Emulator is no longer reachable after the main phase (see android-logcat-stream.txt)"
   host_diagnostics
-  kill "$LOGCAT_PID" 2>/dev/null || true
+  kill "$LOGCAT_PID" "$MONITOR_PID" 2>/dev/null || true
+  status=1
+  write_outcome lost
   exit 1
 fi
 launch
@@ -100,7 +124,7 @@ if [ "$testapk" != "$shipped" ]; then
   if adb shell pidof "$PKG" >/dev/null && adb shell dumpsys activity activities | grep -q "mResumedActivity.*$PKG"; then
     echo "PASS  Signed APK installs and stays in the foreground"
   else
-    echo "FAIL  Signed APK did not stay in the foreground"; status=1
+    echo "FAIL  Signed APK did not stay in the foreground"; status=1; APP_FAILURE=1
   fi
   adb exec-out screencap -p > "$OUT/android-release-screen.png" || true
 fi
@@ -108,7 +132,8 @@ fi
 host_diagnostics
 kill "$LOGCAT_PID" "$MONITOR_PID" 2>/dev/null || true
 adb logcat -d > "$OUT/android-logcat.txt" || true
-if grep -E "FATAL EXCEPTION.*|AndroidRuntime: Process: $PKG" "$OUT/android-logcat.txt"; then
-  echo "FAIL  App crashed (see android-logcat.txt)"; status=1
+if grep -E "AndroidRuntime: Process: $PKG\b" "$OUT/android-logcat.txt"; then
+  echo "FAIL  App crashed (see android-logcat.txt)"; status=1; APP_FAILURE=1
 fi
+write_outcome
 exit $status

@@ -114,7 +114,8 @@ Jobs:
    allow-list.
 2. **android-device-test**: installs the APK on an **Android 14 emulator**
    (Pixel 6 profile) and runs `apps/scripts/native-smoke.mjs` against the
-   app's own WebView over DevTools.
+   app's own WebView over DevTools. Only an emulator infrastructure failure gets
+   a fresh emulator (at most 3 attempts; see "Android emulator stability").
 3. **windows-build** (Windows): `cargo test`, then `tauri build` to the NSIS
    installer, Authenticode-signed when certificate secrets exist. It checks
    the PE header and signature status.
@@ -174,6 +175,21 @@ separate emulator infrastructure problems were found:
 The harness also re-attaches if the app process restarts during its very first
 cold launch (the DevTools socket is named after the process ID). Only the attach
 step is retried; app checks run exactly once.
+
+Even with both fixes, the CPU-only emulator renderer still occasionally dies or
+wedges (about 15–30% of sessions in sampling, and more when the guest was given a
+third core). The job therefore separates the two kinds of failure:
+
+- **Functional failure:** any check fails, or `app.inkstrip.studio` crashes. The
+  job fails immediately, with no retry.
+- **Infrastructure failure:** the emulator is lost, or a DevTools/adb timeout
+  happens with no functional check failing. The whole suite is rerun from the
+  start on a **fresh emulator**, at most 3 attempts.
+
+One attempt must pass every check in a single uninterrupted session. Earlier
+attempts are kept under `infra-attempts/` in the artifact, and the release
+notes say when a retry happened. App hangs are still caught: the Windows device
+test runs the same checks without retries.
 
 If the emulator still disappears, the job log ends with a **Host diagnostics**
 block. It shows host memory, the emulator process state, kernel OOM/fault
