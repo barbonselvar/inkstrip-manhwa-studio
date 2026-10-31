@@ -229,5 +229,9 @@ command plus the adaptive foreground in `apps/brand`).
   file and shows a toast for each.
 - On-device AI uses WebGPU when the WebView provides it, otherwise
   WebAssembly. That is slower on low-end phones.
+- Android back inside **Raster Studio** does not close the editor: the editor
+  doesn't respond to the Escape the back handler sends, so back does nothing
+  there. Use the editor's own ← button. Back does close dialogs and menus and
+  navigates history elsewhere. The CI emulator test reports this as a warning.
 - iOS and macOS builds are not included. Tauri could produce a macOS build
   with a signing identity.
