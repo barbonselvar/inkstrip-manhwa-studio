@@ -8,23 +8,13 @@
           "name": "image",
           "isTensor": true,
           "type": "float32",
-          "shape": [
-            "batch",
-            3,
-            512,
-            512
-          ]
+          "shape": ["batch", 3, 512, 512]
         },
         {
           "name": "mask",
           "isTensor": true,
           "type": "float32",
-          "shape": [
-            "batch",
-            1,
-            512,
-            512
-          ]
+          "shape": ["batch", 1, 512, 512]
         }
       ],
       "outputs": [
@@ -32,12 +22,7 @@
           "name": "output",
           "isTensor": true,
           "type": "float32",
-          "shape": [
-            "batch",
-            3,
-            512,
-            512
-          ]
+          "shape": ["batch", 3, 512, 512]
         }
       ]
     },
@@ -46,12 +31,7 @@
       "inferenceMs": 23277.300000000047,
       "totalMs": 46701.60000000009,
       "type": "float32",
-      "dims": [
-        1,
-        3,
-        512,
-        512
-      ],
+      "dims": [1, 3, 512, 512],
       "min": 0,
       "max": 255
     }

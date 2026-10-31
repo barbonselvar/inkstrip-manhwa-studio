@@ -1,4 +1,4 @@
-# R14 AI engine implementation — work in progress
+# R14 AI engine implementation and review scope
 
 Base: main `2ff54b2fd6297e63b225a11187c7cc5a1995669f` (R13).
 Branch: `codex/r14-ai-engine-optimization`. Development only; no merge or production deployment.
@@ -46,8 +46,8 @@ No mock output is inference evidence. Synthetic image fixtures test invariants o
   third-party ONNX conversion, not an assertion of official binary equivalence.
   The model card license and original upstream license are recorded. Initial
   whole-plane runs on identical inputs took 744–797ms and mean PSNR was about
-  24.35dB, with a 0.23dB loss against Swin2SR on the monochrome crop. The production
-  tiled path is undergoing the nine-artwork comparison; no universal speedup or
+  24.35dB, with a 0.23dB loss against Swin2SR on the monochrome crop. The production tiled
+  path completed the nine-artwork comparison below; no universal speedup or
   identity preservation is claimed.
 - 1×/2×/4× outputs, real two-pass Swin2SR for 4×, one native Real-ESRGAN pass.
   Native ×4 patches can be resampled directly to owned 1×/2× output cores with halos;
@@ -64,11 +64,11 @@ No mock output is inference evidence. Synthetic image fixtures test invariants o
 - Existing preview/Apply/recover transactions retained. Added a scroll-contained
   100% pixel comparison, explicit model/preset/scale controls and mobile labels.
 
-Validation so far: 1113 unit tests, typecheck, lint and production build passed;
+Initial Stage A validation: 1113 unit tests, typecheck, lint and production build passed;
 real 1×/2×/4×, exact alpha/source bytes, corrupt-cache recovery, cancellation and
 oversized-output checks passed. Five-width real Fast Anime UI checks passed at
 1440/768/390/360/320, including exact 100% display geometry, Apply, original-byte
-recovery and subsequent Raster opening. Final consolidated checks/CI remain pending.
+recovery and subsequent Raster opening. Final consolidated checks and CI are documented in the test report and PR.
 
 Two new harness setup errors are preserved separately: the comparison server was
 initially started with an overriding default port, and a synthetic safety fixture
@@ -146,18 +146,43 @@ Sources inspected 2026-10-31:
 ## Measured quality/performance
 
 Nine 256px centre crops from the original gallery, downsampled to 128px then restored
-by the actual editor worker. Mean luma PSNR: bicubic24.385dB, Swin2SR24.967dB,
-Fast Anime25.121dB. Mean RGB absolute error favors Swin2SR (9.023 vs9.833); Fast
+by the actual editor worker. Mean luma PSNR: bicubic 24.385dB, Swin2SR 24.967dB,
+Fast Anime 25.121dB. Mean RGB absolute error favors Swin2SR (9.023 vs 9.833); Fast
 Anime removes some fine hatching/rain, visible in the saved comparisons. Therefore
 Swin2SR remains the default; faster output is opt-in, with mandatory review.
-Median observed per-crop times were41.10s/1.48s, including model preparation on
+Median observed per-crop times were 41.10s/1.48s, including model preparation on
 switches. Shared-host results are not a universal speedup or perceptual guarantee.
-Sampled Node/Chromium process-tree peak was1163MiB, not an isolated WASM/GPU peak.
+Sampled Node/Chromium process-tree peak was 1163MiB, not an isolated WASM/GPU peak.
 
-The actual original720×960 gallery panel produced2880×3840 (11.06MP) in85.46s,
-with a sampled882MiB peak. Original compressed bytes stayed exact. Cancelling after
+The actual original 720×960 gallery panel produced 2880×3840 (11.06MP) in 85.46s,
+with a sampled 882MiB peak. Original compressed bytes stayed exact. Cancelling after
 one completed native tile terminated processing; a new real run then succeeded.
-No near-limit16MP input or physical Android performance claim is made.
+No near-limit 16MP input or physical Android performance claim is made.
 
 See raw evidence and before/after panels in `docs/r14-evidence/`. Final regression,
 exact-HEAD CI and Vercel Preview verification are recorded in the test report.
+
+## Final review scope
+
+Final application source: `30ac825a891754fb1ec5e094131f0f8e91b69d4c`.
+The final guard compares effective parameter values, so restoring the default model
+or optional flags does not unnecessarily invalidate an equivalent preview. Original
+device-specific import policies are retained beneath the AI area/scale preflight.
+1121 unique unit tests and the final frozen candidate's 13 targeted commands pass;
+the broad 21-command browser/worker/smoke coverage and its initial corrected harness
+failure are detailed in the test report. Native/database versions remain unchanged.
+
+| Requested area         | Delivered / remaining boundary                                                                                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Upscaler               | Real Swin2SR/optional Fast Anime, 1×/2×/4×, fidelity/cleanup/ink controls, exact alpha, native comparison, original retention and bounded processing verified.                 |
+| Eraser                 | Native ownership/aspect defects fixed. Existing local texture repair preserved; neural LaMa is a real research prototype, not a shipping option.                               |
+| Face consistency       | Precise shared composition retained, references preserved. Free identity-conditioned model deferred for licensing/infrastructure; paid model not invoked or quality-validated. |
+| Character Library      | Existing multi-reference system reused; editable view/expression labels, IDs/Blob bytes/primary/reload verified.                                                               |
+| Line restoration       | Optional conservative tiny-gap repair and measured fidelity defaults/presets. Larger missing drawing/color restoration is not guaranteed.                                      |
+| Background consistency | No validated reference/geometry-conditioned engine adopted.                                                                                                                    |
+| Translation            | Existing manual workflow and Arabic shaping preserved; real French OCR prototype only. Automatic translation and persistent French metadata deferred.                          |
+| Assistant              | Tested rule-based proposal prototype only; no LLM, automatic edits or provider calls.                                                                                          |
+
+R14 is ready to review within this implemented scope; it is **not** claimed complete
+for all advanced AI goals. Vercel Preview is Ready but login-protected from this
+environment. No merge/production deployment is performed; keep Draft PR #28.

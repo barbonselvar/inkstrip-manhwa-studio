@@ -59,13 +59,11 @@ try {
     await p.getByLabel("Character name", { exact: true }).fill("R14 subject");
     const upload = async (angle) => {
       await p.getByLabel("Reference angle", { exact: true }).fill(angle);
-      await p
-        .getByLabel("Upload character reference", { exact: true })
-        .setInputFiles({
-          name: "reference.png",
-          mimeType: "image/png",
-          buffer: Buffer.from(source, "base64"),
-        });
+      await p.getByLabel("Upload character reference", { exact: true }).setInputFiles({
+        name: "reference.png",
+        mimeType: "image/png",
+        buffer: Buffer.from(source, "base64"),
+      });
     };
     await upload("Front neutral");
     await p.getByAltText("Character reference face", { exact: true }).waitFor();

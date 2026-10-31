@@ -1,13 +1,7 @@
 {
   "source": "public/gallery/adventure-720.webp",
-  "input": [
-    720,
-    960
-  ],
-  "output": [
-    2880,
-    3840
-  ],
+  "input": [720, 960],
+  "output": [2880, 3840],
   "ms": 85459.8999999999,
   "bytes": 25472446,
   "sha256": "2c7855a933909dd323e6a6b021638ec5dbe6c1296f558ac6fa0b9fdc74f18902",
