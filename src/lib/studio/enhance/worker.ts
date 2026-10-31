@@ -1,5 +1,5 @@
 import { boundedBitmap } from "../image-decode";
-import { preflightImage, imagePolicy } from "../image-policy";
+import { preflightImage, browserImagePolicy } from "../image-policy";
 import { ENHANCE_MODELS, type EnhanceModel } from "./models";
 import { enhancementPlan } from "./plan";
 import { downloadModelBytes } from "./model-bytes";
@@ -135,7 +135,7 @@ self.onmessage = async (event: MessageEvent<{ blob: Blob; options: EnhanceOption
     const key = options.model ?? "swin2sr",
       spec = ENHANCE_MODELS[key];
     const info = await preflightImage(blob, {
-      ...imagePolicy(true),
+      ...browserImagePolicy(),
       maxPixels: 4_000_000,
       maxSide: 4096,
     });
