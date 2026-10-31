@@ -8,7 +8,8 @@ OUT=native-smoke
 mkdir -p "$OUT"
 status=0
 # Fail fast instead of hanging if the emulator goes away.
-adb() { timeout 120 command adb "$@"; }
+ADB_BIN=$(type -P adb)
+adb() { timeout 120 "$ADB_BIN" "$@"; }
 
 shipped=$(ls dist/*.apk | head -1)
 # A release-signed APK has WebView debugging off, so the CDP smoke test runs on the
@@ -43,7 +44,7 @@ launch() {
 
 adb logcat -c || true
 # Stream logcat for the whole run so a crash is captured even if the device disappears.
-command adb logcat -v threadtime > "$OUT/android-logcat-stream.txt" 2>&1 &
+"$ADB_BIN" logcat -v threadtime > "$OUT/android-logcat-stream.txt" 2>&1 &
 LOGCAT_PID=$!
 adb install -r "$testapk" || exit 1
 adb shell getprop ro.build.version.release | sed 's/^/Android /' | tee "$OUT/android-device.txt"
