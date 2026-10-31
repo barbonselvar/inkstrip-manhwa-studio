@@ -32,6 +32,9 @@ const { values: args } = parseArgs({
     out: { type: "string", default: "native-smoke" },
     port: { type: "string", default: "9222" },
     timeout: { type: "string", default: "180" },
+    // Studio Appearance preset applied (as a user would, via the saved preference)
+    // before testing: "default" leaves the app untouched.
+    appearance: { type: "string", default: "default" },
   },
 });
 const platform = args.platform;
@@ -234,6 +237,27 @@ async function main() {
     loaded.href.startsWith(APP_ORIGIN),
     loaded,
   );
+  if (args.phase === "main" && args.appearance !== "default") {
+    const preset =
+      args.appearance === "lowpower"
+        ? { motion: "quiet", atmosphere: false, transparency: false }
+        : { motion: "quiet", atmosphere: true, transparency: true };
+    await cdp
+      .eval(
+        `localStorage.setItem("inkstrip-studio-appearance-v1", ${JSON.stringify(JSON.stringify(preset))}); setTimeout(() => location.reload(), 50); return true;`,
+      )
+      .catch(() => {});
+    await sleep(3000);
+    const applied = await settle(() =>
+      cdp.eval(
+        page(
+          `await waitFor(() => document.readyState === "complete" && document.querySelector(".hero-title, main#workspace"), 60000, "reload"); return { ...document.documentElement.dataset };`,
+        ),
+        90000,
+      ),
+    );
+    console.log(`Appearance preset ${args.appearance}: ${JSON.stringify(applied)}`);
+  }
   await cdp.screenshot(`${args.phase}-01-home`);
 
   // 2. Native shell markers.

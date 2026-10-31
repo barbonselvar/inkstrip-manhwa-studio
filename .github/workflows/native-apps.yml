@@ -146,13 +146,13 @@ jobs:
     needs: android-build
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    strategy:  # TEMPORARY verification: hardware-keyboard AVD, 2 rendering configs x 4 samples
+    strategy:  # TEMPORARY experiment: does stopping continuous home-screen rendering stop the crash?
       fail-fast: false
       matrix:
         sample: [1, 2, 3, 4]
         cfg:
-          - { id: a34-default-hwkbd, api: 34, gpu: "-gpu guest" }
-          - { id: a34-swiftshader-novulkan-hwkbd, api: 34, gpu: "-gpu swiftshader_indirect -feature -Vulkan" }
+          - { id: quiet-motion, api: 34, gpu: "-gpu guest", appearance: quiet }
+          - { id: lowpower, api: 34, gpu: "-gpu guest", appearance: lowpower }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -177,15 +177,10 @@ jobs:
           ram-size: 4096M
           disk-size: 6000M
           disable-animations: true
-          # Hardware keyboard: Android never shows the soft keyboard (IME), whose rendering
-          # crashed the emulator's host renderer when the studio's dialogs focused a field.
-          pre-emulator-launch-script: |
-            printf 'hw.keyboard=yes\n' >> "$HOME/.android/avd/test.avd/config.ini"
-            grep -E '^hw\.(keyboard|ramSize|cpu\.ncore|lcd)' "$HOME/.android/avd/test.avd/config.ini"
           # Guest-side rendering: host SwiftShader crashed the emulator process when the
           # studio's blurred (backdrop-filter) dialogs opened.
           emulator-options: -no-window ${{ matrix.cfg.gpu }} -noaudio -no-boot-anim -no-snapshot -camera-back none
-          script: bash apps/scripts/android-device-test.sh
+          script: INKSTRIP_TEST_APPEARANCE=${{ matrix.cfg.appearance }} bash apps/scripts/android-device-test.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
