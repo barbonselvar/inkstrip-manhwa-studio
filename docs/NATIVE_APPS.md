@@ -205,6 +205,12 @@ git tag app-v1.0.0 <merged-commit-sha>
 git push origin app-v1.0.0
 ```
 
+Alternatively, run the **Native apps** workflow manually on `main` (Actions → Run
+workflow) with `release_version` set to a new version such as `1.0.1`. It runs
+the same build and device-test gates and creates the tag at the tested `main`
+commit. It refuses versions whose tag already exists, so a published tag is never
+moved.
+
 The workflow publishes `Inkstrip apps 1.0.0`, and the website's Download App
 dialog picks it up straight away (no web redeploy needed). Bump the tag for
 each app release. The Android `versionCode` comes from the workflow run number,
