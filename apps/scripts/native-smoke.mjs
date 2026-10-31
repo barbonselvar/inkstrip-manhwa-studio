@@ -353,15 +353,23 @@ async function main() {
       );
       await sleep(800);
     }
-    pressBack();
-    await sleep(1500);
-    const afterBack = await cdp.eval(
-      `return { dialogOpen: !!document.querySelector("[role=dialog][data-state=open]"), href: location.href };`,
-    );
+    // If the keyboard is still up, Android spends the first press hiding it (normal
+    // phone behaviour). A user needs at most two presses; more means the app ignored it.
+    let afterBack = null;
+    let presses = 0;
+    while (presses < 2) {
+      pressBack();
+      presses++;
+      await sleep(1500);
+      afterBack = await cdp.eval(
+        `return { dialogOpen: !!document.querySelector("[role=dialog][data-state=open]"), href: location.href };`,
+      );
+      if (!afterBack.dialogOpen) break;
+    }
     record(
       "Android back closes an open dialog first (app stays open)",
       !afterBack.dialogOpen && afterBack.href.startsWith(APP_ORIGIN),
-      afterBack,
+      { ...afterBack, presses },
     );
   }
 
