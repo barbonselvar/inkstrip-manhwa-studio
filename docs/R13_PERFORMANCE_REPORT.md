@@ -67,6 +67,25 @@ does not change it. Images near the 4 MP cap can therefore take a very long time
 This is documented as a limitation; WebGPU execution or a lighter model are the
 candidates to evaluate next.
 
+**Results** (CI run 41199543792 on `962a717`; raw:
+[ai-quality-ci.json](r13-evidence/ai-quality-ci.json)):
+
+| Artwork (128×128 → 256×256) | Bicubic  | Swin2SR, fidelity preset | App default preset | Time per run                       |
+| --------------------------- | -------- | ------------------------ | ------------------ | ---------------------------------- |
+| action                      | 25.69 dB | **26.56 dB**             | 25.53 dB           | 21.5 s (default preset)            |
+| manga                       | 20.76 dB | **21.38 dB**             | —                  | 21.2 s                             |
+| romance                     | 24.46 dB | **25.07 dB**             | —                  | 21.3 s                             |
+| Mean                        | 23.64 dB | **24.34 dB (+0.70)**     | —                  | first run incl. model load: 30.5 s |
+
+- **Quality:** the pinned model improves on bicubic on all three artworks (+0.6 to +0.9 dB
+  luma PSNR).
+- **Default preset:** on the one artwork measured with it, the app's default post-processing
+  (denoise 15, sharpen 15, artifact cleanup) gave up about 1 dB against the raw model output
+  and fell slightly below bicubic. PSNR penalises sharpening, and n = 1, so R13 does not
+  change the default. A perceptual comparison over more artwork is the follow-up.
+- **Speed:** about 21 s for a 0.016 MP input on a CPU runner. A 4 MP image (the app's
+  limit) would take far longer. This is the most significant AI finding.
+
 No model is replaced in R13: that needs this benchmark plus an alternative evaluated
 under the same harness, and none has been.
 
@@ -230,8 +249,11 @@ compatibility, import safety, history pixels, and long pages.
 - No physical Android or iOS device testing.
 - The AI model choice is unevaluated against alternatives until the CI benchmark
   reports and an alternative is run under the same harness.
-- In-browser AI enhancement is slow on CPU: more than 2 minutes per 0.17 MP on a CI
-  runner, single-threaded WASM. WebGPU or a lighter model are follow-ups.
+- In-browser AI enhancement is slow on CPU: about 21 s per 0.016 MP on a CI runner,
+  single-threaded WASM. WebGPU, threads under cross-origin isolation, or a lighter model
+  are the top AI follow-up.
+- The default enhancement preset may cost fidelity against the raw model output (−1 dB on
+  one artwork). It needs a perceptual comparison over more images before any change.
 - Heavy-document strokes still spend about 100 ms in the full-record IndexedDB read
   during save. Removing it is a schema change, deferred.
 - Opening a document near the 100 k-point cap takes about 4.5 s, dominated by
