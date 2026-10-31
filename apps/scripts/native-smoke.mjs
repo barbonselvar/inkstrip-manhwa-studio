@@ -218,18 +218,29 @@ function findDownloaded(fileName) {
   return hit ? join(dir, hit) : null;
 }
 
+/** Points the DevTools forward at the app's current process (its socket is named by pid). */
+function reforward() {
+  if (platform !== "android") return;
+  try {
+    const pid = adb("shell", "pidof", "app.inkstrip.studio");
+    if (!pid) return;
+    execFileSync("adb", ["forward", "--remove", `tcp:${args.port}`], { stdio: "ignore" });
+    adb("forward", `tcp:${args.port}`, `localabstract:webview_devtools_remote_${pid}`);
+    console.log(`(re-forwarded DevTools to pid ${pid})`);
+  } catch (e) {
+    console.log(`(re-forward failed: ${e.message})`);
+  }
+}
+
 function pressBack() {
   adb("shell", "input", "keyevent", "4");
 }
 
 // ---------------------------------------------------------------- checks
 async function main() {
-  const target = await findAppTarget(Number(args.timeout) * 1000);
-  console.log(`Attached to ${target.url}`);
-  const cdp = await Cdp.connect(target.webSocketDebuggerUrl);
-  await withTimeout(cdp.send("Page.enable"), 15000, "Page.enable").catch(() => {});
-
-  // 1. The production app actually rendered inside the native shell.
+  // Attach to the app's WebView. On a cold first launch the app process can restart
+  // after the DevTools forward was set up; only this attach step is retried (each time
+  // re-forwarding to the current process). Every app check below runs exactly once.
   // The target can be attached while the page is still navigating; retry until it settles.
   const settle = async (fn) => {
     for (let attempt = 0; ; attempt++) {
@@ -247,16 +258,40 @@ async function main() {
       }
     }
   };
-  const loaded = await settle(() =>
-    cdp.eval(
-      page(`
-      await waitFor(() => document.readyState === "complete", 60000, "document load");
-      await waitFor(() => document.querySelector(".hero-title, main#workspace, .studio-layout"), 60000, "Inkstrip UI");
-      return { href: location.href, title: document.title, text: document.body.innerText.slice(0, 200), ua: navigator.userAgent };
-    `),
-      90000,
-    ),
-  );
+  let cdp = null;
+  let loaded = null;
+  const attachDeadline = Date.now() + Number(args.timeout) * 1000;
+  for (let attempt = 1; !loaded; attempt++) {
+    try {
+      const target = await findAppTarget(
+        Math.max(15000, Math.min(60000, attachDeadline - Date.now())),
+      );
+      console.log(`Attached to ${target.url}`);
+      cdp = await withTimeout(Cdp.connect(target.webSocketDebuggerUrl), 15000, "DevTools connect");
+      await withTimeout(cdp.send("Page.enable"), 15000, "Page.enable").catch(() => {});
+      loaded = await settle(() =>
+        cdp.eval(
+          page(`
+          await waitFor(() => document.readyState === "complete", 60000, "document load");
+          await waitFor(() => document.querySelector(".hero-title, main#workspace, .studio-layout"), 60000, "Inkstrip UI");
+          return { href: location.href, title: document.title, text: document.body.innerText.slice(0, 200), ua: navigator.userAgent };
+        `),
+          90000,
+        ),
+      );
+    } catch (error) {
+      try {
+        cdp?.close();
+      } catch {
+        /* already closed */
+      }
+      cdp = null;
+      if (attempt >= 4 || Date.now() > attachDeadline) throw error;
+      console.log(`(attach attempt ${attempt} failed: ${error.message}; retrying)`);
+      reforward();
+      await sleep(3000);
+    }
+  }
   record(
     "Production web app loads inside the app window",
     loaded.href.startsWith(APP_ORIGIN),
