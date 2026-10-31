@@ -8,6 +8,7 @@ export type EnhanceOptions = {
   sharpen: number;
   color: boolean;
   artifacts: boolean;
+  inkGaps?: boolean;
 };
 export const DEFAULT_ENHANCE: EnhanceOptions = {
   scale: 2,
@@ -15,6 +16,7 @@ export const DEFAULT_ENHANCE: EnhanceOptions = {
   sharpen: 0,
   color: false,
   artifacts: false,
+  inkGaps: false,
 };
 export type EnhanceProgress = { stage: string; done: number; total: number };
 export type EnhanceResult = { blob: Blob; width: number; height: number };
@@ -40,13 +42,15 @@ export function validateEnhanceOptions(options: EnhanceOptions) {
     !Number.isFinite(options.sharpen) ||
     options.sharpen < 0 ||
     options.sharpen > 40 ||
+    (options.inkGaps !== undefined && typeof options.inkGaps !== "boolean") ||
     typeof options.color !== "boolean" ||
     typeof options.artifacts !== "boolean"
   )
     throw Error("Invalid AI enhancement settings.");
 }
 export const ENHANCE_PRESETS = {
-  fidelity: { denoise: 0, sharpen: 0, color: false, artifacts: false },
-  "gentle-cleanup": { denoise: 10, sharpen: 5, color: false, artifacts: false },
-  "legacy-cleanup": { denoise: 15, sharpen: 15, color: false, artifacts: true },
+  fidelity: { denoise: 0, sharpen: 0, color: false, artifacts: false, inkGaps: false },
+  "gentle-cleanup": { denoise: 10, sharpen: 5, color: false, artifacts: false, inkGaps: false },
+  "manga-ink": { denoise: 5, sharpen: 0, color: false, artifacts: false, inkGaps: true },
+  "legacy-cleanup": { denoise: 15, sharpen: 15, color: false, artifacts: true, inkGaps: false },
 } as const;

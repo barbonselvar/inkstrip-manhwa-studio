@@ -33,6 +33,10 @@ jobs:
           exit 1
       - name: Real pinned Fast Anime, transactions and five viewport widths
         run: npm run test:r14:browser
+      - name: Native retouch ownership and reference persistence
+        run: |
+          npm run test:r14:retouch
+          npm run test:r14:characters
       - uses: actions/upload-artifact@v4
         if: always()
         with:

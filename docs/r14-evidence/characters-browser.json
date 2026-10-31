@@ -1,0 +1,45 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "twoReferences": true,
+      "renamed": true,
+      "idsAndBlobBytesExact": true,
+      "primaryAndReload": true,
+      "sourceUnchanged": true
+    },
+    {
+      "width": 768,
+      "twoReferences": true,
+      "renamed": true,
+      "idsAndBlobBytesExact": true,
+      "primaryAndReload": true,
+      "sourceUnchanged": true
+    },
+    {
+      "width": 390,
+      "twoReferences": true,
+      "renamed": true,
+      "idsAndBlobBytesExact": true,
+      "primaryAndReload": true,
+      "sourceUnchanged": true
+    },
+    {
+      "width": 360,
+      "twoReferences": true,
+      "renamed": true,
+      "idsAndBlobBytesExact": true,
+      "primaryAndReload": true,
+      "sourceUnchanged": true
+    },
+    {
+      "width": 320,
+      "twoReferences": true,
+      "renamed": true,
+      "idsAndBlobBytesExact": true,
+      "primaryAndReload": true,
+      "sourceUnchanged": true
+    }
+  ],
+  "errors": []
+}

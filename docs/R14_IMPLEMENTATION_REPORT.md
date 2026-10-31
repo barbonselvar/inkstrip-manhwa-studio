@@ -103,3 +103,61 @@ Sources inspected 2026-10-31:
 - https://github.com/xinntao/Real-ESRGAN/blob/master/LICENSE
 - https://huggingface.co/tidus2102/Real-ESRGAN/tree/c9a1cd990b587ccf20be2373fad8eb021e24ab01
 - https://huggingface.co/Carve/LaMa-ONNX/tree/c3c0c9e468934d62e79c329e35d82dd09ff8c444
+
+## Stage B — reference usability and line restoration
+
+- Existing multiple references, names, notes, angle/primary selection and independent
+  blobs are reused. View/expression labels can now be renamed. Five-width tests
+  verify two references, stable IDs and Blob hashes, primary choice, reload and
+  unchanged panel artwork. No record fields or database versions were added.
+- Confirmed non-square selection bounds used normalized height for a width-based
+  brush radius. The new test fails before the fix. Retouch/reference cropping now
+  accounts for the native aspect ratio; legacy one-argument calls retain their defaults.
+- Optional, explicitly deterministic 1px monochrome ink-gap repair. It only joins
+  opaque, nearly black runs across one nearly white pixel with three known ink pixels
+  on each side. Saturated colors, soft alpha and wider gaps remain unchanged. It is
+  off by default and does not pretend to reconstruct larger missing drawing details.
+- Added Manga Ink preset and retained existing controls. Settings changed after
+  inference require regeneration before Apply, so controls cannot misrepresent the
+  pixels being committed. Strict five-width UI tests cover this guard.
+
+## Stage C — feasibility/prototypes, not shipped capability claims
+
+- **LaMa:** real pinned Apache-2.0 512px ONNX inference succeeded: 23.28s inference,
+  46.70s including load, sampled process-tree peak 1475MiB. No GPU service was used.
+  This is a research-only worker; its 208MB download, mobile memory implications and
+  unverified multi-image perceptual quality prevent production adoption in R14.
+  Existing local repair remains supported. No broad background reconstruction or
+  identity claim follows from this single occlusion experiment.
+- **Background consistency:** deferred. Reusing a palette is not scene conditioning;
+  a reliable solution needs reference/geometry conditioning, commercial-use model
+  verification and multi-panel perspective/object-consistency evaluation. No fake UI.
+- **Translation:** existing manual OCR→cleanup→lettering is preserved. A real French
+  Tesseract prototype recognizes the accented fixture exactly using pinned verified
+  weights and the existing runtime. Its descriptor exists only in an isolated page:
+  production language enums/native records currently omit French. No prototype
+  regions were persisted. Automatic Arabic/English/French translation still needs
+  a licensed model/tokenizer, quality evaluation and explicit native compatibility work.
+- **Assistant:** a tested research-only rule router proposes existing masked repair
+  or line controls for constrained English/French/Arabic requests. It executes no
+  edits, uses no LLM and calls no provider. Face identity and ambiguous requests are
+  deferred/refused explicitly; it is not exposed as a general AI assistant.
+
+## Measured quality/performance
+
+Nine 256px centre crops from the original gallery, downsampled to 128px then restored
+by the actual editor worker. Mean luma PSNR: bicubic24.385dB, Swin2SR24.967dB,
+Fast Anime25.121dB. Mean RGB absolute error favors Swin2SR (9.023 vs9.833); Fast
+Anime removes some fine hatching/rain, visible in the saved comparisons. Therefore
+Swin2SR remains the default; faster output is opt-in, with mandatory review.
+Median observed per-crop times were41.10s/1.48s, including model preparation on
+switches. Shared-host results are not a universal speedup or perceptual guarantee.
+Sampled Node/Chromium process-tree peak was1163MiB, not an isolated WASM/GPU peak.
+
+The actual original720×960 gallery panel produced2880×3840 (11.06MP) in85.46s,
+with a sampled882MiB peak. Original compressed bytes stayed exact. Cancelling after
+one completed native tile terminated processing; a new real run then succeeded.
+No near-limit16MP input or physical Android performance claim is made.
+
+See raw evidence and before/after panels in `docs/r14-evidence/`. Final regression,
+exact-HEAD CI and Vercel Preview verification are recorded in the test report.

@@ -43,6 +43,7 @@ export function CharacterControls({
     [name, setName] = useState(""),
     [notes, setNotes] = useState(""),
     [angle, setAngle] = useState("Front"),
+    [referenceLabel, setReferenceLabel] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState("");
@@ -50,6 +51,9 @@ export function CharacterControls({
     reference =
       selected?.references.find((r) => r.id === (refId || selected.primaryId)) ??
       selected?.references.find((r) => r.id === selected.primaryId);
+  useEffect(() => {
+    setReferenceLabel(reference?.angle ?? "");
+  }, [reference?.id, reference?.angle]);
   useEffect(() => {
     setName(selected?.name ?? "");
     setNotes(selected?.notes ?? "");
@@ -179,7 +183,7 @@ export function CharacterControls({
         />
       </label>
       <label className="editor-field-label">
-        Reference angle
+        Reference view / expression
         <input
           className="field"
           aria-label="Reference angle"
@@ -256,6 +260,39 @@ export function CharacterControls({
           {reference ? (
             <>
               <Thumb blob={reference.blob} />
+              <label className="editor-field-label">
+                Saved reference label
+                <input
+                  className="field"
+                  aria-label="Saved reference label"
+                  maxLength={80}
+                  value={referenceLabel}
+                  onChange={(e) => setReferenceLabel(e.target.value)}
+                />
+              </label>
+              <Button
+                variant="secondary"
+                disabled={!referenceLabel.trim() || referenceLabel.trim() === reference.angle}
+                onClick={() =>
+                  void mutate((list) =>
+                    list.map((p) =>
+                      p.id === id
+                        ? {
+                            ...p,
+                            references: p.references.map((r) =>
+                              r.id === reference.id
+                                ? { ...r, angle: referenceLabel.trim().slice(0, 80) }
+                                : r,
+                            ),
+                            updatedAt: Date.now(),
+                          }
+                        : p,
+                    ),
+                  )
+                }
+              >
+                Rename reference
+              </Button>
               <Button
                 variant="ghost"
                 onClick={() =>

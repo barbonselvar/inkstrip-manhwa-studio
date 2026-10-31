@@ -81,7 +81,7 @@ scope.onmessage = async ({
       throw new Error(
         "Retouch supports up to 16 megapixels and 16384px per side. Split a larger image first.",
       );
-    const box = selectionBox(data.strokes!);
+    const box = selectionBox(data.strokes!, original.width, original.height);
     selected = data.strokes!;
     const width = original.width,
       height = original.height;

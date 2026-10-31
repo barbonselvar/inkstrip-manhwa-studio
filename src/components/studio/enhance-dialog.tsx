@@ -24,7 +24,7 @@ import { getBlob, storageMessage } from "@/lib/studio/db";
 import { useStudio } from "@/lib/studio/store";
 import type { Panel } from "@/lib/studio/types";
 
-type Preview = { panel: Panel; before: Blob; after: EnhanceResult };
+type Preview = { panel: Panel; before: Blob; after: EnhanceResult; options: EnhanceOptions };
 
 export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: () => void }) {
   const [options, setOptions] = useState<EnhanceOptions>(DEFAULT_ENHANCE);
@@ -42,6 +42,9 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
   const cancelled = useRef(false);
   const mounted = useRef(true);
   const preview = previews[index];
+  const settingsChanged = previews.some(
+    (item) => JSON.stringify(item.options) !== JSON.stringify(options),
+  );
   const replace = useStudio((state) => state.replacePanelImage);
   const restore = useStudio((state) => state.restorePanel);
 
@@ -104,7 +107,7 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
         });
         if (cancelled.current) break;
         completed++;
-        setPreviews((items) => [...items, { panel, before, after }]);
+        setPreviews((items) => [...items, { panel, before, after, options: { ...options } }]);
       }
       if (mounted.current)
         setMessage(
@@ -127,6 +130,10 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
   }
 
   async function apply() {
+    if (settingsChanged) {
+      setMessage("Settings changed. Regenerate before applying these previews.");
+      return;
+    }
     setSaving(true);
     setMessage("");
     let applied = 0;
@@ -190,7 +197,8 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
           ? "Fast Anime downloads about 14 MB of model/runtime assets."
           : "Swin2SR downloads about 65 MB of model/runtime assets and can be slow on a phone."}{" "}
         Review faces and fine text: neural enhancement can change small details. Identity
-        preservation is not guaranteed. Your original is always kept.
+        preservation is not guaranteed. Your original is always kept. Fast Anime favors speed; use
+        Swin2SR for color fidelity.
       </p>
       <fieldset disabled={locked} className="enhance-options mt-5 grid grid-cols-2 gap-4">
         <label className="text-sm text-muted">
@@ -219,7 +227,8 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
                   p.denoise === options.denoise &&
                   p.sharpen === options.sharpen &&
                   p.color === options.color &&
-                  p.artifacts === options.artifacts,
+                  p.artifacts === options.artifacts &&
+                  (p.inkGaps ?? false) === (options.inkGaps ?? false),
               )?.[0] ?? "custom"
             }
             onChange={(e) => {
@@ -229,6 +238,7 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
           >
             <option value="fidelity">Fidelity · preserve colors and edges</option>
             <option value="gentle-cleanup">Gentle line cleanup</option>
+            <option value="manga-ink">Manga ink · repair tiny gaps</option>
             <option value="legacy-cleanup">Legacy cleanup</option>
             <option value="custom" disabled>
               Custom
@@ -288,6 +298,15 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
               onChange={(e) => setOptions({ ...options, color: e.target.checked })}
             />
             Gentle color boost
+          </label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              aria-label="Repair tiny ink gaps"
+              checked={options.inkGaps ?? false}
+              onChange={(e) => setOptions({ ...options, inkGaps: e.target.checked })}
+            />
+            Repair 1px monochrome ink gaps
           </label>
         </div>
       </fieldset>
@@ -402,6 +421,11 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
           </p>
         </div>
       ) : null}
+      {settingsChanged && (
+        <p className="ai-message mt-4 text-sm" role="status">
+          Settings changed. Regenerate before applying these previews.
+        </p>
+      )}
       {message ? (
         <p className="ai-message mt-4 text-sm" role="status">
           {message}
@@ -428,7 +452,11 @@ export function EnhanceDialog({ panels, onClose }: { panels: Panel[]; onClose: (
           </Button>
         )}
         {previews.length ? (
-          <Button disabled={locked} variant="secondary" onClick={() => void apply()}>
+          <Button
+            disabled={locked || settingsChanged}
+            variant="secondary"
+            onClick={() => void apply()}
+          >
             <Check className="size-4" />
             {saving ? "Saving…" : `Apply ${previews.length} preview(s)`}
           </Button>

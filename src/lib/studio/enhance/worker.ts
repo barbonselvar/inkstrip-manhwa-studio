@@ -7,7 +7,7 @@ import { downloadModelBytes } from "./model-bytes";
 import { env, InferenceSession, Tensor } from "onnxruntime-web/wasm";
 import wasmUrl from "../../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
 import wasmModuleUrl from "../../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url";
-import { cleanPixels, finishPixels } from "./filters";
+import { cleanPixels, finishPixels, repairInkGaps } from "./filters";
 import { validateEnhanceOptions, type EnhanceOptions, type WorkerReply } from "./types";
 
 // Single-thread WASM works without cross-origin isolation or GPU infrastructure.
@@ -151,6 +151,7 @@ self.onmessage = async (event: MessageEvent<{ blob: Blob; options: EnhanceOption
     bitmap.close();
     bitmap = undefined;
     const original = ctx.getImageData(0, 0, input.width, input.height);
+    if (options.inkGaps) repairInkGaps(original.data, input.width, input.height);
     cleanPixels(
       original.data,
       input.width,

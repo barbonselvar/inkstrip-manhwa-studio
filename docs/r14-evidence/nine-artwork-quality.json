@@ -1,0 +1,259 @@
+{
+  "rows": [
+    {
+      "name": "action",
+      "input": [
+        128,
+        128
+      ],
+      "output": [
+        256,
+        256
+      ],
+      "bicubic": {
+        "psnrY": 25.688213130140806,
+        "rgbMAE": 7.6193288167317705,
+        "horizontalEdgeMAE": 9.23175030637258
+      },
+      "swin2sr": {
+        "psnrY": 26.55745135212266,
+        "rgbMAE": 6.50244140625,
+        "horizontalEdgeMAE": 9.156075459558716,
+        "ms": 46916.10000000009
+      },
+      "realesrgan-anime": {
+        "psnrY": 26.69187674949796,
+        "rgbMAE": 7.4742584228515625,
+        "horizontalEdgeMAE": 8.323703446691054,
+        "ms": 2330.6999999999534
+      }
+    },
+    {
+      "name": "manga",
+      "input": [
+        128,
+        128
+      ],
+      "output": [
+        256,
+        256
+      ],
+      "bicubic": {
+        "psnrY": 20.760095651848083,
+        "rgbMAE": 16.098587036132812,
+        "horizontalEdgeMAE": 19.381894730392187
+      },
+      "swin2sr": {
+        "psnrY": 21.37512134354776,
+        "rgbMAE": 14.571502685546875,
+        "horizontalEdgeMAE": 18.955179702819006,
+        "ms": 41098.80000000005
+      },
+      "realesrgan-anime": {
+        "psnrY": 21.150463308939887,
+        "rgbMAE": 15.501042683919271,
+        "horizontalEdgeMAE": 18.613000245098213,
+        "ms": 1366.3000000000466
+      }
+    },
+    {
+      "name": "romance",
+      "input": [
+        128,
+        128
+      ],
+      "output": [
+        256,
+        256
+      ],
+      "bicubic": {
+        "psnrY": 24.458311235962043,
+        "rgbMAE": 10.353383382161459,
+        "horizontalEdgeMAE": 13.69903074448566
+      },
+      "swin2sr": {
+        "psnrY": 25.073206227866464,
+        "rgbMAE": 9.348292032877604,
+        "horizontalEdgeMAE": 13.220657536765376,
+        "ms": 43241.5
+      },
+      "realesrgan-anime": {
+        "psnrY": 25.219790473655515,
+        "rgbMAE": 10.152633666992188,
+        "horizontalEdgeMAE": 12.785242800245017,
+        "ms": 2160.6999999999534
+      }
+    },
+    {
+      "name": "murim",
+      "input": [
+        128,
+        128
+      ],
+      "output": [
+        256,
+        256
+      ],
+      "bicubic": {
+        "psnrY": 25.457881318466264,
+        "rgbMAE": 8.447474161783854,
+        "horizontalEdgeMAE": 11.027462208945998
+      },
+      "swin2sr": {
+        "psnrY": 25.978248509136442,
+        "rgbMAE": 7.505716959635417,
+        "horizontalEdgeMAE": 10.587274203431596,
+        "ms": 53741.5
+      },
+      "realesrgan-anime": {
+        "psnrY": 26.12815961475366,
+        "rgbMAE": 8.222310384114584,
+        "horizontalEdgeMAE": 10.464978799019779,
+        "ms": 1417.9000000001397
+      }
+    },
+    {
+      "name": "fantasy",
+      "input": [
+        128,
+        128
+      ],
+      "output": [
+        256,
+        256
+      ],
+      "bicubic": {
+        "psnrY": 25.87217904879715,
+        "rgbMAE": 8.050847371419271,
+        "horizontalEdgeMAE": 10.566705851715788
+      },
+      "swin2sr": {
+        "psnrY": 26.363304652804157,
+        "rgbMAE": 7.357808430989583,
+        "horizontalEdgeMAE": 10.614521415441306,
+        "ms": 41746
+      },
+      "realesrgan-anime": {
+        "psnrY": 26.49775187568575,
+        "rgbMAE": 8.113311767578125,
+        "horizontalEdgeMAE": 10.051000153186168,
+        "ms": 1478.3000000000466
+      }
+    },
+    {
+      "name": "medieval",
+      "input": [
+        128,
+        128
+      ],
+      "output": [
+        256,
+        256
+      ],
+      "bicubic": {
+        "psnrY": 25.204039776075327,
+        "rgbMAE": 8.761586507161459,
+        "horizontalEdgeMAE": 10.910413235294083
+      },
+      "swin2sr": {
+        "psnrY": 25.87174216483398,
+        "rgbMAE": 7.5785471598307295,
+        "horizontalEdgeMAE": 10.448944730392203,
+        "ms": 40341.5
+      },
+      "realesrgan-anime": {
+        "psnrY": 25.962934416190468,
+        "rgbMAE": 8.799352010091146,
+        "horizontalEdgeMAE": 10.381513694853123,
+        "ms": 1394
+      }
+    },
+    {
+      "name": "horror",
+      "input": [
+        128,
+        128
+      ],
+      "output": [
+        256,
+        256
+      ],
+      "bicubic": {
+        "psnrY": 26.374237984960025,
+        "rgbMAE": 7.652414957682292,
+        "horizontalEdgeMAE": 9.963675750612866
+      },
+      "swin2sr": {
+        "psnrY": 26.84732995848534,
+        "rgbMAE": 7.0086822509765625,
+        "horizontalEdgeMAE": 9.74528275122566,
+        "ms": 40570.799999999814
+      },
+      "realesrgan-anime": {
+        "psnrY": 27.137409561045295,
+        "rgbMAE": 7.477650960286458,
+        "horizontalEdgeMAE": 9.416733333333282,
+        "ms": 1441.3000000000466
+      }
+    },
+    {
+      "name": "scifi",
+      "input": [
+        128,
+        128
+      ],
+      "output": [
+        256,
+        256
+      ],
+      "bicubic": {
+        "psnrY": 22.373027346529838,
+        "rgbMAE": 12.497487386067709,
+        "horizontalEdgeMAE": 16.224996951593067
+      },
+      "swin2sr": {
+        "psnrY": 22.784556523491748,
+        "rgbMAE": 11.355616251627604,
+        "horizontalEdgeMAE": 15.760539384191205,
+        "ms": 40567.5
+      },
+      "realesrgan-anime": {
+        "psnrY": 23.271693489559002,
+        "rgbMAE": 11.761042277018229,
+        "horizontalEdgeMAE": 14.87352287071076,
+        "ms": 1667.3999999999069
+      }
+    },
+    {
+      "name": "adventure",
+      "input": [
+        128,
+        128
+      ],
+      "output": [
+        256,
+        256
+      ],
+      "bicubic": {
+        "psnrY": 23.27778594346387,
+        "rgbMAE": 11.281865437825521,
+        "horizontalEdgeMAE": 14.530318642769926
+      },
+      "swin2sr": {
+        "psnrY": 23.85090465739463,
+        "rgbMAE": 9.980784098307291,
+        "horizontalEdgeMAE": 13.994967539828941,
+        "ms": 40515.89999999991
+      },
+      "realesrgan-anime": {
+        "psnrY": 24.0267707097729,
+        "rgbMAE": 10.991409301757812,
+        "horizontalEdgeMAE": 13.698051332720839,
+        "ms": 1491
+      }
+    }
+  ],
+  "note": "Centre crops of nine original gallery artworks, 128→256; single-thread WASM. Includes model preparation for each switch. Metrics do not establish identity consistency.",
+  "sampledProcessTreePeakRssMiB": 1162.6484375,
+  "memoryNote": "250ms samples of Node/Chromium descendants, includes QA/browser infrastructure, not isolated WASM/GPU peaks."
+}

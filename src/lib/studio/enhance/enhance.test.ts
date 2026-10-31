@@ -6,7 +6,7 @@ import {
   DEFAULT_ENHANCE,
   ENHANCE_PRESETS,
 } from "./types.ts";
-import { cleanPixels, finishPixels } from "./filters.ts";
+import { cleanPixels, finishPixels, repairInkGaps } from "./filters.ts";
 
 test("2× output preserves the full aspect ratio and 1× still bounds intermediate memory", () => {
   assert.deepEqual(enhancementSize(320, 800, 2), { width: 640, height: 1600 });
@@ -57,6 +57,7 @@ test("4x uses bounded genuine passes, counts halo cores and refuses oversized ou
 test("untrusted enhancement settings reject before workers or image decode", () => {
   for (const change of [
     { denoise: NaN },
+    { inkGaps: 1 },
     { sharpen: 41 },
     { model: "unknown" },
     { color: 1 },
@@ -140,4 +141,32 @@ test("cancelled worker replies cannot settle or clear a newer enhancement", asyn
     engine.dispose();
     globalThis.Worker = original;
   }
+});
+
+test("tiny-gap restoration repairs a known one-pixel break without inventing other ink", () => {
+  const w = 13,
+    h = 13,
+    pixels = new Uint8ClampedArray(w * h * 4).fill(255);
+  for (let x = 2; x < 11; x++) for (let c = 0; c < 3; c++) pixels[(6 * w + x) * 4 + c] = 0;
+  for (let c = 0; c < 3; c++) pixels[(6 * w + 6) * 4 + c] = 255;
+  const expected = pixels.slice();
+  for (let c = 0; c < 3; c++) expected[(6 * w + 6) * 4 + c] = 0;
+  repairInkGaps(pixels, w, h);
+  assert.deepEqual(pixels, expected);
+});
+test("ink restoration preserves color, transparent edges, larger holes and bad-buffer safety", () => {
+  for (const variant of ["color", "alpha", "wide"]) {
+    const w = 13,
+      h = 13,
+      pixels = new Uint8ClampedArray(w * h * 4).fill(255);
+    for (let x = 2; x < 11; x++) {
+      pixels.set(variant === "color" ? [0, 20, 0, 255] : [0, 0, 0, 255], (6 * w + x) * 4);
+    }
+    pixels.set([255, 255, 255, variant === "alpha" ? 100 : 255], (6 * w + 6) * 4);
+    if (variant === "wide") pixels.set([255, 255, 255, 255], (6 * w + 7) * 4);
+    const before = pixels.slice();
+    repairInkGaps(pixels, w, h);
+    assert.deepEqual(pixels, before);
+  }
+  assert.throws(() => repairInkGaps(new Uint8ClampedArray(12), 13, 13), /buffer/);
 });

@@ -87,8 +87,11 @@ export function paintSelection(
     ctx.restore();
   }
 }
-export function selectionBox(strokes: Selection[]) {
+export function selectionBox(strokes: Selection[], width = 1, height = 1) {
   validateSelection(strokes);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0)
+    throw Error("Invalid selection image dimensions.");
+  const ratio = width / height;
   const add = strokes.filter((s) => s.mode === "add");
   if (!add.length) throw new Error("Add a selection first.");
   return {
@@ -98,7 +101,9 @@ export function selectionBox(strokes: Selection[]) {
     ),
     top: Math.max(
       0,
-      Math.min(...add.flatMap((s) => s.points.map((p) => p.y - s.size / 2000 - s.feather / 500))),
+      Math.min(
+        ...add.flatMap((s) => s.points.map((p) => p.y - (s.size / 2000 + s.feather / 500) * ratio)),
+      ),
     ),
     right: Math.min(
       1,
@@ -106,7 +111,9 @@ export function selectionBox(strokes: Selection[]) {
     ),
     bottom: Math.min(
       1,
-      Math.max(...add.flatMap((s) => s.points.map((p) => p.y + s.size / 2000 + s.feather / 500))),
+      Math.max(
+        ...add.flatMap((s) => s.points.map((p) => p.y + (s.size / 2000 + s.feather / 500) * ratio)),
+      ),
     ),
   };
 }

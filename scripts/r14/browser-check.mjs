@@ -40,6 +40,17 @@ try {
         exact: true,
       })
       .waitFor({ timeout: 120000 });
+    await p.getByLabel("Restoration preset", { exact: true }).selectOption("gentle-cleanup");
+    assert.equal(
+      await p.getByRole("button", { name: "Apply 1 preview(s)", exact: true }).isEnabled(),
+      false,
+      "stale settings cannot apply a different preview",
+    );
+    await p.getByLabel("Restoration preset", { exact: true }).selectOption("fidelity");
+    assert.equal(
+      await p.getByRole("button", { name: "Apply 1 preview(s)", exact: true }).isEnabled(),
+      true,
+    );
     await p.getByRole("button", { name: "100% comparison", exact: true }).click();
     const before = p.getByAltText("Original artwork", { exact: true }),
       after = p.getByAltText("AI enhanced artwork", { exact: true });
