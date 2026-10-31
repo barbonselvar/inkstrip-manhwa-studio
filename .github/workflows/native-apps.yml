@@ -377,7 +377,7 @@ jobs:
             echo "| Windows 10/11 x64 | \`$(basename "$exe")\` | $s |"
             echo
             echo "### Automated device tests (emulator / CI runner, not physical devices)"
-            retries=$(ls -d artifacts/inkstrip-android-device-test/infra-attempts/attempt-* 2>/dev/null | wc -l)
+            retries=$(compgen -G "artifacts/inkstrip-android-device-test/infra-attempts/attempt-*" | wc -l || true)
             echo "**Android 14 emulator**"; echo "$android_tests"
             if [ "$retries" -gt 0 ]; then echo "_(passed on a fresh emulator after $retries emulator infrastructure failure(s); evidence in the workflow artifacts)_"; fi
             echo
