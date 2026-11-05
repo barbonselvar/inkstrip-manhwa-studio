@@ -1,0 +1,8 @@
+
+> test:chapter-display:browser
+> node scripts/chapter-display-import-browser-check.mjs
+
+Chapter display/import at 1440px
+Chapter display/import at 390px
+Chapter display/import at 360px
+{"results":[{"width":1440,"mobileEmulation":false,"zero":true,"singleImage":true,"multipleAndReorder":true,"mixedFormats":true,"storageFailureAndRetry":true,"longVertical":{"parts":1,"width":800},"chunkedBatch":true,"rasterStudio":true,"persistence":true,"removalClearsPage":true,"noOverflow":true},{"width":390,"mobileEmulation":true,"zero":true,"singleImage":true,"multipleAndReorder":true,"mixedFormats":true,"storageFailureAndRetry":true,"longVertical":{"parts":2,"width":800},"rasterStudio":true,"persistence":true,"removalClearsPage":true,"noOverflow":true},{"width":360,"mobileEmulation":true,"zero":true,"singleImage":true,"multipleAndReorder":true,"mixedFormats":true,"storageFailureAndRetry":true,"longVertical":{"parts":2,"width":800},"rasterStudio":true,"persistence":true,"removalClearsPage":true,"noOverflow":true},{"width":360,"lowMemoryEmulation":true,"constrainedBudgetReason":true}],"errors":[]}

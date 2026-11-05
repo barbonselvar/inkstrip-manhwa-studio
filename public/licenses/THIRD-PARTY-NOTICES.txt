@@ -99,3 +99,8 @@ used, verified by size and SHA-256, and run in your browser; no image is uploade
 
 These components are provided "AS IS", WITHOUT WARRANTY OF ANY KIND, as stated
 in their licenses.
+
+Composition & FX lettering fonts (self-hosted, loaded by Unicode range):
+Bangers, Noto Sans, Noto Sans KR, Noto Sans JP, Noto Sans Arabic.
+Distributed through @fontsource packages under the SIL Open Font License 1.1.
+Original copyright notices and licenses are in the corresponding *-OFL.txt files.

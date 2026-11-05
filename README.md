@@ -14,3 +14,5 @@ and `npm run check:build`. No deployment command is included in CI.
 [Configuration audit](CONFIGURATION_AUDIT.md)
 
 [Android APK and Windows EXE apps: build, signing and release](docs/NATIVE_APPS.md)
+
+[Composition & FX Studio: usage, architecture, verified features, tests and screenshots](docs/COMPOSITION_FX_STUDIO.md)

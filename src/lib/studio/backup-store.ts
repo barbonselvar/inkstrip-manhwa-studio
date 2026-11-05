@@ -1,3 +1,4 @@
+import { readComposition, validateComposition } from "./composition/model";
 import { loadSession } from "./pro/storage";
 import { validateNativeImages } from "./pro/native-images";
 import { openDb } from "./db";
@@ -111,6 +112,9 @@ export async function writeProjectData(data: ProjectData) {
   try {
     validateProjectRecord(data.project);
     data.chapters.forEach(validateChapterRecord);
+    data.chapters.forEach((c) => {
+      if (c.composition !== undefined) validateComposition(c.composition);
+    });
     data.panels.forEach(validatePanelRecord);
   } catch (error) {
     throw Error(
@@ -165,6 +169,17 @@ export async function writeProjectData(data: ProjectData) {
           "Backup image dimensions disagree with its source header. Existing projects are unchanged.",
         );
     }
+  }
+  for (const chapter of data.chapters) {
+    const composition = readComposition(chapter.composition).record;
+    for (const panel of Object.values(composition?.document.panels ?? {}))
+      if (panel.snapshot) {
+        const info = dimensions.get(panel.snapshot.blobId);
+        if (!info || !matchingDimensions(panel.snapshot.width, panel.snapshot.height, info))
+          throw Error(
+            "A composition snapshot disagrees with its image header. Existing projects are unchanged.",
+          );
+      }
   }
   for (const chapter of data.chapters)
     for (const part of chapter.strip?.parts ?? []) {

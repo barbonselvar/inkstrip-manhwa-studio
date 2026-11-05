@@ -1,3 +1,4 @@
+import { compositionBlobIds, validateComposition } from "./composition/model.ts";
 import { validateDialogue } from "./dialogue/types.ts";
 import { validateAssets, type ProSession } from "./pro/model.ts";
 import type { Chapter, Panel, Project } from "./types.ts";
@@ -33,7 +34,7 @@ type StoredReference = { id: string; angle: string; blobRef: string };
 type StoredCharacter = Omit<CharacterProfile, "references"> & { references: StoredReference[] };
 type Header = {
   format: "inkstrip-backup";
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   sessions?: (Omit<ProSession, "assets"> & { assets: Record<string, string> })[];
   exportedAt: number;
   project: Omit<Project, "characters"> & { characters?: StoredCharacter[] };
@@ -48,6 +49,7 @@ export function projectBlobIds(chapters: Chapter[], panels: Panel[]) {
     ...new Set([
       ...panels.flatMap(mediaIds),
       ...chapters.flatMap((chapter) => chapter.strip?.parts.map((part) => part.blobId) ?? []),
+      ...chapters.flatMap((chapter) => compositionBlobIds(chapter.composition)),
     ]),
   ];
 }
@@ -108,7 +110,12 @@ export function encodeBackup(data: ProjectData, exportedAt = Date.now()): Blob {
   });
   const header: Header = {
     format: "inkstrip-backup",
-    version: sessions?.length || data.project.dialoguePresets ? 2 : 1,
+    version:
+      data.chapters.some((c) => c.composition !== undefined) || data.project.compositionPreferences
+        ? 3
+        : sessions?.length || data.project.dialoguePresets
+          ? 2
+          : 1,
     ...(sessions?.length ? { sessions } : {}),
     exportedAt,
     project: { ...projectFields, ...(characters ? { characters } : {}) },
@@ -172,7 +179,7 @@ export async function decodeBackup(file: Blob): Promise<ProjectData> {
     return fail();
   }
   if (header?.format !== "inkstrip-backup") fail();
-  if (![1, 2].includes(header.version))
+  if (![1, 2, 3].includes(header.version))
     throw new Error("This backup was made by a newer Inkstrip version.");
   const { project, chapters, panels, blobs: entries } = header;
   if (!Array.isArray(chapters) || !Array.isArray(panels) || !Array.isArray(entries)) fail();
@@ -182,6 +189,9 @@ export async function decodeBackup(file: Blob): Promise<ProjectData> {
     validateProjectRecord(project, { characters: false });
     if (project.characters !== undefined) validateStoredCharacters(project.characters);
     chapters.forEach(validateChapterRecord);
+    chapters.forEach((c) => {
+      if (c.composition !== undefined) validateComposition(c.composition);
+    });
     panels.forEach(validatePanelRecord);
   } catch (error) {
     if (error instanceof RecordError)

@@ -1,0 +1,286 @@
+{
+  "result": {
+    "effects": [
+      {
+        "name": "Motion Blur",
+        "changed": 216124
+      },
+      {
+        "name": "Directional Blur",
+        "changed": 216124
+      },
+      {
+        "name": "Radial Blur",
+        "changed": 186106
+      },
+      {
+        "name": "Speed Lines",
+        "changed": 41703
+      },
+      {
+        "name": "Radial Burst",
+        "changed": 40835
+      },
+      {
+        "name": "Zoom Burst",
+        "changed": 45300
+      },
+      {
+        "name": "Action Streaks",
+        "changed": 30234
+      },
+      {
+        "name": "Sword Trail",
+        "changed": 26762
+      },
+      {
+        "name": "Slash Trail",
+        "changed": 26762
+      },
+      {
+        "name": "Impact Flash",
+        "changed": 174183
+      },
+      {
+        "name": "Shockwave",
+        "changed": 56154
+      },
+      {
+        "name": "Sparks",
+        "changed": 3113
+      },
+      {
+        "name": "Energy Arc",
+        "changed": 26762
+      },
+      {
+        "name": "Impact Lines",
+        "changed": 47800
+      },
+      {
+        "name": "Mist",
+        "changed": 273584
+      },
+      {
+        "name": "Fog",
+        "changed": 252894
+      },
+      {
+        "name": "Rain",
+        "changed": 2611
+      },
+      {
+        "name": "Snow",
+        "changed": 4315
+      },
+      {
+        "name": "Dust",
+        "changed": 4621
+      },
+      {
+        "name": "Smoke",
+        "changed": 271271
+      },
+      {
+        "name": "Falling Leaves",
+        "changed": 7851
+      },
+      {
+        "name": "Floating Particles",
+        "changed": 4056
+      },
+      {
+        "name": "Glow",
+        "changed": 174183
+      },
+      {
+        "name": "Bloom",
+        "changed": 52139
+      },
+      {
+        "name": "Light Rays",
+        "changed": 39749
+      },
+      {
+        "name": "Vignette",
+        "changed": 270731
+      },
+      {
+        "name": "Lens Flare",
+        "changed": 175616
+      },
+      {
+        "name": "Moonlight Glow",
+        "changed": 161000
+      },
+      {
+        "name": "Color Overlay",
+        "changed": 298033
+      },
+      {
+        "name": "Screen Shake Appearance",
+        "changed": 222038
+      },
+      {
+        "name": "Horror Shadow",
+        "changed": 270731
+      },
+      {
+        "name": "Dark Aura",
+        "changed": 270731
+      },
+      {
+        "name": "Red Aura",
+        "changed": 262123
+      },
+      {
+        "name": "Memory Haze",
+        "changed": 298033
+      },
+      {
+        "name": "Flashback Overlay",
+        "changed": 298033
+      },
+      {
+        "name": "Dream Sequence",
+        "changed": 298033
+      },
+      {
+        "name": "Time Regression Visual",
+        "changed": 297815
+      },
+      {
+        "name": "Dramatic Blackout",
+        "changed": 294220
+      }
+    ],
+    "lettering": [
+      {
+        "style": "Sharp Slash",
+        "changed": 18067
+      },
+      {
+        "style": "White Impact",
+        "changed": 17792
+      },
+      {
+        "style": "Black Impact",
+        "changed": 17755
+      },
+      {
+        "style": "Heavy Explosion",
+        "changed": 22446
+      },
+      {
+        "style": "Brush Stroke",
+        "changed": 17812
+      },
+      {
+        "style": "Speed Motion",
+        "changed": 20139
+      },
+      {
+        "style": "Energy Burst",
+        "changed": 20346
+      },
+      {
+        "style": "Metallic",
+        "changed": 16744
+      },
+      {
+        "style": "Horror",
+        "changed": 17682
+      },
+      {
+        "style": "Whisper",
+        "changed": 3971
+      },
+      {
+        "style": "Glowing Aura",
+        "changed": 21247
+      },
+      {
+        "style": "Hand-drawn",
+        "changed": 17842
+      },
+      {
+        "text": "슉",
+        "changed": 6386
+      },
+      {
+        "text": "スッ",
+        "changed": 9848
+      },
+      {
+        "text": "حفيف",
+        "changed": 14256
+      },
+      {
+        "text": "WHOOSH 💥",
+        "changed": 32134
+      }
+    ],
+    "extension": [
+      {
+        "fill": "solid",
+        "width": 400,
+        "height": 75
+      },
+      {
+        "fill": "transparent",
+        "width": 400,
+        "height": 75
+      },
+      {
+        "fill": "gradient",
+        "width": 400,
+        "height": 75
+      },
+      {
+        "fill": "blur",
+        "width": 400,
+        "height": 75
+      },
+      {
+        "fill": "mirror",
+        "width": 400,
+        "height": 75
+      }
+    ],
+    "formats": [
+      {
+        "format": "image/png",
+        "parts": 2,
+        "width": 400
+      },
+      {
+        "format": "image/jpeg",
+        "parts": 2,
+        "width": 400
+      },
+      {
+        "format": "image/webp",
+        "parts": 2,
+        "width": 400
+      }
+    ],
+    "metadataPreserved": true,
+    "quotaError": true,
+    "recoveryHeight": 999,
+    "conflict": true,
+    "sourcesByteExact": true,
+    "nativeSnapshot": {
+      "panelId": "68a7618f-19b2-4a46-be22-0aa4143d5655",
+      "snapshot": {
+        "blobId": "88bcc011-2002-4530-9eb7-93df423c9c42",
+        "width": 720,
+        "height": 960,
+        "revision": 1
+      },
+      "accepted": "c6e607a1-7f52-4071-ac84-cfca6218959e",
+      "original": "c6e607a1-7f52-4071-ac84-cfca6218959e"
+    },
+    "editableRestore": true
+  },
+  "errors": []
+}

@@ -1,5 +1,17 @@
 # Inkstrip release changelog
 
+## Composition & FX Studio — feature branch, unreleased
+
+- A third Chapter tool opens a complete chapter canvas or an isolated panel with
+  shared history, exact extensions, additive gaps and non-destructive fades.
+- Editable pair transitions, cross-panel SFX, procedural effects, overlays and
+  groups share one layer stack and the same preview/export renderer.
+- Revision-checked autosave, editable project packages, presets, touch controls,
+  reading simulation and bounded segmented PNG/JPEG/WebP export preserve sources.
+- Perspective/glyph deformation and AI outpainting are explicitly unavailable.
+  [Implementation, validation and limitations](COMPOSITION_FX_STUDIO.md).
+- Not merged or deployed to production.
+
 ## R13 — performance, AI quality and stability
 
 - **Faster Raster editing in long sessions.** Each edit no longer re-serializes every
