@@ -3,6 +3,8 @@ import type { EditingPreset } from "./workflow";
 import type { CharacterProfile } from "./characters/types";
 import type { EditRecipe } from "./editor/geometry";
 
+import type { CompositionPreferences } from "./composition/model";
+
 export type StripFormat = "image/jpeg" | "image/png";
 
 export type StripPart = {
@@ -23,6 +25,7 @@ export type Strip = {
 };
 
 export type Project = {
+  compositionPreferences?: CompositionPreferences;
   dialoguePresets?: DialoguePreset[];
   presets?: EditingPreset[];
   characters?: CharacterProfile[];
@@ -33,6 +36,8 @@ export type Project = {
 };
 
 export type Chapter = {
+  /** Opaque at the storage boundary: future/damaged scenes never hide chapter artwork. */
+  composition?: unknown;
   orderHistory?: { before: string[]; after: string[] }[];
   id: string;
   projectId: string;

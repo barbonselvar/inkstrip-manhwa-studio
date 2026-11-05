@@ -1,0 +1,75 @@
+{
+  "base": "http://127.0.0.1:8080",
+  "built": false,
+  "engine": "chromium",
+  "results": [
+    {
+      "workflow": "pixel/export parity",
+      "samples": [
+        [
+          0,
+          0,
+          0,
+          255
+        ],
+        [
+          0,
+          0,
+          0,
+          255
+        ],
+        [
+          128,
+          128,
+          128,
+          255
+        ],
+        [
+          254,
+          254,
+          254,
+          255
+        ]
+      ],
+      "mismatch": 0,
+      "maxDiff": 1,
+      "rows": 2827,
+      "total": 2827,
+      "segments": 6,
+      "gapInk": 3695
+    },
+    {
+      "workflow": "A/B/C and refresh",
+      "restored": true
+    },
+    {
+      "workflow": "existing chapter navigation",
+      "passed": true
+    },
+    {
+      "workflow": "mobile Focus/spacing/fade",
+      "width": 360,
+      "passed": true
+    },
+    {
+      "workflow": "genuine touch fade drag, pinch zoom, two-finger pan, double-tap and long-press",
+      "width": 390,
+      "passed": true
+    },
+    {
+      "workflow": "mobile Focus/spacing/fade",
+      "width": 390,
+      "passed": true
+    },
+    {
+      "workflow": "mobile Focus/spacing/fade",
+      "width": 430,
+      "passed": true
+    },
+    {
+      "workflow": "40-panel reload and viewport rendering",
+      "passed": true
+    }
+  ],
+  "errors": []
+}

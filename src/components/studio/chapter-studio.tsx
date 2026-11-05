@@ -48,6 +48,7 @@ const emptyUrls: string[] = [];
 
 const loadProWorkspace = () => import("./pro/pro-workspace");
 const ProWorkspace = lazy(loadProWorkspace);
+const CompositionWorkspace = lazy(() => import("./composition/workspace"));
 
 export function ChapterStudio({ projectId, chapterId }: { projectId: string; chapterId: string }) {
   const project = useStudio((state) => state.projects.find((item) => item.id === projectId));
@@ -101,7 +102,7 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
   };
   const [dialogueMode, setDialogueMode] = useState(false);
   const [dialogueQuick, setDialogueQuick] = useState(true);
-  const [workspaceTab, setWorkspaceTab] = useState<"images" | "dialogue">("images");
+  const [workspaceTab, setWorkspaceTab] = useState<"images" | "dialogue" | "composition">("images");
   const [studioMode, setStudioMode] = useState<"raster" | "vector">("raster");
   const legacyVector = useLegacyVector();
   useEffect(() => {
@@ -307,7 +308,25 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
         >
           <MessageCircle /> Text &amp; Bubbles
         </Button>
+        <Button
+          variant={workspaceTab === "composition" ? "secondary" : "ghost"}
+          disabled={!!proPanel}
+          onClick={() => setWorkspaceTab("composition")}
+        >
+          <Layers3 /> Composition &amp; FX
+        </Button>
       </nav>
+      {workspaceTab === "composition" && (
+        <Suspense
+          fallback={
+            <p className="p-5" role="status">
+              Loading Composition &amp; FX…
+            </p>
+          }
+        >
+          <CompositionWorkspace key={chapterId} chapter={chapter} project={project} panels={list} />
+        </Suspense>
+      )}
       {workspaceTab === "dialogue" && !proPanel && (
         <section className="dialogue-chapter-entry" aria-label="Text and Bubbles pages">
           <h2>Text &amp; Bubbles</h2>

@@ -1,3 +1,4 @@
+import { compositionBlobIds, readComposition, reconcile } from "./composition/model";
 import { hasLegacyAiDraft } from "./dialogue/storage-compat";
 import { mediaIds } from "./editor/references";
 import { validateRecipe } from "./editor/geometry";
@@ -114,14 +115,41 @@ export async function putRecords(input: {
   const names = (["projects", "chapters", "panels"] as const).filter(
     (name) => (input[name]?.length ?? 0) > 0,
   );
-  if (names.length === 0) return;
+  if (names.length === 0) return input;
   const db = await openDb();
-  const tx = db.transaction(names, "readwrite");
-  for (const name of names) {
-    const store = tx.objectStore(name);
-    for (const record of input[name] ?? []) store.put(record);
+  const tx = db.transaction(names, "readwrite"),
+    done = transactionDone(tx);
+  const saved: typeof input = {};
+  try {
+    for (const name of names) {
+      const store = tx.objectStore(name);
+      for (const record of input[name] ?? []) {
+        const current = await request<Project | Chapter | Panel | undefined>(store.get(record.id));
+        // Ordinary metadata writers never own the independent composition revision.
+        // Preserve the latest scene/preferences and return the actual acknowledged record.
+        const next =
+          name === "chapters" && current && "composition" in current
+            ? { ...record, composition: current.composition }
+            : name === "projects" && current && "compositionPreferences" in current
+              ? { ...record, compositionPreferences: current.compositionPreferences }
+              : record;
+        store.put(next);
+        if (name === "chapters") (saved.chapters ??= []).push(next as Chapter);
+        else if (name === "projects") (saved.projects ??= []).push(next as Project);
+        else (saved.panels ??= []).push(next as Panel);
+      }
+    }
+    await done;
+    return saved;
+  } catch (error) {
+    try {
+      tx.abort();
+    } catch {
+      /* complete */
+    }
+    await done.catch(() => {});
+    throw error;
   }
-  await transactionDone(tx);
 }
 
 export async function putBlobs(entries: { id: string; blob: Blob }[]) {
@@ -223,6 +251,21 @@ export async function removeRecords(input: {
   try {
     for (const name of ["projects", "chapters", "panels"] as const)
       for (const id of input[name] ?? []) tx.objectStore(name).delete(id);
+    if (input.panels?.length) {
+      const chapters = await request<Chapter[]>(tx.objectStore("chapters").getAll());
+      const panels = await request<Panel[]>(tx.objectStore("panels").getAll());
+      for (const chapter of chapters) {
+        const record = readComposition(chapter.composition).record;
+        if (!record) continue;
+        const remaining = panels.filter((p) => p.chapterId === chapter.id);
+        const document = reconcile(record.document, remaining);
+        if (JSON.stringify(document) !== JSON.stringify(record.document))
+          tx.objectStore("chapters").put({
+            ...chapter,
+            composition: { ...record, revision: record.revision + 1, document },
+          });
+      }
+    }
     const protectedIds = await retainedBlobIds(tx);
     for (const id of input.blobs ?? [])
       if (!protectedIds.has(id)) tx.objectStore("blobs").delete(id);
@@ -244,6 +287,7 @@ async function retainedBlobIds(tx: IDBTransaction) {
   return new Set([
     ...panels.flatMap(mediaIds),
     ...chapters.flatMap((c) => c.strip?.parts.map((p) => p.blobId) ?? []),
+    ...chapters.flatMap((c) => compositionBlobIds(c.composition)),
   ]);
 }
 

@@ -1,3 +1,4 @@
+import { compositionBlobIds } from "./composition/model";
 import { create } from "zustand";
 import {
   commitPanelMedia,
@@ -231,9 +232,9 @@ export const useStudio = create<Studio>((set, get) => ({
     const project = get().projects.find((item) => item.id === id);
     if (!project) return;
     const next = { ...project, title: cleanTitle(title, project.title), updatedAt: Date.now() };
-    await putRecords({ projects: [next] });
+    const saved = await putRecords({ projects: [next] });
     set((state) => ({
-      projects: state.projects.map((item) => (item.id === id ? next : item)),
+      projects: state.projects.map((item) => (item.id === id ? saved.projects![0]! : item)),
     }));
   },
 
@@ -245,6 +246,7 @@ export const useStudio = create<Studio>((set, get) => ({
     const blobs = [
       ...panels.flatMap(mediaIds),
       ...chapters.flatMap((chapter) => chapter.strip?.parts.map((part) => part.blobId) ?? []),
+      ...chapters.flatMap((chapter) => compositionBlobIds(chapter.composition)),
     ];
     await removeRecords({
       projects: [id],
@@ -291,11 +293,14 @@ export const useStudio = create<Studio>((set, get) => ({
     const next = { ...chapter, title: cleanTitle(title, chapter.title), updatedAt: Date.now() };
     const project = get().projects.find((item) => item.id === chapter.projectId);
     const nextProject = project ? { ...project, updatedAt: next.updatedAt } : null;
-    await putRecords({ chapters: [next], projects: nextProject ? [nextProject] : [] });
+    const saved = await putRecords({
+      chapters: [next],
+      projects: nextProject ? [nextProject] : [],
+    });
     set((state) => ({
-      chapters: state.chapters.map((item) => (item.id === id ? next : item)),
+      chapters: state.chapters.map((item) => (item.id === id ? saved.chapters![0]! : item)),
       projects: nextProject
-        ? state.projects.map((item) => (item.id === nextProject.id ? nextProject : item))
+        ? state.projects.map((item) => (item.id === nextProject.id ? saved.projects![0]! : item))
         : state.projects,
     }));
   },
@@ -308,6 +313,7 @@ export const useStudio = create<Studio>((set, get) => ({
     const blobs = [
       ...panels.flatMap(mediaIds),
       ...(chapter.strip?.parts.map((part) => part.blobId) ?? []),
+      ...compositionBlobIds(chapter.composition),
     ];
     await removeRecords({
       chapters: [id],
@@ -330,9 +336,9 @@ export const useStudio = create<Studio>((set, get) => ({
     const chapter = get().chapters.find((item) => item.id === id);
     if (!chapter) return;
     const next = { ...chapter, ...patch, updatedAt: Date.now() };
-    await putRecords({ chapters: [next] });
+    const saved = await putRecords({ chapters: [next] });
     set((state) => ({
-      chapters: state.chapters.map((item) => (item.id === id ? next : item)),
+      chapters: state.chapters.map((item) => (item.id === id ? saved.chapters![0]! : item)),
     }));
   },
 
@@ -619,7 +625,7 @@ export const useStudio = create<Studio>((set, get) => ({
     const nextProject = chapter
       ? touched?.projects.find((item) => item.id === chapter.projectId)
       : undefined;
-    await putRecords({
+    const saved = await putRecords({
       panels: remaining,
       chapters: nextChapter ? [nextChapter] : [],
       projects: nextProject ? [nextProject] : [],
@@ -635,10 +641,10 @@ export const useStudio = create<Studio>((set, get) => ({
         panels,
         thumbs,
         chapters: nextChapter
-          ? state.chapters.map((item) => (item.id === panel.chapterId ? nextChapter : item))
+          ? state.chapters.map((item) => (item.id === panel.chapterId ? saved.chapters![0]! : item))
           : state.chapters,
         projects: nextProject
-          ? state.projects.map((item) => (item.id === nextProject.id ? nextProject : item))
+          ? state.projects.map((item) => (item.id === nextProject.id ? saved.projects![0]! : item))
           : state.projects,
         selected: {
           ...state.selected,

@@ -1,3 +1,4 @@
+import { validateCompositionPreferences } from "./composition/model.ts";
 import { validateDialogue } from "./dialogue/types.ts";
 import { validateRecipe } from "./editor/geometry.ts";
 import { validatePresets } from "./workflow.ts";
@@ -76,7 +77,7 @@ export function validateProjectRecord(value: unknown, { characters = true } = {}
   keys(
     p,
     ["id", "title", "createdAt", "updatedAt"],
-    ["presets", "dialoguePresets", "characters"],
+    ["presets", "dialoguePresets", "characters", "compositionPreferences"],
     "project",
   );
   id(p.id, "project identifier");
@@ -107,6 +108,14 @@ export function validateProjectRecord(value: unknown, { characters = true } = {}
         "character profiles",
       );
   }
+  if (p.compositionPreferences !== undefined)
+    nested(
+      () =>
+        validateCompositionPreferences(
+          p.compositionPreferences as NonNullable<Project["compositionPreferences"]>,
+        ),
+      "composition presets",
+    );
   return p as Project;
 }
 
@@ -148,7 +157,7 @@ export function validateChapterRecord(value: unknown): Chapter {
   keys(
     c,
     ["id", "projectId", "title", "createdAt", "updatedAt", "width", "seam", "format", "strip"],
-    ["orderHistory"],
+    ["orderHistory", "composition"],
     "chapter",
   );
   id(c.id, "chapter identifier");

@@ -1,0 +1,780 @@
+.composition-studio {
+  --composition-left: 248px;
+  --composition-right: 292px;
+  height: calc(100dvh - var(--composition-top, 112px));
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  position: relative;
+  isolation: isolate;
+}
+.composition-studio svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.composition-toolbar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  scrollbar-width: thin;
+  background: var(--color-bg-elevated);
+}
+.composition-toolbar > * {
+  flex-shrink: 0;
+}
+.composition-mode {
+  display: flex;
+  align-items: center;
+  border-right: 1px solid var(--color-border);
+  padding-right: 8px;
+  margin-right: 4px;
+}
+.composition-save-status {
+  font-size: 11px;
+  color: var(--color-muted);
+  padding: 4px 10px;
+  margin-left: auto;
+}
+.composition-save-status.is-error {
+  color: var(--color-danger);
+}
+.composition-save-status.is-saved {
+  color: var(--color-accent);
+}
+.composition-layout {
+  display: grid;
+  grid-template-columns: var(--composition-left) minmax(0, 1fr) var(--composition-right);
+  min-height: 0;
+  flex: 1;
+}
+.composition-left,
+.composition-right {
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  background: var(--color-bg-elevated);
+  scrollbar-width: thin;
+}
+.composition-left {
+  border-right: 1px solid var(--color-border);
+}
+.composition-right {
+  border-left: 1px solid var(--color-border);
+}
+.composition-right fieldset,
+.composition-export-dialog fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.composition-tool-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+.composition-tool-tabs button {
+  min-height: 44px;
+  text-align: left;
+  font-size: 12px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 8px;
+  color: var(--color-muted);
+}
+.composition-tool-tabs button.is-active {
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 38%, transparent);
+  color: var(--color-accent);
+}
+.composition-properties-content,
+.composition-library-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+.composition-studio h3 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.composition-studio h4 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.composition-studio p,
+.composition-studio small {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.composition-studio small {
+  display: block;
+  color: var(--color-subtle);
+}
+.composition-hint {
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.composition-studio .editor-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-muted);
+  min-width: 0;
+}
+.composition-studio .field {
+  width: 100%;
+  min-height: 42px;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  padding: 9px 10px;
+  min-width: 0;
+}
+.composition-studio .field:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+.composition-studio textarea.field {
+  min-height: 92px;
+  resize: vertical;
+}
+.composition-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  min-width: 0;
+}
+.composition-actions,
+.composition-presets-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.composition-presets-row .studio-button {
+  padding: 4px 9px;
+  min-height: 38px;
+  height: 38px;
+}
+.composition-check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.composition-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-accent);
+}
+.composition-color {
+  display: grid !important;
+  grid-template-columns: 1fr 42px;
+  align-items: center;
+}
+.composition-color input {
+  width: 42px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+.composition-color span {
+  grid-column: 1/-1;
+  font-size: 11px;
+  color: var(--color-subtle);
+}
+.composition-card {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+.composition-canvas-container {
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  margin: 0 auto;
+}
+.composition-center {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+.composition-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: none;
+  scrollbar-width: thin;
+  position: relative;
+  padding: 16px;
+  background-color: var(--color-bg);
+  background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.composition-scene {
+  position: relative;
+  margin: 0 auto;
+  isolation: isolate;
+  background: repeating-conic-gradient(
+      var(--color-bg-subtle) 0% 25%,
+      var(--color-bg-elevated) 0% 50%
+    )
+    0 0/20px 20px;
+  box-shadow: 0 5px 40px color-mix(in srgb, var(--color-bg) 70%, transparent);
+}
+.composition-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
+.composition-render-offset {
+  position: absolute;
+  inset-inline: 0;
+  pointer-events: none;
+}
+.composition-tile {
+  display: block;
+  position: absolute;
+  left: 0;
+}
+.composition-panel-outline {
+  position: absolute;
+  left: 0;
+  pointer-events: none;
+  border: 1px solid transparent;
+}
+.composition-panel-outline.is-selected {
+  border: 2px solid var(--color-accent);
+}
+.composition-panel-label {
+  display: inline-block;
+  max-width: 80%;
+  font-size: 14px;
+  background: var(--color-bg-elevated);
+  color: var(--color-fg);
+  padding: 4px 10px;
+  border-bottom-right-radius: 6px;
+  opacity: 0.85;
+}
+.composition-gap-handle,
+.composition-fade-handle {
+  position: absolute;
+  left: 0;
+  min-height: 24px;
+  font-size: 15px;
+  line-height: 24px;
+  text-align: center;
+  color: var(--color-accent-fg);
+  background: color-mix(in srgb, var(--color-accent) 72%, transparent);
+  border-top: 1px dashed var(--color-accent-fg);
+  cursor: ns-resize;
+  touch-action: none;
+}
+.composition-gap-handle:hover,
+.composition-fade-handle:hover {
+  background: var(--color-accent);
+}
+.composition-fade-handle {
+  color: var(--color-fg);
+  background: var(--color-bg-elevated);
+  border-top-color: var(--color-accent);
+}
+.composition-object-outline {
+  position: absolute;
+  border: 2px solid var(--color-accent);
+  pointer-events: none;
+}
+.composition-object-outline > span {
+  position: absolute;
+  top: -26px;
+  left: 0;
+  white-space: nowrap;
+  font-size: 14px;
+  color: var(--color-accent-fg);
+  background: var(--color-accent);
+  padding: 2px 8px;
+}
+.composition-scale-handle {
+  position: absolute;
+  bottom: -12px;
+  right: -12px;
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--color-accent-fg);
+  border-radius: 3px;
+  background: var(--color-accent);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: nwse-resize;
+}
+.composition-canvas-status {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--color-bg-elevated);
+  border-top: 1px solid var(--color-border);
+  font-size: 10px;
+  color: var(--color-muted);
+  gap: 12px;
+}
+.composition-focus-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 11px;
+  background: var(--color-bg-elevated);
+}
+.composition-focus-bar > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.composition-panel-card {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px;
+}
+.composition-panel-card.is-selected {
+  border-color: var(--color-accent);
+}
+.composition-panel-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  min-width: 0;
+  font-size: 12px;
+}
+.composition-panel-select img {
+  width: 44px;
+  height: 62px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+.composition-panel-select > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.composition-panel-actions {
+  grid-column: 1/-1;
+  display: flex;
+  justify-content: flex-end;
+}
+.composition-panel-actions .studio-button {
+  height: 38px;
+  width: 38px;
+}
+.composition-preset-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.composition-preset-card {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+.composition-preset-card > button:first-child {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0 0 12px;
+  gap: 8px;
+  text-align: left;
+}
+.composition-preset-card > button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.composition-preset-card img {
+  width: 100%;
+  height: 106px;
+  object-fit: cover;
+}
+.composition-preset-card strong,
+.composition-preset-card small {
+  padding: 0 12px;
+}
+.composition-preset-card strong {
+  font-size: 13px;
+}
+.composition-favorite {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: var(--color-bg-elevated);
+  border-radius: 4px;
+  color: var(--color-muted);
+}
+.composition-favorite[aria-pressed="true"] {
+  color: var(--color-accent);
+}
+.composition-word-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.composition-word-list button {
+  min-height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 11px;
+  padding: 6px 8px;
+}
+.composition-layer-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+  padding: 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+}
+.composition-layer-row.is-selected {
+  border-color: var(--color-accent);
+}
+.composition-layer-name {
+  flex: 1 1 100%;
+  text-align: left;
+  font-size: 12px;
+  min-height: 36px;
+}
+.composition-layer-row .studio-button {
+  width: 36px;
+  height: 38px;
+}
+.composition-project-actions {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  border-top: 1px solid var(--color-border);
+}
+.composition-object-actions {
+  padding: 12px;
+  border-top: 1px solid var(--color-border);
+}
+.composition-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-border);
+  padding: 8px 16px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.composition-notice > span {
+  flex: 1;
+}
+.composition-context {
+  position: absolute;
+  bottom: 40px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  z-index: 5;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-elevated);
+  font-size: 12px;
+}
+.composition-context strong {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.composition-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+  gap: 16px;
+}
+.composition-empty > svg {
+  width: 48px;
+  height: 48px;
+  color: var(--color-accent);
+}
+.composition-tools-toggle,
+.composition-properties-toggle,
+.composition-mobile-panel-header {
+  display: none !important;
+}
+.composition-reading-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  height: 100dvh;
+}
+.composition-reading-mode .composition-layout {
+  display: block;
+  min-height: 0;
+}
+.composition-reading-mode .composition-canvas-container {
+  height: 100%;
+}
+.composition-reading-mode .composition-viewport {
+  background: var(--color-bg);
+  padding: 0 16px;
+}
+.composition-reading-mode .composition-toolbar {
+  justify-content: center;
+}
+.composition-reading-mode .composition-toolbar label {
+  min-width: 160px;
+}
+@media (max-width: 1199px) and (min-width: 960px) {
+  .composition-studio {
+    --composition-left: 210px;
+    --composition-right: 250px;
+  }
+}
+@media (max-width: 959px) {
+  .composition-studio {
+    height: calc(100dvh - var(--composition-top, 112px));
+    min-height: 360px;
+  }
+  .composition-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .composition-left,
+  .composition-right {
+    display: none;
+  }
+  .composition-left.is-open,
+  .composition-right.is-open {
+    display: block;
+    position: fixed;
+    z-index: 100;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    top: max(112px, 25dvh);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    padding-bottom: env(safe-area-inset-bottom, 12px);
+    box-shadow: 0 -16px 80px color-mix(in srgb, var(--color-bg) 80%, transparent);
+  }
+  .composition-mobile-panel-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 8px 12px;
+    background: var(--color-bg-elevated);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .composition-tools-toggle {
+    display: inline-flex !important;
+  }
+  .composition-properties-toggle {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 46px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-elevated);
+    color: var(--color-accent);
+    font-size: 13px;
+  }
+  .composition-toolbar {
+    padding: 6px;
+  }
+  .composition-notice {
+    flex-wrap: wrap;
+    padding: 8px;
+  }
+  .composition-canvas-status {
+    font-size: 9px;
+    padding: 6px;
+  }
+  .composition-canvas-status span:last-child {
+    display: none;
+  }
+  .composition-preset-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .composition-tool-tabs {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .composition-focus-bar {
+    flex-wrap: wrap;
+  }
+  .composition-focus-bar .studio-button {
+    padding-inline: 8px;
+  }
+  .composition-focus-bar > span {
+    flex-basis: 100%;
+    order: 5;
+    padding: 0 8px;
+  }
+  .composition-panel-label {
+    font-size: 24px;
+    padding: 6px 12px;
+  }
+  .composition-gap-handle,
+  .composition-fade-handle {
+    min-height: 64px;
+    font-size: 26px;
+    line-height: 54px;
+  }
+  .composition-object-outline {
+    border-width: 4px;
+  }
+  .composition-scale-handle {
+    width: 64px;
+    height: 64px;
+    right: -32px;
+    bottom: -32px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .composition-studio * {
+    scroll-behavior: auto;
+  }
+}
+
+.composition-left > fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.composition-export-dialog .editor-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-block: 10px;
+  font-size: 12px;
+}
+.composition-export-dialog .composition-check {
+  min-height: 42px;
+}
+
+.composition-render-progress {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 9px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-elevated);
+  color: var(--color-muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.composition-properties-content > fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.composition-mask-layer {
+  text-align: left;
+  min-height: 40px;
+  padding-left: 12px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.composition-layer-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.composition-export-dialog .field {
+  width: 100%;
+}
+
+.composition-reading-mode .composition-scene {
+  background: #ffffff;
+}
+
+.composition-guide {
+  position: absolute;
+  pointer-events: none;
+}
+.composition-guide.is-vertical {
+  border-left: 1px dashed var(--color-accent);
+}
+.composition-guide.is-horizontal {
+  border-top: 1px dashed var(--color-accent);
+}
+
+@media (max-width: 959px) {
+  .composition-studio .field,
+  .composition-check,
+  .composition-word-list button,
+  .composition-mask-layer {
+    min-height: 44px;
+  }
+  .composition-presets-row .studio-button,
+  .composition-panel-actions .studio-button,
+  .composition-layer-row .studio-button,
+  .composition-favorite {
+    min-width: 44px;
+    min-height: 44px;
+    height: 44px;
+  }
+  .composition-panel-actions .studio-button,
+  .composition-layer-row .studio-button,
+  .composition-favorite {
+    width: 44px;
+  }
+  .composition-color {
+    grid-template-columns: 1fr 44px;
+  }
+  .composition-color input {
+    width: 44px;
+    height: 44px;
+  }
+}
