@@ -64,7 +64,7 @@ export async function readProjectData(projectId: string): Promise<ProjectData> {
     )
   ).flat();
   const blobs = new Map<string, Blob>();
-  for (const id of projectBlobIds(chapters, panels)) {
+  for (const id of projectBlobIds(chapters, panels, project)) {
     const blob = await request<Blob | undefined>(tx.objectStore("blobs").get(id));
     if (blob) blobs.set(id, blob);
   }

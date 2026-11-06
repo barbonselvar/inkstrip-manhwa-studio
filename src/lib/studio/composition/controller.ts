@@ -39,6 +39,7 @@ export type Session = {
   preview: boolean;
   tool: string;
   mobileProperties: boolean;
+  drawBoundary?: boolean;
 };
 export type Controller = StoreApi<Session> & {
   change: (fn: (d: CompositionDocument) => CompositionDocument, group?: string) => void;

@@ -1,0 +1,49 @@
+{
+  "results": [
+    {
+      "outputs": [
+        {
+          "shape": "Wave",
+          "rows": 1217,
+          "max": 1,
+          "mismatch": 0
+        },
+        {
+          "shape": "Bezier",
+          "rows": 1217,
+          "max": 1,
+          "mismatch": 0
+        },
+        {
+          "shape": "Freehand",
+          "rows": 1217,
+          "max": 1,
+          "mismatch": 0
+        }
+      ],
+      "transparentAsset": true,
+      "svgSanitized": true,
+      "assetPackaged": true
+    },
+    {
+      "restore": {
+        "points": 18,
+        "ink": 1,
+        "assets": 3
+      }
+    },
+    {
+      "width": 360,
+      "touchBoundary": true
+    },
+    {
+      "width": 390,
+      "touchBoundary": true
+    },
+    {
+      "width": 430,
+      "touchBoundary": true
+    }
+  ],
+  "errors": []
+}

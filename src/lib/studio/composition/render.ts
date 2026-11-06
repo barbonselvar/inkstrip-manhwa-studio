@@ -1,3 +1,4 @@
+import { paintInk, inkSupported } from "./ink";
 import { getImageBlob } from "../db";
 import { decodeBlob, deviceLimits } from "../images";
 import { objectMatrix, objectBounds } from "./geometry";
@@ -301,6 +302,10 @@ function textRuns(ctx: CanvasRenderingContext2D, o: Sfx, paint: "fill" | "stroke
   }
 }
 function paintSfx(ctx: CanvasRenderingContext2D, o: Sfx) {
+  if (o.ink && inkSupported(o.text)) {
+    paintInk(ctx, o);
+    return;
+  }
   ctx.lineJoin = "round";
   ctx.miterLimit = 2;
   const m = ctx.getTransform(),
@@ -491,6 +496,16 @@ export async function renderObjectThumbnail(object: CompositionObject) {
   ctx.translate(object.width * 0.06, object.height * 0.08);
   if (object.kind === "sfx") paintSfx(ctx, object);
   if (object.kind === "fx") paintFx(ctx, object);
+  if (object.kind === "overlay") {
+    const r = new RenderResources();
+    try {
+      await r.image(object.blobId, (source) =>
+        ctx.drawImage(source, 0, 0, object.width, object.height),
+      );
+    } finally {
+      r.clear();
+    }
+  }
   return c.toDataURL("image/png");
 }
 async function paintSampledFx(

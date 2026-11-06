@@ -1,5 +1,12 @@
 # Inkstrip release changelog
 
+## Organic fades & Manhwa SFX — feature branch
+
+- Visual galleries for nine editable fade boundaries and original Hangul/English vector sound effects.
+- Bezier/freehand canvas controls, touch drawing, categorized transparent SFX imports and reusable asset presets.
+- Safe SVG-to-PNG conversion and corner-connected background removal preserve original artwork.
+- [Implementation, verification and limits](ORGANIC_FADES_MANHWA_SFX.md). Not merged or deployed.
+
 ## Composition & FX Studio — feature branch, unreleased
 
 - A third Chapter tool opens a complete chapter canvas or an isolated panel with

@@ -1,3 +1,4 @@
+import { shapedCoverage } from "./boundaries.ts";
 import type { Fade } from "./model.ts";
 export const clamp = (v: number) => Math.max(0, Math.min(1, v));
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -23,7 +24,9 @@ export function fadeCoverage(f: Fade, x: number, y: number, w: number, h: number
   const length = f.length + f.feather,
     radians = (f.angle * Math.PI) / 180;
   let t = 0;
-  if (f.type === "Radial Fade" || f.type === "Elliptical Fade") {
+  if (f.boundary) {
+    t = shapedCoverage(f, x, y, w, h);
+  } else if (f.type === "Radial Fade" || f.type === "Elliptical Fade") {
     const rx = f.type === "Radial Fade" ? Math.min(w, h) / 2 : w / 2,
       ry = f.type === "Radial Fade" ? rx : h / 2;
     const distance = Math.hypot((x - w / 2) / Math.max(1, rx), (y - h / 2) / Math.max(1, ry));

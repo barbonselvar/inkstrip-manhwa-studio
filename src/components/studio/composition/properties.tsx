@@ -1,3 +1,7 @@
+import { inkObject } from "@/lib/studio/composition/ink-presets";
+import { FadeShapeProperties } from "./shape-gallery";
+import { INK_STYLES } from "@/lib/studio/composition/ink-catalog";
+import { inkSupported } from "@/lib/studio/composition/ink";
 import { Button } from "@/components/ui/button";
 import { NumberField } from "../editor/number-field";
 import { BLEND_MODES, type BlendMode } from "@/lib/studio/pro/blend";
@@ -68,6 +72,7 @@ export function Choice({
     <label className="editor-field-label">
       {label}
       <select
+        aria-label={label}
         className="field"
         value={value}
         disabled={disabled}
@@ -559,198 +564,206 @@ export function CompositionProperties({
         ) : f ? (
           <>
             <h3>{f.name}</h3>
-            <label className="editor-field-label">
-              Fade name
-              <input
-                className="field"
-                maxLength={200}
-                value={f.name}
-                onChange={(e) => setFade({ name: e.target.value })}
-              />
-            </label>
-            <Choice
-              label="Fade type"
-              value={f.type}
-              options={FADE_TYPES}
-              onChange={(type) =>
-                setFade({
-                  type: type as Fade["type"],
-                  name: f.name === f.type ? type : f.name,
-                  edges: newFade(type as Fade["type"]).edges,
-                })
-              }
-            />
-            <div className="composition-actions">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  if (selection?.kind !== "fade") return;
-                  setPanel(selection.panelId, {
-                    fades: [
-                      ...p!.fades,
-                      {
-                        ...structuredClone(f),
-                        id: crypto.randomUUID(),
-                        name: `${f.name} copy`.slice(0, 200),
-                      },
-                    ],
-                  });
-                }}
-              >
-                Duplicate fade
-              </Button>
-              <Button
-                variant="ghost"
-                disabled={p!.fades.at(-1)?.id === f.id}
-                onClick={() => {
-                  const list = [...p!.fades],
-                    i = list.findIndex((x) => x.id === f.id);
-                  [list[i], list[i + 1]] = [list[i + 1], list[i]];
-                  setPanel(selectedPanel!, { fades: list });
-                }}
-              >
-                Raise fade
-              </Button>
-              <Button
-                variant="ghost"
-                disabled={p!.fades[0]?.id === f.id}
-                onClick={() => {
-                  const list = [...p!.fades],
-                    i = list.findIndex((x) => x.id === f.id);
-                  [list[i], list[i - 1]] = [list[i - 1], list[i]];
-                  setPanel(selectedPanel!, { fades: list });
-                }}
-              >
-                Lower fade
-              </Button>
-            </div>
-            <NumberField
-              label="Fade length (px)"
-              value={f.length}
-              min={1}
-              max={100000}
-              onChange={(length) => setFade({ length })}
-            />
-            <NumberField
-              label="Start position (px)"
-              value={f.start}
-              max={100000}
-              onChange={(start) => setFade({ start })}
-            />
-            <NumberField
-              label="End position (px)"
-              value={f.start + f.length}
-              min={f.start + 1}
-              max={100000}
-              onChange={(end) => setFade({ length: end - f.start })}
-            />
-            <NumberField
-              label="Fade opacity"
-              value={f.opacity}
-              max={1}
-              step={0.01}
-              onChange={(opacity) => setFade({ opacity })}
-            />
-            <NumberField
-              label="Gradient curve"
-              value={f.curve}
-              min={0.1}
-              max={10}
-              step={0.1}
-              onChange={(curve) => setFade({ curve })}
-            />
-            <NumberField
-              label="Feather radius"
-              value={f.feather}
-              max={1000}
-              onChange={(feather) => setFade({ feather })}
-            />
-            <NumberField
-              label="Blur intensity"
-              value={f.blur}
-              max={100}
-              onChange={(blur) => setFade({ blur })}
-            />
-            {/Linear|Directional/.test(f.type) && (
-              <NumberField
-                label="Fade direction"
-                value={f.angle}
-                min={-360}
-                max={360}
-                onChange={(angle) => setFade({ angle })}
-              />
-            )}
-            <Color
-              label="Fade target color"
-              value={f.color}
-              onChange={(color) => setFade({ color })}
-            />
-            <Check
-              label="Fade to transparency"
-              value={f.color === "transparent"}
-              onChange={(checked) => setFade({ color: checked ? "transparent" : "#ffffff" })}
-            />
-            <Choice
-              label="Fade blend mode"
-              value={f.blend}
-              options={BLEND_MODES}
-              onChange={(blend) => setFade({ blend: blend as BlendMode })}
-            />
-            {f.type === "Multi-edge Fade" && (
-              <div>
-                {(["top", "bottom", "left", "right"] as const).map((edge) => (
-                  <Check
-                    key={edge}
-                    label={`${edge} edge`}
-                    value={f.edges.includes(edge)}
-                    onChange={(checked) =>
+            <FadeShapeProperties f={f} update={setFade} controller={controller} />
+            <details open={!f.boundary}>
+              <summary>Advanced fade settings</summary>
+              <label className="editor-field-label">
+                Fade name
+                <input
+                  className="field"
+                  maxLength={200}
+                  value={f.name}
+                  onChange={(e) => setFade({ name: e.target.value })}
+                />
+              </label>
+              {!f.boundary && (
+                <>
+                  <Choice
+                    label="Fade type"
+                    value={f.type}
+                    options={FADE_TYPES}
+                    onChange={(type) =>
                       setFade({
-                        edges: checked
-                          ? [...f.edges, edge]
-                          : f.edges.length > 1
-                            ? f.edges.filter((e) => e !== edge)
-                            : f.edges,
+                        type: type as Fade["type"],
+                        name: f.name === f.type ? type : f.name,
+                        edges: newFade(type as Fade["type"]).edges,
                       })
                     }
                   />
-                ))}
+                </>
+              )}
+              <div className="composition-actions">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    if (selection?.kind !== "fade") return;
+                    setPanel(selection.panelId, {
+                      fades: [
+                        ...p!.fades,
+                        {
+                          ...structuredClone(f),
+                          id: crypto.randomUUID(),
+                          name: `${f.name} copy`.slice(0, 200),
+                        },
+                      ],
+                    });
+                  }}
+                >
+                  Duplicate fade
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={p!.fades.at(-1)?.id === f.id}
+                  onClick={() => {
+                    const list = [...p!.fades],
+                      i = list.findIndex((x) => x.id === f.id);
+                    [list[i], list[i + 1]] = [list[i + 1], list[i]];
+                    setPanel(selectedPanel!, { fades: list });
+                  }}
+                >
+                  Raise fade
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={p!.fades[0]?.id === f.id}
+                  onClick={() => {
+                    const list = [...p!.fades],
+                      i = list.findIndex((x) => x.id === f.id);
+                    [list[i], list[i - 1]] = [list[i - 1], list[i]];
+                    setPanel(selectedPanel!, { fades: list });
+                  }}
+                >
+                  Lower fade
+                </Button>
               </div>
-            )}
-            {f.type === "Custom Gradient Fade" && (
-              <Masks stops={f.stops} onChange={(stops) => setFade({ stops })} />
-            )}
-            <Check
-              label="Fade visible"
-              value={f.visible}
-              onChange={(visible) => setFade({ visible })}
-            />
-            <Check
-              label="Fade locked"
-              value={f.locked}
-              onChange={(locked) => setFade({ locked })}
-            />
-            <Button variant="secondary" onClick={() => onPreset("fade", f)}>
-              Save fade preset
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={!session.selectedPanels.length}
-              onClick={batchFade}
-            >
-              Copy fade to selected
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => {
-                setPanel(selection!.kind === "fade" ? selection!.panelId : "", {
-                  fades: p!.fades.filter((x) => x.id !== f.id),
-                });
-                controller.select({ kind: "panel", id: selectedPanel! });
-              }}
-            >
-              <Trash2 />
-              Delete fade
-            </Button>
+              <NumberField
+                label="Fade length (px)"
+                value={f.length}
+                min={1}
+                max={100000}
+                onChange={(length) => setFade({ length })}
+              />
+              <NumberField
+                label="Start position (px)"
+                value={f.start}
+                max={100000}
+                onChange={(start) => setFade({ start })}
+              />
+              <NumberField
+                label="End position (px)"
+                value={f.start + f.length}
+                min={f.start + 1}
+                max={100000}
+                onChange={(end) => setFade({ length: end - f.start })}
+              />
+              <NumberField
+                label="Fade opacity"
+                value={f.opacity}
+                max={1}
+                step={0.01}
+                onChange={(opacity) => setFade({ opacity })}
+              />
+              <NumberField
+                label="Gradient curve"
+                value={f.curve}
+                min={0.1}
+                max={10}
+                step={0.1}
+                onChange={(curve) => setFade({ curve })}
+              />
+              <NumberField
+                label="Feather radius"
+                value={f.feather}
+                max={1000}
+                onChange={(feather) => setFade({ feather })}
+              />
+              <NumberField
+                label="Blur intensity"
+                value={f.blur}
+                max={100}
+                onChange={(blur) => setFade({ blur })}
+              />
+              {/Linear|Directional/.test(f.type) && (
+                <NumberField
+                  label="Fade direction"
+                  value={f.angle}
+                  min={-360}
+                  max={360}
+                  onChange={(angle) => setFade({ angle })}
+                />
+              )}
+              <Color
+                label="Fade target color"
+                value={f.color}
+                onChange={(color) => setFade({ color })}
+              />
+              <Check
+                label="Fade to transparency"
+                value={f.color === "transparent"}
+                onChange={(checked) => setFade({ color: checked ? "transparent" : "#ffffff" })}
+              />
+              <Choice
+                label="Fade blend mode"
+                value={f.blend}
+                options={BLEND_MODES}
+                onChange={(blend) => setFade({ blend: blend as BlendMode })}
+              />
+              {f.type === "Multi-edge Fade" && (
+                <div>
+                  {(["top", "bottom", "left", "right"] as const).map((edge) => (
+                    <Check
+                      key={edge}
+                      label={`${edge} edge`}
+                      value={f.edges.includes(edge)}
+                      onChange={(checked) =>
+                        setFade({
+                          edges: checked
+                            ? [...f.edges, edge]
+                            : f.edges.length > 1
+                              ? f.edges.filter((e) => e !== edge)
+                              : f.edges,
+                        })
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+              {f.type === "Custom Gradient Fade" && (
+                <Masks stops={f.stops} onChange={(stops) => setFade({ stops })} />
+              )}
+              <Check
+                label="Fade visible"
+                value={f.visible}
+                onChange={(visible) => setFade({ visible })}
+              />
+              <Check
+                label="Fade locked"
+                value={f.locked}
+                onChange={(locked) => setFade({ locked })}
+              />
+              <Button variant="secondary" onClick={() => onPreset("fade", f)}>
+                Save fade preset
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={!session.selectedPanels.length}
+                onClick={batchFade}
+              >
+                Copy fade to selected
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setPanel(selection!.kind === "fade" ? selection!.panelId : "", {
+                    fades: p!.fades.filter((x) => x.id !== f.id),
+                  });
+                  controller.select({ kind: "panel", id: selectedPanel! });
+                }}
+              >
+                <Trash2 />
+                Delete fade
+              </Button>
+            </details>
           </>
         ) : t ? (
           <>
@@ -1013,6 +1026,33 @@ export function CompositionProperties({
             )}
             {o.kind === "sfx" && (
               <>
+                {o.ink && (
+                  <>
+                    <Choice
+                      label="Vector ink style"
+                      value={o.ink}
+                      options={INK_STYLES}
+                      onChange={(ink) => {
+                        const style = inkObject(o.text, ink);
+                        setObject({
+                          ink,
+                          fill: style.fill,
+                          fill2: style.fill2,
+                          gradient: style.gradient,
+                          strokes: style.strokes,
+                          shadow: style.shadow,
+                          texture: style.texture,
+                        } as Partial<CompositionObject>);
+                      }}
+                    />
+                    <p className="composition-hint">
+                      {inkSupported(o.text)
+                        ? "Editable original vector glyphs. Hangul syllables and A–Z are supported."
+                        : "This text contains unsupported vector glyphs; font rendering is being used."}
+                    </p>
+                  </>
+                )}
+
                 <label className="editor-field-label">
                   SFX text
                   <textarea
@@ -1023,28 +1063,34 @@ export function CompositionProperties({
                     onChange={(e) => setObject({ text: e.target.value })}
                   />
                 </label>
-                <Choice
-                  label="Lettering font"
-                  value={o.font}
-                  options={[
-                    'Bangers, "Noto Sans", sans-serif',
-                    '"Noto Sans", sans-serif',
-                    '"Noto Sans KR", sans-serif',
-                    '"Noto Sans JP", sans-serif',
-                    '"Noto Sans Arabic", sans-serif',
-                  ]}
-                  onChange={(font) => setObject({ font })}
-                />
-                <p className="composition-hint">
-                  Use Korean, Japanese or Arabic fonts for those scripts. Decorative Latin fonts use
-                  script fallback.
-                </p>
-                <Choice
-                  label="Text direction"
-                  value={o.direction}
-                  options={["ltr", "rtl"]}
-                  onChange={(direction) => setObject({ direction: direction as Sfx["direction"] })}
-                />
+                {(!o.ink || !inkSupported(o.text)) && (
+                  <>
+                    <Choice
+                      label="Lettering font"
+                      value={o.font}
+                      options={[
+                        'Bangers, "Noto Sans", sans-serif',
+                        '"Noto Sans", sans-serif',
+                        '"Noto Sans KR", sans-serif',
+                        '"Noto Sans JP", sans-serif',
+                        '"Noto Sans Arabic", sans-serif',
+                      ]}
+                      onChange={(font) => setObject({ font })}
+                    />
+                    <p className="composition-hint">
+                      Use Korean, Japanese or Arabic fonts for those scripts. Decorative Latin fonts
+                      use script fallback.
+                    </p>
+                    <Choice
+                      label="Text direction"
+                      value={o.direction}
+                      options={["ltr", "rtl"]}
+                      onChange={(direction) =>
+                        setObject({ direction: direction as Sfx["direction"] })
+                      }
+                    />
+                  </>
+                )}
                 <NumberField
                   label="Font size"
                   value={o.size}
@@ -1052,14 +1098,18 @@ export function CompositionProperties({
                   max={2000}
                   onChange={(size) => setObject({ size })}
                 />
-                <NumberField
-                  label="Font weight"
-                  value={o.weight}
-                  min={100}
-                  max={900}
-                  step={100}
-                  onChange={(weight) => setObject({ weight })}
-                />
+                {(!o.ink || !inkSupported(o.text)) && (
+                  <>
+                    <NumberField
+                      label="Font weight"
+                      value={o.weight}
+                      min={100}
+                      max={900}
+                      step={100}
+                      onChange={(weight) => setObject({ weight })}
+                    />
+                  </>
+                )}
                 <NumberField
                   label="Letter spacing"
                   value={o.spacing}
@@ -1076,11 +1126,15 @@ export function CompositionProperties({
                   step={0.1}
                   onChange={(lineHeight) => setObject({ lineHeight })}
                 />
-                <Check
-                  label="Italic lettering"
-                  value={o.italic}
-                  onChange={(italic) => setObject({ italic })}
-                />
+                {(!o.ink || !inkSupported(o.text)) && (
+                  <>
+                    <Check
+                      label="Italic lettering"
+                      value={o.italic}
+                      onChange={(italic) => setObject({ italic })}
+                    />
+                  </>
+                )}
                 <Color label="Text fill" value={o.fill} onChange={(fill) => setObject({ fill })} />
                 <Check
                   label="Gradient text"

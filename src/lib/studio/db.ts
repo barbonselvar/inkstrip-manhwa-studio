@@ -1,3 +1,4 @@
+import { presetBlobIds } from "./composition/model";
 import { compositionBlobIds, readComposition, reconcile } from "./composition/model";
 import { hasLegacyAiDraft } from "./dialogue/storage-compat";
 import { mediaIds } from "./editor/references";
@@ -285,6 +286,9 @@ async function retainedBlobIds(tx: IDBTransaction) {
   const panels = await request<Panel[]>(tx.objectStore("panels").getAll()),
     chapters = await request<Chapter[]>(tx.objectStore("chapters").getAll());
   return new Set([
+    ...(await request<Project[]>(tx.objectStore("projects").getAll())).flatMap((p) =>
+      presetBlobIds(p.compositionPreferences),
+    ),
     ...panels.flatMap(mediaIds),
     ...chapters.flatMap((c) => c.strip?.parts.map((p) => p.blobId) ?? []),
     ...chapters.flatMap((c) => compositionBlobIds(c.composition)),

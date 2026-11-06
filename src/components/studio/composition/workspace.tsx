@@ -1,3 +1,4 @@
+import { AssetImport } from "./asset-import";
 import "@fontsource/noto-sans/400.css";
 import "@fontsource/noto-sans/700.css";
 import "@fontsource/noto-sans-kr/700.css";
@@ -25,8 +26,6 @@ import {
   type Space,
   type Fade,
   type Transition,
-  type Sfx,
-  type Fx,
 } from "@/lib/studio/composition/model";
 import { saveCompositionPreferences } from "@/lib/studio/composition/storage";
 import {
@@ -66,6 +65,9 @@ import {
 const TOOLS = [
   "Panels",
   "Spacing",
+  "Fade Shapes",
+  "Manhwa SFX",
+  "My SFX Assets",
   "Fades",
   "Transitions",
   "SFX Library",
@@ -92,6 +94,7 @@ export default function CompositionWorkspace({
   }, [panels, session.history.present.order]);
   const inactiveTransitions = d.transitions.filter((t) => !transitionActive(t, list)).length;
   const preferences = project.compositionPreferences ?? EMPTY_PREFERENCES;
+  const [assetOpen, setAssetOpen] = useState(false);
   const [message, setMessage] = useState(""),
     [toolsOpen, setToolsOpen] = useState(false),
     [exportOpen, setExportOpen] = useState(false),
@@ -297,22 +300,19 @@ export default function CompositionWorkspace({
       return false;
     }
   };
-  const onPreset = (
-    category: CompositionPreset["category"],
-    value: Space | Fade | Transition | Sfx | Fx,
-  ) => {
+  const onPreset = (category: CompositionPreset["category"], value: CompositionPreset["value"]) => {
     setPreset({ category, value: structuredClone(value) });
     setPresetName(`${category} preset`);
   };
   const applyPreset = (p: CompositionPreset) => {
     const owner = session.selectedPanels[0] ?? list[0]?.id;
-    if (p.category === "sfx" || p.category === "fx") {
+    if (p.category === "sfx" || p.category === "fx" || p.category === "asset") {
       const o = {
         ...structuredClone(p.value),
         id: crypto.randomUUID(),
         owner,
         parentId: undefined,
-      } as Sfx | Fx;
+      } as CompositionObject;
       controller.change((doc) => ({ ...doc, objects: [...doc.objects, o] }));
       controller.select({ kind: "object", id: o.id });
       return;
@@ -735,6 +735,7 @@ export default function CompositionWorkspace({
                   onOverlay={() => fileRef.current?.click()}
                   onDuplicate={duplicate}
                   onDelete={remove}
+                  onAssetImport={() => setAssetOpen(true)}
                 />
               </fieldset>
               <div className="composition-project-actions">
@@ -763,6 +764,7 @@ export default function CompositionWorkspace({
               controller={controller}
               chapter={chapter}
               panels={list}
+              assetPresets={preferences.presets}
               onError={onError}
             />
           </div>
@@ -829,6 +831,32 @@ export default function CompositionWorkspace({
           <SlidersHorizontal />
           Properties
         </button>
+      )}
+      {assetOpen && (
+        <AssetImport
+          open
+          onClose={() => setAssetOpen(false)}
+          onImport={async (blob, name, collection, w, h) => {
+            const blobId = crypto.randomUUID();
+            await putBlobs([{ id: blobId, blob }]);
+            const width = Math.min(d.width, w),
+              o = { ...common(name, width, (h * width) / w), kind: "overlay" as const, blobId };
+            const preset: CompositionPreset = {
+              id: crypto.randomUUID(),
+              name,
+              collection,
+              category: "asset",
+              value: o,
+            };
+            const saved = await updatePreferences({
+              ...preferences,
+              presets: [...preferences.presets, preset],
+            });
+            if (!saved) throw Error("Asset could not be saved. Free storage and retry.");
+            applyPreset(preset);
+            controller.setState({ tool: "My SFX Assets" });
+          }}
+        />
       )}
       <input
         ref={fileRef}
