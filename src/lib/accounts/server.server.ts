@@ -404,8 +404,8 @@ export async function handleAccount(
     if (request.method === "GET" && route === "projects") {
       const u = await active(),
         r = await client
-          .from("inkstrip_cloud_projects")
-          .select("id,local_id,title,head_revision,updated_at")
+          .from("inkstrip_cloud_project_overview")
+          .select("id,local_id,title,head_revision,updated_at,bytes")
           .eq("owner_id", u.id)
           .order("updated_at", { ascending: false });
       if (r.error) throw new Failure(503, "Cloud projects could not be loaded.");

@@ -114,10 +114,19 @@ function fixture(overrides: Record<string, string> = {}) {
     redirectType: string | null = null;
   const result = (data: any = null, error: any = null) => Promise.resolve({ data, error });
   function query(table: string) {
-    let data: any = null;
+    let data: any =
+      table === "inkstrip_cloud_project_overview"
+        ? [{ id: "22222222-2222-4222-8222-222222222222", head_revision: 1, bytes: 4731913 }]
+        : null;
     const q: any = {
-      select: () => q,
-      eq: () => q,
+      select: (columns: string) => {
+        calls.push(["select", table, columns]);
+        return q;
+      },
+      eq: (column: string, value: unknown) => {
+        calls.push(["eq", table, column, value]);
+        return q;
+      },
       order: () => q,
       limit: () => q,
       in: () => q,
@@ -413,6 +422,34 @@ test("remember false creates session cookies, and logout clears account state", 
   assert.ok(!session.includes("Max-Age"));
   assert.equal((await f.req("logout", {})).status, 200);
   assert.equal((await (await f.req("session")).json()).user, null);
+});
+test("cloud library returns published package sizes through the owner-scoped invoker overview", async () => {
+  const f = fixture();
+  await f.req("session");
+  f.setSigned(true);
+  const r = await f.req("projects");
+  assert.equal(r.status, 200);
+  const { projects } = await r.json();
+  assert.equal(projects[0].bytes, 4731913);
+  assert.ok(
+    f.calls.some(
+      ([op, table, columns]) =>
+        op === "select" &&
+        table === "inkstrip_cloud_project_overview" &&
+        columns.split(",").includes("bytes"),
+    ),
+  );
+  assert.ok(
+    f.calls.some(
+      ([op, table, column, value]) =>
+        op === "eq" &&
+        table === "inkstrip_cloud_project_overview" &&
+        column === "owner_id" &&
+        value === user.id,
+    ),
+  );
+  f.setUnverified();
+  assert.equal((await f.req("projects")).status, 403);
 });
 test("verification uses provider OTP and reports expired codes without provider details", async () => {
   const f = fixture();
