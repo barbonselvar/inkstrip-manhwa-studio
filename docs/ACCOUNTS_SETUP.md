@@ -2,6 +2,8 @@
 
 This feature is implemented behind an explicit server-side enable switch. It is **not enabled on production** by this branch. No Supabase project, credentials, SMTP sender, Google application or Meta application was supplied. Local editing remains available. Do not treat mocked provider/browser tests as verification of real email delivery or OAuth.
 
+For the continuation’s verified free-tier restrictions, ready-to-apply email templates, isolated live authorization checker and current owner-access blockers, see [ACCOUNTS_LIVE_RELEASE.md](ACCOUNTS_LIVE_RELEASE.md).
+
 ## Owner setup, in order
 
 1. Create a Supabase project in the appropriate region and configure backups/retention and billing limits. Keep the service-role key private. The application uses the official Supabase SSR and JavaScript libraries through same-origin server handlers; no Supabase session or service-role token is returned to browser JavaScript.
