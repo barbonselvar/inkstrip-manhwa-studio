@@ -799,3 +799,17 @@ test("email registration stays enabled by default so existing installations are 
   const f = fixture();
   assert.equal((await (await f.req("session")).json()).emailSignup, true);
 });
+test("OAuth callback signs out locally when the provider identity has no verified email", async () => {
+  const f = fixture();
+  await f.req("session");
+  await f.req("oauth", { provider: "google" });
+  const flow = f.jar.get("__Host-inkstrip-flow");
+  f.setSigned(true);
+  f.setUnverified();
+  const r = await f.req(`callback?flow=${flow}&code=example`);
+  assert.match(r.headers.get("location")!, /oauth_failed/);
+  assert.ok(
+    f.calls.some((c) => c[0] === "logout" && c[1]?.scope === "local"),
+    "local session must be discarded",
+  );
+});

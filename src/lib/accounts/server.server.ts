@@ -393,7 +393,14 @@ export async function handleAccount(
         return redirect("/account?notice=oauth_cancelled");
       const exchange = await client.auth.exchangeCodeForSession(url.searchParams.get("code")!);
       if (exchange.error) return redirect("/account?notice=oauth_failed");
-      const u = await confirmed();
+      let u: User;
+      try {
+        u = await confirmed();
+      } catch {
+        // A provider identity without a verified email must not leave a usable session behind.
+        await client.auth.signOut({ scope: "local" });
+        return redirect("/account?notice=oauth_failed");
+      }
       if (intent.data.kind !== "oauth_signin" && intent.data.user_id !== u.id) {
         await client.auth.signOut({ scope: "local" });
         return redirect("/account?notice=identity_mismatch");
