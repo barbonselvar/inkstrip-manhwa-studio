@@ -42,6 +42,10 @@ export function accountConfig(env: AccountEnv) {
       emailMode,
       secure: new URL(origin).protocol === "https:",
       google: env.INKSTRIP_GOOGLE_ENABLED === "true",
+      // Public email/password registration needs a working custom SMTP sender. Set
+      // INKSTRIP_EMAIL_SIGNUP_ENABLED=false for Google-only registration; existing
+      // email accounts keep signing in and recovering their passwords.
+      emailSignup: env.INKSTRIP_EMAIL_SIGNUP_ENABLED !== "false",
       facebook: env.INKSTRIP_FACEBOOK_ENABLED === "true",
     };
   } catch {

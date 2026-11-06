@@ -770,3 +770,46 @@ test("cloud write owner is derived from the verified session, never submitted ow
   const rpc = f.calls.find((c) => c[0] === "rpc" && c[1] === "inkstrip_open_project");
   assert.equal(rpc[2].p_owner, user.id);
 });
+test("Google-only mode closes email registration on the server while Google, login and recovery stay available", async () => {
+  const f = fixture({ INKSTRIP_EMAIL_SIGNUP_ENABLED: "false", INKSTRIP_FACEBOOK_ENABLED: "false" });
+  const status = await (await f.req("session")).json();
+  assert.equal(status.emailSignup, false);
+  assert.equal(status.google, true);
+  assert.equal(status.facebook, false);
+  // A valid, accepted registration is refused before any provider call or ledger write.
+  const refused = await f.req("signup", {
+    email: "new-visitor@example.com",
+    name: "Visitor",
+    password: "Warrior 2026!",
+    accepted: true,
+  });
+  assert.equal(refused.status, 403);
+  assert.equal((await refused.json()).code, "signup_disabled");
+  assert.ok(!f.calls.some((c) => c[0] === "signup"));
+  assert.equal(f.actions.length, 0);
+  // Existing email accounts still sign in; Facebook stays unavailable server-side.
+  assert.notEqual((await f.req("login", { email: user.email, password: "secret" })).status, 403);
+  assert.equal((await f.req("oauth", { provider: "facebook" })).status, 503);
+  // Google keeps using the supported OAuth redirect flow.
+  const google = await f.req("oauth", { provider: "google" });
+  assert.equal(google.status, 200);
+  assert.ok(f.calls.some((c) => c[0] === "oauth"));
+});
+test("email registration stays enabled by default so existing installations are unchanged", async () => {
+  const f = fixture();
+  assert.equal((await (await f.req("session")).json()).emailSignup, true);
+});
+test("OAuth callback signs out locally when the provider identity has no verified email", async () => {
+  const f = fixture();
+  await f.req("session");
+  await f.req("oauth", { provider: "google" });
+  const flow = f.jar.get("__Host-inkstrip-flow");
+  f.setSigned(true);
+  f.setUnverified();
+  const r = await f.req(`callback?flow=${flow}&code=example`);
+  assert.match(r.headers.get("location")!, /oauth_failed/);
+  assert.ok(
+    f.calls.some((c) => c[0] === "logout" && c[1]?.scope === "local"),
+    "local session must be discarded",
+  );
+});
