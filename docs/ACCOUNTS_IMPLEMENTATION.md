@@ -1,5 +1,7 @@
 # Cloud accounts implementation report
 
+Latest hosted configuration and live-test status: [SUPABASE_HOSTED_SETUP.md](SUPABASE_HOSTED_SETUP.md). The original implementation validation below is retained as historical evidence.
+
 Branch: `codex/cloud-accounts-cinematic-auth`, based on PR #34/main `55bc1f1`.
 Status: implemented and locally verified; **draft PR only, no production deployment**.
 Hosted Supabase, email delivery and live Google/Facebook identity flows remain unverified because no external credentials/project were supplied.
@@ -26,7 +28,7 @@ Hosted Supabase, email delivery and live Google/Facebook identity flows remain u
 | Existing integration         | `src/components/studio/library.tsx` (Account & cloud link), `chrome.tsx` (account/legal access independent of local hydration) |
 | Routes                       | `src/routes/account.tsx`, `src/routes/legal/$document.tsx`, `src/routes/api/account/$.ts`, generated route tree                |
 | Backend and transfers        | `src/lib/accounts/{policy,config.server,server.server,client,transfers}.ts`                                                    |
-| Database                     | `supabase/migrations/202611060001_inkstrip_accounts.sql` (owner-applied, separate from Neon/local storage)                     |
+| Database                     | `supabase/migrations/20261106101354_inkstrip_accounts.sql` (owner-applied, separate from Neon/local storage)                   |
 | Security compatibility       | `src/lib/auth/{client,popup.server,gate-session.server}.ts`                                                                    |
 | Tests                        | `src/lib/accounts/{policy,server,database}.test.ts`, `scripts/accounts-browser-check.mjs`                                      |
 

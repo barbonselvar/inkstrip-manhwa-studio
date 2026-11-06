@@ -24,10 +24,20 @@ before(async () => {
  grant usage on schema public,auth,storage to anon,authenticated,service_role;
  create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
  create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
- grant select,insert,update,delete on storage.objects to authenticated;`);
+ grant select,insert,update,delete on storage.objects to authenticated;
+ alter default privileges in schema public grant execute on functions to anon,authenticated;`);
   await db.exec(
     await readFile(
-      new URL("../../../supabase/migrations/202611060001_inkstrip_accounts.sql", import.meta.url),
+      new URL("../../../supabase/migrations/20261106101354_inkstrip_accounts.sql", import.meta.url),
+      "utf8",
+    ),
+  );
+  await db.exec(
+    await readFile(
+      new URL(
+        "../../../supabase/migrations/20261106101958_harden_account_policy_helpers.sql",
+        import.meta.url,
+      ),
       "utf8",
     ),
   );
@@ -220,4 +230,42 @@ test("deletion pending immediately blocks private storage/project reads while pr
   );
   await db.query("delete from auth.users where id=$1", [A]);
   assert.equal((await db.query("select * from public.inkstrip_cloud_revisions")).rows.length, 0);
+});
+
+test("hosted default function grants cannot expose policy definers or invoke the profile trigger", async () => {
+  const exposed = await db.query(
+    "select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'inkstrip_%' and p.prosecdef and (has_function_privilege('anon',p.oid,'EXECUTE') or has_function_privilege('authenticated',p.oid,'EXECUTE'))",
+  );
+  assert.equal(exposed.rows.length, 0);
+  for (const fn of [
+    "inkstrip_email_verified()",
+    "inkstrip_verified_user()",
+    "inkstrip_owns_path(text)",
+    "inkstrip_profile_from_auth()",
+  ]) {
+    const r = await db.query("select has_function_privilege('anon',$1,'EXECUTE') as allowed", [
+      "inkstrip_private." + fn,
+    ]);
+    assert.equal((r.rows[0] as any).allowed, false);
+  }
+  const trigger = await db.query(
+    "select has_function_privilege('authenticated','inkstrip_private.inkstrip_profile_from_auth()','EXECUTE') as allowed",
+  );
+  assert.equal((trigger.rows[0] as any).allowed, false);
+});
+
+test("transactional SQL role check rolls back every synthetic identity and project", async () => {
+  const before = await db.query(
+    "select (select count(*)::int from auth.users) as users,(select count(*)::int from public.inkstrip_cloud_projects) as projects",
+  );
+  await db.exec(
+    await readFile(
+      new URL("../../../supabase/checks/accounts_isolation.sql", import.meta.url),
+      "utf8",
+    ),
+  );
+  const after = await db.query(
+    "select (select count(*)::int from auth.users) as users,(select count(*)::int from public.inkstrip_cloud_projects) as projects",
+  );
+  assert.deepEqual(after.rows, before.rows);
 });

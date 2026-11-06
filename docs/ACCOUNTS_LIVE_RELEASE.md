@@ -1,12 +1,12 @@
 # Live account release — configuration and evidence
 
-This extends PR #35. **The live backend is not yet connected or verified.** Existing local/mock evidence in ACCOUNTS_IMPLEMENTATION.md is not live-provider evidence. No user email address has been supplied for this release session and no real signup/recovery email has been sent. No merge or production deployment is authorized until the specified gates actually pass.
+This extends PR #35. **Supabase management access and the hosted database are now configured; live account end-to-end verification is still blocked.** See [SUPABASE_HOSTED_SETUP.md](SUPABASE_HOSTED_SETUP.md) for the current project, applied migrations, real API checks and remaining access requirements. Existing local/mock evidence in ACCOUNTS_IMPLEMENTATION.md is not live-provider evidence. No user email address has been supplied for this release session and no real signup/recovery email has been sent. No merge or production deployment is authorized until the specified gates actually pass.
 
 ## Current access boundary
 
-The managed environment currently has no Supabase project credentials, Supabase management identity, Vercel management identity, transactional sender credentials or authorized test email. Supabase and Vercel integrations were discovered as available but unconnected. Connecting them to the owner accounts is the smallest first step; never paste API keys, provider passwords or OTPs into a public issue or report. If the integrations do not expose a required configuration operation, the operator must complete that operation in its own dashboard/secret store. Existing GitHub access does not establish permission to read Vercel environment values.
+Supabase management access is connected. The existing Free organization now has the Paris Inkstrip project, and both database migrations have been applied and verified. Available Supabase tools do not expose Auth/SMTP configuration or private project keys. Vercel access is still unavailable in this session. A private server credential binding, verified sender configuration, provider setup and authorized test email remain required; never paste secrets or OTPs into chat or reports.
 
-Required owner information after connecting access: the selected existing Supabase project (or an owner-created **Free** project), authorized test email, and existing verified sending domain/provider if any. Google and Meta consent/client configuration may require additional interactive owner authorization. Do not add billing, buy a domain or change subscriptions.
+Current details and exact remaining owner steps are in [SUPABASE_HOSTED_SETUP.md](SUPABASE_HOSTED_SETUP.md). No paid plan or domain purchase is authorized.
 
 ## Free-tier checks (official pages checked November 6, 2026)
 
@@ -53,7 +53,7 @@ Guard tests for this runner use fake transports solely to test refusal, cleanup 
 | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Existing implementation / local/mock tests                  | Implemented; prior evidence retained, 1,202 tests at prior feature head                   |
 | New live-runner guard tests                                 | Local safety checks only; not hosted authorization evidence                               |
-| Supabase connection / migration application / RLS / Storage | Blocked by owner access and project selection                                             |
+| Supabase connection / migration application / RLS / Storage | Database configured; real anonymous HTTP denial verified; authenticated E2E still blocked |
 | Real verification/recovery delivery                         | Blocked by authorized email, project connection and sender configuration                  |
 | Google / Facebook                                           | Blocked by provider credentials/owner consent; public Meta approval must be distinguished |
 | Real full-project browser recovery                          | Blocked by actual hosted backend credentials                                              |
@@ -65,7 +65,7 @@ Guard tests for this runner use fake transports solely to test refusal, cleanup 
 - Four live-runner guard tests and the 27 existing account/policy/PostgreSQL tests pass locally. Typecheck, lint, production build and build-configuration checks pass. Existing successful editor results remain valid: this continuation changes no editor or account runtime behavior.
 - All three prepared email templates rendered without overflow at 375 px and 800 px (six browser renders). The images below use a synthetic illustrative code; no actual verification/recovery code was collected.
 - The actual live command was invoked without credentials and correctly returned **blocked** / exit 2. It created no identities, sent no email and made no remote database changes.
-- Supabase and Vercel connections are still unconfirmed. The owner test-email question is pending. Do not mark the hosted-service gates passed from any of the preceding local results.
+- Supabase is now connected and configured as documented in SUPABASE_HOSTED_SETUP.md. Vercel and the owner test-email question remain pending. The earlier local results do not establish authenticated hosted-service gates.
 
 ![Prepared confirmation email, mobile; synthetic code](accounts/email-confirmation-mobile.png)
 ![Prepared recovery email, desktop; synthetic code](accounts/email-recovery-desktop.png)
