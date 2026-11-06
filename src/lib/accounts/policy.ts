@@ -129,7 +129,15 @@ export function storagePath(owner: string, project: string, digest: string) {
 }
 export function safeOrigin(value: string, production: boolean) {
   const u = new URL(value);
+  const host = u.hostname.replace(/\.$/, "").toLowerCase();
   if (
+    (production &&
+      (host === "localhost" ||
+        host.endsWith(".localhost") ||
+        host === "0.0.0.0" ||
+        /^127\./.test(host) ||
+        host === "[::1]" ||
+        host === "[::]")) ||
     u.username ||
     u.password ||
     u.pathname !== "/" ||

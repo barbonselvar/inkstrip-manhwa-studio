@@ -2,6 +2,8 @@
 
 Current hosted project and verified/blocked results: [SUPABASE_HOSTED_SETUP.md](SUPABASE_HOSTED_SETUP.md).
 
+Current redirect incident, exact URL fields and live diagnostic evidence: [ACCOUNTS_REDIRECT_FIX.md](ACCOUNTS_REDIRECT_FIX.md). The owner confirmed both original messages arrived, but their links fell back to localhost; this is not a working authentication/reset result. All email requests now set explicit callbacks in both UI modes. Apply all three migrations before enabling current account code.
+
 This feature remains **disabled on production**. The Free hosted Supabase project and three migrations are configured. Vercel access works and eight Production-only settings are prepared with accounts disabled; the private Supabase server credential is missing. An authorized built-in email signup, confirmation, provider password login/profile read/logout and second login passed. Recovery delivery was requested, but full application recovery, cross-user Storage and cloud restoration remain unverified. Local editing remains available. Mocked browser checks are not real delivery or OAuth evidence.
 
 For the continuation’s verified free-tier restrictions, ready-to-apply email templates, isolated live authorization checker and current owner-access blockers, see [ACCOUNTS_LIVE_RELEASE.md](ACCOUNTS_LIVE_RELEASE.md).

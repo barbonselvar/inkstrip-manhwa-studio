@@ -333,7 +333,6 @@ export async function handleAccount(
       const flow = url.searchParams.get("flow") ?? "",
         kind = jar.get(prefix + "email-kind") ?? "";
       if (
-        config.emailMode !== "link" ||
         !/^[a-f0-9]{64}$/.test(flow) ||
         !equal(flow, jar.get(prefix + "email-flow") ?? "") ||
         !["email_signup", "email_recovery"].includes(kind)
@@ -530,9 +529,7 @@ export async function handleAccount(
           password,
           options: {
             data: { display_name: name, terms_version: CONSENT_VERSION },
-            ...(config.emailMode === "link"
-              ? { emailRedirectTo: await emailLink("email_signup", email) }
-              : {}),
+            emailRedirectTo: await emailLink("email_signup", email),
           },
         });
         if (r.data.session) {
@@ -576,20 +573,17 @@ export async function handleAccount(
       if (route === "forgot" || route === "resend") {
         await rate("resend-email", email, 1, 60);
         await rate("send-email", email, 3, 600);
-        const redirectTo =
-          config.emailMode === "link"
-            ? await emailLink(route === "forgot" ? "email_recovery" : "email_signup", email)
-            : undefined;
+        const redirectTo = await emailLink(
+          route === "forgot" ? "email_recovery" : "email_signup",
+          email,
+        );
         const r =
           route === "forgot"
-            ? await client.auth.resetPasswordForEmail(
-                email,
-                redirectTo ? { redirectTo } : undefined,
-              )
+            ? await client.auth.resetPasswordForEmail(email, { redirectTo })
             : await client.auth.resend({
                 type: "signup",
                 email,
-                ...(redirectTo ? { options: { emailRedirectTo: redirectTo } } : {}),
+                options: { emailRedirectTo: redirectTo },
               });
         if (r.error?.status === 429)
           throw new Failure(

@@ -545,6 +545,36 @@ test("email link signup binds PKCE redirect, browser nonce, intended email and s
   assert.equal(f.calls.filter((c) => c[0] === "exchange").length, 1);
   assert.ok(!f.actions.some((a) => a.kind === "recovery"));
 });
+for (const mode of ["otp", "link"])
+  test(`all ${mode} email requests set a trusted production callback instead of provider defaults`, async () => {
+    const f = fixture({ INKSTRIP_EMAIL_MODE: mode });
+    await f.req("session");
+    await f.req(
+      "signup",
+      { email: user.email, name: "Creator", password: "Warrior 2026!", accepted: true },
+      { host: "localhost:3000", "x-forwarded-host": "evil.test", "x-forwarded-proto": "http" },
+    );
+    await f.req("forgot", { email: user.email });
+    await f.req("resend", { email: user.email });
+    const urls = [
+      f.calls.find((c) => c[0] === "signup")[1].options.emailRedirectTo,
+      f.calls.find((c) => c[0] === "forgot")[2].redirectTo,
+      f.calls.find((c) => c[0] === "resend")[1].options.emailRedirectTo,
+    ];
+    for (const value of urls) {
+      const u = new URL(value);
+      assert.equal(u.origin, "https://inkstrip.test");
+      assert.equal(u.pathname, "/api/account/email-callback");
+      assert.match(u.searchParams.get("flow")!, /^[a-f0-9]{64}$/);
+      assert.doesNotMatch(value, /localhost|evil\.test/);
+    }
+    assert.equal(new Set(urls).size, 3);
+    const flow = f.jar.get("__Host-inkstrip-email-flow")!;
+    assert.equal(
+      (await f.req(`email-callback?flow=${flow}&code=example`)).headers.get("location"),
+      "https://inkstrip.test/account?notice=email_verified",
+    );
+  });
 test("email link recovery requires a recovery PKCE exchange and a session-bound single-use grant", async () => {
   const f = fixture({ INKSTRIP_EMAIL_MODE: "link" });
   await f.req("session");

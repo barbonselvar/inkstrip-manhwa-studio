@@ -4,6 +4,8 @@ This extends PR #35. **Supabase and Vercel access work; full application account
 
 ## Current access boundary
 
+The owner has now confirmed receipt of both real emails, and reported Android redirects to localhost. Live diagnostics confirm the default and requested production callbacks resolve to `http://localhost:3000`. This is an unresolved live gate. See [ACCOUNTS_REDIRECT_FIX.md](ACCOUNTS_REDIRECT_FIX.md) for exact settings, callback readiness and tested local fixes. Provider delivery and successful application callbacks remain distinct.
+
 Supabase management access is connected. The existing Free organization has the Paris project and three verified migrations. Vercel's existing `ss-ac00/inkstrip-manhwa-studio` project is authorized. Eight Production-only variables are configured; account/OAuth enable flags remain false, and no credentials were copied into previews. `SUPABASE_SERVICE_ROLE_KEY` is missing from both Vercel and the managed live-QA environment. Available Supabase tools do not expose private keys or Auth URL/email settings. Bind the key through secure Secret interfaces only; never paste it, passwords or codes into chat.
 
 The optional `INKSTRIP_EMAIL_MODE=link` follow-up preserves OTP mode and adds official PKCE links for default-template testing. Browser/email-bound intents and the provider recovery event prevent a link/query flag from bypassing identity checks. Its additive migration retains existing data. Provider send-limit responses are surfaced honestly and verifier-cookie deletions preserve Max-Age zero. These changes are locally tested; real application callbacks/recovery remain unverified. The built-in sender is restricted to authorized recipients and two messages/hour, not public production registration.

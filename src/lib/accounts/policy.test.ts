@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { accountConfig } from "./config.server.ts";
 import {
   CHUNK_BYTES,
@@ -42,8 +43,27 @@ test("configuration fails closed without credentials and refuses noncanonical or
     "https://example.com/path",
     "https://user@example.com",
     "https://example.com?next=bad",
+    "https://localhost:3000",
+    "https://localhost.",
+    "https://editor.localhost",
+    "https://127.0.0.1:8080",
+    "https://127.1",
+    "https://[::1]",
+    "https://0.0.0.0",
+    "https://[::]",
   ])
     assert.throws(() => safeOrigin(u, true));
   assert.equal(safeOrigin("http://localhost:8080", false), "http://localhost:8080");
   assert.throws(() => safeOrigin("ftp://localhost", false));
+});
+test("email templates retain provider-generated verification URLs rather than hardcoded redirects", async () => {
+  for (const name of ["confirm-signup", "recover-password"]) {
+    const html = await readFile(
+      new URL(`../../../supabase/templates/${name}.html`, import.meta.url),
+      "utf8",
+    );
+    assert.match(html, /href="\{\{ \.ConfirmationURL \}\}"/);
+    assert.match(html, /\{\{ \.Token \}\}/);
+    assert.doesNotMatch(html, /localhost|127\.0\.0\.1|\.SiteURL|access_token=|refresh_token=/);
+  }
 });

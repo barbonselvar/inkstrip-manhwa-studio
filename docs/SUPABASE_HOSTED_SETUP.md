@@ -1,5 +1,7 @@
 # Hosted Supabase setup — November 6, 2026
 
+Latest redirect incident: [ACCOUNTS_REDIRECT_FIX.md](ACCOUNTS_REDIRECT_FIX.md). Both original emails are confirmed delivered by the owner. Their Android links resolve to localhost, and the live URL diagnostic reproduces that provider fallback. No working live callback/reset is claimed. Latest local redirect fixes pass 1,223 tests; earlier counts below document the preceding email-link follow-up.
+
 PR #35 remains a draft. **Restricted provider signup/confirmation/password login/profile read/logout have now passed with the owner-authorized test identity. Full application recovery, cross-user file transfers and OAuth are not yet verified.** No merge or Vercel deployment is claimed. The latest local follow-up adds PKCE email links because the owner has no custom domain or SMTP account and selected Supabase's restricted built-in sender.
 
 ## Vercel and email continuation

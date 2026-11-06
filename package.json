@@ -112,6 +112,7 @@
     "test:composition:integrity": "node scripts/composition-deep-check.mjs",
     "test:composition:advanced": "node scripts/composition-advanced-browser-check.mjs",
     "test:accounts": "node --experimental-strip-types --test src/lib/accounts/*.test.ts",
+    "test:accounts:redirects": "node --experimental-strip-types scripts/accounts-redirect-check.mjs",
     "test:accounts:browser": "node scripts/accounts-browser-check.mjs",
     "test:accounts:live": "node scripts/accounts-live-security-check.mjs"
   },
