@@ -10,6 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as LegalDocumentRouteImport } from './routes/legal/$document'
+import { Route as ApiAccountSplatRouteImport } from './routes/api/account/$'
 import { Route as ApiStudioAiEditRouteImport } from './routes/api/studio/ai-edit'
 import { Route as PProjectIdIndexRouteImport } from './routes/p/$projectId/index'
 import { Route as PProjectIdCChapterIdRouteImport } from './routes/p/$projectId/c/$chapterId'
@@ -17,6 +20,21 @@ import { Route as PProjectIdCChapterIdRouteImport } from './routes/p/$projectId/
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalDocumentRoute = LegalDocumentRouteImport.update({
+  id: '/legal/$document',
+  path: '/legal/$document',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAccountSplatRoute = ApiAccountSplatRouteImport.update({
+  id: '/api/account/$',
+  path: '/api/account/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiStudioAiEditRoute = ApiStudioAiEditRouteImport.update({
@@ -37,12 +55,18 @@ const PProjectIdCChapterIdRoute = PProjectIdCChapterIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/legal/$document': typeof LegalDocumentRoute
+  '/api/account/$': typeof ApiAccountSplatRoute
   '/api/studio/ai-edit': typeof ApiStudioAiEditRoute
   '/p/$projectId/': typeof PProjectIdIndexRoute
   '/p/$projectId/c/$chapterId': typeof PProjectIdCChapterIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/legal/$document': typeof LegalDocumentRoute
+  '/api/account/$': typeof ApiAccountSplatRoute
   '/api/studio/ai-edit': typeof ApiStudioAiEditRoute
   '/p/$projectId': typeof PProjectIdIndexRoute
   '/p/$projectId/c/$chapterId': typeof PProjectIdCChapterIdRoute
@@ -50,6 +74,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/legal/$document': typeof LegalDocumentRoute
+  '/api/account/$': typeof ApiAccountSplatRoute
   '/api/studio/ai-edit': typeof ApiStudioAiEditRoute
   '/p/$projectId/': typeof PProjectIdIndexRoute
   '/p/$projectId/c/$chapterId': typeof PProjectIdCChapterIdRoute
@@ -58,15 +85,27 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
+    | '/legal/$document'
+    | '/api/account/$'
     | '/api/studio/ai-edit'
     | '/p/$projectId/'
     | '/p/$projectId/c/$chapterId'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/api/studio/ai-edit' | '/p/$projectId' | '/p/$projectId/c/$chapterId'
+    | '/'
+    | '/account'
+    | '/legal/$document'
+    | '/api/account/$'
+    | '/api/studio/ai-edit'
+    | '/p/$projectId'
+    | '/p/$projectId/c/$chapterId'
   id:
     | '__root__'
     | '/'
+    | '/account'
+    | '/legal/$document'
+    | '/api/account/$'
     | '/api/studio/ai-edit'
     | '/p/$projectId/'
     | '/p/$projectId/c/$chapterId'
@@ -74,6 +113,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
+  LegalDocumentRoute: typeof LegalDocumentRoute
+  ApiAccountSplatRoute: typeof ApiAccountSplatRoute
   ApiStudioAiEditRoute: typeof ApiStudioAiEditRoute
   PProjectIdIndexRoute: typeof PProjectIdIndexRoute
   PProjectIdCChapterIdRoute: typeof PProjectIdCChapterIdRoute
@@ -86,6 +128,27 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/$document': {
+      id: '/legal/$document'
+      path: '/legal/$document'
+      fullPath: '/legal/$document'
+      preLoaderRoute: typeof LegalDocumentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/account/$': {
+      id: '/api/account/$'
+      path: '/api/account/$'
+      fullPath: '/api/account/$'
+      preLoaderRoute: typeof ApiAccountSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/studio/ai-edit': {
@@ -114,6 +177,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
+  LegalDocumentRoute: LegalDocumentRoute,
+  ApiAccountSplatRoute: ApiAccountSplatRoute,
   ApiStudioAiEditRoute: ApiStudioAiEditRoute,
   PProjectIdIndexRoute: PProjectIdIndexRoute,
   PProjectIdCChapterIdRoute: PProjectIdCChapterIdRoute,

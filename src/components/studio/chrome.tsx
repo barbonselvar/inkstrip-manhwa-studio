@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useStudio } from "@/lib/studio/store";
 import { cn } from "@/lib/utils";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { X, Layers3, Info, WifiOff } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 export function AppReady({ children }: { children: ReactNode }) {
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const accountPage = pathname === "/account" || pathname.startsWith("/legal/");
   const hydrate = useStudio((state) => state.hydrate);
   const ready = useStudio((state) => state.ready);
   const banner = useStudio((state) => state.banner);
@@ -25,7 +27,7 @@ export function AppReady({ children }: { children: ReactNode }) {
       <AppearanceRuntime />
       <ConnectivityNotice />
       {banner ? <Banner text={banner} onDismiss={dismissBanner} /> : null}
-      {ready ? children : <BootScreen />}
+      {ready || accountPage ? children : <BootScreen />}
     </>
   );
 }
