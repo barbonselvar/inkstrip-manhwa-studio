@@ -41,6 +41,12 @@ before(async () => {
       "utf8",
     ),
   );
+  await db.exec(
+    await readFile(
+      new URL("../../../supabase/migrations/20261106134024_email_link_flows.sql", import.meta.url),
+      "utf8",
+    ),
+  );
   await db.query(
     "insert into auth.users(id,email,email_confirmed_at) values($1,'a@test.test',now()),($2,'b@test.test',now()),($3,'unverified@test.test',null)",
     [A, B, C],
@@ -54,6 +60,30 @@ before(async () => {
   project = (opened.rows[0] as any).value.id;
 });
 after(async () => db.close());
+test("email intent migration preserves private ledger grants and requires hashed targets", async () => {
+  await as(
+    "service_role",
+    "",
+    "insert into public.inkstrip_account_actions(id_hash,kind,email_hash,expires_at) values($1,'email_signup',$2,now()+interval '10 minutes')",
+    ["d".repeat(64), "e".repeat(64)],
+  );
+  await assert.rejects(
+    as(
+      "service_role",
+      "",
+      "insert into public.inkstrip_account_actions(id_hash,kind,expires_at) values($1,'email_recovery',now())",
+      ["c".repeat(64)],
+    ),
+    /inkstrip_email_intent_target/,
+  );
+  await assert.rejects(
+    as("authenticated", A, "select email_hash from public.inkstrip_account_actions"),
+    /permission denied/,
+  );
+  await as("service_role", "", "delete from public.inkstrip_account_actions where id_hash=$1", [
+    "d".repeat(64),
+  ]);
+});
 test("actual PostgreSQL RLS isolates profiles and rejects anonymous/unverified access", async () => {
   assert.equal(
     (await as("authenticated", A, "select id from public.inkstrip_profiles")).rows.length,

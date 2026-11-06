@@ -27,6 +27,8 @@ const projects = [],
   chunks = new Map(),
   records = new Map();
 let signed = false,
+  emailMode = "otp",
+  recovered = false,
   failUpload = false,
   partCalls = 0,
   commitCalls = 0,
@@ -43,6 +45,8 @@ async function attach(context) {
       route.fulfill({ status, contentType: "application/json", body: JSON.stringify(value) });
     if (path === "session")
       return send({
+        emailMode,
+        recovery: recovered,
         configured: true,
         reason: null,
         google: true,
@@ -67,6 +71,7 @@ async function attach(context) {
     }
     if (path === "logout" || path === "reset-password") {
       signed = false;
+      recovered = false;
       return send({ updated: true });
     }
     if (!signed) return send({ error: "Sign in.", code: "signed_out" }, 401);
@@ -391,6 +396,75 @@ try {
     );
     await mobile.close();
     results.push(`Touch ${width}px registration/dashboard + reduced motion + no overflow`);
+  }
+  emailMode = "link";
+  for (const width of [1440, 360, 390, 430]) {
+    signed = false;
+    recovered = false;
+    const linkContext = await browser.newContext({
+      viewport: { width, height: 1000 },
+      isMobile: width < 500,
+      hasTouch: width < 500,
+      reducedMotion: "reduce",
+    });
+    await attach(linkContext);
+    const page = await linkContext.newPage();
+    watch(page);
+    await page.goto(base + "/account");
+    await page.getByRole("button", { name: "Create an account", exact: true }).click();
+    await page.getByLabel("Display name", { exact: true }).fill("Link QA Creator");
+    await page.getByLabel("Email address", { exact: true }).fill(user.email);
+    await page.getByRole("textbox", { name: "Password", exact: true }).fill("Warrior 2026!");
+    await page
+      .getByRole("textbox", { name: "Confirm password", exact: true })
+      .fill("Warrior 2026!");
+    await page.getByRole("checkbox", { name: /I agree/ }).check();
+    await page.getByRole("button", { name: "Create account", exact: true }).click();
+    await page.getByText(/Open the latest email link in this browser/).waitFor();
+    assert.equal(await page.getByLabel("Six-digit code", { exact: true }).count(), 0);
+    await page.getByRole("button", { name: "Check verification", exact: true }).click();
+    await page.getByText(/then check again/).waitFor();
+    signed = true; // Only local provider transport is mocked; no real email link is used.
+    await page.goto(base + "/account?notice=email_verified");
+    await page.getByRole("button", { name: "Enter your account", exact: true }).click();
+    await page.getByRole("heading", { name: "Creator profile", exact: true }).waitFor();
+    await page.goto(base + "/account?notice=recovery_verified");
+    await page.getByRole("heading", { name: "Creator profile", exact: true }).waitFor();
+    assert.equal(
+      await page.getByRole("button", { name: "Update password", exact: true }).count(),
+      0,
+    );
+    signed = false;
+    await page.goto(base + "/account");
+    await page.getByRole("button", { name: "Forgot password?", exact: true }).click();
+    await page.getByLabel("Email address", { exact: true }).fill(user.email);
+    await page.getByRole("button", { name: "Send recovery link", exact: true }).click();
+    await page.getByRole("button", { name: "Check verification", exact: true }).waitFor();
+    signed = true;
+    recovered = true; // Matches a successful BFF recovery callback, separately server-tested.
+    await page.goto(base + "/account?notice=recovery_verified");
+    await page.getByRole("button", { name: "Update password", exact: true }).waitFor();
+    await page.getByRole("textbox", { name: "Password", exact: true }).fill("Newwarrior 2026!");
+    await page
+      .getByRole("textbox", { name: "Confirm password", exact: true })
+      .fill("Newwarrior 2026!");
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    );
+    if (width === 390 || width === 1440)
+      await page.screenshot({
+        path: `/workspace/screenshots/accounts-email-link-reset-${width}.png`,
+        fullPage: true,
+      });
+    await page.getByRole("button", { name: "Update password", exact: true }).click();
+    await page
+      .getByText("Password updated. Sign in with your new password.", { exact: true })
+      .waitFor();
+    await linkContext.close();
+    results.push(
+      `Email link signup/recovery at ${width}px, same-browser guidance, forged notice rejected; mocked provider`,
+    );
   }
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ ok: true, built, results, errors }, null, 2));

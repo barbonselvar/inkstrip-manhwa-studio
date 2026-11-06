@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 import { handleAccount, type ClientFactory } from "./server.server.ts";
 const env = {
   NODE_ENV: "production",
@@ -22,10 +23,84 @@ const user = {
   identities: [{ provider: "email" }],
 };
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
-function fixture() {
+test("official SSR client carries recovery PKCE cookies and emits the supported recovery event", async () => {
+  const cookies = new Map<string, string>(),
+    events: string[] = [];
+  let challenge = "";
+  const encode = (v: unknown) => Buffer.from(JSON.stringify(v)).toString("base64url");
+  const token = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ sub: user.id, aud: "authenticated", exp: Math.floor(Date.now() / 1000) + 3600, session_id: "session-test" })}.test-signature`;
+  const client = createServerClient("https://provider.test", "test-publishable", {
+    cookieOptions: { name: "__Host-inkstrip-session" },
+    cookies: {
+      getAll: () => Array.from(cookies, ([name, value]) => ({ name, value })),
+      setAll: (entries) => {
+        for (const e of entries) {
+          if (e.options.maxAge === 0) cookies.delete(e.name);
+          else cookies.set(e.name, e.value);
+        }
+      },
+    },
+    global: {
+      fetch: async (input, options) => {
+        const request = new Request(input, options),
+          url = new URL(request.url),
+          body = await request.json();
+        if (url.pathname === "/auth/v1/recover") {
+          challenge = body.code_challenge;
+          assert.equal(body.code_challenge_method, "s256");
+          assert.equal(
+            url.searchParams.get("redirect_to"),
+            "https://inkstrip.test/api/account/email-callback?flow=" + "a".repeat(64),
+          );
+          return new Response("{}", { headers: { "content-type": "application/json" } });
+        }
+        assert.equal(url.pathname, "/auth/v1/token");
+        assert.equal(url.searchParams.get("grant_type"), "pkce");
+        assert.equal(body.auth_code, "provider-code");
+        assert.equal(
+          createHash("sha256").update(body.code_verifier).digest("base64url"),
+          challenge,
+        );
+        return new Response(
+          JSON.stringify({
+            access_token: token,
+            refresh_token: "test-refresh",
+            token_type: "bearer",
+            expires_in: 3600,
+            user: { ...user, aud: "authenticated", app_metadata: {}, user_metadata: {} },
+          }),
+          { headers: { "content-type": "application/json" } },
+        );
+      },
+    },
+  });
+  const subscription = client.auth.onAuthStateChange((event) => {
+    events.push(event);
+  }).data.subscription;
+  try {
+    assert.equal(
+      (
+        await client.auth.resetPasswordForEmail(user.email, {
+          redirectTo: "https://inkstrip.test/api/account/email-callback?flow=" + "a".repeat(64),
+        })
+      ).error,
+      null,
+    );
+    assert.ok([...cookies.keys()].some((k) => k.includes("code-verifier")));
+    assert.equal((await client.auth.exchangeCodeForSession("provider-code")).error, null);
+    assert.ok(events.includes("PASSWORD_RECOVERY"));
+    // The SDK dual-writes bounded per-flow slots for newer redirects. A legacy
+    // exchange consumes the fixed slot; BFF intents separately reject replay.
+    assert.equal(cookies.has("__Host-inkstrip-session-code-verifier"), false);
+  } finally {
+    subscription.unsubscribe();
+  }
+});
+function fixture(overrides: Record<string, string> = {}) {
   const calls: any[] = [],
     actions: any[] = [],
-    jar = new Map<string, string>();
+    jar = new Map<string, string>(),
+    authEvents = new Set<(event: string) => void>();
   let signed = false,
     invalid = false,
     verifyError = false,
@@ -33,7 +108,10 @@ function fixture() {
     unverified = false,
     autoConfirm = false,
     grantExpiry = false,
-    logoutError = false;
+    logoutError = false,
+    verifierCookies = false,
+    emailLimited = false,
+    redirectType: string | null = null;
   const result = (data: any = null, error: any = null) => Promise.resolve({ data, error });
   function query(table: string) {
     let data: any = null;
@@ -67,6 +145,10 @@ function fixture() {
     return q;
   }
   const auth: any = {
+    onAuthStateChange: (callback: (event: string) => void) => {
+      authEvents.add(callback);
+      return { data: { subscription: { unsubscribe: () => authEvents.delete(callback) } } };
+    },
     getUser: () =>
       result({
         user: signed
@@ -76,7 +158,7 @@ function fixture() {
     getClaims: () => result({ claims: { session_id: "session-A" } }),
     signUp: (v: any) => {
       calls.push(["signup", v]);
-      return result({ session: autoConfirm ? {} : null });
+      return result({ session: autoConfirm ? {} : null }, emailLimited ? { status: 429 } : null);
     },
     signInWithPassword: (v: any) => {
       calls.push(["login", v]);
@@ -92,11 +174,11 @@ function fixture() {
     },
     resend: (v: any) => {
       calls.push(["resend", v]);
-      return result();
+      return result(null, emailLimited ? { status: 429 } : null);
     },
-    resetPasswordForEmail: (v: any) => {
-      calls.push(["forgot", v]);
-      return result();
+    resetPasswordForEmail: (v: any, options: any) => {
+      calls.push(["forgot", v, options]);
+      return result(null, emailLimited ? { status: 429 } : null);
     },
     signOut: (v: any) => {
       calls.push(["logout", v]);
@@ -119,7 +201,9 @@ function fixture() {
     exchangeCodeForSession: (v: any) => {
       calls.push(["exchange", v]);
       signed = true;
-      return result({ user });
+      for (const callback of authEvents)
+        callback(redirectType === "recovery" ? "PASSWORD_RECOVERY" : "SIGNED_IN");
+      return result({ user, redirectType });
     },
   };
   const client = { auth, from: query };
@@ -163,6 +247,15 @@ function fixture() {
     },
   };
   const factory: ClientFactory = (_r, c) => {
+    if (verifierCookies)
+      c.setAll([
+        { name: "__Host-inkstrip-session-code-verifier", value: "", options: { maxAge: 0 } },
+        {
+          name: "__Host-inkstrip-session-flow-pending-code-verifier",
+          value: "opaque-test-verifier",
+          options: { maxAge: 2592000 },
+        },
+      ]);
     if (signed)
       c.setAll([
         {
@@ -193,7 +286,7 @@ function fixture() {
           },
           body: body === undefined ? undefined : JSON.stringify(body),
         }),
-        env,
+        { ...env, ...overrides },
         factory,
       );
     for (const line of r.headers.getSetCookie()) {
@@ -216,6 +309,9 @@ function fixture() {
     setAutoConfirm: () => (autoConfirm = true),
     expire: () => (grantExpiry = true),
     failLogout: () => (logoutError = true),
+    emailLimited: () => (emailLimited = true),
+    recoveryExchange: () => (redirectType = "recovery"),
+    verifierCookies: () => (verifierCookies = true),
   };
 }
 test("missing credentials return an honest setup state without initializing provider clients", async () => {
@@ -409,6 +505,155 @@ test("OAuth reauthentication cannot grant rights to a different account", async 
   const r = await f.req(`callback?flow=${flow}&code=example`);
   assert.match(r.headers.get("location")!, /identity_mismatch/);
   assert.equal(f.jar.get("__Host-inkstrip-fresh"), undefined);
+});
+test("email link signup binds PKCE redirect, browser nonce, intended email and single use", async () => {
+  const f = fixture({ INKSTRIP_EMAIL_MODE: "link" });
+  assert.equal((await (await f.req("session")).json()).emailMode, "link");
+  assert.equal(
+    (
+      await f.req("signup", {
+        email: user.email,
+        name: "Creator",
+        password: "Warrior 2026!",
+        accepted: true,
+      })
+    ).status,
+    200,
+  );
+  const flow = f.jar.get("__Host-inkstrip-email-flow")!;
+  assert.equal(
+    f.calls.find((c) => c[0] === "signup")[1].options.emailRedirectTo,
+    `https://inkstrip.test/api/account/email-callback?flow=${flow}`,
+  );
+  assert.equal(f.actions[0].email_hash, hash(user.email));
+  assert.ok(!JSON.stringify(f.actions).includes(user.email));
+  assert.match(
+    (await f.req("email-callback?flow=wrong&code=example")).headers.get("location")!,
+    /email_failed/,
+  );
+  assert.equal(f.calls.filter((c) => c[0] === "exchange").length, 0);
+  assert.equal(
+    (await f.req(`email-callback?flow=${flow}&code=example`)).headers.get("location"),
+    "https://inkstrip.test/account?notice=email_verified",
+  );
+  f.jar.set("__Host-inkstrip-email-flow", flow);
+  f.jar.set("__Host-inkstrip-email-kind", "email_signup");
+  assert.match(
+    (await f.req(`email-callback?flow=${flow}&code=example`)).headers.get("location")!,
+    /email_failed/,
+  );
+  assert.equal(f.calls.filter((c) => c[0] === "exchange").length, 1);
+  assert.ok(!f.actions.some((a) => a.kind === "recovery"));
+});
+test("email link recovery requires a recovery PKCE exchange and a session-bound single-use grant", async () => {
+  const f = fixture({ INKSTRIP_EMAIL_MODE: "link" });
+  await f.req("session");
+  f.setSigned(true);
+  assert.equal(
+    (await f.req("reset-password", { password: "Warrior 2026!", verified: true })).status,
+    403,
+  );
+  f.setSigned(false);
+  await f.req("forgot", { email: user.email });
+  const flow = f.jar.get("__Host-inkstrip-email-flow")!;
+  assert.equal(
+    f.calls.find((c) => c[0] === "forgot")[2].redirectTo,
+    `https://inkstrip.test/api/account/email-callback?flow=${flow}`,
+  );
+  f.recoveryExchange();
+  assert.equal(
+    (await f.req(`email-callback?flow=${flow}&code=example`)).headers.get("location"),
+    "https://inkstrip.test/account?notice=recovery_verified",
+  );
+  assert.equal((await (await f.req("session")).json()).recovery, true);
+  const recovery = f.jar.get("__Host-inkstrip-recovery")!;
+  assert.equal((await f.req("reset-password", { password: "Warrior 2026!" })).status, 200);
+  f.setSigned(true);
+  f.jar.set("__Host-inkstrip-recovery", recovery);
+  assert.equal((await f.req("reset-password", { password: "Anotherwarrior 2026!" })).status, 403);
+  assert.equal(f.calls.filter((c) => c[0] === "password").length, 1);
+});
+test("a signup PKCE code cannot mint a password-recovery grant", async () => {
+  const f = fixture({ INKSTRIP_EMAIL_MODE: "link" });
+  await f.req("session");
+  await f.req("forgot", { email: user.email });
+  const flow = f.jar.get("__Host-inkstrip-email-flow")!;
+  assert.match(
+    (await f.req(`email-callback?flow=${flow}&code=signup-code`)).headers.get("location")!,
+    /email_failed/,
+  );
+  assert.ok(!f.actions.some((a) => a.kind === "recovery"));
+  assert.equal((await (await f.req("session")).json()).user, null);
+});
+test("email link expiry, wrong-account exchange and provider cancellation never grant reset rights", async () => {
+  for (const failure of ["expired", "wrong-account", "cancelled"]) {
+    const f = fixture({ INKSTRIP_EMAIL_MODE: "link" });
+    await f.req("session");
+    await f.req("forgot", { email: user.email });
+    const flow = f.jar.get("__Host-inkstrip-email-flow")!;
+    f.recoveryExchange();
+    if (failure === "expired") f.expire();
+    if (failure === "wrong-account") f.actions[0].email_hash = hash("someone-else@example.com");
+    const query = failure === "cancelled" ? "error=access_denied" : "code=example";
+    assert.match(
+      (await f.req(`email-callback?flow=${flow}&${query}`)).headers.get("location")!,
+      /email_failed/,
+    );
+    assert.ok(!f.actions.some((a) => a.kind === "recovery"));
+    assert.equal(
+      f.calls.filter((c) => c[0] === "exchange").length,
+      failure === "wrong-account" ? 1 : 0,
+    );
+  }
+});
+test("email link resend invalidates the older browser intent and logout clears email intent cookies", async () => {
+  const f = fixture({ INKSTRIP_EMAIL_MODE: "link" });
+  await f.req("session");
+  await f.req("resend", { email: user.email });
+  const oldFlow = f.jar.get("__Host-inkstrip-email-flow")!;
+  await f.req("resend", { email: user.email });
+  const currentFlow = f.jar.get("__Host-inkstrip-email-flow")!;
+  assert.notEqual(currentFlow, oldFlow);
+  assert.equal(
+    f.calls.filter((c) => c[0] === "resend")[1][1].options.emailRedirectTo,
+    `https://inkstrip.test/api/account/email-callback?flow=${currentFlow}`,
+  );
+  await f.req(`email-callback?flow=${oldFlow}&code=example`);
+  assert.equal(f.calls.filter((c) => c[0] === "exchange").length, 0);
+  await f.req("logout", {});
+  assert.equal(f.jar.get("__Host-inkstrip-email-flow"), "");
+  assert.equal(f.jar.get("__Host-inkstrip-email-kind"), "");
+});
+test("email provider rate limits are reported honestly without leaking account state", async () => {
+  for (const route of ["signup", "resend", "forgot"]) {
+    const f = fixture();
+    await f.req("session");
+    f.emailLimited();
+    const r = await f.req(route, {
+      email: user.email,
+      name: "Creator",
+      password: "Warrior 2026!",
+      accepted: true,
+    });
+    assert.equal(r.status, 429);
+    assert.equal(r.headers.get("retry-after"), "3600");
+    assert.equal((await r.json()).code, "rate_limited");
+  }
+});
+test("verifier cookies expire in ten minutes while SDK deletion retains Max-Age zero", async () => {
+  const f = fixture();
+  f.verifierCookies();
+  const headers = (await f.req("session")).headers.getSetCookie();
+  assert.match(
+    headers.find((h) => h.startsWith("__Host-inkstrip-session-code-verifier="))!,
+    /Max-Age=0/,
+  );
+  const active = headers.find((h) =>
+    h.startsWith("__Host-inkstrip-session-flow-pending-code-verifier="),
+  )!;
+  assert.match(active, /Max-Age=600/);
+  assert.match(active, /HttpOnly/);
+  assert.match(active, /Secure/);
 });
 test("signed-out private endpoints and deletion require verified identity and fresh grant", async () => {
   const f = fixture();

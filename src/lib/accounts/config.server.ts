@@ -15,6 +15,8 @@ export function accountConfig(env: AccountEnv) {
       reason: "Cloud accounts are not configured. Your local studio remains available.",
     };
   try {
+    const emailMode = env.INKSTRIP_EMAIL_MODE ?? "otp";
+    if (emailMode !== "otp" && emailMode !== "link") throw Error();
     const origin = safeOrigin(values[0]!, production),
       url = new URL(values[1]!);
     if (
@@ -37,6 +39,7 @@ export function accountConfig(env: AccountEnv) {
       anon: values[2]!,
       service: values[3]!,
       rateSecret: values[4]!,
+      emailMode,
       secure: new URL(origin).protocol === "https:",
       google: env.INKSTRIP_GOOGLE_ENABLED === "true",
       facebook: env.INKSTRIP_FACEBOOK_ENABLED === "true",

@@ -1,10 +1,12 @@
 # Live account release — configuration and evidence
 
-This extends PR #35. **Supabase management access and the hosted database are now configured; live account end-to-end verification is still blocked.** See [SUPABASE_HOSTED_SETUP.md](SUPABASE_HOSTED_SETUP.md) for the current project, applied migrations, real API checks and remaining access requirements. Existing local/mock evidence in ACCOUNTS_IMPLEMENTATION.md is not live-provider evidence. No user email address has been supplied for this release session and no real signup/recovery email has been sent. No merge or production deployment is authorized until the specified gates actually pass.
+This extends PR #35. **Supabase and Vercel access work; full application account end-to-end verification is still blocked.** See [SUPABASE_HOSTED_SETUP.md](SUPABASE_HOSTED_SETUP.md) for current evidence. The owner supplied a recipient and requested restricted built-in email tests without a domain, SMTP account or paid service. One real signup and one recovery delivery request were accepted. Hosted email confirmation, provider password login, profile creation/read, logout and second login passed; full reset and receipt of both messages require owner/UI verification. Existing mock evidence is not live-provider evidence. No merge or production deployment is authorized until the gates pass.
 
 ## Current access boundary
 
-Supabase management access is connected. The existing Free organization now has the Paris Inkstrip project, and both database migrations have been applied and verified. Available Supabase tools do not expose Auth/SMTP configuration or private project keys. Vercel access is still unavailable in this session. A private server credential binding, verified sender configuration, provider setup and authorized test email remain required; never paste secrets or OTPs into chat or reports.
+Supabase management access is connected. The existing Free organization has the Paris project and three verified migrations. Vercel's existing `ss-ac00/inkstrip-manhwa-studio` project is authorized. Eight Production-only variables are configured; account/OAuth enable flags remain false, and no credentials were copied into previews. `SUPABASE_SERVICE_ROLE_KEY` is missing from both Vercel and the managed live-QA environment. Available Supabase tools do not expose private keys or Auth URL/email settings. Bind the key through secure Secret interfaces only; never paste it, passwords or codes into chat.
+
+The optional `INKSTRIP_EMAIL_MODE=link` follow-up preserves OTP mode and adds official PKCE links for default-template testing. Browser/email-bound intents and the provider recovery event prevent a link/query flag from bypassing identity checks. Its additive migration retains existing data. Provider send-limit responses are surfaced honestly and verifier-cookie deletions preserve Max-Age zero. These changes are locally tested; real application callbacks/recovery remain unverified. The built-in sender is restricted to authorized recipients and two messages/hour, not public production registration.
 
 Current details and exact remaining owner steps are in [SUPABASE_HOSTED_SETUP.md](SUPABASE_HOSTED_SETUP.md). No paid plan or domain purchase is authorized.
 
@@ -49,15 +51,15 @@ Guard tests for this runner use fake transports solely to test refusal, cleanup 
 
 ## Evidence status for this continuation
 
-| Gate                                                        | Status                                                                                    |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Existing implementation / local/mock tests                  | Implemented; prior evidence retained, 1,202 tests at prior feature head                   |
-| New live-runner guard tests                                 | Local safety checks only; not hosted authorization evidence                               |
-| Supabase connection / migration application / RLS / Storage | Database configured; real anonymous HTTP denial verified; authenticated E2E still blocked |
-| Real verification/recovery delivery                         | Blocked by authorized email, project connection and sender configuration                  |
-| Google / Facebook                                           | Blocked by provider credentials/owner consent; public Meta approval must be distinguished |
-| Real full-project browser recovery                          | Blocked by actual hosted backend credentials                                              |
-| Production auth release                                     | Not merged or deployed; no merge SHA                                                      |
+| Gate                                                        | Status                                                                                                                    |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Existing implementation / local/mock tests                  | Implemented; prior evidence retained, 1,202 tests at prior feature head                                                   |
+| New live-runner guard tests                                 | Local safety checks only; not hosted authorization evidence                                                               |
+| Supabase connection / migration application / RLS / Storage | Database configured; real anonymous HTTP denial verified; authenticated E2E still blocked                                 |
+| Real verification/recovery delivery                         | Authorized signup/recovery requests accepted; provider email confirmed; full reset and recipient receipt still unverified |
+| Google / Facebook                                           | Blocked by provider credentials/owner consent; public Meta approval must be distinguished                                 |
+| Real full-project browser recovery                          | Blocked by actual hosted backend credentials                                                                              |
+| Production auth release                                     | Not merged or deployed; no merge SHA                                                                                      |
 
 ## Verified independent work in this continuation
 

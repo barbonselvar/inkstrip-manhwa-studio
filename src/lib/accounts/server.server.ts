@@ -170,7 +170,7 @@ export async function handleAccount(
           for (const item of items) {
             const remember = jar.get(prefix + "remember") !== "0",
               options = { ...item.options };
-            if (item.name.includes("code-verifier")) options.maxAge = 600;
+            if (item.name.includes("code-verifier") && options.maxAge !== 0) options.maxAge = 600;
             else if (options.maxAge !== 0) {
               delete options.expires;
               if (!remember) delete options.maxAge;
@@ -288,6 +288,19 @@ export async function handleAccount(
           "reauth_required",
         );
     };
+    const emailLink = async (kind: "email_signup" | "email_recovery", email: string) => {
+      const flow = randomBytes(32).toString("hex"),
+        r = await admin.from("inkstrip_account_actions").insert({
+          id_hash: digest(flow),
+          kind,
+          email_hash: digest(email),
+          expires_at: new Date(Date.now() + 600000).toISOString(),
+        });
+      if (r.error) throw new Failure(503, "Email link setup is incomplete. Contact support.");
+      set(prefix + "email-flow", flow, { maxAge: 600 });
+      set(prefix + "email-kind", kind, { maxAge: 600 });
+      return config.origin + "/api/account/email-callback?flow=" + flow;
+    };
     const safeUser = async (u: User): Promise<AccountUser> => {
       const p = await profile(u);
       return {
@@ -309,10 +322,59 @@ export async function handleAccount(
         reason: null,
         google: config.google,
         facebook: config.facebook,
+        emailMode: config.emailMode,
         user: u?.email_confirmed_at ? await safeUser(u) : null,
         csrf,
         fresh: !!jar.get(prefix + "fresh"),
+        recovery: !!jar.get(prefix + "recovery"),
       });
+    }
+    if (request.method === "GET" && route === "email-callback") {
+      const flow = url.searchParams.get("flow") ?? "",
+        kind = jar.get(prefix + "email-kind") ?? "";
+      if (
+        config.emailMode !== "link" ||
+        !/^[a-f0-9]{64}$/.test(flow) ||
+        !equal(flow, jar.get(prefix + "email-flow") ?? "") ||
+        !["email_signup", "email_recovery"].includes(kind)
+      )
+        throw new Failure(400, "The email flow could not be verified.");
+      const intent = await admin.rpc("inkstrip_consume_action", {
+        p_hash: digest(flow),
+        p_kind: kind,
+        p_user: null,
+        p_session: null,
+      });
+      set(prefix + "email-flow", "", { maxAge: 0 });
+      set(prefix + "email-kind", "", { maxAge: 0 });
+      if (intent.error || url.searchParams.has("error") || !url.searchParams.get("code"))
+        throw new Failure(400, "The email link expired or was used.");
+      let recoveryExchange = false;
+      const {
+        data: { subscription },
+      } = client.auth.onAuthStateChange((event) => {
+        if (event === "PASSWORD_RECOVERY") recoveryExchange = true;
+      });
+      const exchange = await client.auth
+        .exchangeCodeForSession(url.searchParams.get("code")!)
+        .finally(() => subscription.unsubscribe());
+      if (exchange.error) throw new Failure(400, "The email link could not be verified.");
+      const u = await confirmed();
+      if (
+        intent.data.email_hash !== digest(emailAddress(u.email)) ||
+        (kind === "email_recovery" ? !recoveryExchange : recoveryExchange)
+      ) {
+        await client.auth.signOut({ scope: "local" });
+        for (const name of jar.keys())
+          if (name.startsWith(prefix + "session")) set(name, "", { maxAge: 0 });
+        for (const name of ["fresh", "recovery"]) set(prefix + name, "", { maxAge: 0 });
+        throw new Failure(400, "The email link did not match this request.");
+      }
+      if (kind === "email_recovery") await grant("recovery", u);
+      await audit("email_link_verified", "ok", u.id);
+      return redirect(
+        "/account?notice=" + (kind === "email_recovery" ? "recovery_verified" : "email_verified"),
+      );
     }
     if (request.method === "GET" && route === "callback") {
       const flow = url.searchParams.get("flow") ?? "",
@@ -466,7 +528,12 @@ export async function handleAccount(
         const r = await client.auth.signUp({
           email,
           password,
-          options: { data: { display_name: name, terms_version: CONSENT_VERSION } },
+          options: {
+            data: { display_name: name, terms_version: CONSENT_VERSION },
+            ...(config.emailMode === "link"
+              ? { emailRedirectTo: await emailLink("email_signup", email) }
+              : {}),
+          },
         });
         if (r.data.session) {
           await client.auth.signOut({ scope: "local" });
@@ -476,6 +543,13 @@ export async function handleAccount(
             "setup_required",
           );
         }
+        if (r.error?.status === 429)
+          throw new Failure(
+            429,
+            "The email provider's sending limit was reached. Wait before requesting another email.",
+            "rate_limited",
+            3600,
+          );
         if (r.error && r.error.status && r.error.status >= 500)
           throw new Failure(503, "Account registration is temporarily unavailable.");
         await audit("signup_requested", "ok");
@@ -502,10 +576,28 @@ export async function handleAccount(
       if (route === "forgot" || route === "resend") {
         await rate("resend-email", email, 1, 60);
         await rate("send-email", email, 3, 600);
+        const redirectTo =
+          config.emailMode === "link"
+            ? await emailLink(route === "forgot" ? "email_recovery" : "email_signup", email)
+            : undefined;
         const r =
           route === "forgot"
-            ? await client.auth.resetPasswordForEmail(email)
-            : await client.auth.resend({ type: "signup", email });
+            ? await client.auth.resetPasswordForEmail(
+                email,
+                redirectTo ? { redirectTo } : undefined,
+              )
+            : await client.auth.resend({
+                type: "signup",
+                email,
+                ...(redirectTo ? { options: { emailRedirectTo: redirectTo } } : {}),
+              });
+        if (r.error?.status === 429)
+          throw new Failure(
+            429,
+            "The email provider's sending limit was reached. Wait before requesting another email.",
+            "rate_limited",
+            3600,
+          );
         if (r.error && r.error.status && r.error.status >= 500)
           throw new Failure(503, "Email service is temporarily unavailable.");
         await audit(route, "ok");
@@ -598,7 +690,7 @@ export async function handleAccount(
       const r = await client.auth.signOut({ scope: "local" });
       if (r.error && r.error.status && r.error.status >= 500)
         throw new Failure(503, "Logout could not be confirmed. Retry.");
-      for (const name of ["fresh", "recovery", "flow", "flow-kind"])
+      for (const name of ["fresh", "recovery", "flow", "flow-kind", "email-flow", "email-kind"])
         set(prefix + name, "", { maxAge: 0 });
       return json({ signedOut: true });
     }
@@ -796,6 +888,7 @@ export async function handleAccount(
     throw new Failure(404, "Account endpoint not found.");
   } catch (error) {
     if (route === "callback") return redirect("/account?notice=oauth_failed");
+    if (route === "email-callback") return redirect("/account?notice=email_failed");
     if (error instanceof Failure) {
       if (error.retry) headers.set("Retry-After", String(error.retry));
       return json({ error: error.message, code: error.code, requestId }, error.status);

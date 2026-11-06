@@ -26,6 +26,8 @@ export type AccountUser = {
   deleting: boolean;
 };
 export type AccountStatus = {
+  emailMode?: "otp" | "link";
+  recovery?: boolean;
   configured: boolean;
   reason: string | null;
   google: boolean;

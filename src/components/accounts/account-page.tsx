@@ -155,7 +155,11 @@ export function AccountPage({
   useEffect(() => {
     const c = new AbortController();
     void accountSession(c.signal)
-      .then(setStatus)
+      .then((s) => {
+        setStatus(s);
+        if (s.user && notice === "recovery_verified" && s.recovery) setView("reset");
+        else if (s.user && notice === "email_verified") setView("verified");
+      })
       .catch((e) => {
         if (!c.signal.aborted) setError(String(e.message ?? e));
       });
@@ -164,7 +168,7 @@ export function AccountPage({
       request.current?.abort();
       cancelAnimationFrame(frame.current);
     };
-  }, []);
+  }, [notice]);
   useEffect(() => {
     if (!cooldown) return;
     const timer = setInterval(() => setCooldown((s) => Math.max(0, s - 1)), 1000);
@@ -224,6 +228,16 @@ export function AccountPage({
         setMessage("If this address is eligible, a recovery email will arrive.");
         setCooldown(60);
       } else if (view === "verify" || view === "recover") {
+        if (status?.emailMode === "link") {
+          const s = await refresh();
+          if (s.user && (view === "verify" || s.recovery))
+            setView(view === "verify" ? "verified" : "reset");
+          else
+            setMessage(
+              "Open the latest email link in the same browser where you requested it, then check again.",
+            );
+          return;
+        }
         await accountPost(
           "verify",
           { email: emailAddress(email), code, type: view === "verify" ? "signup" : "recovery" },
@@ -256,7 +270,16 @@ export function AccountPage({
       );
       window.location.assign(r.url);
     });
-  const title = titles[view],
+  const emailLinks = status?.emailMode === "link",
+    title: [string, string] =
+      emailLinks && ["verify", "recover", "forgot"].includes(view)
+        ? [
+            titles[view][0],
+            view === "forgot"
+              ? "Request a secure password recovery link."
+              : "Open the latest email link in this browser within 10 minutes. Keep this browser session open.",
+          ]
+        : titles[view],
     signedIn = status?.user && view !== "reset" && view !== "recover" && view !== "verified";
   return (
     <main id="workspace" className="account-page">
@@ -351,13 +374,15 @@ export function AccountPage({
                     </div>
                   </div>
                 )}
-                {notice && (
+                {notice && !["email_verified", "recovery_verified"].includes(notice) && (
                   <p className="account-message" role="status">
-                    {notice === "oauth_cancelled"
-                      ? "Sign-in was cancelled. You can try again."
-                      : notice === "identity_mismatch"
-                        ? "The provider returned a different account. Sign in with your original account."
-                        : "Provider sign-in could not be completed. Please try again or use email."}
+                    {notice === "email_failed"
+                      ? "This email link could not be verified. Request a new link and open it in the same browser."
+                      : notice === "oauth_cancelled"
+                        ? "Sign-in was cancelled. You can try again."
+                        : notice === "identity_mismatch"
+                          ? "The provider returned a different account. Sign in with your original account."
+                          : "Provider sign-in could not be completed. Please try again or use email."}
                   </p>
                 )}
                 {error && (
@@ -446,7 +471,7 @@ export function AccountPage({
                           />
                         </>
                       )}
-                      {(view === "verify" || view === "recover") && (
+                      {!emailLinks && (view === "verify" || view === "recover") && (
                         <Field
                           label="Six-digit code"
                           hint="Codes expire after 10 minutes. Check your most recent email."
@@ -522,10 +547,14 @@ export function AccountPage({
                               : view === "signup"
                                 ? "Create account"
                                 : view === "forgot"
-                                  ? "Send recovery code"
+                                  ? emailLinks
+                                    ? "Send recovery link"
+                                    : "Send recovery code"
                                   : view === "reset"
                                     ? "Update password"
-                                    : "Verify email"}
+                                    : emailLinks
+                                      ? "Check verification"
+                                      : "Verify email"}
                             <ArrowUpRight size={18} />
                           </>
                         )}
@@ -545,11 +574,19 @@ export function AccountPage({
                           signal,
                         );
                         setCooldown(60);
-                        setMessage("If eligible, a new code will arrive. Use the latest email.");
+                        setMessage(
+                          emailLinks
+                            ? "If eligible, a new link will arrive. Open it in this browser."
+                            : "If eligible, a new code will arrive. Use the latest email.",
+                        );
                       })
                     }
                   >
-                    {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
+                    {cooldown > 0
+                      ? `Resend in ${cooldown}s`
+                      : emailLinks
+                        ? "Resend link"
+                        : "Resend code"}
                   </button>
                 )}
                 {["login", "signup"].includes(view) && (

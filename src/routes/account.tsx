@@ -4,7 +4,14 @@ export const Route = createFileRoute("/account")({
   validateSearch: (s: Record<string, unknown>): { notice?: string } => ({
     notice:
       typeof s.notice === "string" &&
-      ["oauth_cancelled", "identity_mismatch", "oauth_failed"].includes(s.notice)
+      [
+        "oauth_cancelled",
+        "identity_mismatch",
+        "oauth_failed",
+        "email_failed",
+        "email_verified",
+        "recovery_verified",
+      ].includes(s.notice)
         ? s.notice
         : undefined,
   }),
