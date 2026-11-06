@@ -322,6 +322,7 @@ export async function handleAccount(
         reason: null,
         google: config.google,
         facebook: config.facebook,
+        emailSignup: config.emailSignup,
         emailMode: config.emailMode,
         user: u?.email_confirmed_at ? await safeUser(u) : null,
         csrf,
@@ -518,6 +519,12 @@ export async function handleAccount(
       const email = emailAddress(body.email);
       await rate("auth-ip", ip, 60, 600);
       if (route === "signup") {
+        if (!config.emailSignup)
+          throw new Failure(
+            403,
+            "New email registration is closed. Continue with Google to create your account.",
+            "signup_disabled",
+          );
         const password = strongPassword(body.password),
           name = displayName(body.name);
         if (body.accepted !== true)

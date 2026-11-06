@@ -1154,3 +1154,60 @@
     transform: none !important;
   }
 }
+
+/* Google-first sign-in (public registration mode without custom SMTP) */
+.account-google-first {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.account-google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 20px;
+  background: #ffffff;
+  color: #1f1f1f;
+  border: 1px solid #dadce0;
+  border-radius: 10px;
+  font-family: "Roboto", "Outfit", Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 1px 2px #0000002e;
+  transition:
+    box-shadow 180ms ease,
+    transform 180ms ease,
+    background-color 180ms ease;
+}
+.account-google-button:hover:not(:disabled) {
+  background: #f8f9fa;
+  box-shadow: 0 6px 26px #9ae2c02e;
+  transform: translateY(-1px);
+}
+.account-google-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+.account-google-button:focus-visible {
+  outline: 3px solid #96d9c0;
+  outline-offset: 3px;
+}
+.account-google-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.account-google-mark {
+  flex: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .account-google-button {
+    transition: none;
+  }
+  .account-google-button:hover:not(:disabled) {
+    transform: none;
+  }
+}

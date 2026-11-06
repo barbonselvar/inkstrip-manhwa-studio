@@ -32,6 +32,8 @@ export type AccountStatus = {
   reason: string | null;
   google: boolean;
   facebook: boolean;
+  /** False in Google-only mode: new email/password registration is closed. */
+  emailSignup?: boolean;
   user: AccountUser | null;
   csrf: string;
   fresh: boolean;
