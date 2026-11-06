@@ -108,6 +108,13 @@ export function FadeShapeProperties({
         options={["Top", "Bottom", "Both"]}
         onChange={(placement) => set({ placement: placement as Boundary["placement"] })}
       />
+      <NumberField
+        label="Fade position (px)"
+        value={f.start}
+        min={0}
+        max={100000}
+        onChange={(start) => update({ start })}
+      />
       {b.shape !== "Straight" && (
         <NumberField
           label="Boundary amplitude"

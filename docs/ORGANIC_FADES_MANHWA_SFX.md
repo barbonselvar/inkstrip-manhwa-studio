@@ -1,7 +1,7 @@
 # Organic fades and Manhwa SFX — implementation report
 
 Feature branch: `codex/organic-fades-manhwa-sfx`, based on the verified PR #33 merge
-`67926a6597dc8ad812373b8ae7ae1235701b0a40`. This change is not merged or deployed to production.
+`67926a6597dc8ad812373b8ae7ae1235701b0a40`. Release status is tracked in [PR #34](https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/34); production is verified against its merge commit.
 
 ## Architecture and compatibility
 
@@ -88,7 +88,7 @@ engine rather than stock placeholder images.
   preset, source-crossing Hangul, SVG sanitization, transparent PNG, matte WebP,
   categorized asset reload, reader and PNG/JPEG/WebP decoding all passed.
 - Wave, Bezier and freehand exports with crossing vector SFX and imported artwork
-  were compared against whole reference renders. Each covered exactly 1217 rows;
+  were initially compared at width 400 against whole reference renders. Each covered exactly 1217 rows;
   maximum channel deviation was 1 and no values differed by more than 2.
 - Existing Composition browser suite passed its Chapter/Focus/spacing/fade/SFX/
   save/refresh/export/40-panel and gesture workflows. Existing integrity suite passed
@@ -150,3 +150,21 @@ Screenshots and machine-readable results are in [organic-composition](organic-co
 - [Cross-boundary Hangul and action gallery](organic-composition/screenshots/manhwa-sfx.png)
 - [Touch freehand editing at 390px](organic-composition/screenshots/mobile-390.png)
 - [Browser results and pixel parity](organic-composition/evidence/browser-results.json)
+
+## PR #34 release QA correction
+
+The quick shape inspector now exposes **Fade position (px)** alongside placement
+and intensity. This reuses the existing non-destructive `start` setting; no schema
+or renderer changes are needed. A browser regression checks immediate pixel changes
+and restoration of the position after refresh. Legacy advanced controls remain.
+
+A second release check compared UI-downloaded 640px PNG segments against a single
+PNG containing rotated Hangul and English lettering. Browser clipping changed
+polygon-stroke antialiasing: 82 pixels differed, with maximum channel deviation 62.
+Ink now renders into cached, stable global bounds, with a bounded global tile
+fallback for larger objects. Stroke halos include miter extent. Segment extraction
+copies those pixels instead of rerasterizing against each segment's clip. The
+isolated reproduction now covers 2107 rows with maximum deviation 1 and zero
+channel differences above 2. The automated shape/export regression now includes
+both rotated scripts at the fractional 640/800 output scale. No source image,
+project schema or stored layer coordinates are changed.

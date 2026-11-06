@@ -4,19 +4,19 @@
       "outputs": [
         {
           "shape": "Wave",
-          "rows": 1217,
+          "rows": 1947,
           "max": 1,
           "mismatch": 0
         },
         {
           "shape": "Bezier",
-          "rows": 1217,
-          "max": 1,
+          "rows": 1947,
+          "max": 2,
           "mismatch": 0
         },
         {
           "shape": "Freehand",
-          "rows": 1217,
+          "rows": 1947,
           "max": 1,
           "mismatch": 0
         }
@@ -28,6 +28,7 @@
     {
       "restore": {
         "points": 18,
+        "position": 60,
         "ink": 1,
         "assets": 3
       }

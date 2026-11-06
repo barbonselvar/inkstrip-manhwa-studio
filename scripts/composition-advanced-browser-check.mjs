@@ -89,6 +89,25 @@ try {
   await p.getByLabel("Boundary amplitude", { exact: true }).fill("140");
   await p.getByRole("button", { name: "Fit screen", exact: true }).click();
   await ready(p);
+  const beforePosition = await p.locator(".composition-tile").evaluate((c) => {
+    const data = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+    let hash = 0;
+    for (let i = 0; i < data.length; i += 64) hash = (Math.imul(hash, 31) + data[i]) >>> 0;
+    return hash;
+  });
+  await p.getByLabel("Fade position (px)", { exact: true }).fill("60");
+  await p.waitForFunction(
+    (before) => {
+      const c = document.querySelector(".composition-tile");
+      if (c?.dataset.renderStatus !== "ready") return false;
+      const data = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+      let hash = 0;
+      for (let i = 0; i < data.length; i += 64) hash = (Math.imul(hash, 31) + data[i]) >>> 0;
+      return hash !== before;
+    },
+    beforePosition,
+    { timeout: 90000 },
+  );
   await p.screenshot({ path: "/workspace/screenshots/advanced-fade-gallery.png" });
   await p.getByLabel("Boundary shape", { exact: true }).selectOption("Bezier");
   await ready(p);
@@ -243,11 +262,24 @@ try {
     c.getContext("2d").drawImage(bitmap, 0, 0);
     if (c.getContext("2d").getImageData(0, 0, 1, 1).data[3] !== 0) throw Error("Transparency lost");
     bitmap.close();
+    // Rotated Hangul and English at fractional output scale reproduce the
+    // browser's region-dependent polygon antialiasing regression.
+    const { inkObject } = await import("/src/lib/studio/composition/ink-presets.ts");
     const outputs = [];
     for (const shape of ["Wave", "Bezier", "Freehand"]) {
       const d = structuredClone(doc),
         f = d.panels[s.panels[0].id].fades[0];
       f.boundary.shape = shape;
+      d.objects = d.objects.map((o) =>
+        o.kind === "sfx" && o.ink ? { ...o, y: -100, rotation: -18 } : o,
+      );
+      d.objects.push({
+        ...inkObject("SWISH", "Sharp Black & White"),
+        id: "segmented-ink-regression",
+        owner: s.panels[0].id,
+        x: 280,
+        y: -90,
+      });
       if (shape === "Bezier")
         f.boundary.points = [
           { x: 0, y: 0.1 },
@@ -259,13 +291,13 @@ try {
           d,
           s.panels,
           { y: 0, height: layout(d, s.panels).height },
-          400,
+          640,
           resources,
         ),
         pixels = whole.getContext("2d").getImageData(0, 0, whole.width, whole.height).data;
       const entries = await exportComposition(d, s.panels, {
         format: "image/png",
-        width: 400,
+        width: 640,
         segmentHeight: 257,
         quality: 1,
         background: "transparent",
@@ -281,7 +313,7 @@ try {
         c.getContext("2d").drawImage(b, 0, 0);
         const data = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
         for (let i = 0; i < data.length; i++) {
-          const diff = Math.abs(data[i] - pixels[rows * 400 * 4 + i]);
+          const diff = Math.abs(data[i] - pixels[rows * 640 * 4 + i]);
           max = Math.max(max, diff);
           if (diff > 2) mismatch++;
         }
@@ -323,6 +355,7 @@ try {
       d = s.controller.getState().history.present.document;
     return {
       points: d.panels[s.panels[0].id].fades[0].boundary.points.length,
+      position: d.panels[s.panels[0].id].fades[0].start,
       ink: d.objects.filter((o) => o.ink).length,
       assets: s.store
         .getState()
@@ -331,6 +364,7 @@ try {
     };
   });
   assert.ok(restored.points > 8);
+  assert.equal(restored.position, 60);
   assert.equal(restored.ink, 1);
   assert.equal(restored.assets, 3);
   results.push({ restore: restored });
