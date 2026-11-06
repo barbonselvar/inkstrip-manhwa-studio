@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Inkstrip",
+      "hasCanvas": false,
+      "bodyTextLen": 1747,
+      "bodyTextHash": "d21f067ff7ff899c208c5575b5e6e9651fa5a7f4838b35c5523e25ad8e9a140e",
+      "bodyTextPrefix": "Skip to workspace Inkstrip . YOUR CREATIVE SPACE My projects 00 ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/advanced-dev.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Inkstrip",
+      "hasCanvas": false,
+      "bodyTextLen": 1522,
+      "bodyTextHash": "218748dad141a0a32f641cd1ae527de4036a26d049bdede74f004708e8d25447",
+      "bodyTextPrefix": "Skip to workspace My projects On-device studio A STUDIO FOR VISU",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/advanced-dev-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/advanced-dev.json"
+}

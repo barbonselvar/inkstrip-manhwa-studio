@@ -1,0 +1,27 @@
+export const INK_STYLES = [
+  "Sharp Black & White",
+  "Jagged Korean Lettering",
+  "Brush Ink",
+  "Heavy Impact",
+  "Thin Slash",
+  "Metallic",
+  "Horror",
+  "Speed Stroke",
+  "White Outline",
+  "Double Outline",
+  "Shadowed Lettering",
+] as const;
+export const MANHWA_WORDS = [
+  ["Sword Swing", "슉", "SWISH"],
+  ["Sword Impact", "쾅", "CLANG"],
+  ["Branch Breaking", "뚝", "CRACK"],
+  ["Footsteps", "탁", "STEP"],
+  ["Wind", "휘잉", "WHOOSH"],
+  ["Explosion", "펑", "BOOM"],
+  ["Punch Impact", "퍽", "THUD"],
+  ["Energy Burst", "쿠궁", "SURGE"],
+  ["Speed Movement", "쌩", "DASH"],
+  ["Rustling Leaves", "사삭", "RUSTLE"],
+  ["Heavy Collision", "쿵", "CRASH"],
+  ["Dramatic Silence", "쉿", "HUSH"],
+] as const;

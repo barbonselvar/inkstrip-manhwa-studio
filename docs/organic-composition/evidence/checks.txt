@@ -1,0 +1,20 @@
+ℹ tests 204
+ℹ pass 204
+ℹ fail 0
+ℹ tests 63
+ℹ pass 63
+ℹ fail 0
+ℹ tests 151
+ℹ pass 151
+ℹ fail 0
+ℹ tests 707
+ℹ pass 707
+ℹ fail 0
+ℹ tests 50
+ℹ pass 50
+ℹ fail 0
+
+Application/config typecheck: passed
+ESLint: passed, no warnings
+Production build: passed
+Build contract: passed

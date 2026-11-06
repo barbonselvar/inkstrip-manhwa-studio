@@ -778,3 +778,82 @@
     height: 44px;
   }
 }
+
+.composition-shape-card {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 6px;
+  padding: 8px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  color: var(--color-fg);
+  min-height: 44px;
+}
+.composition-shape-card:hover,
+.composition-shape-card:focus-visible {
+  border-color: var(--color-accent);
+}
+.composition-shape-card img {
+  width: 100%;
+  aspect-ratio: 1.8;
+  object-fit: contain;
+  border-radius: 6px;
+}
+.composition-shape-card small {
+  color: var(--color-muted);
+  font-size: 11px;
+}
+.composition-shape-properties {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.composition-right details {
+  margin-top: 16px;
+}
+.composition-right summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 12px 0;
+  color: var(--color-accent);
+}
+.composition-right details[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.composition-asset-preview {
+  max-height: 250px;
+  object-fit: contain;
+  width: 100%;
+  background: repeating-conic-gradient(#777 0% 25%, #bbb 0% 50%) 0 0/16px 16px;
+}
+.composition-boundary-editor {
+  position: absolute;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.composition-boundary-editor.is-drawing {
+  pointer-events: auto;
+  touch-action: none;
+  cursor: crosshair;
+}
+.composition-boundary-editor circle {
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+}
+.composition-preset-grid:has(.composition-shape-card) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.composition-shape-card strong {
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.composition-boundary-editor.is-drawing {
+  z-index: 5;
+}

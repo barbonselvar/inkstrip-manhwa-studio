@@ -1,3 +1,5 @@
+import { INK_STYLES } from "./ink-catalog.ts";
+import { BOUNDARY_SHAPES, type Boundary } from "./boundaries.ts";
 import type { Chapter, Panel } from "../types.ts";
 import { isBlendMode, type BlendMode } from "../pro/blend.ts";
 
@@ -40,6 +42,7 @@ export const FADE_TYPES = [
   "Custom Gradient Fade",
 ] as const;
 export type Fade = {
+  boundary?: Boundary;
   id: string;
   name: string;
   type: (typeof FADE_TYPES)[number];
@@ -132,6 +135,7 @@ export type CommonObject = {
   clip: boolean;
 };
 export type Sfx = CommonObject & {
+  ink?: string;
   kind: "sfx";
   text: string;
   font: string;
@@ -208,8 +212,9 @@ export type CompositionRecord = { version: 1; revision: number; document: Compos
 export type CompositionPreset = {
   id: string;
   name: string;
-  category: "spacing" | "fade" | "transition" | "sfx" | "fx";
-  value: Space | Fade | Transition | Sfx | Fx;
+  category: "spacing" | "fade" | "transition" | "sfx" | "fx" | "asset";
+  collection?: string;
+  value: Space | Fade | Transition | Sfx | Fx | Overlay;
 };
 export type CompositionPreferences = { presets: CompositionPreset[]; favorites: string[] };
 export function createComposition(chapter: Chapter, panels: Panel[]): CompositionDocument {
@@ -420,6 +425,22 @@ export function validateFade(f: Fade) {
       typeof f.locked === "boolean",
     "fade settings",
   );
+  if (f.boundary) {
+    const b = f.boundary;
+    assert(
+      BOUNDARY_SHAPES.includes(b.shape) &&
+        n(b.amplitude, 0, 100000) &&
+        n(b.frequency, 0.1, 20) &&
+        [-1, 1].includes(b.direction) &&
+        ["Top", "Bottom", "Both"].includes(b.placement) &&
+        Array.isArray(b.points) &&
+        b.points.length >= 2 &&
+        b.points.length <= 128 &&
+        b.points.every((p) => n(p.x, 0, 1) && n(p.y, 0, 1)) &&
+        (b.shape !== "Bezier" || b.points.length === 4),
+      "fade boundary",
+    );
+  }
   validateStops(f.stops);
 }
 function validateStops(stops: Fade["stops"]) {
@@ -468,6 +489,10 @@ export function validateObject(o: CompositionObject) {
     "layer flags",
   );
   if (o.kind === "sfx") {
+    assert(
+      o.ink === undefined || (typeof o.ink === "string" && INK_STYLES.includes(o.ink as never)),
+      "ink style",
+    );
     assert(
       typeof o.text === "string" &&
         o.text.length <= 10000 &&
@@ -659,11 +684,19 @@ export function validateCompositionPreferences(value: CompositionPreferences) {
       ident(p.id) && typeof p.name === "string" && p.name.length > 0 && p.name.length <= 200,
       "preset",
     );
+    assert(
+      p.collection === undefined || (typeof p.collection === "string" && p.collection.length <= 80),
+      "preset collection",
+    );
     if (p.category === "spacing") validateSpace(p.value as Space);
     else if (p.category === "fade") validateFade(p.value as Fade);
     else if (p.category === "transition") validateTransition(p.value as Transition);
     else {
-      assert(p.category === "sfx" || p.category === "fx", "preset category");
+      assert(
+        p.category === "sfx" || p.category === "fx" || p.category === "asset",
+        "preset category",
+      );
+      if (p.category === "asset") assert((p.value as Overlay).kind === "overlay", "asset preset");
       validateObject(p.value as CompositionObject);
     }
   }
@@ -716,4 +749,10 @@ export function moveLayer(
   if (index < 0 || target < 0 || target >= stack.length) return d;
   [stack[index], stack[target]] = [stack[target], stack[index]];
   return { ...d, layerOrder: stack };
+}
+
+export function presetBlobIds(p?: CompositionPreferences) {
+  return (p?.presets ?? []).flatMap((x) =>
+    x.category === "asset" ? [(x.value as Overlay).blobId] : [],
+  );
 }

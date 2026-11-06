@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useStudio } from "@/lib/studio/store";
 import {
@@ -10,8 +10,6 @@ import {
   type CompositionObject,
   type CompositionPreferences,
   type CompositionPreset,
-  type Sfx,
-  type Fx,
   type Transition,
 } from "@/lib/studio/composition/model";
 import {
@@ -26,32 +24,15 @@ import {
 } from "@/lib/studio/composition/library";
 import { reparent, objectFlags } from "@/lib/studio/composition/geometry";
 import { layout } from "@/lib/studio/composition/model";
-import { renderObjectThumbnail } from "@/lib/studio/composition/render";
+import { Thumbnail } from "./thumbnail";
+import { FadeShapeGallery } from "./shape-gallery";
+import { ManhwaGallery, AssetGallery } from "./sfx-gallery";
 import type { Controller, Session } from "@/lib/studio/composition/controller";
 import { NumberField } from "../editor/number-field";
 import { CompositionLayers } from "./layers";
 import { Choice } from "./properties";
 import type { Panel } from "@/lib/studio/types";
 import { ArrowDown, ArrowUp, Star, Group, Ungroup, Focus } from "lucide-react";
-const Thumbnail = memo(function Thumbnail({ object }: { object: CompositionObject }) {
-  const [src, setSrc] = useState("");
-  useEffect(() => {
-    let alive = true;
-    void document.fonts.ready
-      .then(() => renderObjectThumbnail(object))
-      .then((url) => {
-        if (alive) setSrc(url);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [object]);
-  return src ? (
-    <img alt="" src={src} loading="lazy" width={180} height={100} />
-  ) : (
-    <span className="composition-thumbnail-loading" />
-  );
-});
 export function CompositionLibrary({
   controller,
   session,
@@ -63,6 +44,7 @@ export function CompositionLibrary({
   onOverlay,
   onDuplicate,
   onDelete,
+  onAssetImport,
 }: {
   controller: Controller;
   session: Session;
@@ -74,6 +56,7 @@ export function CompositionLibrary({
   onOverlay: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onAssetImport: () => void;
 }) {
   const [search, setSearch] = useState(""),
     [category, setCategory] = useState("All"),
@@ -95,7 +78,7 @@ export function CompositionLibrary({
   );
   const thumbs = useStudio((s) => s.thumbs),
     owner = session.selectedPanels[0] ?? panels[0]?.id;
-  const insert = (object: Sfx | Fx) => {
+  const insert = (object: CompositionObject) => {
     const y = owner ? 0 : 60;
     const next = { ...object, owner, y };
     controller.change((doc) => ({ ...doc, objects: [...doc.objects, next] }));
@@ -469,6 +452,15 @@ export function CompositionLibrary({
             </div>
           )}
         </>
+      )}
+      {tool === "Fade Shapes" && <FadeShapeGallery controller={controller} owner={owner} />}
+      {tool === "Manhwa SFX" && <ManhwaGallery insert={insert} />}
+      {tool === "My SFX Assets" && (
+        <AssetGallery
+          presets={preferences.presets}
+          insert={onApplyPreset}
+          onImport={onAssetImport}
+        />
       )}
       {tool === "Layers" && (
         <div className="composition-actions">

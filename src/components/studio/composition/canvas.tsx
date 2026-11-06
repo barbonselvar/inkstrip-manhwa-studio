@@ -1,3 +1,7 @@
+import { BoundaryEditor } from "./boundary-editor";
+import { inkObject } from "@/lib/studio/composition/ink-presets";
+import { MANHWA_WORDS, INK_STYLES } from "@/lib/studio/composition/ink-catalog";
+import type { CompositionPreset, CompositionObject } from "@/lib/studio/composition/model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { Button } from "@/components/ui/button";
@@ -85,7 +89,9 @@ export function CompositionCanvas({
   chapter,
   panels,
   onError,
+  assetPresets = [],
 }: {
+  assetPresets?: CompositionPreset[];
   controller: Controller;
   chapter: Chapter;
   panels: Panel[];
@@ -285,6 +291,56 @@ export function CompositionCanvas({
           if (frame) {
             selectPanel(frame);
             controller.setState({ focus: frame.panel.id });
+          }
+        }}
+        onDragOver={(e) => {
+          if (
+            !session.preview &&
+            !session.before &&
+            e.dataTransfer.types.includes("application/x-inkstrip-composition")
+          )
+            e.preventDefault();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (session.preview || session.before || session.blocked) return;
+          try {
+            const payload = JSON.parse(
+                e.dataTransfer.getData("application/x-inkstrip-composition"),
+              ),
+              p = point(e),
+              frame = scene.frames.find((f) => p.y >= f.top && p.y < f.gapY);
+            let object: CompositionObject | undefined;
+            if (
+              payload.kind === "manhwa" &&
+              Number.isInteger(payload.index) &&
+              MANHWA_WORDS[payload.index] &&
+              INK_STYLES.includes(payload.style)
+            )
+              object = inkObject(
+                MANHWA_WORDS[payload.index][payload.english ? 2 : 1],
+                payload.style,
+              );
+            if (payload.kind === "asset") {
+              const preset = assetPresets.find(
+                (x) => x.category === "asset" && x.id === payload.id,
+              );
+              if (preset) object = structuredClone(preset.value) as CompositionObject;
+            }
+            if (object) {
+              const next = {
+                ...object,
+                id: crypto.randomUUID(),
+                owner: frame?.panel.id,
+                parentId: undefined,
+                x: p.x,
+                y: p.y - (frame?.imageY ?? 0),
+              };
+              controller.change((d) => ({ ...d, objects: [...d.objects, next] }));
+              controller.select({ kind: "object", id: next.id });
+            }
+          } catch {
+            onError("This artwork could not be dropped. Try clicking its gallery thumbnail.");
           }
         }}
         onPointerDown={(event) => {
@@ -560,6 +616,23 @@ export function CompositionCanvas({
                 />
               )}
             </div>
+            {!session.preview &&
+              !session.before &&
+              fade?.boundary &&
+              selectedFade &&
+              !fade.locked &&
+              !selectedFade.settings.locked && (
+                <BoundaryEditor
+                  f={fade}
+                  panelId={selectedFade.panel.id}
+                  width={d.width}
+                  height={selectedFade.imageHeight}
+                  top={selectedFade.imageY - origin}
+                  scale={scale}
+                  controller={controller}
+                  drawing={!!session.drawBoundary}
+                />
+              )}
             {!session.preview && !session.before && (
               <>
                 {scene.frames
@@ -752,7 +825,7 @@ export function CompositionCanvas({
                     />
                   </div>
                 )}
-                {selectedFade && fade && (
+                {selectedFade && fade && !fade.boundary && (
                   <button
                     className="composition-fade-handle"
                     aria-label="Drag fade length"

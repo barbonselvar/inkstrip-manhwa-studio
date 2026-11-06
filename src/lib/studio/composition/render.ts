@@ -1,3 +1,4 @@
+import { paintInk, inkSupported, inkPolygons } from "./ink";
 import { getImageBlob } from "../db";
 import { decodeBlob, deviceLimits } from "../images";
 import { objectMatrix, objectBounds } from "./geometry";
@@ -301,6 +302,10 @@ function textRuns(ctx: CanvasRenderingContext2D, o: Sfx, paint: "fill" | "stroke
   }
 }
 function paintSfx(ctx: CanvasRenderingContext2D, o: Sfx) {
+  if (o.ink && inkSupported(o.text)) {
+    paintInk(ctx, o);
+    return;
+  }
   ctx.lineJoin = "round";
   ctx.miterLimit = 2;
   const m = ctx.getTransform(),
@@ -491,6 +496,16 @@ export async function renderObjectThumbnail(object: CompositionObject) {
   ctx.translate(object.width * 0.06, object.height * 0.08);
   if (object.kind === "sfx") paintSfx(ctx, object);
   if (object.kind === "fx") paintFx(ctx, object);
+  if (object.kind === "overlay") {
+    const r = new RenderResources();
+    try {
+      await r.image(object.blobId, (source) =>
+        ctx.drawImage(source, 0, 0, object.width, object.height),
+      );
+    } finally {
+      r.clear();
+    }
+  }
   return c.toDataURL("image/png");
 }
 async function paintSampledFx(
@@ -591,11 +606,135 @@ function objectPadding(o: CompositionObject, frames: PanelFrame[], objects: Comp
     scale = Math.max(Math.hypot(m[0], m[1]), Math.hypot(m[2], m[3]));
   return (
     (o.kind === "sfx"
-      ? Math.max(o.glow, o.shadow) * 3 + o.shadow + Math.max(0, ...o.strokes.map((s) => s.width))
+      ? Math.max(o.glow, o.shadow) * 3 +
+        o.shadow +
+        Math.max(0, ...o.strokes.map((s) => s.width)) * (o.ink ? 4 : 1)
       : o.kind === "fx"
         ? o.radius * 3
         : 0) * scale
   );
+}
+/** Rasterize ink against stable global bounds, independent of the requested
+ * chapter segment. Clipping a transformed polygon path to different viewport
+ * sizes changes browser stroke tessellation/AA at the crop. */
+function paintStableInk(
+  ctx: CanvasRenderingContext2D,
+  o: Sfx,
+  frames: PanelFrame[],
+  objects: CompositionObject[],
+  r: Region,
+  scale: number,
+  resources: RenderResources,
+  outputWidth: number,
+  maxArea: number,
+) {
+  const m = objectMatrix(o, frames, objects),
+    points = inkPolygons(o).flat();
+  if (!points.length) return;
+  let x0 = Infinity,
+    y0 = Infinity,
+    x1 = -Infinity,
+    y1 = -Infinity;
+  for (const p of points) {
+    const x = (m[0] * p.x + m[2] * p.y + m[4]) * scale,
+      y = (m[1] * p.x + m[3] * p.y + m[5]) * scale;
+    x0 = Math.min(x0, x);
+    x1 = Math.max(x1, x);
+    y0 = Math.min(y0, y);
+    y1 = Math.max(y1, y);
+  }
+  const pad = Math.ceil(objectPadding(o, frames, objects) * scale) + 2;
+  const bounds = {
+    left: Math.max(0, Math.floor(x0) - pad),
+    top: Math.floor(y0) - pad,
+    right: Math.min(outputWidth, Math.ceil(x1) + pad),
+    bottom: Math.ceil(y1) + pad,
+  };
+  if (bounds.right <= bounds.left) return;
+  const origin = Math.round(r.y * scale),
+    end = origin + ctx.canvas.height,
+    limits = deviceLimits(),
+    key = JSON.stringify([o, m, scale]);
+  const paint = (
+    left: number,
+    top: number,
+    width: number,
+    height: number,
+    core: { x: number; y: number; w: number; h: number },
+  ) => {
+    const id = `ink:${key}:${left}:${top}:${width}:${height}`;
+    let tile = resources.get(id);
+    if (!tile) {
+      if (width > limits.maxSide || height > limits.maxSide || width * height > maxArea)
+        throw Error(
+          "Lettering exceeds this device render budget. Reduce the output width or lettering size.",
+        );
+      tile = canvas(width, height);
+      const p = tile.getContext("2d")!;
+      p.setTransform(scale, 0, 0, scale, -left, -top);
+      p.transform(...m);
+      paintSfx(p, o);
+      if (o.texture) {
+        p.globalCompositeOperation = "source-atop";
+        p.strokeStyle = rgba("#000000", o.texture);
+        p.lineWidth = 1;
+        for (let i = 0; i < o.width / 7; i++) {
+          p.beginPath();
+          p.moveTo(i * 7, 0);
+          p.lineTo(i * 7 + o.height * 0.2, o.height);
+          p.stroke();
+        }
+      }
+      resources.put(id, tile);
+    }
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(
+      tile,
+      core.x - left,
+      core.y - top,
+      core.w,
+      core.h,
+      core.x,
+      core.y - origin,
+      core.w,
+      core.h,
+    );
+    ctx.restore();
+    if (resources.get(id) !== tile) tile.width = tile.height = 0;
+  };
+  const width = bounds.right - bounds.left,
+    height = bounds.bottom - bounds.top;
+  if (width <= limits.maxSide && height <= limits.maxSide && width * height <= maxArea) {
+    paint(bounds.left, bounds.top, width, height, {
+      x: bounds.left,
+      y: bounds.top,
+      w: width,
+      h: height,
+    });
+    return;
+  }
+  // Large lettering stays bounded, with stable 128px cores and a glyph-sized halo.
+  const halo =
+      pad +
+      Math.ceil(o.size * scale * Math.max(Math.hypot(m[0], m[1]), Math.hypot(m[2], m[3])) * 1.5),
+    step = 128;
+  for (
+    let y = Math.floor(Math.max(bounds.top, origin) / step) * step;
+    y < Math.min(bounds.bottom, end);
+    y += step
+  )
+    for (let x = Math.floor(bounds.left / step) * step; x < bounds.right; x += step) {
+      const left = Math.max(0, x - halo),
+        right = Math.min(outputWidth, x + step + halo),
+        top = y - halo;
+      paint(left, top, right - left, step + 2 * halo, {
+        x,
+        y,
+        w: Math.min(step, outputWidth - x),
+        h: step,
+      });
+    }
 }
 async function paintObjects(
   ctx: CanvasRenderingContext2D,
@@ -608,6 +747,7 @@ async function paintObjects(
   parentId?: string,
   excluded?: Set<string>,
   rootId?: string,
+  inkArea = deviceLimits().maxArea / 6,
 ) {
   for (const o of d.objects.filter(
     (o) => o.parentId === parentId && (!rootId || o.id === rootId),
@@ -631,7 +771,19 @@ async function paintObjects(
         }
       }
       if (o.kind === "group")
-        await paintObjects(p, d, frames, r, scale, resources, signal, o.id, excluded);
+        await paintObjects(
+          p,
+          d,
+          frames,
+          r,
+          scale,
+          resources,
+          signal,
+          o.id,
+          excluded,
+          undefined,
+          inkArea,
+        );
       else {
         if (o.clip && o.owner) {
           const owner = frames.find((f) => f.panel.id === o.owner);
@@ -648,8 +800,11 @@ async function paintObjects(
             o.text || " ",
           );
           signal?.throwIfAborted();
-          paintSfx(p, o);
-          if (o.texture) {
+          const ink = o.ink && inkSupported(o.text);
+          if (ink)
+            paintStableInk(p, o, frames, d.objects, r, scale, resources, d.width * scale, inkArea);
+          else paintSfx(p, o);
+          if (o.texture && !ink) {
             p.globalCompositeOperation = "source-atop";
             p.strokeStyle = rgba("#000000", o.texture);
             p.lineWidth = 1;
@@ -889,6 +1044,7 @@ export async function renderRegion(
           undefined,
           options.excluded,
           key.slice(7),
+          limits.maxArea / planes,
         );
     }
     options.signal?.throwIfAborted();

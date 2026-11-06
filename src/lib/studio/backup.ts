@@ -1,3 +1,4 @@
+import { presetBlobIds } from "./composition/model.ts";
 import { compositionBlobIds, validateComposition } from "./composition/model.ts";
 import { validateDialogue } from "./dialogue/types.ts";
 import { validateAssets, type ProSession } from "./pro/model.ts";
@@ -44,9 +45,14 @@ type Header = {
 };
 
 /** Every stored blob a project's chapters and panels point at (character images live on the project). */
-export function projectBlobIds(chapters: Chapter[], panels: Panel[]) {
+export function projectBlobIds(
+  chapters: Chapter[],
+  panels: Panel[],
+  project?: Pick<Project, "compositionPreferences">,
+) {
   return [
     ...new Set([
+      ...presetBlobIds(project?.compositionPreferences),
       ...panels.flatMap(mediaIds),
       ...chapters.flatMap((chapter) => chapter.strip?.parts.map((part) => part.blobId) ?? []),
       ...chapters.flatMap((chapter) => compositionBlobIds(chapter.composition)),
@@ -77,7 +83,7 @@ export function encodeBackup(data: ProjectData, exportedAt = Date.now()): Blob {
     entries.push({ id, type: blob.type, size: blob.size });
     parts.push(blob);
   };
-  for (const id of projectBlobIds(data.chapters, data.panels)) {
+  for (const id of projectBlobIds(data.chapters, data.panels, data.project)) {
     const blob = data.blobs.get(id);
     if (!blob) throw new Error("An image in this project is missing; backup not created.");
     add(id, blob);
@@ -222,7 +228,7 @@ export async function decodeBackup(file: Blob): Promise<ProjectData> {
     if (!isString(panel?.id) || !chapterIds.has(panel.chapterId) || panelIds.has(panel.id)) fail();
     panelIds.add(panel.id);
   }
-  for (const id of projectBlobIds(chapters, panels)) if (!blobs.has(id)) fail();
+  for (const id of projectBlobIds(chapters, panels, project)) if (!blobs.has(id)) fail();
 
   if (
     header.sessions !== undefined &&
@@ -231,7 +237,7 @@ export async function decodeBackup(file: Blob): Promise<ProjectData> {
     fail();
   if (header.version === 1 && header.sessions?.length) fail();
   const nativeRefs = new Set<string>(),
-    protectedRefs = new Set(projectBlobIds(chapters, panels));
+    protectedRefs = new Set(projectBlobIds(chapters, panels, project));
   const sessionIds = new Set<string>();
   const sessions = header.sessions?.map((stored) => {
     if (
