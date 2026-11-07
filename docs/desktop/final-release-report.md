@@ -1,7 +1,9 @@
 # Inkstrip Manhwa Studio for Windows — final release report
 
 > **Current 1.1.0 status:** see [independent QA continuation](qa-continuation-2026-11-07.md).
-> All seven regular workflows and a controlled 60-minute Windows stability run passed.
+> All seven regular workflows and a controlled 60-minute Windows stability run passed
+> on the cited heads. A later repeated driver timeout was corrected; the complete
+> Windows matrix passes on 989a2db. See the QA report and PR for final-head checks.
 > Exact source/build provenance and results are tracked there. Owner-PC upgrade and installed-window verification remain
 > incomplete. No production release is authorized by this continuation.
 

@@ -14,6 +14,7 @@
  * 5. Connection restored: a new update check settles again.
  */
 import assert from "node:assert/strict";
+import { launchElectron } from "./launch-electron.mjs";
 import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -49,7 +50,7 @@ const settled = (s) => ["not-available", "available", "error", "disabled", "idle
 let failure = null;
 let app;
 try {
-  app = await electron.launch({ executablePath: exe, env: { ...process.env, INKSTRIP_PROFILE_DIR: join(out, "profile") }, timeout: 60_000 });
+  app = await launchElectron(electron, { executablePath: exe, env: { ...process.env, INKSTRIP_PROFILE_DIR: join(out, "profile") }, timeout: 60_000 });
   const { studio, shell } = await windowPages(app);
   const errors = [];
   studio.on("pageerror", (e) => errors.push(e.message));

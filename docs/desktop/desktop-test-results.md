@@ -3,8 +3,8 @@
 ## Current independent automated QA
 
 See [qa-continuation-2026-11-07.md](qa-continuation-2026-11-07.md) for exact commits,
-run links, installer hashes and full evidence. Local full tests: **1,258/1,258**,
-including 43 desktop tests. Windows packaged suites: **13/13 offline, 6/6 feature,
+run links, installer hashes and full evidence. Local full tests: **1,261/1,261**,
+including 43 desktop and 3 startup-driver gate tests. Windows packaged suites: **13/13 offline, 6/6 feature,
 5/5 network, 140/140 window**. Android emulator: **13/13 + 4/4 restart**. Raster and
 both R14 jobs pass. Controlled Windows stability: **60 minutes, 1,717 cycles,
 zero errors/crashes**. All seven regular workflows also pass on f2a35df.

@@ -3,20 +3,81 @@
 PR: https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/41  
 Branch: `desktop/windows-app`  
 Verified starting commit: `c10afca22011f7d3b2c0ecd755c38a225f20df66`  
-QA implementation commit: `7ec94e05122ddea2d667f3486cfa87bf0ba4672b`
+Initial QA commit: `7ec94e05122ddea2d667f3486cfa87bf0ba4672b`
 
-**Automated QA passed:** 1,258 local tests, all seven regular workflows on
+Startup-driver correction: `989a2dbe6f93cceb263be599f75a72c57eeda348`
+
+**Automated QA evidence:** 1,261 local tests, all seven regular workflows on
 documentation/build head `f2a35df387ee5ccff1912f42e8ba02c0564116c3`, and a controlled
 60-minute Windows run with 1,717 cycles and zero errors/crashes on implementation
-7ec94e0. Final evidence updates change documentation/data only.
+7ec94e0. A subsequent test-only startup correction passes the full Windows suite
+on 989a2db; current branch checks are tracked in PR #41. Product source is unchanged.
 
 **Installation is not verified:** this session cannot reach the owner's Windows
 installation or backup. No replacement was attempted. Fresh backup verification,
 permission to replace 1.0.0, migration and installed-window screenshots remain open.
 
 Latest independently downloaded and hashed installer in this report:
-[unsigned 1.1.0 test artifact, f2a35df](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42417153007/artifacts/13591782546).
+[unsigned 1.1.0 test artifact, 989a2db](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42422844268/artifacts/13594610231).
 It is not a production release. Exact checksum and all run links appear below.
+
+## Startup-driver correction and retained failed attempts
+
+Evidence-only head 9b4735a had six successful regular workflows but Windows run
+[42421680038](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42421680038)
+failed twice at different Playwright initializations:
+
+- Attempt 1 completed A1–A8; `electron.launch` then timed out while opening the saved
+  project in a new profile. Both debugger connections were established; the app
+  logged startup and registered the matching file hash. Subsequent feature/network/
+  window steps were **SKIPPED**, not passed.
+- Attempt 2 passed **13/13 offline, 6/6 features and 5/5 network**, then completed
+  **70/140 window checks** before another `electron.launch` timeout starting the
+  150% instance. The remaining 70 window checks were not counted as passed.
+- Failure artifacts [13594275641](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42421680038/artifacts/13594275641)
+  and [13593898170](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42421680038/artifacts/13593898170)
+  are preserved. No third unchanged retry was requested.
+
+The evidence points to an automation initialization race while the two initial
+pages are navigating, rather than a reproduced failed save/open. Playwright waits
+for initial pages during connection. A Windows **test-process** wrapper now holds
+only the browser-debugger announcement until the app's existing startup log,
+which is emitted after both `loadURL` calls finish. It then releases the announcement
+so Playwright attaches to committed pages. No product code, flags, timeouts,
+assertions, security settings or installer behavior change. Node-debugger and all
+ordinary/error output pass through; a startup failure never receives a fake ready
+signal. No automatic retry or unconditional-success path is added.
+
+Three regression tests verify ordering, fragmented stream handling and preservation
+of fatal errors/non-readiness. They pass locally and on Windows. The local terminal
+was temporarily lost during diagnosis, then recovered with a fresh checkout;
+all **1,261** unit tests and lint pass after the correction.
+
+Corrected Windows run [42422844268](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42422844268)
+on **989a2db** passes 43 desktop + 3 gate unit tests, packaging and the complete
+**13/13 + 6/6 + 5/5 + 140/140** matrix. Its JSON artifacts were downloaded and
+inspected, all failure fields null. The same wrapper is also used for the feature
+and network CI suite entry points in the final handoff; their exact current-head
+results are tracked in the PR description.
+
+All seven workflows subsequently finished successfully on 989a2db:
+
+| Workflow | Successful 989a2db run |
+|---|---|
+| Desktop | [42422844268](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42422844268) |
+| Android | [42422844474](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42422844474) |
+| Raster | [42422844197](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42422844197) |
+| R14 | [42422844226](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42422844226) |
+| Configuration/full tests | [42422844306](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42422844306) |
+| Website build | [42422844215](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42422844215) |
+| External verification | [42422844234](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42422844234) |
+
+Fresh 989a2db installer: **135,443,133 bytes**, SHA-256
+`a5f28b0f692bcb5c84ac4f0d01120a91862194990e864c81306862eef7ef6e7a`.
+This downloaded EXE matches the workflow checksum. Older build receipts below are
+historical. This startup-driver change does not alter the application source used
+by the completed 60-minute test. A full protocol trace was not collected, so the
+individual CDP request that stranded the old driver is not proven.
 
 ## Scope and environment
 
@@ -121,7 +182,7 @@ approval to spend money on a real provider.
 | Command/check | Result |
 |---|---|
 | `npm ci --no-audit --no-fund` (root and desktop) | PASS |
-| `npm test` | **1,258 PASS**, zero failures/skips: scripts 206, library/auth/release 65, desktop 43, studio 151, Pro 707, composition 86; security probes also pass |
+| `npm test` | **1,261 PASS**, zero failures/skips: scripts 209, library/auth/release 65, desktop 43, studio 151, Pro 707, composition 86; security probes also pass |
 | Previously blocked directory-link tests | Both PASS in this Linux environment |
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS |

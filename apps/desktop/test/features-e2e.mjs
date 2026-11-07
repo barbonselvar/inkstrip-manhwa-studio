@@ -10,6 +10,7 @@
  * image, chapter and Raster document intact.
  */
 import assert from "node:assert/strict";
+import { launchElectron } from "./launch-electron.mjs";
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -66,7 +67,7 @@ let failure = null;
 let app;
 let studio;
 try {
-  app = await electron.launch({
+  app = await launchElectron(electron, {
     executablePath: exe ?? join(desktop, "node_modules", "electron", "dist", "electron.exe"),
     args: exe ? [] : [desktop],
     env: { ...process.env, INKSTRIP_PROFILE_DIR: join(out, "profile") },

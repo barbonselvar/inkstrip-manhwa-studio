@@ -1,27 +1,29 @@
 # Continuation report (2026-11-07)
 
-## Active launch-driver correction (supersedes prior readiness)
+## Current startup-driver correction
 
-Final evidence head 9b4735a had six successful regular workflows, but Windows
-run 42421680038 failed twice at different `electron.launch` initializations.
-Attempt 1: A1–A8 passed, then driver timeout on a new profile reopening the file;
-the app had already registered the matching project hash. Attempt 2: offline
-13/13, feature 6/6 and network 5/5 passed; window checks reached 70/140, then driver
-timeout launching the 150% instance. No third unchanged retry was requested.
+Read qa-continuation-2026-11-07.md first. Correction source 989a2db passes the full
+Windows matrix (run 42422844268): 43 desktop + 3 startup-gate unit tests, NSIS build,
+13/13 offline, 6/6 features, 5/5 network, 140/140 windows. Downloaded JSON failure
+fields are null. Local full unit command: 1,261/1,261; lint passes.
 
-A test-only Windows launch wrapper now waits for the app's existing startup log
-(after both initial pages loaded) before releasing the browser-debugger endpoint
-to Playwright. Product code, startup, flags, integrity/security and all assertions
-remain unchanged. Three gate tests preserve Node-debugger/error output, cover
-fragmented logs and refuse to declare startup failures ready. Windows CI runs them.
-The corrected full Windows job is PENDING; do not claim this correction verified.
+This corrects repeated Playwright initial-navigation attachment timeouts on 9b4735a.
+Both failed attempts and exact partial counts are recorded in the QA report. No
+third unchanged retry was requested. Test-only launcher delays browser debugger
+attachment until the existing app startup log; app code/flags/security/checks stay
+unchanged. The final handoff uses this launcher for feature/network CI as well.
+Inspect checks/artifacts on the current PR head before claiming those final checks.
 
-The local terminal became unavailable after 9b4735a, so subsequent work uses the
-authenticated repository connection and Windows CI. Local 1,258-test results
-predate this startup-wrapper change. The completed 60-minute test on application
-source 7ec94e0 remains valid for that unchanged product source, not new wrapper QA.
-Do not merge or install/publish. Inspect the next Windows job/artifacts, verify
-13/13 + 6/6 + 5/5 + 140/140, and update this checkpoint with exact outcomes.
+The terminal briefly became unavailable; it recovered and a fresh checkout was
+restored from GitHub. All committed evidence survived. Completed 60-minute run
+42416585169 (application source 7ec94e0): 1,717 cycles, zero errors/crashes; product
+source is unchanged by startup-driver QA work. Do not rerun it solely for docs.
+
+Owner-PC install/backup/manual native screenshots remain blocked. Signing/auth/
+production publication remain deferred. Do not merge, replace the installed app,
+or publish. Next: finish current CI inspection, then use a Windows-connected
+session for a fresh verified backup, explicit replacement permission, installed
+migration/edit/export/recovery, five whole-window captures and isolated uninstall.
 
 ## Latest independent QA checkpoint
 
