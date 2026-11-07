@@ -30,7 +30,9 @@ if (!exe || !Number.isFinite(minutes) || minutes <= 0)
 const out = resolve(arg("--out") ?? join(tmpdir(), `inkstrip-stability-${Date.now()}`));
 mkdirSync(join(out, "panels"), { recursive: true });
 
-const app = await electron.launch({ executablePath: exe, env: { ...process.env, INKSTRIP_PROFILE_DIR: join(out, "profile") }, timeout: 60_000 });
+let app;
+try {
+app = await electron.launch({ executablePath: exe, env: { ...process.env, INKSTRIP_PROFILE_DIR: join(out, "profile") }, timeout: 60_000 });
 await app.evaluate(({ session }) => session.defaultSession.enableNetworkEmulation({ offline: true }));
 const { studio, shell } = await windowPages(app);
 const errors = [];
@@ -42,7 +44,7 @@ app.process().once("exit", (code) => (crashed ??= `app exited (${code})`));
 await studio.waitForSelector(".desktop-toasts", { state: "attached", timeout: 60_000 });
 
 const samples = [];
-const started = Date.now();
+let started = Date.now();
 const sample = async (label) => {
   const m = await app.evaluate(({ app }) => {
     const all = app.getAppMetrics();
@@ -92,6 +94,8 @@ await app.evaluate(({ dialog }, p) => {
 }, join(out, "stability.inkstrip"));
 await studio.keyboard.press("Control+s");
 await waitShellStatus(shell, /Saved · stability\.inkstrip/, 60_000);
+// Setup and import must not consume any of the sustained editing interval.
+started = Date.now();
 await sample("start");
 
 let cycles = 0;
@@ -124,11 +128,17 @@ while (Date.now() - started < minutes * 60_000 && !crashed) {
     await studio.getByRole("button", { name: "Open in Raster Studio", exact: true }).click();
     await studio.getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true }).waitFor({ timeout: 60_000 });
     const board = await studio.locator(".pro-artboard").first().boundingBox();
+    if (!board || board.width <= 0 || board.height <= 0) throw new Error("Raster artboard is not visible");
     await studio.getByRole("button", { name: "Brush tool", exact: true }).click();
     await studio.mouse.move(board.x + board.width * 0.3, board.y + board.height * 0.5);
     await studio.mouse.down();
     await studio.mouse.move(board.x + board.width * 0.7, board.y + board.height * 0.5, { steps: 10 });
     await studio.mouse.up();
+    // A stroke commits asynchronously; clicking a still-disabled Undo races it.
+    await studio.waitForFunction(() => {
+      const undo = document.querySelector('[aria-label="Pro undo"]');
+      return undo && !undo.disabled;
+    }, null, { timeout: 15_000 });
     await studio.getByRole("button", { name: "Pro undo", exact: true }).click();
     await studio.getByRole("button", { name: "Back to chapter from Pro Studio", exact: true }).click();
     await studio.getByRole("dialog", { name: "Inkstrip Raster Studio", exact: true }).waitFor({ state: "detached", timeout: 30_000 });
@@ -166,5 +176,12 @@ const result = {
 Object.assign(result, stabilityOutcome(result));
 writeFileSync(join(out, "stability-results.json"), JSON.stringify(result, null, 2));
 console.log(JSON.stringify({ ...result, samples: undefined }, null, 2));
-await app.evaluate(({ app }) => app.exit(0)).catch(() => {});
-process.exit(result.passed ? 0 : 1);
+process.exitCode = result.passed ? 0 : 1;
+} catch (error) {
+  const result = { exe, minutes, completed: false, passed: false, failure: String(error.stack ?? error) };
+  writeFileSync(join(out, "stability-results.json"), JSON.stringify(result, null, 2));
+  console.error(JSON.stringify(result, null, 2));
+  process.exitCode = 1;
+} finally {
+  if (app) await app.evaluate(({ app }) => app.exit(0)).catch(() => {});
+}

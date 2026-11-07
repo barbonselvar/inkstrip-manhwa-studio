@@ -1,0 +1,57 @@
+name: Desktop sustained stability (Windows)
+
+# Targeted continuation validation. Never installs over an owner's application,
+# uses release credentials, or publishes. Do not cancel an hour already in flight.
+on:
+  push:
+    branches: [desktop/windows-app]
+    paths:
+      - apps/desktop/test/stability-*.mjs
+      - .github/workflows/desktop-stability.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-stability-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  stability:
+    runs-on: windows-latest
+    timeout-minutes: 85
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/desktop/package-lock.json
+      - name: Install, typecheck and test
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          npm ci --no-audit --no-fund
+          npm ci --no-audit --no-fund --prefix apps/desktop
+          npm run typecheck --prefix apps/desktop
+          npm run test:desktop
+      - name: Build isolated packaged application
+        working-directory: apps/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run dist:dir
+      - name: Sixty minutes of offline editing, saving and resource sampling
+        run: node apps/desktop/test/stability-desktop.mjs --exe "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe" --minutes 60 --out "$env:RUNNER_TEMP/desktop-stability"
+      - name: Preserve stability evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: desktop-stability-evidence
+          path: |
+            ${{ runner.temp }}/desktop-stability/**/*.json
+            ${{ runner.temp }}/desktop-stability/**/*.log
+            ${{ runner.temp }}/desktop-stability/**/*.png
+            ${{ runner.temp }}/desktop-stability/*.inkstrip
+          if-no-files-found: error
