@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { waitShellStatus, windowPages } from "./window-pages.mjs";
+import { stabilityOutcome } from "./stability-outcome.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..", "..", "..");
@@ -24,6 +25,8 @@ const arg = (n) => {
 };
 const exe = arg("--exe");
 const minutes = Number(arg("--minutes") ?? 60);
+if (!exe || !Number.isFinite(minutes) || minutes <= 0)
+  throw new Error("--exe and a finite, positive --minutes value are required");
 const out = resolve(arg("--out") ?? join(tmpdir(), `inkstrip-stability-${Date.now()}`));
 mkdirSync(join(out, "panels"), { recursive: true });
 
@@ -43,7 +46,11 @@ const started = Date.now();
 const sample = async (label) => {
   const m = await app.evaluate(({ app }) => {
     const all = app.getAppMetrics();
-    return { workingSetMB: Math.round(all.reduce((s, p) => s + p.memory.workingSetSize, 0) / 1024), processes: all.length };
+    return {
+      workingSetMB: Math.round(all.reduce((s, p) => s + p.memory.workingSetSize, 0) / 1024),
+      cpuPercent: all.reduce((s, p) => s + p.cpu.percentCPUUsage, 0),
+      processes: all.length,
+    };
   });
   const heapMB = await studio.evaluate(() => Math.round((performance.memory?.usedJSHeapSize ?? 0) / 1048576));
   samples.push({ minute: +((Date.now() - started) / 60000).toFixed(1), label, ...m, heapMB });
@@ -133,10 +140,10 @@ while (Date.now() - started < minutes * 60_000 && !crashed) {
   if (Date.now() - lastSample > 30_000) {
     lastSample = Date.now();
     await sample(`cycle ${cycles}`).catch((e) => errors.push(`sample: ${e.message}`));
-    writeFileSync(join(out, "stability-progress.json"), JSON.stringify({ cycles, samples, errors: errors.length }, null, 1));
+    writeFileSync(join(out, "stability-progress.json"), JSON.stringify({ cycles, samples, errorCount: errors.length, errors: [...new Set(errors)] }, null, 1));
   }
 }
-if (!crashed) await sample("end").catch(() => {});
+if (!crashed) await sample("end").catch((error) => errors.push(`final sample: ${error.message}`));
 
 const warm = samples.find((s) => s.minute >= 5) ?? samples[0];
 const end = samples.at(-1);
@@ -144,6 +151,7 @@ const result = {
   exe,
   minutes,
   cycles,
+  elapsedMs: Date.now() - started,
   crashed,
   errors: [...new Set(errors)].slice(0, 50),
   errorCount: errors.length,
@@ -155,7 +163,8 @@ const result = {
   heapGrowthAfterWarmupMB: end && warm ? end.heapMB - warm.heapMB : null,
   samples,
 };
+Object.assign(result, stabilityOutcome(result));
 writeFileSync(join(out, "stability-results.json"), JSON.stringify(result, null, 2));
 console.log(JSON.stringify({ ...result, samples: undefined }, null, 2));
 await app.evaluate(({ app }) => app.exit(0)).catch(() => {});
-process.exit(crashed ? 1 : 0);
+process.exit(result.passed ? 0 : 1);

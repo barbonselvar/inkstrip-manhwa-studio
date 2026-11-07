@@ -1,5 +1,39 @@
 # Continuation report (2026-11-07, stopped at usage limit)
 
+## Codex continuation checkpoint (supersedes the handoff below)
+
+Started from verified clean HEAD `cbf9f51459c98332e78c1bc20ccf2317b9d2ceee`.
+Read [verification-2026-11-07.md](verification-2026-11-07.md) first for exact results,
+fixes, provenance and blockers. New desktop tests: 43 passing on Node 24.22.2.
+Website build/check/typecheck/lint and remaining test suites pass, but the full npm
+test command is blocked by two EPERM directory-junction tests in this restricted session.
+
+The original stability process is still running; **do not start another copy** or stop it.
+Its profile, exe copy and reports are beneath:
+`C:\Users\ASUS\AppData\Local\Temp\claude\92551a3c0e7c043d\ea8f14e1-481d-439b-ae7d-20682c281b4d\scratchpad\`.
+Read `stability/stability-results.json` when present; the progress file already records
+one error. The old harness returns zero even for caught errors, so inspect errorCount
+and error strings. The corrected harness on this branch fixes that false-success bug.
+
+1. Finish collecting the original stability result and update performance/release reports.
+2. GitHub CLI remains unauthenticated in this tool session despite owner login refresh;
+   connected GitHub tools work for PR/Actions. Secret presence is UNVERIFIED. Never
+   upload the existing key without the owner's separate approval if the secret is absent.
+3. Installed 1.0.0 was closed safely (clean marker true), and user data backed up under
+   `dist/codex-work/pre-upgrade-backup`. Installation/data filesystem access was not
+   granted. It remains 1.0.0; do not claim an upgrade or installed 1.1.0 screenshots.
+4. Local renderer/main packaging succeeds; NSIS compiler launch is blocked here. The
+   existing verified installer is preserved, but predates these fixes. The original
+   Windows Actions job was rerun through the connector and passed including NSIS/E2E.
+5. Finish committing/pushing this continuation's fixes, inspect checks on the new head,
+   and update PR #41. Do not merge or publish. Keep recommendation NOT READY until
+   outstanding verification is resolved.
+
+Logs and private data backups are in ignored `dist/codex-work`; do not commit them.
+Scratch report copies for the user are in the Codex chat's `outputs/evidence` directory.
+
+## Original Claude handoff
+
 ## Done this session
 - Five live-switchable window designs on one native window shell (docs/desktop/window-designs.md); 140/140 window checks at 100–200 % scaling.
 - Feature, network-transition, window-design and signed-update E2E suites; all passing on packaged 1.1.0.

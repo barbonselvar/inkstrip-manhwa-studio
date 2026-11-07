@@ -7,9 +7,9 @@
  * - Metadata and installers come over HTTPS from github.com. electron-updater verifies
  *   the SHA-512 in latest.yml, and verifies the downloaded installer's Authenticode
  *   signature against the publisher recorded in app-update.yml at build time.
- * - Automatic download/installation is enabled only when the running application is
- *   itself validly signed and that publisher is pinned. Unsigned (test) builds can still
- *   tell the user a release exists and open its page, but never install it.
+ * - Every installer must verify against the pinned Ed25519 update key. Authenticode
+ *   publisher verification is an additional check when configured; Ed25519 does not
+ *   establish Windows first-install trust or remove SmartScreen warnings.
  * - Installation happens only after the user clicks "Install and Restart" and the
  *   renderer has saved/preserved all open work.
  */

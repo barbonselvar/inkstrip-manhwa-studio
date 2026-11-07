@@ -1,5 +1,11 @@
 # Update system and owner-approved releases
 
+**Continuation audit (2026-11-07):** the protected environment, owner reviewer, `main`
+deployment policy and tag ruleset were verified. Administrator approval bypass is
+enabled. Signing-secret presence is currently **unverified**, because GitHub CLI in
+this session cannot authenticate. The local key matches the pinned public key; it was
+not replaced or uploaded. See [current verification](verification-2026-11-07.md).
+
 ## Signing strategy (free — nothing purchased)
 
 | Purpose | Mechanism | Cost | Status |

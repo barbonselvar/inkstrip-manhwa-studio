@@ -15,7 +15,7 @@
     "build:main": "node scripts/build-main.mjs",
     "build": "npm run build:renderer && npm run build:main",
     "start": "npm run build:main && electron .",
-    "test": "node --experimental-strip-types --test test/main-modules.test.ts",
+    "test": "node --experimental-strip-types --test test/main-modules.test.ts test/stability-outcome.test.mjs test/updater-service.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dist": "npm run build && electron-builder --win nsis --x64 --publish never",
     "dist:dir": "npm run build && electron-builder --win dir --x64 --publish never",

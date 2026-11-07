@@ -1,5 +1,9 @@
 # Performance report
 
+For the later stability run and its limitations, see
+[the continuation verification](verification-2026-11-07.md). The measurements below
+are the earlier large-chapter benchmark, not a completed 60-minute stability result.
+
 Measured on 2026-11-07 with `apps/desktop/test/perf-desktop.mjs` (real Electron app,
 production renderer bundle, isolated profiles, network disabled).
 

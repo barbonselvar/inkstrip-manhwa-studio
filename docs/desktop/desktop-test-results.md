@@ -1,5 +1,8 @@
 # Desktop test results
 
+> **Historical baseline.** See [current 1.1.0 verification](verification-2026-11-07.md)
+> for recovered evidence, reruns, new regression tests and explicit blocked checks.
+
 Windows 11 Pro 26200 · i7-12700H · 31.6 GB · RTX 4050 Laptop. 2026-11-07.
 **PASS** = executed and passed · **FAIL** · **NOT TESTED** = not executed.
 

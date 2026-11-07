@@ -80,18 +80,21 @@ jobs:
             apps/desktop/package-lock.json
       - name: Install
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
           npm ci --no-audit --no-fund
           npm ci --no-audit --no-fund --prefix apps/desktop
       - name: Website checks (typecheck, lint, unit and integration tests)
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
           npm run typecheck
           npm run lint
           npm test
       - name: Desktop typecheck, unit tests and shipped-dependency audit
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
           npm audit --omit=dev --audit-level=high --prefix apps/desktop
           npm run typecheck --prefix apps/desktop
-          node --experimental-strip-types --test apps/desktop/test/main-modules.test.ts
+          npm run test:desktop
       - name: Build and sign the NSIS installer
         working-directory: apps/desktop
         shell: pwsh

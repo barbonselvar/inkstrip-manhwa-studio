@@ -43,8 +43,6 @@ export function compareVersions(a: string, b: string) {
   return 0;
 }
 
-const REQUIRED_ASSETS = [/^latest\.yml$/, /^Inkstrip-Manhwa-Studio-Setup-[\d.]+\.exe$/, /\.exe\.blockmap$/, /\.exe\.sig$/];
-
 export function pickRelease(
   releases: unknown,
   currentVersion: string,
@@ -62,9 +60,8 @@ export function pickRelease(
           .filter((a) => a && typeof a.name === "string" && (a.state === undefined || a.state === "uploaded"))
           .map((a) => a.name as string)
       : [];
-    if (!REQUIRED_ASSETS.every((re) => names.some((n) => re.test(n)))) continue;
-    const installer = names.find((n) => REQUIRED_ASSETS[1]!.test(n))!;
-    if (installer !== `Inkstrip-Manhwa-Studio-Setup-${version}.exe`) continue;
+    const installer = `Inkstrip-Manhwa-Studio-Setup-${version}.exe`;
+    if (!["latest.yml", installer, `${installer}.blockmap`, `${installer}.sig`].every((name) => names.includes(name))) continue;
     if (best && compareVersions(version, best.version) <= 0) continue;
     best = {
       tag: raw.tag_name,

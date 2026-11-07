@@ -262,6 +262,17 @@ describe("update release selection", () => {
     const r = pickRelease([release("desktop-v1.1.0", { html_url: "https://evil.example/x" })], "1.0.0", repo);
     assert.equal(r?.pageUrl, `https://github.com/${repo}/releases/tag/desktop-v1.1.0`);
   });
+  test("requires the signature and blockmap for the selected installer", () => {
+    for (const suffix of [".sig", ".blockmap"]) {
+      const mismatched = assets("1.1.1").map((asset) =>
+        asset.name.endsWith(suffix) ? { ...asset, name: `unrelated.exe${suffix}` } : asset,
+      );
+      assert.equal(pickRelease([release("desktop-v1.1.1", { assets: mismatched })], "1.1.0", repo), null);
+    }
+    // A stray installer attachment must not hide a complete, correctly paired update.
+    const complete = [{ name: "Inkstrip-Manhwa-Studio-Setup-9.0.0.exe", state: "uploaded" }, ...assets("1.1.1")];
+    assert.equal(pickRelease([release("desktop-v1.1.1", { assets: complete })], "1.1.0", repo)?.version, "1.1.1");
+  });
   test("network failures are offline, HTTP/metadata failures are real errors", () => {
     for (const m of ["net::ERR_INTERNET_DISCONNECTED", "net::ERR_PROXY_CONNECTION_FAILED", "getaddrinfo ENOTFOUND api.github.com", "The operation was aborted due to timeout (TimeoutError)", "connect ECONNREFUSED 1.2.3.4:443"])
       assert.ok(isNetworkFailure(m, true), m);

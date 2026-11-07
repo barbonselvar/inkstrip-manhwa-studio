@@ -50,13 +50,15 @@ jobs:
             apps/desktop/package-lock.json
       - name: Install
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
           npm ci --no-audit --no-fund
           npm ci --no-audit --no-fund --prefix apps/desktop
       - name: Desktop typecheck, unit tests and shipped-dependency audit
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
           npm audit --omit=dev --audit-level=high --prefix apps/desktop
           npm run typecheck --prefix apps/desktop
-          node --experimental-strip-types --test apps/desktop/test/main-modules.test.ts
+          npm run test:desktop
       - name: Build renderer, main process and unsigned NSIS installer
         working-directory: apps/desktop
         env:
@@ -66,7 +68,15 @@ jobs:
         run: node apps/desktop/scripts/assemble-dist.mjs
       - name: Offline end-to-end test of the packaged app
         shell: pwsh
+        env:
+          DEBUG: pw:browser
         run: node apps/desktop/test/e2e-desktop.mjs --exe "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe" --out "$env:RUNNER_TEMP/desktop-e2e"
+      - name: Editing, backup and network-transition workflows
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          node apps/desktop/test/features-e2e.mjs --exe "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe" --out "$env:RUNNER_TEMP/desktop-e2e/features"
+          node apps/desktop/test/network-e2e.mjs --exe "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe" --out "$env:RUNNER_TEMP/desktop-e2e/network"
       - name: Window designs (five designs × 100/125/150/200% scaling)
         shell: pwsh
         run: node apps/desktop/test/window-designs-e2e.mjs --exe "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe" --out "$env:RUNNER_TEMP/desktop-e2e/windows"
@@ -77,6 +87,7 @@ jobs:
           path: |
             ${{ runner.temp }}/desktop-e2e/**/*.png
             ${{ runner.temp }}/desktop-e2e/**/*.json
+            ${{ runner.temp }}/desktop-e2e/**/*.log
           if-no-files-found: warn
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

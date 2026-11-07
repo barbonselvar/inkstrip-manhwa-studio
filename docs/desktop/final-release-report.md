@@ -1,5 +1,9 @@
 # Inkstrip Manhwa Studio for Windows — final release report
 
+> **Historical 1.0.0 report.** Current 1.1.0 results, installer provenance, signing
+> status and blockers are in [the continuation verification](verification-2026-11-07.md).
+> Claims below describe the earlier run and do not establish current release readiness.
+
 | | |
 |---|---|
 | Application version | **1.0.0** |
