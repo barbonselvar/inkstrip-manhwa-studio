@@ -134,7 +134,7 @@ try {
   await saved(page);
   await ready(page);
   await page.screenshot({ path: "/workspace/screenshots/composition-desktop-spacing.png" });
-  await page.getByRole("button", { name: "SFX Library", exact: true }).click();
+  await page.getByRole("button", { name: "Manhwa SFX", exact: true }).click();
   await page
     .locator(".composition-preset-card")
     .filter({ has: page.getByText("Sharp Slash", { exact: true }) })
@@ -317,7 +317,7 @@ try {
   await page.screenshot({ path: "/workspace/screenshots/composition-desktop.png" });
   // Existing navigation is still operational after composition edits.
   await page.getByRole("button", { name: "Text & Bubbles", exact: true }).click();
-  await page.getByRole("heading", { name: "Text & Bubbles", exact: true }).waitFor();
+  await page.locator("[data-composition=lettering]").waitFor();
   await page.getByRole("button", { name: "Images", exact: true }).click();
   await page.getByRole("button", { name: "Open in Raster Studio", exact: true }).waitFor();
   results.push({ workflow: "existing chapter navigation", passed: true });

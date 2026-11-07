@@ -32,7 +32,34 @@ import { NumberField } from "../editor/number-field";
 import { CompositionLayers } from "./layers";
 import { Choice } from "./properties";
 import type { Panel } from "@/lib/studio/types";
-import { ArrowDown, ArrowUp, Star, Group, Ungroup, Focus } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Star,
+  Group,
+  Ungroup,
+  Focus,
+  Eye,
+  EyeOff,
+  Lock,
+  Unlock,
+} from "lucide-react";
+import { FadeTypeGallery, TransitionGallery } from "./fx-galleries";
+import { SfxExtractor } from "./extractor";
+import { MANHWA_WORDS, INK_STYLES } from "@/lib/studio/composition/ink-catalog";
+import { inkObject } from "@/lib/studio/composition/ink-presets";
+import { space } from "@/lib/studio/composition/model";
+/** Built-in spacing presets: fill + height applied to the gap after each selected panel. */
+const SPACING_PRESETS = [
+  { name: "No gap", height: 0, fill: "solid", color: "#ffffff" },
+  { name: "Tight white · 40", height: 40, fill: "solid", color: "#ffffff" },
+  { name: "Standard white · 120", height: 120, fill: "solid", color: "#ffffff" },
+  { name: "Scene break · 600", height: 600, fill: "solid", color: "#ffffff" },
+  { name: "Dramatic black · 400", height: 400, fill: "solid", color: "#000000" },
+  { name: "Transparent · 200", height: 200, fill: "transparent", color: "#ffffff" },
+  { name: "Night gradient · 500", height: 500, fill: "gradient", color: "#0b1a33" },
+  { name: "Blurred edge · 300", height: 300, fill: "blur", color: "#ffffff" },
+] as const;
 export function CompositionLibrary({
   controller,
   session,
@@ -45,7 +72,18 @@ export function CompositionLibrary({
   onDuplicate,
   onDelete,
   onAssetImport,
+  onExtractSave,
+  tool,
 }: {
+  tool: string;
+  onExtractSave: (
+    blob: Blob,
+    name: string,
+    collection: string,
+    width: number,
+    height: number,
+    place: boolean,
+  ) => Promise<void>;
   controller: Controller;
   session: Session;
   document: CompositionDocument;
@@ -61,10 +99,7 @@ export function CompositionLibrary({
   const [search, setSearch] = useState(""),
     [category, setCategory] = useState("All"),
     [text, setText] = useState("SWISH"),
-    [favoritesOnly, setFavoritesOnly] = useState(false),
-    [fadeType, setFadeType] = useState<(typeof FADE_TYPES)[number]>("Bottom Fade"),
-    [transitionType, setTransitionType] =
-      useState<(typeof TRANSITION_TYPES)[number]>("White Transition");
+    [favoritesOnly, setFavoritesOnly] = useState(false);
   const styleItems = useMemo(
     () => SFX_STYLES.map((style) => ({ style, object: sfx(text, style) })),
     [text],
@@ -107,7 +142,113 @@ export function CompositionLibrary({
     session.selection?.kind === "object"
       ? d.objects.find((o) => o.id === session.selection?.id)
       : undefined;
-  const tool = session.tool;
+  const [dragPanel, setDragPanel] = useState<string | null>(null),
+    [dropPanel, setDropPanel] = useState<string | null>(null);
+  const setPanelFlag = (id: string, patch: { visible?: boolean; locked?: boolean }) =>
+    controller.change((doc) => ({
+      ...doc,
+      panels: { ...doc.panels, [id]: { ...doc.panels[id], ...patch } },
+    }));
+  const presetList = (categories: CompositionPreset["category"][], title = "Saved presets") => {
+    const items = preferences.presets.filter((p) => categories.includes(p.category));
+    if (!items.length) return null;
+    return (
+      <>
+        <h4>{title}</h4>
+        {items.map((p) => (
+          <div key={p.id} className="composition-card">
+            <strong>{p.name}</strong>
+            <small>{p.category}</small>
+            <Button variant="secondary" onClick={() => onApplyPreset(p)}>
+              Apply preset
+            </Button>
+            <Button
+              variant="ghost"
+              aria-label={`Delete preset ${p.name}`}
+              onClick={() =>
+                onPreferences({
+                  ...preferences,
+                  presets: preferences.presets.filter((x) => x.id !== p.id),
+                })
+              }
+            >
+              Delete preset
+            </Button>
+          </div>
+        ))}
+      </>
+    );
+  };
+  const addFade = (type: (typeof FADE_TYPES)[number]) => {
+    if (!owner || d.panels[owner]?.locked) return;
+    const f = fade(type);
+    controller.change((doc) => ({
+      ...doc,
+      panels: {
+        ...doc.panels,
+        [owner]: { ...doc.panels[owner], fades: [...doc.panels[owner].fades, f] },
+      },
+    }));
+    controller.select({ kind: "fade", id: f.id, panelId: owner });
+  };
+  const addTransition = (type: (typeof TRANSITION_TYPES)[number]) => {
+    const next = panels[panels.findIndex((p) => p.id === owner) + 1];
+    if (!owner || !next) return;
+    const t: Transition = {
+      id: crypto.randomUUID(),
+      a: owner,
+      b: next.id,
+      type,
+      height: 350,
+      softness: 0.6,
+      opacity: 1,
+      angle: 0,
+      color: "#ffffff",
+      visible: true,
+      locked: false,
+      seed: 1234,
+      stops: [
+        { position: 0, opacity: 0 },
+        { position: 1, opacity: 1 },
+      ],
+    };
+    controller.change((doc) => ({ ...doc, transitions: [...doc.transitions, t] }));
+    controller.select({ kind: "transition", id: t.id });
+  };
+  type FavoriteItem = {
+    key: string;
+    label: string;
+    detail: string;
+    object: CompositionObject;
+    preset?: CompositionPreset;
+  };
+  const favoriteItems = preferences.favorites.flatMap((key): FavoriteItem[] => {
+    const [kind, ...rest] = key.split(":"),
+      name = rest.join(":");
+    if (kind === "sfx" && SFX_STYLES.includes(name as never))
+      return [{ key, label: name, detail: "Lettering style", object: sfx(text, name) }];
+    if (kind === "fx")
+      return [{ key, label: name, detail: "Effect", object: fx(name, d.width, 500) }];
+    if (kind === "manhwa") {
+      const word = MANHWA_WORDS.find((w) => w[0] === name);
+      if (word)
+        return [{ key, label: name, detail: word[1], object: inkObject(word[1], INK_STYLES[0]) }];
+    }
+    if (kind === "asset") {
+      const preset = preferences.presets.find((p) => p.id === name && p.category === "asset");
+      if (preset)
+        return [
+          {
+            key,
+            label: preset.name,
+            detail: preset.collection ?? "Asset",
+            object: preset.value as CompositionObject,
+            preset,
+          },
+        ];
+    }
+    return [];
+  });
   return (
     <div className="composition-library-content">
       <h3>{tool}</h3>
@@ -125,10 +266,43 @@ export function CompositionLibrary({
               Clear
             </Button>
           </div>
+          <p className="composition-hint">Drag a card to reorder; arrows work on touch.</p>
           {panels.map((p, index) => (
             <div
               key={p.id}
-              className={`composition-panel-card ${session.selectedPanels.includes(p.id) ? "is-selected" : ""}`}
+              draggable={!d.panels[p.id]?.locked}
+              onDragStart={(e) => {
+                e.dataTransfer.setData("application/x-inkstrip-panel", p.id);
+                e.dataTransfer.effectAllowed = "move";
+                setDragPanel(p.id);
+              }}
+              onDragOver={(e) => {
+                if (dragPanel && dragPanel !== p.id) {
+                  e.preventDefault();
+                  setDropPanel(p.id);
+                }
+              }}
+              onDragLeave={() => setDropPanel((x) => (x === p.id ? null : x))}
+              onDrop={(e) => {
+                e.preventDefault();
+                const id = e.dataTransfer.getData("application/x-inkstrip-panel") || dragPanel;
+                setDragPanel(null);
+                setDropPanel(null);
+                if (!id || id === p.id) return;
+                const order = session.history.present.order.filter((x) => x !== id);
+                order.splice(
+                  order.indexOf(p.id) + (index > panels.findIndex((x) => x.id === id) ? 1 : 0),
+                  0,
+                  id,
+                );
+                controller.reorder(order);
+              }}
+              onDragEnd={() => {
+                setDragPanel(null);
+                setDropPanel(null);
+              }}
+              data-panel-card={p.id}
+              className={`composition-panel-card ${session.selectedPanels.includes(p.id) ? "is-selected" : ""} ${dropPanel === p.id ? "is-drop-target" : ""}`}
             >
               <label className="composition-check">
                 <input
@@ -183,6 +357,24 @@ export function CompositionLibrary({
                 <Button
                   size="icon"
                   variant="ghost"
+                  aria-label={`${d.panels[p.id]?.visible === false ? "Show" : "Hide"} panel ${index + 1}`}
+                  aria-pressed={d.panels[p.id]?.visible === false}
+                  onClick={() => setPanelFlag(p.id, { visible: d.panels[p.id]?.visible === false })}
+                >
+                  {d.panels[p.id]?.visible === false ? <EyeOff /> : <Eye />}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label={`${d.panels[p.id]?.locked ? "Unlock" : "Lock"} panel ${index + 1}`}
+                  aria-pressed={!!d.panels[p.id]?.locked}
+                  onClick={() => setPanelFlag(p.id, { locked: !d.panels[p.id]?.locked })}
+                >
+                  {d.panels[p.id]?.locked ? <Lock /> : <Unlock />}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
                   aria-label={`Focus panel ${index + 1}`}
                   onClick={() => {
                     controller.setState({ focus: p.id, selectedPanels: [p.id] });
@@ -228,6 +420,65 @@ export function CompositionLibrary({
           >
             Chapter ending
           </Button>
+          <h4>Quick gaps</h4>
+          <p className="composition-hint">
+            Applies to the gap after{" "}
+            {session.selectedPanels.length > 1
+              ? `${session.selectedPanels.length} selected panels`
+              : "the selected panel"}{" "}
+            in one undo step.
+          </p>
+          <div className="composition-swatch-row">
+            {SPACING_PRESETS.map((preset) => (
+              <button
+                key={preset.name}
+                disabled={!owner}
+                onClick={() => {
+                  const ids = (
+                    session.selectedPanels.length ? session.selectedPanels : [owner]
+                  ).filter((id) => id && id !== panels.at(-1)?.id && !d.panels[id]?.locked);
+                  controller.change((doc) => ({
+                    ...doc,
+                    panels: {
+                      ...doc.panels,
+                      ...Object.fromEntries(
+                        ids.map((id) => [
+                          id,
+                          {
+                            ...doc.panels[id],
+                            after: {
+                              ...doc.panels[id].after,
+                              ...space(preset.height, preset.color),
+                              fill: preset.fill,
+                              color2:
+                                preset.fill === "gradient"
+                                  ? "#000000"
+                                  : doc.panels[id].after.color2,
+                            },
+                          },
+                        ]),
+                      ),
+                    },
+                  }));
+                  if (ids[0]) controller.select({ kind: "space", id: ids[0], slot: "after" });
+                }}
+              >
+                <i
+                  style={
+                    preset.fill === "transparent"
+                      ? undefined
+                      : preset.fill === "gradient"
+                        ? { background: `linear-gradient(${preset.color}, #000000)` }
+                        : preset.fill === "blur"
+                          ? { background: "linear-gradient(#bbb, #fff)", filter: "blur(1px)" }
+                          : { background: preset.color }
+                  }
+                />
+                {preset.name}
+              </button>
+            ))}
+          </div>
+          {presetList(["spacing"])}
         </>
       )}
       {tool === "Fades" && (
@@ -235,28 +486,7 @@ export function CompositionLibrary({
           <p className="composition-hint">
             Fade the selected artwork into its extension or chapter background.
           </p>
-          <Choice
-            label="New fade"
-            value={fadeType}
-            options={FADE_TYPES}
-            onChange={(v) => setFadeType(v as typeof fadeType)}
-          />
-          <Button
-            disabled={!owner || d.panels[owner]?.locked}
-            onClick={() => {
-              const f = fade(fadeType);
-              controller.change((doc) => ({
-                ...doc,
-                panels: {
-                  ...doc.panels,
-                  [owner]: { ...doc.panels[owner], fades: [...doc.panels[owner].fades, f] },
-                },
-              }));
-              controller.select({ kind: "fade", id: f.id, panelId: owner });
-            }}
-          >
-            Add fade
-          </Button>
+          <FadeTypeGallery disabled={!owner || d.panels[owner]?.locked} onPick={addFade} />
           {owner &&
             d.panels[owner]?.fades.map((f) => (
               <Button
@@ -267,45 +497,18 @@ export function CompositionLibrary({
                 {f.name} · {f.length} px {f.visible ? "" : "(hidden)"}
               </Button>
             ))}
+          {presetList(["fade"])}
         </>
       )}
       {tool === "Transitions" && (
         <>
-          <Choice
-            label="New transition"
-            value={transitionType}
-            options={TRANSITION_TYPES}
-            onChange={(v) => setTransitionType(v as typeof transitionType)}
-          />
-          <Button
+          <p className="composition-hint">
+            Choose a transition to connect the selected panel to the next one.
+          </p>
+          <TransitionGallery
             disabled={!owner || panels.findIndex((p) => p.id === owner) === panels.length - 1}
-            onClick={() => {
-              const next = panels[panels.findIndex((p) => p.id === owner) + 1];
-              if (!next) return;
-              const t: Transition = {
-                id: crypto.randomUUID(),
-                a: owner,
-                b: next.id,
-                type: transitionType,
-                height: 350,
-                softness: 0.6,
-                opacity: 1,
-                angle: 0,
-                color: "#ffffff",
-                visible: true,
-                locked: false,
-                seed: 1234,
-                stops: [
-                  { position: 0, opacity: 0 },
-                  { position: 1, opacity: 1 },
-                ],
-              };
-              controller.change((doc) => ({ ...doc, transitions: [...doc.transitions, t] }));
-              controller.select({ kind: "transition", id: t.id });
-            }}
-          >
-            Connect to next panel
-          </Button>
+            onPick={addTransition}
+          />
           {d.transitions.map((t) => (
             <div className="composition-card" key={t.id}>
               <Button
@@ -336,9 +539,14 @@ export function CompositionLibrary({
               )}
             </div>
           ))}
+          {presetList(["transition"])}
         </>
       )}
-      {(tool === "SFX Library" || tool === "Effects Library") && (
+      {tool === "Built-in SFX" && (
+        <ManhwaGallery insert={insert} favorites={preferences.favorites} onFavorite={favorite} />
+      )}
+      {tool === "Built-in SFX" && <h4>Classic lettering styles</h4>}
+      {(tool === "Built-in SFX" || tool === "Effects Library") && (
         <>
           <label className="editor-field-label">
             Search presets
@@ -355,7 +563,7 @@ export function CompositionLibrary({
             value={category}
             options={[
               "All",
-              ...Object.keys(tool === "SFX Library" ? SFX_CATEGORIES : FX_CATEGORIES),
+              ...Object.keys(tool === "Built-in SFX" ? SFX_CATEGORIES : FX_CATEGORIES),
             ]}
             onChange={setCategory}
           />
@@ -367,7 +575,7 @@ export function CompositionLibrary({
             />
             Favorites only
           </label>
-          {tool === "SFX Library" ? (
+          {tool === "Built-in SFX" ? (
             <>
               <label className="editor-field-label">
                 Custom sound effect
@@ -453,14 +661,113 @@ export function CompositionLibrary({
           )}
         </>
       )}
+      {tool === "Effects Library" && presetList(["fx"])}
       {tool === "Fade Shapes" && <FadeShapeGallery controller={controller} owner={owner} />}
-      {tool === "Manhwa SFX" && <ManhwaGallery insert={insert} />}
-      {tool === "My SFX Assets" && (
-        <AssetGallery
-          presets={preferences.presets}
-          insert={onApplyPreset}
-          onImport={onAssetImport}
-        />
+      {tool === "Fade Shapes" && presetList(["fade"])}
+      {tool === "My Assets" && (
+        <>
+          <AssetGallery
+            presets={preferences.presets}
+            insert={onApplyPreset}
+            onImport={onAssetImport}
+            favorites={preferences.favorites}
+            onFavorite={favorite}
+          />
+          {presetList(["sfx"], "Saved SFX lettering")}
+        </>
+      )}
+      {tool === "Import" && (
+        <>
+          <p className="composition-hint">
+            Bring finished SFX artwork into this project&apos;s library: transparent PNG, WebP or
+            sanitized SVG. To cut lettering out of a page or panel, use Extract.
+          </p>
+          <Button variant="secondary" onClick={onAssetImport}>
+            Import SFX artwork
+          </Button>
+          <Button variant="ghost" onClick={onOverlay}>
+            Place an image overlay without saving it
+          </Button>
+        </>
+      )}
+      {tool === "Extract" && <SfxExtractor panels={panels} onSave={onExtractSave} />}
+      {tool === "Favorites" && (
+        <>
+          <p className="composition-hint">
+            Star lettering, styles, effects and assets in the other tabs to pin them here.
+          </p>
+          {!favoriteItems.length && <p>No favorites yet.</p>}
+          <div className="composition-preset-grid">
+            {favoriteItems.map((item) => (
+              <div className="composition-preset-card" key={item.key}>
+                <button
+                  onClick={() =>
+                    "preset" in item && item.preset
+                      ? onApplyPreset(item.preset)
+                      : insert(item.object)
+                  }
+                >
+                  <Thumbnail object={item.object} />
+                  <strong>{item.label}</strong>
+                  <small>{item.detail}</small>
+                </button>
+                <button
+                  className="composition-favorite"
+                  aria-label={`Remove favorite ${item.label}`}
+                  aria-pressed
+                  onClick={() => favorite(item.key)}
+                >
+                  <Star />
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      {tool === "Overlays & Sources" && (
+        <>
+          <p className="composition-hint">
+            Source artwork stays unchanged. Lock, hide or fade a source here; select a panel for
+            opacity, blend and saved native drafts in Properties.
+          </p>
+          <Button variant="secondary" onClick={onOverlay}>
+            Add image overlay
+          </Button>
+          {panels.map((p, index) => (
+            <div className="composition-card" key={p.id}>
+              <strong>
+                {index + 1} · {p.name}
+              </strong>
+              <small>
+                Opacity {Math.round((d.panels[p.id]?.opacity ?? 1) * 100)}% ·{" "}
+                {d.panels[p.id]?.snapshot ? "native draft" : "accepted image"}
+              </small>
+              <div className="composition-actions">
+                <Button
+                  variant="ghost"
+                  onClick={() => setPanelFlag(p.id, { visible: d.panels[p.id]?.visible === false })}
+                >
+                  {d.panels[p.id]?.visible === false ? "Show source" : "Hide source"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setPanelFlag(p.id, { locked: !d.panels[p.id]?.locked })}
+                >
+                  {d.panels[p.id]?.locked ? "Unlock source" : "Lock source"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    controller.select({ kind: "panel", id: p.id });
+                    controller.setState({ selectedPanels: [p.id] });
+                  }}
+                >
+                  Source properties
+                </Button>
+              </div>
+            </div>
+          ))}
+        </>
       )}
       {tool === "Layers" && (
         <div className="composition-actions">
@@ -537,7 +844,7 @@ export function CompositionLibrary({
           onOverlay={onOverlay}
         />
       )}
-      {tool === "Presets" && (
+      {tool === "All presets" && (
         <>
           <p className="composition-hint">
             Saved with this project and included in editable backups.

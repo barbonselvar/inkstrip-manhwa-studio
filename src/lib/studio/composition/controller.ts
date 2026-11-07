@@ -40,6 +40,19 @@ export type Session = {
   tool: string;
   mobileProperties: boolean;
   drawBoundary?: boolean;
+  /** Additional selected creative objects for multi-object move/alignment. */
+  multi?: string[];
+  /** Snap to chapter, panel and object guides (on unless false). */
+  snap?: boolean;
+  /** Non-destructive smart-placement candidates in chapter coordinates. */
+  suggestions?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    reason: string;
+    preset?: string;
+  }[];
 };
 export type Controller = StoreApi<Session> & {
   change: (fn: (d: CompositionDocument) => CompositionDocument, group?: string) => void;
@@ -70,14 +83,12 @@ function installSaveGuards() {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden")
       for (const [, c] of pending())
-        void c
-          .flush()
-          .catch(() =>
-            useStudio.setState({
-              banner:
-                "Composition changes could not be saved. Return to Composition & FX and export recovery before leaving.",
-            }),
-          );
+        void c.flush().catch(() =>
+          useStudio.setState({
+            banner:
+              "Composition changes could not be saved. Return to Composition & FX and export recovery before leaving.",
+          }),
+        );
   });
 }
 export let clipboard: Space | Fade | CompositionObject | Transition | undefined;
@@ -144,7 +155,12 @@ export function getController(chapter: Chapter, panels: Panel[]): Controller {
       const s = store.getState();
       if (s.history.future.length) commit(redo(s.history));
     },
-    select: (selection: Selection) => store.setState({ selection, mobileProperties: true }),
+    select: (selection: Selection) =>
+      store.setState((s) => ({
+        selection,
+        mobileProperties: true,
+        multi: selection?.kind === "object" && s.multi?.includes(selection.id) ? s.multi : [],
+      })),
     flush: async () => {
       clearTimeout(timer);
       if (running) return running;

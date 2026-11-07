@@ -23,6 +23,7 @@ import { fadeCoverage, noise, stopValue } from "./masks.ts";
 import { createHistory, record, undo, redo } from "../editor/history.ts";
 import { validateChapterRecord, partitionLibrary } from "../records.ts";
 import { encodeBackup, decodeBackup, projectBlobIds } from "../backup.ts";
+import { bubble } from "./bubble-presets.ts";
 import type { Panel, Chapter, Project } from "../types.ts";
 const project: Project = {
   id: "project",
@@ -459,4 +460,45 @@ test("creative hit testing follows unified stack order and respects parent clipp
   o.y = -150;
   o.clip = true;
   assert.equal(pickCreative(d, frames, { x: 100, y: -50 }, layerStack(d)), null);
+});
+test("editable packages round-trip chapter lettering and saved bubble/text styles", async () => {
+  const d = scene();
+  const speech = { ...bubble("Standard dialogue"), owner: "p1", y: -60, rotation: 12 },
+    vertical = { ...bubble("Japanese vertical"), x: 300, y: 40 },
+    arabic = { ...bubble("Arabic dialogue"), owner: "p0" };
+  d.objects = [speech, vertical, arabic];
+  const preferences = {
+    presets: [
+      {
+        id: "style",
+        name: "Shout style",
+        category: "bubble" as const,
+        collection: "Bubble style",
+        value: bubble("Shouting"),
+      },
+    ],
+    favorites: ["bubble:Thought"],
+  };
+  const c = { ...chapter, composition: { version: 1, revision: 3, document: d } },
+    blobs = new Map(
+      panels.flatMap(
+        (p) =>
+          [
+            [p.blobId, new Blob(["art"])],
+            [p.thumbId, new Blob(["thumbnail"])],
+          ] as [string, Blob][],
+      ),
+    );
+  const restored = await decodeBackup(
+    encodeBackup({
+      project: { ...project, compositionPreferences: preferences },
+      chapters: [c],
+      panels,
+      blobs,
+    }),
+  );
+  assert.deepEqual(restored.chapters[0].composition, c.composition);
+  assert.deepEqual(restored.project.compositionPreferences, preferences);
+  // Bubbles carry no media, so no extra blobs are referenced.
+  assert.equal(restored.blobs.size, panels.length * 2);
 });

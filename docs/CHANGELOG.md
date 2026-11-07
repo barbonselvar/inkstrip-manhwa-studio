@@ -1,5 +1,21 @@
 # Inkstrip release changelog
 
+## Text & Bubbles chapter editor, Composition consolidation, SFX extractor
+
+- Text & Bubbles is now a chapter-level editor on the same scene and history as
+  Composition & FX: Chapter and Focus modes, 15 visual bubble presets, ten editable
+  shapes, multi-tail geometry, direct resize/rotate/tail handles, inline canvas typing,
+  multilingual typography (Korean, vertical Japanese, Arabic RTL), a chapter dialogue
+  list, reusable bubble/text styles and optional smart-placement suggestions.
+  Per-panel native dialogue documents remain under Advanced.
+- Composition & FX navigation is consolidated into Panels, Spacing, Fades &
+  Transitions and Manhwa SFX plus Advanced, with thumbnail galleries for every fade and
+  transition, quick spacing presets, panel drag-and-drop and show/lock toggles.
+- New SFX & artwork extractor: selections, offline colour-key matting, refinement
+  brushes, recolor/outline/shadow and transparent PNG/WebP assets; sources untouched.
+- Multi-select alignment, object snapping toggle and re-anchoring across panels.
+- [Audit, implementation, validation and limits](TEXT_BUBBLES_SFX_STUDIO.md).
+
 ## Organic fades & Manhwa SFX — PR #34
 
 - Visual galleries for nine editable fade boundaries and original Hangul/English vector sound effects.
