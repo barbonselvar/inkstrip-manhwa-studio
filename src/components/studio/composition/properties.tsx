@@ -32,6 +32,8 @@ import {
 } from "@/lib/studio/composition/controller";
 import type { Panel } from "@/lib/studio/types";
 import { Copy, ClipboardPaste, RotateCcw, Plus, Trash2 } from "lucide-react";
+import { BubbleProperties } from "./bubble-properties";
+import type { Bubble } from "@/lib/studio/composition/bubble";
 export function Check({
   label,
   value,
@@ -261,7 +263,9 @@ export function CompositionProperties({
   onPreset,
   onNative,
   onOverlay,
+  onSaveStyle,
 }: {
+  onSaveStyle?: (kind: "Bubble style" | "Text style", value: Bubble) => void;
   controller: Controller;
   session: Session;
   document: CompositionDocument;
@@ -895,20 +899,34 @@ export function CompositionProperties({
                 ? "Sound effect"
                 : o.kind === "group"
                   ? "Layer group"
-                  : "Visual layer"}
+                  : o.kind === "bubble"
+                    ? o.shape === "None"
+                      ? "Text"
+                      : "Speech bubble"
+                    : "Visual layer"}
             </h3>
-            <label className="editor-field-label">
-              Layer name
-              <input
-                className="field"
-                maxLength={200}
-                value={o.name}
-                onChange={(e) => setObject({ name: e.target.value })}
+            {o.kind === "bubble" && (
+              <BubbleProperties
+                bubble={o}
+                onChange={(patch) => setObject(patch as Partial<CompositionObject>)}
+                onSaveStyle={(kind, value) => onSaveStyle?.(kind, value)}
               />
-            </label>
-            <div className="composition-two">
-              {(["x", "y", "width", "height", "rotation", "scaleX", "scaleY", "skew"] as const).map(
-                (key) => (
+            )}
+            <details open={o.kind !== "bubble"} className="composition-transform-details">
+              <summary>Transform &amp; layer</summary>
+              <label className="editor-field-label">
+                Layer name
+                <input
+                  className="field"
+                  maxLength={200}
+                  value={o.name}
+                  onChange={(e) => setObject({ name: e.target.value })}
+                />
+              </label>
+              <div className="composition-two">
+                {(
+                  ["x", "y", "width", "height", "rotation", "scaleX", "scaleY", "skew"] as const
+                ).map((key) => (
                   <NumberField
                     key={key}
                     label={key === "x" ? "X position" : key === "y" ? "Y position" : key}
@@ -938,92 +956,92 @@ export function CompositionProperties({
                     step={key.startsWith("scale") ? 0.01 : 1}
                     onChange={(v) => setObject({ [key]: v })}
                   />
-                ),
-              )}
-            </div>
-            <label className="editor-field-label">
-              Coordinate scope
-              <select
-                className="field"
-                value={o.owner ?? ""}
-                disabled={!!o.parentId || o.kind === "group"}
-                onChange={(e) => {
-                  const owner = e.target.value || undefined,
-                    frames = layout(d, panels).frames;
-                  const oldY = o.owner
-                      ? (frames.find((f) => f.panel.id === o.owner)?.imageY ?? 0)
-                      : 0,
-                    newY = owner ? (frames.find((f) => f.panel.id === owner)?.imageY ?? 0) : 0;
-                  setObject({ owner, y: o.y + oldY - newY });
-                }}
-              >
-                <option value="">Chapter global</option>
-                {panels.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    Panel · {p.name}
-                  </option>
                 ))}
-              </select>
-            </label>
-            {o.kind !== "group" && (
+              </div>
               <label className="editor-field-label">
-                Layer group
+                Coordinate scope
                 <select
                   className="field"
-                  value={o.parentId ?? ""}
-                  onChange={(e) =>
-                    setObject(
-                      reparent(
-                        o,
-                        e.target.value || undefined,
-                        o.owner,
-                        layout(d, panels).frames,
-                        d.objects,
-                      ),
-                    )
-                  }
+                  value={o.owner ?? ""}
+                  disabled={!!o.parentId || o.kind === "group"}
+                  onChange={(e) => {
+                    const owner = e.target.value || undefined,
+                      frames = layout(d, panels).frames;
+                    const oldY = o.owner
+                        ? (frames.find((f) => f.panel.id === o.owner)?.imageY ?? 0)
+                        : 0,
+                      newY = owner ? (frames.find((f) => f.panel.id === owner)?.imageY ?? 0) : 0;
+                    setObject({ owner, y: o.y + oldY - newY });
+                  }}
                 >
-                  <option value="">No group</option>
-                  {d.objects
-                    .filter((g) => g.kind === "group" && g.owner === o.owner)
-                    .map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.name}
-                      </option>
-                    ))}
+                  <option value="">Chapter global</option>
+                  {panels.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      Panel · {p.name}
+                    </option>
+                  ))}
                 </select>
               </label>
-            )}
-            <NumberField
-              label="Layer opacity"
-              value={o.opacity}
-              max={1}
-              step={0.01}
-              onChange={(opacity) => setObject({ opacity })}
-            />
-            <Choice
-              label="Layer blend mode"
-              value={o.blend}
-              options={BLEND_MODES}
-              onChange={(blend) => setObject({ blend: blend as BlendMode })}
-            />
-            <Check
-              label="Layer visible"
-              value={o.visible}
-              onChange={(visible) => setObject({ visible })}
-            />
-            <Check
-              label="Layer locked"
-              value={o.locked}
-              onChange={(locked) => setObject({ locked })}
-            />
-            {o.owner && (
-              <Check
-                label="Clip to owning panel"
-                value={o.clip}
-                onChange={(clip) => setObject({ clip })}
+              {o.kind !== "group" && (
+                <label className="editor-field-label">
+                  Layer group
+                  <select
+                    className="field"
+                    value={o.parentId ?? ""}
+                    onChange={(e) =>
+                      setObject(
+                        reparent(
+                          o,
+                          e.target.value || undefined,
+                          o.owner,
+                          layout(d, panels).frames,
+                          d.objects,
+                        ),
+                      )
+                    }
+                  >
+                    <option value="">No group</option>
+                    {d.objects
+                      .filter((g) => g.kind === "group" && g.owner === o.owner)
+                      .map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              )}
+              <NumberField
+                label="Layer opacity"
+                value={o.opacity}
+                max={1}
+                step={0.01}
+                onChange={(opacity) => setObject({ opacity })}
               />
-            )}
+              <Choice
+                label="Layer blend mode"
+                value={o.blend}
+                options={BLEND_MODES}
+                onChange={(blend) => setObject({ blend: blend as BlendMode })}
+              />
+              <Check
+                label="Layer visible"
+                value={o.visible}
+                onChange={(visible) => setObject({ visible })}
+              />
+              <Check
+                label="Layer locked"
+                value={o.locked}
+                onChange={(locked) => setObject({ locked })}
+              />
+              {o.owner && (
+                <Check
+                  label="Clip to owning panel"
+                  value={o.clip}
+                  onChange={(clip) => setObject({ clip })}
+                />
+              )}
+            </details>
             {o.kind === "sfx" && (
               <>
                 {o.ink && (

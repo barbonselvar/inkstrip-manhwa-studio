@@ -153,3 +153,96 @@ export function pickCreative(
   }
   return null;
 }
+
+/** Rotate around the visual center instead of the local origin, preserving the world center. */
+export function rotateAboutCenter(
+  object: CompositionObject,
+  rotation: number,
+  frames: PanelFrame[],
+  objects: CompositionObject[],
+): CompositionObject {
+  const c = { x: object.width / 2, y: object.height / 2 },
+    before = applyMatrix(objectMatrix(object, frames, objects), c),
+    next = { ...object, rotation },
+    after = applyMatrix(objectMatrix(next, frames, objects), c);
+  let dx = before.x - after.x,
+    dy = before.y - after.y;
+  const parent = objects.find((o) => o.id === object.parentId);
+  if (parent) {
+    const inv = inverse(objectMatrix(parent, frames, objects)),
+      a = applyMatrix(inv, { x: 0, y: 0 }),
+      b = applyMatrix(inv, { x: dx, y: dy });
+    dx = b.x - a.x;
+    dy = b.y - a.y;
+  }
+  return { ...next, x: object.x + dx, y: object.y + dy };
+}
+/** Move an unparented panel-local object to the panel under its center, keeping its world position. */
+export function reanchor(
+  object: CompositionObject,
+  frames: PanelFrame[],
+  objects: CompositionObject[],
+) {
+  if (object.parentId || !object.owner) return object;
+  const b = objectBounds(object, frames, objects),
+    cy = b.y + b.height / 2,
+    target =
+      frames.find((f) => cy >= f.top && cy < f.end) ??
+      (cy >= (frames.at(-1)?.end ?? 0) ? frames.at(-1) : frames[0]);
+  const current = frames.find((f) => f.panel.id === object.owner);
+  if (!target || !current || target.panel.id === object.owner) return object;
+  return { ...object, owner: target.panel.id, y: object.y + current.imageY - target.imageY };
+}
+export type Align =
+  "left" | "center" | "right" | "top" | "middle" | "bottom" | "spread-x" | "spread-y";
+/** Align top-level objects by their world bounds. Locked or grouped objects are left untouched. */
+export function alignObjects(
+  ids: string[],
+  mode: Align,
+  frames: PanelFrame[],
+  objects: CompositionObject[],
+): CompositionObject[] {
+  const items = objects
+    .filter((o) => ids.includes(o.id) && !o.parentId && !o.locked)
+    .map((o) => ({ o, b: objectBounds(o, frames, objects) }));
+  if (items.length < 2) return objects;
+  const left = Math.min(...items.map((i) => i.b.x)),
+    right = Math.max(...items.map((i) => i.b.x + i.b.width)),
+    top = Math.min(...items.map((i) => i.b.y)),
+    bottom = Math.max(...items.map((i) => i.b.y + i.b.height));
+  const delta = new Map<string, { dx: number; dy: number }>();
+  if (mode === "spread-x" || mode === "spread-y") {
+    const horizontal = mode === "spread-x",
+      sorted = [...items].sort((a, b) => (horizontal ? a.b.x - b.b.x : a.b.y - b.b.y)),
+      total = sorted.reduce((v, i) => v + (horizontal ? i.b.width : i.b.height), 0),
+      gap = ((horizontal ? right - left : bottom - top) - total) / (sorted.length - 1);
+    let cursor = horizontal ? left : top;
+    for (const i of sorted) {
+      delta.set(i.o.id, horizontal ? { dx: cursor - i.b.x, dy: 0 } : { dx: 0, dy: cursor - i.b.y });
+      cursor += (horizontal ? i.b.width : i.b.height) + gap;
+    }
+  } else
+    for (const { o, b } of items)
+      delta.set(o.id, {
+        dx:
+          mode === "left"
+            ? left - b.x
+            : mode === "right"
+              ? right - b.x - b.width
+              : mode === "center"
+                ? (left + right) / 2 - b.x - b.width / 2
+                : 0,
+        dy:
+          mode === "top"
+            ? top - b.y
+            : mode === "bottom"
+              ? bottom - b.y - b.height
+              : mode === "middle"
+                ? (top + bottom) / 2 - b.y - b.height / 2
+                : 0,
+      });
+  return objects.map((o) => {
+    const d = delta.get(o.id);
+    return d ? { ...o, x: Math.round(o.x + d.dx), y: Math.round(o.y + d.dy) } : o;
+  });
+}

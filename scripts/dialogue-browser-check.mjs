@@ -3,6 +3,19 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
 import { legacyVector } from "./pro-browser-fixtures.mjs";
+
+/** Text & Bubbles opens the chapter lettering editor; per-panel native documents live under Advanced. */
+async function openPanelDocuments(page) {
+  const section = page.getByRole("button", { name: "Panel documents", exact: true });
+  if (!(await section.isVisible())) {
+    const tools = page.locator(".composition-tools-toggle");
+    if (await tools.isVisible()) await tools.click();
+    if (!(await section.isVisible()))
+      await page.locator(".composition-advanced-nav summary").first().click();
+  }
+  await section.click();
+}
+
 const base = process.argv[2] ?? "http://127.0.0.1:8080";
 const production = new URL(base).hostname === "inkstrip-manhwa-studio.vercel.app",
   expected = process.argv[3];
@@ -68,6 +81,7 @@ try {
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
       "Page names do not overflow the Text & Bubbles entry",
     );
+    await openPanelDocuments(page);
     await page.getByRole("button", { name: `Edit dialogue · ${sourceName}`, exact: true }).click();
     await page.getByRole("dialog", { name: "Inkstrip Dialogue Studio", exact: true }).waitFor();
     await page.getByRole("button", { name: "Speech", exact: true }).click();
@@ -132,6 +146,7 @@ try {
     await page
       .getByRole("dialog", { name: "Inkstrip Dialogue Studio", exact: true })
       .waitFor({ state: "detached" });
+    await openPanelDocuments(page);
     await page.getByRole("button", { name: `Edit dialogue · ${sourceName}`, exact: true }).click();
     await page.getByLabel("Dialogue text", { exact: true }).waitFor();
     assert.equal(

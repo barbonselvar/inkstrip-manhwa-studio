@@ -2,6 +2,8 @@ import { INK_STYLES } from "./ink-catalog.ts";
 import { BOUNDARY_SHAPES, type Boundary } from "./boundaries.ts";
 import type { Chapter, Panel } from "../types.ts";
 import { isBlendMode, type BlendMode } from "../pro/blend.ts";
+import { validateBubbleObject, type Bubble } from "./bubble.ts";
+export type { Bubble } from "./bubble.ts";
 
 export type Fill = "solid" | "transparent" | "gradient" | "blur" | "mirror";
 export type Space = {
@@ -166,7 +168,7 @@ export type Fx = CommonObject & {
 };
 export type Overlay = CommonObject & { kind: "overlay"; blobId: string };
 export type Group = CommonObject & { kind: "group" };
-export type CompositionObject = Sfx | Fx | Overlay | Group;
+export type CompositionObject = Sfx | Fx | Overlay | Group | Bubble;
 export const TRANSITION_TYPES = [
   "White Transition",
   "Black Transition",
@@ -212,9 +214,9 @@ export type CompositionRecord = { version: 1; revision: number; document: Compos
 export type CompositionPreset = {
   id: string;
   name: string;
-  category: "spacing" | "fade" | "transition" | "sfx" | "fx" | "asset";
+  category: "spacing" | "fade" | "transition" | "sfx" | "fx" | "asset" | "bubble";
   collection?: string;
-  value: Space | Fade | Transition | Sfx | Fx | Overlay;
+  value: Space | Fade | Transition | Sfx | Fx | Overlay | Bubble;
 };
 export type CompositionPreferences = { presets: CompositionPreset[]; favorites: string[] };
 export function createComposition(chapter: Chapter, panels: Panel[]): CompositionDocument {
@@ -461,7 +463,7 @@ function validateStops(stops: Fade["stops"]) {
 export function validateObject(o: CompositionObject) {
   assert(
     o &&
-      ["sfx", "fx", "overlay", "group"].includes(o.kind) &&
+      ["sfx", "fx", "overlay", "group", "bubble"].includes(o.kind) &&
       ident(o.id) &&
       typeof o.name === "string" &&
       o.name.length <= 200,
@@ -534,6 +536,7 @@ export function validateObject(o: CompositionObject) {
       "effect",
     );
   if (o.kind === "overlay") assert(ident(o.blobId), "overlay image");
+  if (o.kind === "bubble") validateBubbleObject(o);
 }
 export function validateTransition(t: Transition) {
   assert(
@@ -693,10 +696,15 @@ export function validateCompositionPreferences(value: CompositionPreferences) {
     else if (p.category === "transition") validateTransition(p.value as Transition);
     else {
       assert(
-        p.category === "sfx" || p.category === "fx" || p.category === "asset",
+        p.category === "sfx" ||
+          p.category === "fx" ||
+          p.category === "asset" ||
+          p.category === "bubble",
         "preset category",
       );
       if (p.category === "asset") assert((p.value as Overlay).kind === "overlay", "asset preset");
+      if (p.category === "bubble")
+        assert((p.value as CompositionObject).kind === "bubble", "bubble preset");
       validateObject(p.value as CompositionObject);
     }
   }

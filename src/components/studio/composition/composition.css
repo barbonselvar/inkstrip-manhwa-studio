@@ -857,3 +857,291 @@
 .composition-boundary-editor.is-drawing {
   z-index: 5;
 }
+
+/* ── Direct-manipulation handles (sizes are set inline in world units) ── */
+.composition-handle {
+  position: absolute;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  z-index: 4;
+  border-radius: 999px;
+  border: 2px solid var(--color-accent-fg);
+  background: var(--color-accent);
+  pointer-events: auto;
+  touch-action: none;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-bg) 60%, transparent);
+}
+.composition-rotate-handle {
+  cursor: grab;
+}
+.composition-bubble-resize {
+  border-radius: 3px;
+  cursor: nwse-resize;
+}
+.composition-tail-tip {
+  background: #38d6e8;
+  cursor: move;
+}
+.composition-tail-base {
+  background: var(--color-bg-elevated);
+  border-color: #38d6e8;
+  cursor: grab;
+}
+.composition-object-outline.is-secondary {
+  border-style: dashed;
+  opacity: 0.8;
+}
+.composition-suggestion {
+  position: absolute;
+  z-index: 3;
+  border: 2px dashed #38d6e8;
+  border-radius: 12px;
+  background: color-mix(in srgb, #38d6e8 10%, transparent);
+  pointer-events: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.composition-suggestion button {
+  pointer-events: auto;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: #38d6e8;
+  color: #06202a;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.composition-inline-text {
+  position: absolute;
+  z-index: 5;
+  pointer-events: auto;
+  resize: none;
+  padding: 8%;
+  border: 2px solid var(--color-accent);
+  border-radius: 10px;
+  background: color-mix(in srgb, #ffffff 92%, transparent);
+  color: #111111;
+  line-height: 1.2;
+  outline: none;
+}
+
+/* ── Consolidated navigation: four primary categories + Advanced ── */
+.composition-tool-tabs.is-primary {
+  grid-template-columns: 1fr 1fr;
+}
+.composition-tool-tabs .composition-tool-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.composition-tool-tabs svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.composition-advanced-nav {
+  padding: 0 12px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+.composition-advanced-nav summary {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+.composition-advanced-nav div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.composition-advanced-nav button {
+  min-height: 40px;
+  font-size: 12px;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 5px;
+  color: var(--color-muted);
+  border: 1px solid transparent;
+}
+.composition-advanced-nav button.is-active {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 38%, transparent);
+}
+.composition-subtabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  margin: 0 0 12px;
+  padding-bottom: 2px;
+}
+.composition-subtabs button {
+  flex: none;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+}
+.composition-subtabs button[aria-selected="true"] {
+  color: var(--color-accent-fg);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.composition-panel-card.is-drop-target {
+  outline: 2px dashed var(--color-accent);
+}
+.composition-panel-card[draggable="true"] {
+  cursor: grab;
+}
+.composition-swatch-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+.composition-swatch-row button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+  text-align: left;
+}
+.composition-swatch-row i {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  flex: none;
+  background-image:
+    linear-gradient(45deg, #888 25%, transparent 25%),
+    linear-gradient(-45deg, #888 25%, transparent 25%);
+  background-size: 8px 8px;
+}
+
+/* ── Text & Bubbles ── */
+.composition-font-gallery {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 12px;
+}
+.composition-font-gallery button {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  min-height: 48px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+.composition-font-gallery button[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+.composition-font-gallery span {
+  font-size: 18px;
+  line-height: 1.2;
+}
+.composition-font-gallery small {
+  font-size: 11px;
+  color: var(--color-muted);
+  font-family: inherit;
+}
+.composition-segmented {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0 10px;
+}
+.composition-segmented button {
+  flex: 1;
+  min-height: 40px;
+  border-radius: 5px;
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+}
+.composition-segmented button[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.composition-shape-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 6px 0 12px;
+}
+.composition-shape-grid button {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  font-size: 11px;
+  min-height: 44px;
+}
+.composition-shape-grid button[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.composition-shape-grid img {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+.composition-dialogue-list {
+  display: grid;
+  gap: 8px;
+}
+.composition-dialogue-item {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+.composition-dialogue-item.is-selected {
+  border-color: var(--color-accent);
+}
+.composition-dialogue-item header {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.composition-dialogue-item textarea {
+  min-height: 52px;
+}
+.composition-align-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin: 6px 0 12px;
+}
+.composition-align-grid button {
+  min-height: 40px;
+  border-radius: 5px;
+  border: 1px solid var(--color-border);
+  font-size: 11px;
+}
+.composition-tail-card {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+.composition-letter-switch {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  overflow-x: auto;
+}

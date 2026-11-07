@@ -7,14 +7,26 @@ import "@fontsource/noto-sans-arabic/400.css";
 import "@fontsource/noto-sans-arabic/700.css";
 import "@fontsource/bangers/400.css";
 import "./composition.css";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import "@fontsource/outfit/400.css";
+import "@fontsource/fraunces/400.css";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useStore } from "zustand";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { NumberField } from "../editor/number-field";
 import { useStudio } from "@/lib/studio/store";
 import type { Chapter, Panel, Project } from "@/lib/studio/types";
-import { objectFlags } from "@/lib/studio/composition/geometry";
+import { objectFlags, alignObjects, type Align } from "@/lib/studio/composition/geometry";
+import { LetteringTools } from "./lettering";
+import { LETTERING_TOOLS, LETTERING_ADVANCED } from "./nav";
+import {
+  placeBubble,
+  bubble as newBubble,
+  applyStyle,
+  BUBBLE_STYLE_KEYS,
+  TEXT_STYLE_KEYS,
+} from "@/lib/studio/composition/bubble-presets";
+import type { Bubble } from "@/lib/studio/composition/bubble";
 import { getController, clipboard, copySettings } from "@/lib/studio/composition/controller";
 import {
   layout,
@@ -61,30 +73,35 @@ import {
   Copy,
   ClipboardPaste,
   ArrowLeftRight,
+  Magnet,
 } from "lucide-react";
-const TOOLS = [
-  "Panels",
-  "Spacing",
-  "Fade Shapes",
-  "Manhwa SFX",
-  "My SFX Assets",
-  "Fades",
-  "Transitions",
-  "SFX Library",
-  "Effects Library",
-  "Layers",
-  "Presets",
-];
+import { PRIMARY, ADVANCED, SUBTAB, ALIGN, normalizeTool } from "./nav";
+
+/** Remembered per chapter so returning from a panel document keeps the open section. */
+const lastLetterTool = new Map<string, string>();
 const EMPTY_PREFERENCES: CompositionPreferences = { presets: [], favorites: [] };
 export default function CompositionWorkspace({
   chapter,
   project,
   panels,
+  mode = "composition",
+  legacyDialogue,
 }: {
   chapter: Chapter;
   project: Project;
   panels: Panel[];
+  /** "lettering" is the Text & Bubbles editor on the same chapter scene and history. */
+  mode?: "composition" | "lettering";
+  legacyDialogue?: ReactNode;
 }) {
+  const lettering = mode === "lettering";
+  const [letterTool, setLetterToolState] = useState<string>(
+    () => lastLetterTool.get(chapter.id) ?? "Bubbles",
+  );
+  const setLetterTool = (t: string) => {
+    lastLetterTool.set(chapter.id, t);
+    setLetterToolState(t);
+  };
   const controller = useMemo(() => getController(chapter, panels), [chapter, panels]); // The chapter controller survives mode/tab changes.
   const session = useStore(controller),
     d = session.history.present.document;
@@ -94,6 +111,8 @@ export default function CompositionWorkspace({
   }, [panels, session.history.present.order]);
   const inactiveTransitions = d.transitions.filter((t) => !transitionActive(t, list)).length;
   const preferences = project.compositionPreferences ?? EMPTY_PREFERENCES;
+  const tool = lettering ? letterTool : normalizeTool(session.tool);
+  const category = PRIMARY.find((c) => (c.tools as readonly string[]).includes(tool));
   const [assetOpen, setAssetOpen] = useState(false);
   const [message, setMessage] = useState(""),
     [toolsOpen, setToolsOpen] = useState(false),
@@ -305,7 +324,35 @@ export default function CompositionWorkspace({
     setPresetName(`${category} preset`);
   };
   const applyPreset = (p: CompositionPreset) => {
-    const owner = session.selectedPanels[0] ?? list[0]?.id;
+    const owner = session.focus ?? session.selectedPanels[0] ?? list[0]?.id;
+    if (p.category === "bubble") {
+      const selected = d.objects.find(
+        (o): o is Bubble => o.id === session.selection?.id && o.kind === "bubble",
+      );
+      const source = p.value as Bubble;
+      if (selected && !selected.locked && p.collection) {
+        const keys =
+          p.collection === "Text style"
+            ? TEXT_STYLE_KEYS
+            : [...BUBBLE_STYLE_KEYS, ...TEXT_STYLE_KEYS];
+        controller.change((doc) => ({
+          ...doc,
+          objects: doc.objects.map((o) =>
+            o.id === selected.id ? applyStyle(selected, source, keys) : o,
+          ),
+        }));
+        return;
+      }
+      const next = placeBubble(
+        d,
+        list,
+        { ...structuredClone(source), id: crypto.randomUUID(), parentId: undefined },
+        owner,
+      );
+      controller.change((doc) => ({ ...doc, objects: [...doc.objects, next] }));
+      controller.select({ kind: "object", id: next.id });
+      return;
+    }
     if (p.category === "sfx" || p.category === "fx" || p.category === "asset") {
       const o = {
         ...structuredClone(p.value),
@@ -431,6 +478,76 @@ export default function CompositionWorkspace({
       setBusy(false);
     }
   };
+  const saveAsset = async (
+    blob: Blob,
+    name: string,
+    collection: string,
+    w: number,
+    h: number,
+    place: boolean,
+  ) => {
+    const blobId = crypto.randomUUID();
+    await putBlobs([{ id: blobId, blob }]);
+    const width = Math.min(d.width, w),
+      o = { ...common(name, width, (h * width) / w), kind: "overlay" as const, blobId };
+    const preset: CompositionPreset = {
+      id: crypto.randomUUID(),
+      name,
+      collection,
+      category: "asset",
+      value: o,
+    };
+    const saved = await updatePreferences({
+      ...preferences,
+      presets: [...preferences.presets, preset],
+    });
+    if (!saved) throw Error("Asset could not be saved. Free storage and retry.");
+    if (place) applyPreset(preset);
+    setMessage(
+      place ? `Saved “${name}” to My Assets and placed it.` : `Saved “${name}” to My Assets.`,
+    );
+  };
+  const saveStyle = (kind: "Bubble style" | "Text style", value: Bubble) =>
+    void updatePreferences({
+      ...preferences,
+      presets: [
+        ...preferences.presets,
+        {
+          id: crypto.randomUUID(),
+          name: `${value.preset ?? value.shape} ${kind.toLowerCase()}`.slice(0, 200),
+          category: "bubble",
+          collection: kind,
+          value: { ...structuredClone(value), owner: undefined, parentId: undefined },
+        },
+      ],
+    }).then((ok) => ok && setMessage(`${kind} saved. Find it under Bubbles → My styles.`));
+  const placeSuggestion = (index: number) => {
+    const s = controller.getState().suggestions?.[index];
+    if (!s) return;
+    const frames = layout(d, list).frames,
+      center = s.y + s.height / 2,
+      frame = frames.find((f) => center >= f.top && center < f.end);
+    const b = newBubble(s.preset ?? "Standard dialogue");
+    const next: Bubble = {
+      ...b,
+      owner: frame?.panel.id,
+      x: Math.round(s.x),
+      y: Math.round(s.y - (frame?.imageY ?? 0)),
+      tails: b.tails.map((t) => ({
+        ...t,
+        tip: { x: t.tip.x, y: Math.min(t.tip.y, b.height + 60) },
+      })),
+    };
+    controller.change((doc) => ({ ...doc, objects: [...doc.objects, next] }));
+    controller.setState({ suggestions: [] });
+    controller.select({ kind: "object", id: next.id });
+  };
+  const multi = session.multi ?? [];
+  const align = (m: Align) =>
+    controller.change((doc) => ({
+      ...doc,
+      objects: alignObjects(multi, m, layout(doc, list).frames, doc.objects),
+    }));
   const recover = async () => {
     setBusy(true);
     try {
@@ -498,9 +615,9 @@ export default function CompositionWorkspace({
   return (
     <section
       ref={root}
-      className={`composition-studio ${session.preview ? "composition-reading-mode" : ""}`}
-      aria-label="Composition and FX Studio"
-      data-composition="studio"
+      className={`composition-studio ${session.preview ? "composition-reading-mode" : ""} ${lettering ? "is-lettering" : ""}`}
+      aria-label={lettering ? "Text and Bubbles chapter editor" : "Composition and FX Studio"}
+      data-composition={lettering ? "lettering" : "studio"}
       data-save-status={session.status}
     >
       <div className="composition-toolbar">
@@ -612,6 +729,15 @@ export default function CompositionWorkspace({
             </Button>
             <Button
               variant="ghost"
+              aria-pressed={session.snap !== false}
+              title="Snap to chapter, panel and object guides"
+              onClick={() => controller.setState({ snap: session.snap === false })}
+            >
+              <Magnet />
+              Snap
+            </Button>
+            <Button
+              variant="ghost"
               aria-pressed={session.before}
               onClick={() => controller.setState({ before: !session.before })}
             >
@@ -689,8 +815,12 @@ export default function CompositionWorkspace({
       {!list.length ? (
         <div className="composition-empty">
           <Layers3 />
-          <h2>Compose your chapter</h2>
-          <p>Add artwork in Images, then return here to build spacing, transitions and effects.</p>
+          <h2>{lettering ? "Letter your chapter" : "Compose your chapter"}</h2>
+          <p>
+            {lettering
+              ? "Add artwork in Images, then return here to place dialogue, bubbles and text across the whole chapter."
+              : "Add artwork in Images, then return here to build spacing, transitions and effects."}
+          </p>
         </div>
       ) : (
         <div className="composition-layout">
@@ -700,7 +830,7 @@ export default function CompositionWorkspace({
               aria-label="Composition tools"
             >
               <div className="composition-mobile-panel-header">
-                <strong>Composition tools</strong>
+                <strong>{lettering ? "Text & Bubbles tools" : "Composition tools"}</strong>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -710,34 +840,128 @@ export default function CompositionWorkspace({
                   <X />
                 </Button>
               </div>
-              <nav className="composition-tool-tabs" aria-label="Composition tool sections">
-                {TOOLS.map((tool) => (
-                  <button
-                    key={tool}
-                    className={session.tool === tool ? "is-active" : ""}
-                    onClick={() => {
-                      controller.setState({ tool });
-                    }}
+              {lettering ? (
+                <>
+                  <nav
+                    className="composition-tool-tabs is-primary"
+                    aria-label="Text and bubbles sections"
                   >
-                    {tool}
-                  </button>
-                ))}
-              </nav>
-              <fieldset disabled={session.blocked || session.before || busy}>
-                <CompositionLibrary
-                  controller={controller}
-                  session={session}
-                  document={d}
-                  panels={list}
-                  preferences={preferences}
-                  onPreferences={(next) => void updatePreferences(next)}
-                  onApplyPreset={applyPreset}
-                  onOverlay={() => fileRef.current?.click()}
-                  onDuplicate={duplicate}
-                  onDelete={remove}
-                  onAssetImport={() => setAssetOpen(true)}
-                />
-              </fieldset>
+                    {LETTERING_TOOLS.map((t) => (
+                      <button
+                        key={t}
+                        className={tool === t ? "is-active" : ""}
+                        aria-current={tool === t ? "page" : undefined}
+                        onClick={() => setLetterTool(t)}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </nav>
+                  <details
+                    className="composition-advanced-nav"
+                    open={LETTERING_ADVANCED.includes(tool as never)}
+                  >
+                    <summary>Advanced</summary>
+                    <div>
+                      {LETTERING_ADVANCED.map((t) => (
+                        <button
+                          key={t}
+                          className={tool === t ? "is-active" : ""}
+                          onClick={() => setLetterTool(t)}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </details>
+                  <fieldset disabled={session.blocked || session.before || busy}>
+                    <LetteringTools
+                      tool={tool}
+                      controller={controller}
+                      session={session}
+                      document={d}
+                      panels={list}
+                      preferences={preferences}
+                      onPreferences={(next) => void updatePreferences(next)}
+                      onApplyPreset={applyPreset}
+                      onDuplicate={duplicate}
+                      onOverlay={() => fileRef.current?.click()}
+                      legacy={legacyDialogue}
+                      onError={onError}
+                    />
+                  </fieldset>
+                </>
+              ) : (
+                <>
+                  <nav
+                    className="composition-tool-tabs is-primary"
+                    aria-label="Composition tool sections"
+                  >
+                    {PRIMARY.map((c) => (
+                      <button
+                        key={c.label}
+                        className={category === c ? "is-active" : ""}
+                        aria-current={category === c ? "page" : undefined}
+                        onClick={() => controller.setState({ tool: c.tools[0] })}
+                      >
+                        <span className="composition-tool-icon">
+                          <c.icon aria-hidden="true" />
+                          {c.label}
+                        </span>
+                      </button>
+                    ))}
+                  </nav>
+                  <details className="composition-advanced-nav" open={ADVANCED.includes(tool)}>
+                    <summary>Advanced · layers, effects, overlays, presets</summary>
+                    <div>
+                      {ADVANCED.map((t) => (
+                        <button
+                          key={t}
+                          className={tool === t ? "is-active" : ""}
+                          onClick={() => controller.setState({ tool: t })}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </details>
+                  <fieldset disabled={session.blocked || session.before || busy}>
+                    {category && category.tools.length > 1 && (
+                      <div
+                        className="composition-subtabs composition-subtabs-main"
+                        role="tablist"
+                        aria-label={`${category.label} tools`}
+                      >
+                        {category.tools.map((t) => (
+                          <button
+                            key={t}
+                            role="tab"
+                            aria-selected={tool === t}
+                            onClick={() => controller.setState({ tool: t })}
+                          >
+                            {SUBTAB[t] ?? t}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <CompositionLibrary
+                      tool={tool}
+                      controller={controller}
+                      session={session}
+                      document={d}
+                      panels={list}
+                      preferences={preferences}
+                      onPreferences={(next) => void updatePreferences(next)}
+                      onApplyPreset={applyPreset}
+                      onOverlay={() => fileRef.current?.click()}
+                      onDuplicate={duplicate}
+                      onDelete={remove}
+                      onAssetImport={() => setAssetOpen(true)}
+                      onExtractSave={saveAsset}
+                    />
+                  </fieldset>
+                </>
+              )}
               <div className="composition-project-actions">
                 <Button variant="ghost" disabled={busy} onClick={() => void recover()}>
                   Export editable project
@@ -766,6 +990,7 @@ export default function CompositionWorkspace({
               panels={list}
               assetPresets={preferences.presets}
               onError={onError}
+              onPlaceSuggestion={placeSuggestion}
             />
           </div>
           {!session.preview && (
@@ -784,8 +1009,24 @@ export default function CompositionWorkspace({
                   <X />
                 </Button>
               </div>
+              {multi.length > 1 && (
+                <div className="composition-multi-tools">
+                  <h3>{multi.length} layers selected</h3>
+                  <p className="composition-hint">
+                    Drag any of them to move together. Shift-click adds or removes layers.
+                  </p>
+                  <div className="composition-align-grid" role="group" aria-label="Align layers">
+                    {ALIGN.map((a) => (
+                      <button key={a.mode} onClick={() => align(a.mode)}>
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <fieldset disabled={session.blocked || session.before || busy}>
                 <CompositionProperties
+                  onSaveStyle={saveStyle}
                   controller={controller}
                   session={session}
                   document={d}
@@ -837,24 +1078,8 @@ export default function CompositionWorkspace({
           open
           onClose={() => setAssetOpen(false)}
           onImport={async (blob, name, collection, w, h) => {
-            const blobId = crypto.randomUUID();
-            await putBlobs([{ id: blobId, blob }]);
-            const width = Math.min(d.width, w),
-              o = { ...common(name, width, (h * width) / w), kind: "overlay" as const, blobId };
-            const preset: CompositionPreset = {
-              id: crypto.randomUUID(),
-              name,
-              collection,
-              category: "asset",
-              value: o,
-            };
-            const saved = await updatePreferences({
-              ...preferences,
-              presets: [...preferences.presets, preset],
-            });
-            if (!saved) throw Error("Asset could not be saved. Free storage and retry.");
-            applyPreset(preset);
-            controller.setState({ tool: "My SFX Assets" });
+            await saveAsset(blob, name, collection, w, h, true);
+            controller.setState({ tool: "My Assets" });
           }}
         />
       )}

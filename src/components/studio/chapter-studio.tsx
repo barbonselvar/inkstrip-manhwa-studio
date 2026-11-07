@@ -328,31 +328,47 @@ export function ChapterStudio({ projectId, chapterId }: { projectId: string; cha
         </Suspense>
       )}
       {workspaceTab === "dialogue" && !proPanel && (
-        <section className="dialogue-chapter-entry" aria-label="Text and Bubbles pages">
-          <h2>Text &amp; Bubbles</h2>
-          <DialogueChapterExport panels={list} title={`${project.title}-${chapter.title}`} />
-          <p>
-            Select a chapter image for editable dialogue. Quick Edit and the full editor share the
-            same layered native document.
-          </p>
-          {!list.length && <p>Add images in the Images tab first.</p>}
-          <div>
-            {list.map((panel) => (
-              <Button
-                key={panel.id}
-                variant="secondary"
-                onClick={() => {
-                  setDialogueMode(true);
-                  setDialogueQuick(true);
-                  setStudioMode("vector");
-                  setProPanel(panel);
-                }}
-              >
-                <MessageCircle /> Edit dialogue · {panel.name}
-              </Button>
-            ))}
-          </div>
-        </section>
+        <Suspense
+          fallback={
+            <p className="p-5" role="status">
+              Loading Text &amp; Bubbles…
+            </p>
+          }
+        >
+          <CompositionWorkspace
+            key={`${chapterId}:lettering`}
+            mode="lettering"
+            chapter={chapter}
+            project={project}
+            panels={list}
+            legacyDialogue={
+              <section className="dialogue-chapter-entry" aria-label="Text and Bubbles pages">
+                <DialogueChapterExport panels={list} title={`${project.title}-${chapter.title}`} />
+                <p>
+                  Select a chapter image for editable dialogue. Quick Edit and the full editor share
+                  the same layered native document.
+                </p>
+                {!list.length && <p>Add images in the Images tab first.</p>}
+                <div>
+                  {list.map((panel) => (
+                    <Button
+                      key={panel.id}
+                      variant="secondary"
+                      onClick={() => {
+                        setDialogueMode(true);
+                        setDialogueQuick(true);
+                        setStudioMode("vector");
+                        setProPanel(panel);
+                      }}
+                    >
+                      <MessageCircle /> Edit dialogue · {panel.name}
+                    </Button>
+                  ))}
+                </div>
+              </section>
+            }
+          />
+        </Suspense>
       )}
       {workspaceTab === "images" && (
         <>

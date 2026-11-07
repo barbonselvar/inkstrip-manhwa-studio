@@ -21,7 +21,19 @@ import {
   compositionRenderBudget,
   objectBounds,
 } from "@/lib/studio/composition/render";
-import { objectFlags, pickCreative } from "@/lib/studio/composition/geometry";
+import {
+  objectFlags,
+  pickCreative,
+  rotateAboutCenter,
+  reanchor,
+} from "@/lib/studio/composition/geometry";
+import { bubble as newBubble, BUBBLE_PRESETS } from "@/lib/studio/composition/bubble-presets";
+import {
+  nearestAttachment,
+  baseOutline,
+  outlineAt,
+  type Bubble,
+} from "@/lib/studio/composition/bubble";
 import { applyMatrix, inverse } from "@/lib/studio/pro/transform";
 import { deviceLimits } from "@/lib/studio/images";
 import { objectMatrix } from "@/lib/studio/composition/geometry";
@@ -90,7 +102,9 @@ export function CompositionCanvas({
   panels,
   onError,
   assetPresets = [],
+  onPlaceSuggestion,
 }: {
+  onPlaceSuggestion?: (index: number) => void;
   assetPresets?: CompositionPreset[];
   controller: Controller;
   chapter: Chapter;
@@ -129,7 +143,9 @@ export function CompositionCanvas({
     group: string;
     panelId?: string;
     frame?: PanelFrame;
+    others?: { id: string; x: number; y: number }[];
   } | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
   const pinch = useRef<{ distance: number; zoom: number; anchorY: number } | null>(null),
     tap = useRef({ time: 0, id: "" }),
     longpress = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -234,6 +250,48 @@ export function CompositionCanvas({
         : [frame.panel.id],
     }));
   };
+  const handleSize = (coarse ? 44 : 14) / scale;
+  const toLocal = (o: CompositionObject, world: { x: number; y: number }) => {
+    const doc = controller.getState().history.present.document,
+      frames = layout(doc, panels).frames;
+    return applyMatrix(inverse(objectMatrix(o, frames, doc.objects)), world);
+  };
+  const toWorld = (o: CompositionObject, local: { x: number; y: number }) =>
+    applyMatrix(objectMatrix(o, scene.frames, d.objects), local);
+  /** Pointer-captured handle drag; one history entry per gesture. */
+  const handleDrag = (
+    event: React.PointerEvent<HTMLElement>,
+    move: (world: { x: number; y: number }, e: PointerEvent, group: string) => void,
+  ) => {
+    event.stopPropagation();
+    event.preventDefault();
+    const target = event.currentTarget,
+      group = `handle-${Date.now()}`;
+    target.setPointerCapture(event.pointerId);
+    const onMove = (e: PointerEvent) => move(point(e), e, group);
+    const up = () => {
+      target.removeEventListener("pointermove", onMove);
+      target.removeEventListener("pointerup", up);
+      target.removeEventListener("pointercancel", up);
+    };
+    target.addEventListener("pointermove", onMove);
+    target.addEventListener("pointerup", up, { once: true });
+    target.addEventListener("pointercancel", up, { once: true });
+  };
+  const patchObject = (
+    id: string,
+    fn: (o: CompositionObject) => CompositionObject,
+    group: string,
+  ) =>
+    controller.change(
+      (doc) => ({ ...doc, objects: doc.objects.map((o) => (o.id === id ? fn(o) : o)) }),
+      group,
+    );
+  const selectedLocked = selected ? objectFlags(selected, d.objects).locked : true;
+  const ownerFrame = selected?.owner
+    ? scene.frames.find((f) => f.panel.id === selected.owner)
+    : undefined;
+  const editingBubble = d.objects.find((o): o is Bubble => o.id === editing && o.kind === "bubble");
   const focusNeighbor = (direction: -1 | 1) => {
     const id = panels[panels.findIndex((p) => p.id === focus?.panel.id) + direction]?.id;
     if (id)
@@ -286,6 +344,21 @@ export function CompositionCanvas({
         }}
         onDoubleClick={(event) => {
           if (session.preview) return;
+          const hit = pickCreative(
+            d,
+            scene.frames,
+            point(event),
+            layerStack(
+              d,
+              panels.map((p) => p.id),
+            ),
+            -1,
+          );
+          if (hit?.kind === "bubble" && !objectFlags(hit, d.objects).locked) {
+            controller.setState({ selection: { kind: "object", id: hit.id } });
+            setEditing(hit.id);
+            return;
+          }
           const p = point(event),
             frame = scene.frames.find((f) => p.y >= f.imageY && p.y <= f.bottomY);
           if (frame) {
@@ -321,6 +394,14 @@ export function CompositionCanvas({
                 MANHWA_WORDS[payload.index][payload.english ? 2 : 1],
                 payload.style,
               );
+            if (payload.kind === "bubble") {
+              const builtIn = BUBBLE_PRESETS.find((x) => x.name === payload.preset),
+                saved = assetPresets.find((x) => x.category === "bubble" && x.id === payload.id);
+              if (builtIn) object = newBubble(builtIn);
+              else if (saved)
+                object = { ...structuredClone(saved.value), id: crypto.randomUUID() } as Bubble;
+              if (object) object = { ...object, x: p.x - object.width / 2 };
+            }
             if (payload.kind === "asset") {
               const preset = assetPresets.find(
                 (x) => x.category === "asset" && x.id === payload.id,
@@ -333,8 +414,8 @@ export function CompositionCanvas({
                 id: crypto.randomUUID(),
                 owner: frame?.panel.id,
                 parentId: undefined,
-                x: p.x,
-                y: p.y - (frame?.imageY ?? 0),
+                x: object.kind === "bubble" ? object.x : p.x,
+                y: p.y - (frame?.imageY ?? 0) - (object.kind === "bubble" ? object.height / 2 : 0),
               };
               controller.change((d) => ({ ...d, objects: [...d.objects, next] }));
               controller.select({ kind: "object", id: next.id });
@@ -344,7 +425,8 @@ export function CompositionCanvas({
           }
         }}
         onPointerDown={(event) => {
-          if ((event.target as Element).closest("button,input") || event.button !== 0) return;
+          if ((event.target as Element).closest("button,input,textarea") || event.button !== 0)
+            return;
           pendingPanelTap.current = null;
           pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -396,13 +478,30 @@ export function CompositionCanvas({
             const object = pickCreative(d, scene.frames, p, stack, structuralRank);
             if (object) {
               const locked = objectFlags(object, d.objects).locked;
+              const current = controller.getState(),
+                previous = current.selection?.kind === "object" ? current.selection.id : undefined;
+              let multi = current.multi ?? [];
+              if (event.shiftKey && previous && previous !== object.id) {
+                multi = multi.includes(object.id)
+                  ? multi.filter((id) => id !== object.id)
+                  : [...new Set([...multi, previous, object.id])];
+              } else if (!multi.includes(object.id)) multi = [];
               if (locked) {
-                controller.setState({ selection: { kind: "object", id: object.id } });
+                controller.setState({ selection: { kind: "object", id: object.id }, multi });
                 drag.current = null;
                 return;
               }
-              controller.setState({ selection: { kind: "object", id: object.id } });
+              controller.setState({ selection: { kind: "object", id: object.id }, multi });
+              const others = multi
+                .filter((id) => id !== object.id)
+                .map((id) => d.objects.find((o) => o.id === id))
+                .filter(
+                  (o): o is CompositionObject =>
+                    !!o && !o.parentId && !objectFlags(o, d.objects).locked,
+                )
+                .map((o) => ({ id: o.id, x: o.x, y: o.y }));
               drag.current = {
+                others,
                 kind: "object",
                 id: object.id,
                 x: p.x,
@@ -414,6 +513,7 @@ export function CompositionCanvas({
               };
               return;
             }
+            if (controller.getState().multi?.length) controller.setState({ multi: [] });
             const region = scene.spaces.find((s) => p.y >= s.y && p.y < s.y + s.height);
             if (transition && stack.indexOf(`transition:${transition.id}`) === structuralRank) {
               controller.setState({
@@ -520,6 +620,7 @@ export function CompositionCanvas({
             );
             return;
           }
+          let shift: { x: number; y: number } | null = null;
           controller.change(
             (doc) => ({
               ...doc,
@@ -527,32 +628,81 @@ export function CompositionCanvas({
                 if (o.id !== start.id) return o;
                 let x = start.startX + dx,
                   y = start.startY + dy;
-                if (!o.parentId) {
+                if (!o.parentId && controller.getState().snap !== false) {
                   const bounds = objectBounds(o, scene.frames, doc.objects),
                     offsetX = bounds.x - o.x,
                     ownerY = o.owner
                       ? (scene.frames.find((f) => f.panel.id === o.owner)?.imageY ?? 0)
                       : 0,
                     offsetY = bounds.y - o.y - ownerY;
-                  for (const guide of [0, d.width / 2 - bounds.width / 2, d.width - bounds.width])
+                  const near = doc.objects
+                    .filter(
+                      (n) =>
+                        n.id !== o.id &&
+                        !n.parentId &&
+                        n.visible &&
+                        !start.others?.some((x) => x.id === n.id),
+                    )
+                    .slice(0, 400)
+                    .map((n) => objectBounds(n, scene.frames, doc.objects))
+                    .filter((n) => Math.abs(n.y - bounds.y) < 3000);
+                  for (const guide of [
+                    0,
+                    d.width / 2 - bounds.width / 2,
+                    d.width - bounds.width,
+                    ...near.flatMap((n) => [
+                      n.x,
+                      n.x + n.width - bounds.width,
+                      n.x + n.width / 2 - bounds.width / 2,
+                    ]),
+                  ])
                     if (Math.abs(x + offsetX - guide) < 6 / scale) x = guide - offsetX;
                   for (const guide of [
                     0,
                     scene.height,
                     ...scene.frames.flatMap((f) => [f.imageY, f.bottomY, f.top, f.gapY]),
+                    ...near.flatMap((n) => [n.y, n.y + n.height]),
                   ])
                     for (const edge of [0, bounds.height / 2, bounds.height])
                       if (Math.abs(y + ownerY + offsetY + edge - guide) < 6 / scale)
                         y = guide - ownerY - offsetY - edge;
                 }
+                shift = { x: Math.round(x) - start.startX, y: Math.round(y) - start.startY };
                 return { ...o, x: Math.round(x), y: Math.round(y) };
               }),
             }),
             start.group,
           );
+          if (start.others?.length && shift) {
+            const delta = shift as { x: number; y: number };
+            controller.change(
+              (doc) => ({
+                ...doc,
+                objects: doc.objects.map((o) => {
+                  const origin = start.others!.find((x) => x.id === o.id);
+                  return origin ? { ...o, x: origin.x + delta.x, y: origin.y + delta.y } : o;
+                }),
+              }),
+              start.group,
+            );
+          }
         }}
         onPointerUp={(event) => {
           const start = drag.current;
+          if (start?.kind === "object") {
+            const ids = new Set([start.id, ...(start.others ?? []).map((x) => x.id)]);
+            controller.change((doc) => {
+              const frames = layout(doc, panels).frames;
+              let changed = false;
+              const objects = doc.objects.map((o) => {
+                if (!ids.has(o.id) || o.kind !== "bubble") return o;
+                const next = reanchor(o, frames, doc.objects);
+                if (next !== o) changed = true;
+                return next;
+              });
+              return changed ? { ...doc, objects } : doc;
+            }, start.group);
+          }
           if (start && pointers.current.size === 1 && !session.preview) {
             const p = point(event),
               distance =
@@ -758,72 +908,285 @@ export function CompositionCanvas({
                       height: selectedBounds.height,
                     }}
                   >
-                    <span>{selected.name}</span>
-                    <button
-                      aria-label="Resize selected effect"
-                      className="composition-scale-handle"
-                      style={
-                        coarse
-                          ? {
-                              width: 44 / scale,
-                              height: 44 / scale,
-                              right: -22 / scale,
-                              bottom: -22 / scale,
-                            }
-                          : undefined
-                      }
-                      onPointerDown={(event) => {
-                        event.stopPropagation();
-                        const startX = event.clientX,
-                          startScale = selected.scaleX;
-                        event.currentTarget.setPointerCapture(event.pointerId);
-                        const button = event.currentTarget,
-                          group = `scale-${Date.now()}`;
-                        const move = (e: PointerEvent) =>
-                          controller.change(
-                            (doc) => ({
-                              ...doc,
-                              objects: doc.objects.map((o) =>
-                                o.id === selected.id
-                                  ? {
-                                      ...o,
-                                      scaleX: Math.max(
-                                        0.05,
-                                        Math.min(
-                                          20,
-                                          startScale +
-                                            (e.clientX - startX) /
-                                              scale /
-                                              Math.max(1, selected.width),
+                    <span>
+                      {selected.name} · {Math.round(selectedBounds.width)} ×{" "}
+                      {Math.round(selectedBounds.height)}
+                      {ownerFrame &&
+                        ` · ${Math.round(selectedBounds.y - ownerFrame.imageY)} px from panel top`}
+                    </span>
+                    {selected.kind !== "bubble" && (
+                      <button
+                        aria-label="Resize selected effect"
+                        className="composition-scale-handle"
+                        style={
+                          coarse
+                            ? {
+                                width: 44 / scale,
+                                height: 44 / scale,
+                                right: -22 / scale,
+                                bottom: -22 / scale,
+                              }
+                            : undefined
+                        }
+                        onPointerDown={(event) => {
+                          event.stopPropagation();
+                          const startX = event.clientX,
+                            startScale = selected.scaleX;
+                          event.currentTarget.setPointerCapture(event.pointerId);
+                          const button = event.currentTarget,
+                            group = `scale-${Date.now()}`;
+                          const move = (e: PointerEvent) =>
+                            controller.change(
+                              (doc) => ({
+                                ...doc,
+                                objects: doc.objects.map((o) =>
+                                  o.id === selected.id
+                                    ? {
+                                        ...o,
+                                        scaleX: Math.max(
+                                          0.05,
+                                          Math.min(
+                                            20,
+                                            startScale +
+                                              (e.clientX - startX) /
+                                                scale /
+                                                Math.max(1, selected.width),
+                                          ),
                                         ),
-                                      ),
-                                      scaleY: Math.max(
-                                        0.05,
-                                        Math.min(
-                                          20,
-                                          startScale +
-                                            (e.clientX - startX) /
-                                              scale /
-                                              Math.max(1, selected.width),
+                                        scaleY: Math.max(
+                                          0.05,
+                                          Math.min(
+                                            20,
+                                            startScale +
+                                              (e.clientX - startX) /
+                                                scale /
+                                                Math.max(1, selected.width),
+                                          ),
                                         ),
-                                      ),
-                                    }
-                                  : o,
-                              ),
-                            }),
-                            group,
-                          );
-                        const up = () => {
-                          button.removeEventListener("pointermove", move);
-                          button.removeEventListener("pointerup", up);
-                          button.removeEventListener("pointercancel", up);
-                        };
-                        button.addEventListener("pointermove", move);
-                        button.addEventListener("pointerup", up, { once: true });
-                        button.addEventListener("pointercancel", up, { once: true });
-                      }}
-                    />
+                                      }
+                                    : o,
+                                ),
+                              }),
+                              group,
+                            );
+                          const up = () => {
+                            button.removeEventListener("pointermove", move);
+                            button.removeEventListener("pointerup", up);
+                            button.removeEventListener("pointercancel", up);
+                          };
+                          button.addEventListener("pointermove", move);
+                          button.addEventListener("pointerup", up, { once: true });
+                          button.addEventListener("pointercancel", up, { once: true });
+                        }}
+                      />
+                    )}
                   </div>
+                )}
+                {selected && selectedBounds && !selectedLocked && (
+                  <button
+                    className="composition-handle composition-rotate-handle"
+                    aria-label="Rotate selected layer"
+                    title="Drag to rotate · Shift snaps to 15°"
+                    style={{
+                      left: selectedBounds.x + selectedBounds.width / 2 - handleSize / 2,
+                      top: selectedBounds.y - origin - handleSize - 24 / scale,
+                      width: handleSize,
+                      height: handleSize,
+                    }}
+                    onPointerDown={(event) => {
+                      const o = selected,
+                        center = toWorld(o, { x: o.width / 2, y: o.height / 2 }),
+                        start = point(event),
+                        startAngle = Math.atan2(start.x - center.x, -(start.y - center.y));
+                      handleDrag(event, (p, e, group) => {
+                        let angle =
+                          o.rotation +
+                          ((Math.atan2(p.x - center.x, -(p.y - center.y)) - startAngle) * 180) /
+                            Math.PI;
+                        angle = ((((angle + 180) % 360) + 360) % 360) - 180;
+                        if (e.shiftKey) angle = Math.round(angle / 15) * 15;
+                        else if (Math.abs(angle - Math.round(angle / 45) * 45) < 3)
+                          angle = Math.round(angle / 45) * 45;
+                        const doc = controller.getState().history.present.document;
+                        patchObject(
+                          o.id,
+                          (x) =>
+                            rotateAboutCenter(
+                              x,
+                              Math.round(angle * 10) / 10,
+                              layout(doc, panels).frames,
+                              doc.objects,
+                            ),
+                          group,
+                        );
+                      });
+                    }}
+                  />
+                )}
+                {selected?.kind === "bubble" &&
+                  !selectedLocked &&
+                  (() => {
+                    const b = selected,
+                      corner = toWorld(b, { x: b.width, y: b.height }),
+                      outline = baseOutline(b);
+                    return (
+                      <>
+                        <button
+                          className="composition-handle composition-bubble-resize"
+                          aria-label="Resize speech bubble"
+                          title="Drag to resize; text re-wraps"
+                          style={{
+                            left: corner.x - handleSize / 2,
+                            top: corner.y - origin - handleSize / 2,
+                            width: handleSize,
+                            height: handleSize,
+                          }}
+                          onPointerDown={(event) =>
+                            handleDrag(event, (p, _e, group) => {
+                              const local = toLocal(b, p);
+                              patchObject(
+                                b.id,
+                                (x) => ({
+                                  ...x,
+                                  width: Math.max(40, Math.min(100000, Math.round(local.x))),
+                                  height: Math.max(30, Math.min(100000, Math.round(local.y))),
+                                }),
+                                group,
+                              );
+                            })
+                          }
+                        />
+                        {b.tails.map((t, i) => {
+                          const tip = toWorld(b, t.tip),
+                            base = outline.length
+                              ? toWorld(b, outlineAt(outline, t.attachment))
+                              : null;
+                          const patchTail = (
+                            patch: (tail: Bubble["tails"][number]) => Bubble["tails"][number],
+                            group: string,
+                          ) =>
+                            patchObject(
+                              b.id,
+                              (x) =>
+                                x.kind === "bubble"
+                                  ? {
+                                      ...x,
+                                      tails: x.tails.map((y) => (y.id === t.id ? patch(y) : y)),
+                                    }
+                                  : x,
+                              group,
+                            );
+                          return (
+                            <span key={t.id}>
+                              <button
+                                className="composition-handle composition-tail-tip"
+                                aria-label={`Move tail ${i + 1} tip`}
+                                style={{
+                                  left: tip.x - handleSize / 2,
+                                  top: tip.y - origin - handleSize / 2,
+                                  width: handleSize,
+                                  height: handleSize,
+                                }}
+                                onPointerDown={(event) =>
+                                  handleDrag(event, (p, _e, group) => {
+                                    const local = toLocal(b, p);
+                                    patchTail(
+                                      (y) => ({
+                                        ...y,
+                                        tip: { x: Math.round(local.x), y: Math.round(local.y) },
+                                      }),
+                                      group,
+                                    );
+                                  })
+                                }
+                              />
+                              {base && (
+                                <button
+                                  className="composition-handle composition-tail-base"
+                                  aria-label={`Move tail ${i + 1} anchor`}
+                                  style={{
+                                    left: base.x - handleSize / 2,
+                                    top: base.y - origin - handleSize / 2,
+                                    width: handleSize,
+                                    height: handleSize,
+                                  }}
+                                  onPointerDown={(event) =>
+                                    handleDrag(event, (p, _e, group) => {
+                                      const attachment =
+                                        Math.round(nearestAttachment(b, toLocal(b, p)) * 1000) /
+                                        1000;
+                                      patchTail((y) => ({ ...y, attachment }), group);
+                                    })
+                                  }
+                                />
+                              )}
+                            </span>
+                          );
+                        })}
+                      </>
+                    );
+                  })()}
+                {(session.multi ?? [])
+                  .filter((id) => id !== selected?.id)
+                  .map((id) => d.objects.find((o) => o.id === id))
+                  .filter((o): o is CompositionObject => !!o)
+                  .map((o) => {
+                    const b = objectBounds(o, scene.frames, d.objects);
+                    return (
+                      <div
+                        key={o.id}
+                        className="composition-object-outline is-secondary"
+                        style={{ left: b.x, top: b.y - origin, width: b.width, height: b.height }}
+                      />
+                    );
+                  })}
+                {(session.suggestions ?? []).map((r, i) => (
+                  <div
+                    key={`suggestion-${i}`}
+                    className="composition-suggestion"
+                    style={{ left: r.x, top: r.y - origin, width: r.width, height: r.height }}
+                  >
+                    <button
+                      style={{ fontSize: 13 / scale, padding: `${4 / scale}px ${8 / scale}px` }}
+                      aria-label={`Place suggested bubble ${i + 1}`}
+                      onClick={() => onPlaceSuggestion?.(i)}
+                    >
+                      {i + 1}. Place here · {r.reason}
+                    </button>
+                  </div>
+                ))}
+                {editingBubble && (
+                  <textarea
+                    className="composition-inline-text"
+                    aria-label="Edit bubble text"
+                    dir="auto"
+                    autoFocus
+                    value={editingBubble.text}
+                    style={{
+                      ...(() => {
+                        const b = objectBounds(editingBubble, scene.frames, d.objects);
+                        return { left: b.x, top: b.y - origin, width: b.width, height: b.height };
+                      })(),
+                      fontSize: editingBubble.size * editingBubble.scaleY,
+                      fontFamily: `"${editingBubble.font}", sans-serif`,
+                      textAlign: editingBubble.align,
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onChange={(e) =>
+                      patchObject(
+                        editingBubble.id,
+                        (x) => ({ ...x, text: e.target.value.slice(0, 10000) }),
+                        `object-${editingBubble.id}-text`,
+                      )
+                    }
+                    onBlur={() => setEditing(null)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        e.stopPropagation();
+                        setEditing(null);
+                      }
+                    }}
+                  />
                 )}
                 {selectedFade && fade && !fade.boundary && (
                   <button

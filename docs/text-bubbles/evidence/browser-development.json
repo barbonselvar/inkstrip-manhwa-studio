@@ -1,0 +1,106 @@
+{
+  "results": [
+    {
+      "step": "panels: toggles, drag reorder, undo"
+    },
+    {
+      "step": "spacing: quick preset applied"
+    },
+    {
+      "step": "fades & transitions: galleries insert real effects"
+    },
+    {
+      "step": "manhwa sfx: tabs, favorite and insert"
+    },
+    {
+      "step": "extractor: transparent PNG asset saved, source untouched",
+      "type": "image/png",
+      "width": 292,
+      "height": 292,
+      "transparent": 31366,
+      "opaque": 4414,
+      "unchanged": true
+    },
+    {
+      "step": "bubbles inserted and edited"
+    },
+    {
+      "step": "handles: resize, tail tip, rotation",
+      "width": 415,
+      "rotation": 21.1
+    },
+    {
+      "step": "undo/redo"
+    },
+    {
+      "step": "cross-panel drag re-anchors",
+      "panelIndex": 1
+    },
+    {
+      "step": "chapter and focus positions agree",
+      "chapterOffset": {
+        "dy": 0.09313573210619547,
+        "dx": 0.08214857831238359,
+        "owner": "4802d38f-d5ad-4c64-aba6-0566b260ee00"
+      },
+      "focusOffset": {
+        "dy": 0.09313573210619547,
+        "dx": 0.08214857831238359,
+        "owner": "4802d38f-d5ad-4c64-aba6-0566b260ee00"
+      }
+    },
+    {
+      "step": "inline canvas text editing"
+    },
+    {
+      "step": "multi-select alignment",
+      "xs": [
+        155,
+        66,
+        66
+      ]
+    },
+    {
+      "step": "smart placement suggests and places without moving existing art",
+      "suggestionCount": 3
+    },
+    {
+      "step": "persisted after reload",
+      "bubbles": 4
+    },
+    {
+      "step": "segmented export parity with bubbles",
+      "rows": 2880,
+      "total": 2880,
+      "segments": 8,
+      "mismatch": 0,
+      "maxDiff": 1,
+      "white": 26293,
+      "dark": 9633
+    },
+    {
+      "step": "UI export download",
+      "file": "Lettering QA-Chapter 1-001-chapter-001.png"
+    },
+    {
+      "step": "composition shares lettering layers"
+    },
+    {
+      "step": "panel dialogue documents still reachable"
+    },
+    {
+      "step": "touch 320px",
+      "overflow": 0,
+      "smallControls": 6
+    },
+    {
+      "step": "touch 390px",
+      "overflow": 0,
+      "smallControls": 6
+    }
+  ],
+  "errors": [],
+  "external": [
+    "https://grok.com/grok-app-builder/extensions.js net::ERR_TUNNEL_CONNECTION_FAILED"
+  ]
+}

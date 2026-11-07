@@ -81,7 +81,7 @@ try {
   await create(p);
   await p.getByRole("button", { name: "Focus panel 1", exact: true }).click();
   await p.getByLabel("Top extension (px)", { exact: true }).fill("300");
-  await p.getByRole("button", { name: "Fade Shapes", exact: true }).click();
+  await p.getByRole("button", { name: "Fades & Transitions", exact: true }).click();
   assert.equal(await p.locator(".composition-shape-card").count(), 9);
   await p
     .getByRole("button", { name: "Wave Editable mask · instant preview", exact: true })
@@ -172,7 +172,7 @@ try {
   await ready(p);
   await p.screenshot({ path: "/workspace/screenshots/advanced-manhwa-gallery.png" });
   // SVG contains executable and external content which must never survive sanitation.
-  await p.getByRole("button", { name: "My SFX Assets", exact: true }).click();
+  await p.getByRole("tab", { name: "My Assets", exact: true }).click();
   await p.getByRole("button", { name: "Import SFX artwork", exact: true }).click();
   const unsafe =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 100" onload="alert(1)"><script>alert(1)</script><image href="https://example.invalid/tracker.png"/><path d="M10 20 L220 10 L160 50 L220 80 L10 90 L70 50 Z" fill="#111" stroke="#fff" stroke-width="6"/></svg>';
@@ -381,7 +381,7 @@ try {
     await p.getByRole("button", { name: "Focus panel 1", exact: true }).click();
     await p.getByRole("button", { name: "Close properties", exact: true }).click();
     await p.getByRole("button", { name: "Tools", exact: true }).click();
-    await p.getByRole("button", { name: "Fade Shapes", exact: true }).click();
+    await p.getByRole("button", { name: "Fades & Transitions", exact: true }).click();
     await p
       .getByRole("button", {
         name: "Freehand Boundary Editable mask · instant preview",

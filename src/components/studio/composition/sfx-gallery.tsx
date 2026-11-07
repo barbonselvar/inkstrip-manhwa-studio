@@ -5,7 +5,31 @@ import { inkObject } from "@/lib/studio/composition/ink-presets";
 import type { CompositionPreset, CompositionObject } from "@/lib/studio/composition/model";
 import { Thumbnail } from "./thumbnail";
 import { Choice } from "./properties";
-export function ManhwaGallery({ insert }: { insert: (o: CompositionObject) => void }) {
+import { Star } from "lucide-react";
+type Favorites = { favorites?: string[]; onFavorite?: (key: string) => void };
+function FavoriteStar({
+  id,
+  label,
+  favorites,
+  onFavorite,
+}: Favorites & { id: string; label: string }) {
+  if (!onFavorite) return null;
+  return (
+    <button
+      className="composition-favorite"
+      aria-label={`Favorite ${label}`}
+      aria-pressed={!!favorites?.includes(id)}
+      onClick={() => onFavorite(id)}
+    >
+      <Star />
+    </button>
+  );
+}
+export function ManhwaGallery({
+  insert,
+  favorites,
+  onFavorite,
+}: { insert: (o: CompositionObject) => void } & Favorites) {
   const [language, setLanguage] = useState("Hangul"),
     [search, setSearch] = useState(""),
     [selected, setSelected] = useState(0);
@@ -44,32 +68,39 @@ export function ManhwaGallery({ insert }: { insert: (o: CompositionObject) => vo
         }))
           .filter(({ word }) => word.join(" ").toLowerCase().includes(search.toLowerCase()))
           .map(({ word, i, object }) => (
-            <button
-              className="composition-shape-card"
-              key={word[0]}
-              draggable
-              onDragStart={(e) =>
-                e.dataTransfer.setData(
-                  "application/x-inkstrip-composition",
-                  JSON.stringify({
-                    kind: "manhwa",
-                    index: i,
-                    style: INK_STYLES[0],
-                    english: language === "English",
-                  }),
-                )
-              }
-              onClick={() => {
-                setSelected(i);
-                insert(object);
-              }}
-            >
-              <Thumbnail object={object} />
-              <strong>{word[0]}</strong>
-              <small>
-                {word[1]} · {word[2]}
-              </small>
-            </button>
+            <div className="composition-preset-card" key={word[0]}>
+              <button
+                className="composition-shape-card"
+                draggable
+                onDragStart={(e) =>
+                  e.dataTransfer.setData(
+                    "application/x-inkstrip-composition",
+                    JSON.stringify({
+                      kind: "manhwa",
+                      index: i,
+                      style: INK_STYLES[0],
+                      english: language === "English",
+                    }),
+                  )
+                }
+                onClick={() => {
+                  setSelected(i);
+                  insert(object);
+                }}
+              >
+                <Thumbnail object={object} />
+                <strong>{word[0]}</strong>
+                <small>
+                  {word[1]} · {word[2]}
+                </small>
+              </button>
+              <FavoriteStar
+                id={`manhwa:${word[0]}`}
+                label={word[0]}
+                favorites={favorites}
+                onFavorite={onFavorite}
+              />
+            </div>
           ))}
       </div>
       <h4>Lettering styles · {text}</h4>
@@ -105,7 +136,9 @@ export function AssetGallery({
   presets,
   insert,
   onImport,
-}: {
+  favorites,
+  onFavorite,
+}: Favorites & {
   presets: CompositionPreset[];
   insert: (p: CompositionPreset) => void;
   onImport: () => void;
@@ -141,22 +174,29 @@ export function AssetGallery({
               p.name.toLowerCase().includes(search.toLowerCase()),
           )
           .map((p) => (
-            <button
-              className="composition-shape-card"
-              key={p.id}
-              draggable
-              onDragStart={(e) =>
-                e.dataTransfer.setData(
-                  "application/x-inkstrip-composition",
-                  JSON.stringify({ kind: "asset", id: p.id }),
-                )
-              }
-              onClick={() => insert(p)}
-            >
-              <Thumbnail object={p.value as CompositionObject} />
-              <strong>{p.name}</strong>
-              <small>{p.collection ?? "Custom"} · reusable artwork</small>
-            </button>
+            <div className="composition-preset-card" key={p.id}>
+              <button
+                className="composition-shape-card"
+                draggable
+                onDragStart={(e) =>
+                  e.dataTransfer.setData(
+                    "application/x-inkstrip-composition",
+                    JSON.stringify({ kind: "asset", id: p.id }),
+                  )
+                }
+                onClick={() => insert(p)}
+              >
+                <Thumbnail object={p.value as CompositionObject} />
+                <strong>{p.name}</strong>
+                <small>{p.collection ?? "Custom"} · reusable artwork</small>
+              </button>
+              <FavoriteStar
+                id={`asset:${p.id}`}
+                label={p.name}
+                favorites={favorites}
+                onFavorite={onFavorite}
+              />
+            </div>
           ))}
       </div>
       {!assets.length && (

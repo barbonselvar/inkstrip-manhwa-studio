@@ -1,4 +1,5 @@
 import { paintInk, inkSupported, inkPolygons } from "./ink";
+import { paintBubble, bubbleExtentPoints, bubbleOverflow, bubbleFont, type Bubble } from "./bubble";
 import { getImageBlob } from "../db";
 import { decodeBlob, deviceLimits } from "../images";
 import { objectMatrix, objectBounds } from "./geometry";
@@ -487,11 +488,28 @@ function paintFx(ctx: CanvasRenderingContext2D, o: Fx) {
     ctx.restore();
   }
 }
+async function loadBubbleFont(o: Bubble) {
+  if (typeof document === "undefined" || !document.fonts) return;
+  await document.fonts.load(bubbleFont(o, o.size), o.text || " ");
+}
 export async function renderObjectThumbnail(object: CompositionObject) {
   const c = canvas(180, 100),
     ctx = c.getContext("2d")!;
   ctx.fillStyle = "#243332";
   ctx.fillRect(0, 0, 180, 100);
+  if (object.kind === "bubble") {
+    await loadBubbleFont(object);
+    const pts = bubbleExtentPoints(object),
+      x0 = Math.min(...pts.map((p) => p.x)),
+      y0 = Math.min(...pts.map((p) => p.y)),
+      w = Math.max(...pts.map((p) => p.x)) - x0,
+      h = Math.max(...pts.map((p) => p.y)) - y0,
+      k = Math.min(164 / w, 88 / h);
+    ctx.translate((180 - w * k) / 2 - x0 * k, (100 - h * k) / 2 - y0 * k);
+    ctx.scale(k, k);
+    paintBubble(ctx, object);
+    return c.toDataURL("image/png");
+  }
   ctx.scale(160 / object.width, 80 / object.height);
   ctx.translate(object.width * 0.06, object.height * 0.08);
   if (object.kind === "sfx") paintSfx(ctx, object);
@@ -611,7 +629,9 @@ function objectPadding(o: CompositionObject, frames: PanelFrame[], objects: Comp
         Math.max(0, ...o.strokes.map((s) => s.width)) * (o.ink ? 4 : 1)
       : o.kind === "fx"
         ? o.radius * 3
-        : 0) * scale
+        : o.kind === "bubble"
+          ? bubbleOverflow(o) + 2
+          : 0) * scale
   );
 }
 /** Rasterize ink against stable global bounds, independent of the requested
@@ -628,8 +648,50 @@ function paintStableInk(
   outputWidth: number,
   maxArea: number,
 ) {
-  const m = objectMatrix(o, frames, objects),
-    points = inkPolygons(o).flat();
+  paintStable(
+    ctx,
+    o,
+    inkPolygons(o).flat(),
+    (p) => {
+      paintSfx(p, o);
+      if (o.texture) {
+        p.globalCompositeOperation = "source-atop";
+        p.strokeStyle = rgba("#000000", o.texture);
+        p.lineWidth = 1;
+        for (let i = 0; i < o.width / 7; i++) {
+          p.beginPath();
+          p.moveTo(i * 7, 0);
+          p.lineTo(i * 7 + o.height * 0.2, o.height);
+          p.stroke();
+        }
+      }
+    },
+    o.size,
+    frames,
+    objects,
+    r,
+    scale,
+    resources,
+    outputWidth,
+    maxArea,
+  );
+}
+/** Shared stable-bounds rasterization for path-heavy objects (ink lettering, bubbles). */
+function paintStable(
+  ctx: CanvasRenderingContext2D,
+  o: CompositionObject,
+  points: { x: number; y: number }[],
+  painter: (p: CanvasRenderingContext2D) => void,
+  haloSize: number,
+  frames: PanelFrame[],
+  objects: CompositionObject[],
+  r: Region,
+  scale: number,
+  resources: RenderResources,
+  outputWidth: number,
+  maxArea: number,
+) {
+  const m = objectMatrix(o, frames, objects);
   if (!points.length) return;
   let x0 = Infinity,
     y0 = Infinity,
@@ -654,7 +716,7 @@ function paintStableInk(
   const origin = Math.round(r.y * scale),
     end = origin + ctx.canvas.height,
     limits = deviceLimits(),
-    key = JSON.stringify([o, m, scale]);
+    key = `${o.kind}:${JSON.stringify([o, m, scale])}`;
   const paint = (
     left: number,
     top: number,
@@ -673,18 +735,7 @@ function paintStableInk(
       const p = tile.getContext("2d")!;
       p.setTransform(scale, 0, 0, scale, -left, -top);
       p.transform(...m);
-      paintSfx(p, o);
-      if (o.texture) {
-        p.globalCompositeOperation = "source-atop";
-        p.strokeStyle = rgba("#000000", o.texture);
-        p.lineWidth = 1;
-        for (let i = 0; i < o.width / 7; i++) {
-          p.beginPath();
-          p.moveTo(i * 7, 0);
-          p.lineTo(i * 7 + o.height * 0.2, o.height);
-          p.stroke();
-        }
-      }
+      painter(p);
       resources.put(id, tile);
     }
     ctx.save();
@@ -717,7 +768,7 @@ function paintStableInk(
   // Large lettering stays bounded, with stable 128px cores and a glyph-sized halo.
   const halo =
       pad +
-      Math.ceil(o.size * scale * Math.max(Math.hypot(m[0], m[1]), Math.hypot(m[2], m[3])) * 1.5),
+      Math.ceil(haloSize * scale * Math.max(Math.hypot(m[0], m[1]), Math.hypot(m[2], m[3])) * 1.5),
     step = 128;
   for (
     let y = Math.floor(Math.max(bounds.top, origin) / step) * step;
@@ -815,6 +866,23 @@ async function paintObjects(
               p.stroke();
             }
           }
+        } else if (o.kind === "bubble") {
+          await loadBubbleFont(o);
+          signal?.throwIfAborted();
+          paintStable(
+            p,
+            o,
+            bubbleExtentPoints(o),
+            (q) => paintBubble(q, o),
+            Math.max(o.size * 2, 64),
+            frames,
+            d.objects,
+            r,
+            scale,
+            resources,
+            d.width * scale,
+            inkArea,
+          );
         } else if (o.kind === "fx") {
           if (o.effect === "Bloom") await paintBloom(p, o, frames, d, resources, scale, signal);
           if (/Blur|Screen Shake/.test(o.effect))
