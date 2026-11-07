@@ -14,6 +14,7 @@
  * - the chosen design survives an application restart; "Restore default" works.
  */
 import assert from "node:assert/strict";
+import { launchElectron } from "./launch-electron.mjs";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -40,7 +41,7 @@ const ok = (scale, step, data = {}) => {
 
 async function launch(profile, scale) {
   const extra = [`--force-device-scale-factor=${scale}`];
-  const app = await electron.launch({
+  const app = await launchElectron(electron, {
     executablePath: exe ?? join(desktop, "node_modules", "electron", "dist", "electron.exe"),
     args: exe ? extra : [desktop, ...extra],
     env: { ...process.env, INKSTRIP_PROFILE_DIR: profile },

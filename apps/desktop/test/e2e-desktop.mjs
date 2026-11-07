@@ -15,6 +15,7 @@
  * killed process, rejection of a corrupted file, and the close-without-saving prompt.
  */
 import assert from "node:assert/strict";
+import { launchElectron } from "./launch-electron.mjs";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -45,7 +46,7 @@ async function launch(profile, extraArgs = []) {
   const executablePath = exe ?? join(desktop, "node_modules", "electron", "dist", "electron.exe");
   const args = exe ? extraArgs : [desktop, ...extraArgs];
   const started = Date.now();
-  const app = await electron.launch({
+  const app = await launchElectron(electron, {
     executablePath,
     args,
     env: { ...process.env, INKSTRIP_PROFILE_DIR: profile },

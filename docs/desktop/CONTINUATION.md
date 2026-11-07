@@ -1,5 +1,28 @@
 # Continuation report (2026-11-07)
 
+## Active launch-driver correction (supersedes prior readiness)
+
+Final evidence head 9b4735a had six successful regular workflows, but Windows
+run 42421680038 failed twice at different `electron.launch` initializations.
+Attempt 1: A1–A8 passed, then driver timeout on a new profile reopening the file;
+the app had already registered the matching project hash. Attempt 2: offline
+13/13, feature 6/6 and network 5/5 passed; window checks reached 70/140, then driver
+timeout launching the 150% instance. No third unchanged retry was requested.
+
+A test-only Windows launch wrapper now waits for the app's existing startup log
+(after both initial pages loaded) before releasing the browser-debugger endpoint
+to Playwright. Product code, startup, flags, integrity/security and all assertions
+remain unchanged. Three gate tests preserve Node-debugger/error output, cover
+fragmented logs and refuse to declare startup failures ready. Windows CI runs them.
+The corrected full Windows job is PENDING; do not claim this correction verified.
+
+The local terminal became unavailable after 9b4735a, so subsequent work uses the
+authenticated repository connection and Windows CI. Local 1,258-test results
+predate this startup-wrapper change. The completed 60-minute test on application
+source 7ec94e0 remains valid for that unchanged product source, not new wrapper QA.
+Do not merge or install/publish. Inspect the next Windows job/artifacts, verify
+13/13 + 6/6 + 5/5 + 140/140, and update this checkpoint with exact outcomes.
+
 ## Latest independent QA checkpoint
 
 Read [qa-continuation-2026-11-07.md](qa-continuation-2026-11-07.md) first.

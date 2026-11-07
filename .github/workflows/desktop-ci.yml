@@ -59,6 +59,7 @@ jobs:
           npm audit --omit=dev --audit-level=high --prefix apps/desktop
           npm run typecheck --prefix apps/desktop
           npm run test:desktop
+          node --test scripts/electron-startup-gate.test.mjs
       - name: Build renderer, main process and unsigned NSIS installer
         working-directory: apps/desktop
         env:
