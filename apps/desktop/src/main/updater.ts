@@ -78,6 +78,8 @@ export class UpdateService {
     autoUpdater.allowDowngrade = false;
     autoUpdater.allowPrerelease = false;
     autoUpdater.fullChangelog = false;
+    // Only complete, verified NSIS installers are accepted (no web-installer packages).
+    if ("disableWebInstaller" in autoUpdater) (autoUpdater as { disableWebInstaller: boolean }).disableWebInstaller = true;
     autoUpdater.logger = { info: (m) => log.info(`[updater] ${m}`), warn: (m) => log.warn(`[updater] ${m}`), error: (m) => log.error(`[updater] ${m}`), debug: () => {} };
     autoUpdater.on("download-progress", (p: ProgressInfo) => {
       if (this.state.status !== "downloading") return;

@@ -357,10 +357,11 @@ try {
     () => {},
   );
   assert.deepEqual(errors, []);
-  await closeApp(app).catch(async () => {
-    // Unsaved changes still exist → the prompt appears again; that is expected.
-    await page.getByRole("button", { name: "Close without saving to file", exact: true }).click();
-  });
+  // Unsaved changes still exist → the prompt appears again; that is expected.
+  const finished = new Promise((r) => app.process().once("exit", r));
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close());
+  await page.getByRole("button", { name: "Close without saving to file", exact: true }).click();
+  await finished;
   step("B5 close prompt for unsaved work; declining keeps the edit in the workspace (no data loss)");
 } catch (error) {
   failure = error;

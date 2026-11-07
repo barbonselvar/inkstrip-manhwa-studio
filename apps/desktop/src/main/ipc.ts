@@ -4,7 +4,7 @@
  * itself (from opaque tokens or its own storage folders).
  */
 import { BrowserWindow, dialog, ipcMain, shell, type IpcMainInvokeEvent } from "electron";
-import { readdir, stat } from "node:fs/promises";
+import { mkdir, readdir, stat } from "node:fs/promises";
 import { extname, join } from "node:path";
 import {
   DESKTOP_ORIGIN,
@@ -85,6 +85,7 @@ export function registerIpc(ctx: IpcContext) {
   const chooseFile = async (title: string, webBackupFirst: boolean) => {
     const win = ctx.window();
     if (!win) return null;
+    await mkdir(ctx.paths.documents, { recursive: true }).catch(() => {});
     const filters = [
       { name: "Inkstrip projects", extensions: ["inkstrip", "inkstrip-project"] },
       { name: "Inkstrip project files", extensions: ["inkstrip"] },
@@ -106,6 +107,8 @@ export function registerIpc(ctx: IpcContext) {
   const chooseSave = async (title: string, suggested: unknown) => {
     const win = ctx.window();
     if (!win) return null;
+    // Default home for projects: Documents\Inkstrip (created on first use).
+    await mkdir(ctx.paths.documents, { recursive: true }).catch(() => {});
     const name = safeName(str(suggested, 200).replace(/\.inkstrip$/i, "")) + PROJECT_EXTENSION;
     const result = await dialog.showSaveDialog(win, {
       title,
