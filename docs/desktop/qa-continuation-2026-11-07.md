@@ -5,6 +5,19 @@ Branch: `desktop/windows-app`
 Verified starting commit: `c10afca22011f7d3b2c0ecd755c38a225f20df66`  
 QA implementation commit: `7ec94e05122ddea2d667f3486cfa87bf0ba4672b`
 
+**Automated QA passed:** 1,258 local tests, all seven regular workflows on
+documentation/build head `f2a35df387ee5ccff1912f42e8ba02c0564116c3`, and a controlled
+60-minute Windows run with 1,717 cycles and zero errors/crashes on implementation
+7ec94e0. Final evidence updates change documentation/data only.
+
+**Installation is not verified:** this session cannot reach the owner's Windows
+installation or backup. No replacement was attempted. Fresh backup verification,
+permission to replace 1.0.0, migration and installed-window screenshots remain open.
+
+Latest independently downloaded and hashed installer in this report:
+[unsigned 1.1.0 test artifact, f2a35df](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42417153007/artifacts/13591782546).
+It is not a production release. Exact checksum and all run links appear below.
+
 ## Scope and environment
 
 Continued the existing implementation. No application features, signing checks,
@@ -134,7 +147,7 @@ Its original error has **not** been diagnosed, and the old run is not called pas
 Do not stop or duplicate it on the owner's PC if still active.
 
 New isolated Windows run: [42416585169](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42416585169),
-source **7ec94e0**. Status at this checkpoint: **IN PROGRESS**, not passed.
+source **7ec94e0**. Final status: **SUCCESS**. The final JSON and application log were downloaded and inspected.
 
 The corrected harness starts its sustained clock after project creation/import/save,
 so setup cannot consume part of the requested hour. It waits for asynchronous brush
@@ -144,9 +157,37 @@ working set, aggregate CPU, process count and JS heap while repeatedly editing,
 switching workspaces and saving offline. Its outcome still fails on any caught
 workflow/console error, crash or incomplete measured interval.
 
-No memory-leak, CPU-stability or hour-long success claim is made before inspecting
-the final JSON. A single end-minus-warmup memory delta alone cannot prove absence
-of leaks; inspect the time series and workload/errors together.
+Final measured result: **60 minutes + 1.319 seconds**, **1,717 cycles**, **116 resource
+samples**, `completed: true`, `passed: true`, no crash, zero errors and an empty error
+array. The retained application log has no warning/error/exception/crash entries.
+
+| Measurement | Result |
+|---|---|
+| Working set start / warm-up (5.3 min) / end | 608 / 749 / 644 MB |
+| Peak working set | 963 MB |
+| Working-set change after warm-up | -105 MB |
+| JS heap start / warm-up / end | 14 / 27 / 21 MB |
+| JS heap change after warm-up | -6 MB |
+| Post-warm-up aggregate Electron CPU mean / median | 15.44% / 15.42% |
+| Post-warm-up aggregate Electron CPU p95 / max | 16.05% / 16.49% |
+| App process count | 5 throughout sampling |
+| Working-set range in final ten minutes | 540–644 MB |
+| Logged successful project writes | 344; 17–115 ms, median 25 ms |
+
+CPU values are the sum of Electron's per-process `percentCPUUsage` samples, not a
+measurement of total host CPU load. Memory fluctuates and ends below warm-up in
+this workload; this is encouraging sustained-run evidence, not a general proof
+that no possible editing session can leak memory. The saved project container was
+also revalidated after downloading it: one chapter, 20 panels, 41 assets; it remained
+structurally readable. Its SHA-256 is
+`a26e500afdb9dc2764e925bf9326bdedcfe1384ba81f2956fae611f23807ec78`.
+
+Retained evidence: [raw JSON](evidence/stability-7ec94e0.json),
+[sample CSV](evidence/stability-7ec94e0-samples.csv),
+[application log](evidence/stability-7ec94e0-app.log), and
+[complete workflow artifact](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42416585169/artifacts/13594210443).
+The original owner's earlier error is still inaccessible and remains undiagnosed;
+this successful controlled run does not retroactively mark that old run passed.
 
 ## QA implementation Actions (7ec94e0)
 
@@ -160,7 +201,7 @@ of leaks; inspect the time series and workload/errors together.
 | Website build | [42416589388](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42416589388) | SUCCESS |
 | External verification | [42416589447](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42416589447) | SUCCESS |
 
-Current-head artifacts were downloaded and inspected again. Windows retains
+Implementation-head artifacts were downloaded and inspected again. Windows retains
 13/13 offline, 6/6 features, 5/5 network and 140/140 window checks with null
 failures. Android now records **13/13 main + 4/4 restart**, no optional warnings;
 its actual dialog changes from open to closed while the chapter path stays the same.
@@ -169,7 +210,8 @@ The newer 7ec94e0 unsigned 1.1.0 installer is **135,443,797 bytes**, SHA-256
 `6c9723df5d290e1f48a8964d79165075b12be3e81c0ed9907052ace700f72605`,
 verified by hashing the downloaded EXE and comparing to `checksums.txt`.
 Use [artifact 13591337495](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42416589382/artifacts/13591337495)
-for the current QA source instead of the baseline installer above. It is an isolated
+for implementation 7ec94e0 instead of the baseline installer above. A newer f2a35df
+documentation-head build is linked at the top and at the end. It is an isolated
 **unsigned test build**, not a published trusted production release.
 
 ## Installation, backup and screenshot status
@@ -239,7 +281,7 @@ check: use an isolated Windows test installation for uninstall/data-retention te
 | Continuation local checks | PASS for executable checks above; GUI/platform checks blocked |
 | Baseline CI | VERIFIED on c10afca |
 | QA implementation CI | All seven regular workflows VERIFIED on 7ec94e0 |
-| 60-minute stability | RUNNING, unverified |
+| 60-minute stability | VERIFIED PASS on isolated Windows runner, source 7ec94e0 |
 | Owner-PC 1.1.0 installation | NOT VERIFIED |
 | Production release ready | NO; explicitly out of this session's scope |
 
@@ -260,3 +302,34 @@ Do not merge PR #41 or publish an unsigned installer as a trusted release.
 
 All five were visually inspected in this continuation. None is relabelled as a new
 capture of the owner's installed 1.1.0 application.
+
+
+## Final documentation-head verification
+
+Documentation head `f2a35df387ee5ccff1912f42e8ba02c0564116c3` changes reports only;
+its application and QA implementation match 7ec94e0. All seven regular workflows
+also passed on that exact head:
+
+| Workflow | Successful run |
+|---|---|
+| Desktop Windows | [42417153007](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42417153007) |
+| Android APK/emulator | [42417152985](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42417152985) |
+| Raster continuity | [42417153046](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42417153046) |
+| R14 real AI | [42417153018](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42417153018) |
+| Configuration/full tests | [42417152999](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42417152999) |
+| Website build | [42417153021](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42417153021) |
+| External verification | [42417153022](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42417153022) |
+
+Artifacts were inspected again: Windows 13/13 + 6/6 + 5/5 + 140/140, all null
+failures; Android 13/13 + 4/4. A fresh unsigned 1.1.0 NSIS installer from f2a35df
+was downloaded and verified: **135,443,141 bytes**, SHA-256
+`654ddb9320c96fd6d6a92133478d24e8e0ced77207c0e1c8c0a88c59838b778b`.
+[Download that development artifact](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42417153007/artifacts/13591782546).
+It has not been copied to or installed on the owner's PC.
+
+**Final readiness:** QA fixes and automated local/CI validation are complete for the
+executed scope, including the controlled hour. Owner-PC installation, fresh backup
+verification, migration, native manual controls/Snap/physical displays, fresh five
+installed-window captures and installed-version uninstall/recovery remain blocked
+by lack of Windows access. Signing/publication are deferred. PR #41 is not merged;
+no production release is ready or claimed.

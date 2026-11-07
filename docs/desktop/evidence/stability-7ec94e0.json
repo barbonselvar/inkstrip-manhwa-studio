@@ -1,0 +1,968 @@
+{
+  "exe": "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe",
+  "minutes": 60,
+  "cycles": 1717,
+  "elapsedMs": 3601319,
+  "crashed": null,
+  "errors": [],
+  "errorCount": 0,
+  "start": {
+    "minute": 0,
+    "label": "start",
+    "workingSetMB": 608,
+    "cpuPercent": 0,
+    "processes": 5,
+    "heapMB": 14
+  },
+  "afterWarmup": {
+    "minute": 5.3,
+    "label": "cycle 149",
+    "workingSetMB": 749,
+    "cpuPercent": 15.39293064757016,
+    "processes": 5,
+    "heapMB": 27
+  },
+  "end": {
+    "minute": 60,
+    "label": "end",
+    "workingSetMB": 644,
+    "cpuPercent": 15.655300159992201,
+    "processes": 5,
+    "heapMB": 21
+  },
+  "peakWorkingSetMB": 963,
+  "growthAfterWarmupMB": -105,
+  "heapGrowthAfterWarmupMB": -6,
+  "samples": [
+    {
+      "minute": 0,
+      "label": "start",
+      "workingSetMB": 608,
+      "cpuPercent": 0,
+      "processes": 5,
+      "heapMB": 14
+    },
+    {
+      "minute": 0.5,
+      "label": "cycle 14",
+      "workingSetMB": 792,
+      "cpuPercent": 15.265258649905952,
+      "processes": 5,
+      "heapMB": 34
+    },
+    {
+      "minute": 1,
+      "label": "cycle 29",
+      "workingSetMB": 896,
+      "cpuPercent": 15.176353502277507,
+      "processes": 5,
+      "heapMB": 20
+    },
+    {
+      "minute": 1.6,
+      "label": "cycle 44",
+      "workingSetMB": 963,
+      "cpuPercent": 15.137058289101173,
+      "processes": 5,
+      "heapMB": 37
+    },
+    {
+      "minute": 2.1,
+      "label": "cycle 59",
+      "workingSetMB": 817,
+      "cpuPercent": 15.298292996312657,
+      "processes": 5,
+      "heapMB": 26
+    },
+    {
+      "minute": 2.6,
+      "label": "cycle 74",
+      "workingSetMB": 891,
+      "cpuPercent": 15.211873088104575,
+      "processes": 5,
+      "heapMB": 43
+    },
+    {
+      "minute": 3.1,
+      "label": "cycle 89",
+      "workingSetMB": 903,
+      "cpuPercent": 15.332927074239647,
+      "processes": 5,
+      "heapMB": 43
+    },
+    {
+      "minute": 3.7,
+      "label": "cycle 104",
+      "workingSetMB": 865,
+      "cpuPercent": 15.666215984286882,
+      "processes": 5,
+      "heapMB": 43
+    },
+    {
+      "minute": 4.2,
+      "label": "cycle 119",
+      "workingSetMB": 803,
+      "cpuPercent": 15.424884729020894,
+      "processes": 5,
+      "heapMB": 26
+    },
+    {
+      "minute": 4.7,
+      "label": "cycle 134",
+      "workingSetMB": 761,
+      "cpuPercent": 15.075681072761208,
+      "processes": 5,
+      "heapMB": 26
+    },
+    {
+      "minute": 5.3,
+      "label": "cycle 149",
+      "workingSetMB": 749,
+      "cpuPercent": 15.39293064757016,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 5.8,
+      "label": "cycle 164",
+      "workingSetMB": 792,
+      "cpuPercent": 15.122752608261763,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 6.3,
+      "label": "cycle 179",
+      "workingSetMB": 769,
+      "cpuPercent": 15.248714623608812,
+      "processes": 5,
+      "heapMB": 43
+    },
+    {
+      "minute": 6.8,
+      "label": "cycle 194",
+      "workingSetMB": 696,
+      "cpuPercent": 15.211567903271519,
+      "processes": 5,
+      "heapMB": 26
+    },
+    {
+      "minute": 7.3,
+      "label": "cycle 209",
+      "workingSetMB": 659,
+      "cpuPercent": 15.125471330761705,
+      "processes": 5,
+      "heapMB": 26
+    },
+    {
+      "minute": 7.9,
+      "label": "cycle 224",
+      "workingSetMB": 710,
+      "cpuPercent": 15.421689449642685,
+      "processes": 5,
+      "heapMB": 43
+    },
+    {
+      "minute": 8.4,
+      "label": "cycle 239",
+      "workingSetMB": 605,
+      "cpuPercent": 15.415576931749847,
+      "processes": 5,
+      "heapMB": 34
+    },
+    {
+      "minute": 8.9,
+      "label": "cycle 254",
+      "workingSetMB": 596,
+      "cpuPercent": 15.299847037836063,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 9.5,
+      "label": "cycle 269",
+      "workingSetMB": 589,
+      "cpuPercent": 15.181836066468207,
+      "processes": 5,
+      "heapMB": 26
+    },
+    {
+      "minute": 10,
+      "label": "cycle 284",
+      "workingSetMB": 595,
+      "cpuPercent": 15.653572707611577,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 10.5,
+      "label": "cycle 299",
+      "workingSetMB": 659,
+      "cpuPercent": 15.30281547715018,
+      "processes": 5,
+      "heapMB": 43
+    },
+    {
+      "minute": 11,
+      "label": "cycle 314",
+      "workingSetMB": 646,
+      "cpuPercent": 15.58448488076251,
+      "processes": 5,
+      "heapMB": 43
+    },
+    {
+      "minute": 11.6,
+      "label": "cycle 329",
+      "workingSetMB": 591,
+      "cpuPercent": 16.01969093235793,
+      "processes": 5,
+      "heapMB": 26
+    },
+    {
+      "minute": 12.1,
+      "label": "cycle 344",
+      "workingSetMB": 581,
+      "cpuPercent": 15.866695636423797,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 12.6,
+      "label": "cycle 359",
+      "workingSetMB": 639,
+      "cpuPercent": 15.89305905453249,
+      "processes": 5,
+      "heapMB": 43
+    },
+    {
+      "minute": 13.1,
+      "label": "cycle 374",
+      "workingSetMB": 591,
+      "cpuPercent": 15.860740169974664,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 13.7,
+      "label": "cycle 389",
+      "workingSetMB": 597,
+      "cpuPercent": 15.59639573638275,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 14.2,
+      "label": "cycle 404",
+      "workingSetMB": 663,
+      "cpuPercent": 15.613280418318286,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 14.7,
+      "label": "cycle 419",
+      "workingSetMB": 588,
+      "cpuPercent": 15.797843607118711,
+      "processes": 5,
+      "heapMB": 35
+    },
+    {
+      "minute": 15.3,
+      "label": "cycle 434",
+      "workingSetMB": 597,
+      "cpuPercent": 15.605386904101273,
+      "processes": 5,
+      "heapMB": 32
+    },
+    {
+      "minute": 15.8,
+      "label": "cycle 449",
+      "workingSetMB": 550,
+      "cpuPercent": 15.630329734215632,
+      "processes": 5,
+      "heapMB": 34
+    },
+    {
+      "minute": 16.3,
+      "label": "cycle 464",
+      "workingSetMB": 564,
+      "cpuPercent": 16.096395244698602,
+      "processes": 5,
+      "heapMB": 32
+    },
+    {
+      "minute": 16.8,
+      "label": "cycle 479",
+      "workingSetMB": 566,
+      "cpuPercent": 15.961234560309329,
+      "processes": 5,
+      "heapMB": 35
+    },
+    {
+      "minute": 17.4,
+      "label": "cycle 494",
+      "workingSetMB": 582,
+      "cpuPercent": 15.920496651728689,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 17.9,
+      "label": "cycle 509",
+      "workingSetMB": 738,
+      "cpuPercent": 15.688792627501481,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 18.4,
+      "label": "cycle 524",
+      "workingSetMB": 579,
+      "cpuPercent": 16.052803988943,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 18.9,
+      "label": "cycle 539",
+      "workingSetMB": 568,
+      "cpuPercent": 15.78250658851325,
+      "processes": 5,
+      "heapMB": 34
+    },
+    {
+      "minute": 19.5,
+      "label": "cycle 554",
+      "workingSetMB": 570,
+      "cpuPercent": 15.415332106401564,
+      "processes": 5,
+      "heapMB": 32
+    },
+    {
+      "minute": 20,
+      "label": "cycle 569",
+      "workingSetMB": 639,
+      "cpuPercent": 15.573340530120719,
+      "processes": 5,
+      "heapMB": 25
+    },
+    {
+      "minute": 20.5,
+      "label": "cycle 584",
+      "workingSetMB": 581,
+      "cpuPercent": 15.464708137637276,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 21,
+      "label": "cycle 599",
+      "workingSetMB": 599,
+      "cpuPercent": 15.685792664569522,
+      "processes": 5,
+      "heapMB": 34
+    },
+    {
+      "minute": 21.6,
+      "label": "cycle 614",
+      "workingSetMB": 642,
+      "cpuPercent": 15.773126686005746,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 22.1,
+      "label": "cycle 629",
+      "workingSetMB": 554,
+      "cpuPercent": 15.708826155608875,
+      "processes": 5,
+      "heapMB": 25
+    },
+    {
+      "minute": 22.6,
+      "label": "cycle 644",
+      "workingSetMB": 614,
+      "cpuPercent": 15.379856464324726,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 23.1,
+      "label": "cycle 659",
+      "workingSetMB": 695,
+      "cpuPercent": 15.209822923199587,
+      "processes": 5,
+      "heapMB": 36
+    },
+    {
+      "minute": 23.7,
+      "label": "cycle 674",
+      "workingSetMB": 579,
+      "cpuPercent": 15.370984094095203,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 24.2,
+      "label": "cycle 689",
+      "workingSetMB": 635,
+      "cpuPercent": 15.599583451003404,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 24.7,
+      "label": "cycle 704",
+      "workingSetMB": 636,
+      "cpuPercent": 15.601089479277896,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 25.2,
+      "label": "cycle 719",
+      "workingSetMB": 558,
+      "cpuPercent": 16.033242046521814,
+      "processes": 5,
+      "heapMB": 32
+    },
+    {
+      "minute": 25.8,
+      "label": "cycle 734",
+      "workingSetMB": 616,
+      "cpuPercent": 15.74124879370687,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 26.3,
+      "label": "cycle 749",
+      "workingSetMB": 562,
+      "cpuPercent": 15.62982337287621,
+      "processes": 5,
+      "heapMB": 34
+    },
+    {
+      "minute": 26.8,
+      "label": "cycle 764",
+      "workingSetMB": 576,
+      "cpuPercent": 15.453925121296344,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 27.3,
+      "label": "cycle 779",
+      "workingSetMB": 636,
+      "cpuPercent": 15.742339538835884,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 27.9,
+      "label": "cycle 794",
+      "workingSetMB": 632,
+      "cpuPercent": 16.127440174350127,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 28.4,
+      "label": "cycle 809",
+      "workingSetMB": 571,
+      "cpuPercent": 15.92432181127722,
+      "processes": 5,
+      "heapMB": 29
+    },
+    {
+      "minute": 28.9,
+      "label": "cycle 824",
+      "workingSetMB": 559,
+      "cpuPercent": 15.444710879646925,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 29.4,
+      "label": "cycle 839",
+      "workingSetMB": 574,
+      "cpuPercent": 15.24359243761847,
+      "processes": 5,
+      "heapMB": 25
+    },
+    {
+      "minute": 30,
+      "label": "cycle 854",
+      "workingSetMB": 653,
+      "cpuPercent": 15.231688286160022,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 30.5,
+      "label": "cycle 869",
+      "workingSetMB": 630,
+      "cpuPercent": 15.631668191934903,
+      "processes": 5,
+      "heapMB": 43
+    },
+    {
+      "minute": 31,
+      "label": "cycle 884",
+      "workingSetMB": 573,
+      "cpuPercent": 15.31748492030107,
+      "processes": 5,
+      "heapMB": 34
+    },
+    {
+      "minute": 31.5,
+      "label": "cycle 899",
+      "workingSetMB": 544,
+      "cpuPercent": 15.685759167904997,
+      "processes": 5,
+      "heapMB": 32
+    },
+    {
+      "minute": 32.1,
+      "label": "cycle 914",
+      "workingSetMB": 576,
+      "cpuPercent": 15.594349563168162,
+      "processes": 5,
+      "heapMB": 35
+    },
+    {
+      "minute": 32.6,
+      "label": "cycle 929",
+      "workingSetMB": 552,
+      "cpuPercent": 15.257235925591832,
+      "processes": 5,
+      "heapMB": 32
+    },
+    {
+      "minute": 33.1,
+      "label": "cycle 944",
+      "workingSetMB": 676,
+      "cpuPercent": 15.311896766123345,
+      "processes": 5,
+      "heapMB": 36
+    },
+    {
+      "minute": 33.6,
+      "label": "cycle 959",
+      "workingSetMB": 614,
+      "cpuPercent": 15.523802853973272,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 34.2,
+      "label": "cycle 974",
+      "workingSetMB": 612,
+      "cpuPercent": 15.398676200980928,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 34.7,
+      "label": "cycle 989",
+      "workingSetMB": 572,
+      "cpuPercent": 15.368379851357567,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 35.2,
+      "label": "cycle 1004",
+      "workingSetMB": 559,
+      "cpuPercent": 15.509672458012144,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 35.7,
+      "label": "cycle 1019",
+      "workingSetMB": 567,
+      "cpuPercent": 15.374603034072962,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 36.2,
+      "label": "cycle 1034",
+      "workingSetMB": 637,
+      "cpuPercent": 15.246488667650066,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 36.8,
+      "label": "cycle 1049",
+      "workingSetMB": 583,
+      "cpuPercent": 15.054117496259078,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 37.3,
+      "label": "cycle 1064",
+      "workingSetMB": 674,
+      "cpuPercent": 14.956671004488534,
+      "processes": 5,
+      "heapMB": 36
+    },
+    {
+      "minute": 37.8,
+      "label": "cycle 1079",
+      "workingSetMB": 572,
+      "cpuPercent": 15.396232027229711,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 38.3,
+      "label": "cycle 1094",
+      "workingSetMB": 622,
+      "cpuPercent": 15.28266507049224,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 38.8,
+      "label": "cycle 1109",
+      "workingSetMB": 553,
+      "cpuPercent": 14.917179003623378,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 39.4,
+      "label": "cycle 1124",
+      "workingSetMB": 568,
+      "cpuPercent": 14.711898503781523,
+      "processes": 5,
+      "heapMB": 34
+    },
+    {
+      "minute": 39.9,
+      "label": "cycle 1139",
+      "workingSetMB": 570,
+      "cpuPercent": 14.755659995079146,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 40.4,
+      "label": "cycle 1154",
+      "workingSetMB": 668,
+      "cpuPercent": 14.721631655089775,
+      "processes": 5,
+      "heapMB": 36
+    },
+    {
+      "minute": 40.9,
+      "label": "cycle 1169",
+      "workingSetMB": 586,
+      "cpuPercent": 15.308419579128167,
+      "processes": 5,
+      "heapMB": 34
+    },
+    {
+      "minute": 41.4,
+      "label": "cycle 1184",
+      "workingSetMB": 627,
+      "cpuPercent": 15.28897444065246,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 42,
+      "label": "cycle 1199",
+      "workingSetMB": 613,
+      "cpuPercent": 15.161318465861065,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 42.5,
+      "label": "cycle 1214",
+      "workingSetMB": 626,
+      "cpuPercent": 15.13509162654795,
+      "processes": 5,
+      "heapMB": 29
+    },
+    {
+      "minute": 43,
+      "label": "cycle 1229",
+      "workingSetMB": 575,
+      "cpuPercent": 15.427566778301529,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 43.5,
+      "label": "cycle 1244",
+      "workingSetMB": 681,
+      "cpuPercent": 15.108366768076046,
+      "processes": 5,
+      "heapMB": 18
+    },
+    {
+      "minute": 44,
+      "label": "cycle 1259",
+      "workingSetMB": 632,
+      "cpuPercent": 14.821006986860823,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 44.6,
+      "label": "cycle 1274",
+      "workingSetMB": 584,
+      "cpuPercent": 14.908954916620651,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 45.1,
+      "label": "cycle 1289",
+      "workingSetMB": 563,
+      "cpuPercent": 15.09739328904708,
+      "processes": 5,
+      "heapMB": 34
+    },
+    {
+      "minute": 45.6,
+      "label": "cycle 1304",
+      "workingSetMB": 554,
+      "cpuPercent": 15.297154674627064,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 46.1,
+      "label": "cycle 1319",
+      "workingSetMB": 552,
+      "cpuPercent": 15.123818708125697,
+      "processes": 5,
+      "heapMB": 32
+    },
+    {
+      "minute": 46.6,
+      "label": "cycle 1334",
+      "workingSetMB": 662,
+      "cpuPercent": 14.804229432917996,
+      "processes": 5,
+      "heapMB": 36
+    },
+    {
+      "minute": 47.1,
+      "label": "cycle 1349",
+      "workingSetMB": 610,
+      "cpuPercent": 14.795723996332821,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 47.7,
+      "label": "cycle 1364",
+      "workingSetMB": 606,
+      "cpuPercent": 15.647091034094696,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 48.2,
+      "label": "cycle 1379",
+      "workingSetMB": 617,
+      "cpuPercent": 15.418959690059705,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 48.7,
+      "label": "cycle 1393",
+      "workingSetMB": 576,
+      "cpuPercent": 16.487656152287506,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 49.2,
+      "label": "cycle 1407",
+      "workingSetMB": 640,
+      "cpuPercent": 16.25947576605779,
+      "processes": 5,
+      "heapMB": 21
+    },
+    {
+      "minute": 49.7,
+      "label": "cycle 1422",
+      "workingSetMB": 574,
+      "cpuPercent": 15.505699897443508,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 50.2,
+      "label": "cycle 1437",
+      "workingSetMB": 609,
+      "cpuPercent": 15.371162086000044,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 50.8,
+      "label": "cycle 1452",
+      "workingSetMB": 540,
+      "cpuPercent": 15.021783356556647,
+      "processes": 5,
+      "heapMB": 29
+    },
+    {
+      "minute": 51.3,
+      "label": "cycle 1467",
+      "workingSetMB": 558,
+      "cpuPercent": 14.904911520832577,
+      "processes": 5,
+      "heapMB": 34
+    },
+    {
+      "minute": 51.8,
+      "label": "cycle 1482",
+      "workingSetMB": 622,
+      "cpuPercent": 14.969617536909412,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 52.3,
+      "label": "cycle 1497",
+      "workingSetMB": 630,
+      "cpuPercent": 15.164473892227232,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 52.8,
+      "label": "cycle 1512",
+      "workingSetMB": 618,
+      "cpuPercent": 15.158919959809761,
+      "processes": 5,
+      "heapMB": 25
+    },
+    {
+      "minute": 53.4,
+      "label": "cycle 1527",
+      "workingSetMB": 558,
+      "cpuPercent": 15.471111250367446,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 53.9,
+      "label": "cycle 1542",
+      "workingSetMB": 610,
+      "cpuPercent": 15.856988293817682,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 54.4,
+      "label": "cycle 1557",
+      "workingSetMB": 607,
+      "cpuPercent": 15.588407190794339,
+      "processes": 5,
+      "heapMB": 27
+    },
+    {
+      "minute": 54.9,
+      "label": "cycle 1572",
+      "workingSetMB": 570,
+      "cpuPercent": 15.687003308211128,
+      "processes": 5,
+      "heapMB": 30
+    },
+    {
+      "minute": 55.5,
+      "label": "cycle 1587",
+      "workingSetMB": 555,
+      "cpuPercent": 15.296495498604765,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 56,
+      "label": "cycle 1602",
+      "workingSetMB": 542,
+      "cpuPercent": 15.264974862773308,
+      "processes": 5,
+      "heapMB": 26
+    },
+    {
+      "minute": 56.5,
+      "label": "cycle 1617",
+      "workingSetMB": 591,
+      "cpuPercent": 15.1504991378029,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 57,
+      "label": "cycle 1632",
+      "workingSetMB": 557,
+      "cpuPercent": 15.303112217303951,
+      "processes": 5,
+      "heapMB": 25
+    },
+    {
+      "minute": 57.6,
+      "label": "cycle 1647",
+      "workingSetMB": 612,
+      "cpuPercent": 15.495527825840025,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 58.1,
+      "label": "cycle 1662",
+      "workingSetMB": 553,
+      "cpuPercent": 15.729432535621243,
+      "processes": 5,
+      "heapMB": 26
+    },
+    {
+      "minute": 58.6,
+      "label": "cycle 1677",
+      "workingSetMB": 547,
+      "cpuPercent": 15.379766599919387,
+      "processes": 5,
+      "heapMB": 28
+    },
+    {
+      "minute": 59.1,
+      "label": "cycle 1692",
+      "workingSetMB": 620,
+      "cpuPercent": 15.399878296916897,
+      "processes": 5,
+      "heapMB": 44
+    },
+    {
+      "minute": 59.7,
+      "label": "cycle 1707",
+      "workingSetMB": 571,
+      "cpuPercent": 15.602224380662319,
+      "processes": 5,
+      "heapMB": 34
+    },
+    {
+      "minute": 60,
+      "label": "end",
+      "workingSetMB": 644,
+      "cpuPercent": 15.655300159992201,
+      "processes": 5,
+      "heapMB": 21
+    }
+  ],
+  "completed": true,
+  "passed": true
+}

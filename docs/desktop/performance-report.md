@@ -1,5 +1,19 @@
 # Performance report
 
+## Completed controlled stability run (current QA)
+
+Windows Actions run [42416585169](https://github.com/barbonselvar/inkstrip-manhwa-studio/actions/runs/42416585169),
+implementation `7ec94e0`, completed 60 minutes + 1.319 seconds of offline work:
+**1,717 cycles, 116 samples, zero errors, no crash**. Working set was 749 MB after
+warm-up and 644 MB at the end (peak 963 MB); JS heap went from 27 to 21 MB after
+warm-up. Post-warm-up aggregate Electron CPU averaged 15.44% (p95 16.05%).
+344 project writes were logged (median 25 ms); the final 20-panel container was
+downloaded and revalidated. This is an isolated CI machine, **not** a new benchmark
+of the owner's PC. Full time series, limits and logs are in
+[the independent QA report](qa-continuation-2026-11-07.md#controlled-stability-validation).
+
+## Historical owner-PC large-chapter benchmark
+
 For the later stability run and its limitations, see
 [the continuation verification](verification-2026-11-07.md). The measurements below
 are the earlier large-chapter benchmark, not a completed 60-minute stability result.
