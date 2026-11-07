@@ -1,0 +1,47 @@
+name: Desktop release withdraw (owner-approved rollback)
+
+# Stops a published desktop release from being offered to installed apps, without
+# deleting it: the release is marked as a prerelease, which the in-app updater and the
+# website ignore. Installed apps never downgrade, so the recovery for users who already
+# updated is to publish a fixed, higher version with "Desktop release".
+# Requires the same protected `desktop-production` environment approval.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release to withdraw, e.g. desktop-v1.0.1"
+        required: true
+      reason:
+        description: "Short reason shown in the release notes"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
+
+jobs:
+  withdraw:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: desktop-production
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ inputs.tag }}
+      REASON: ${{ inputs.reason }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Mark the release as withdrawn (prerelease)
+        run: |
+          set -euo pipefail
+          if ! [[ "$TAG" =~ ^desktop-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then echo "::error::Only desktop-v<x.y.z> releases can be withdrawn here."; exit 1; fi
+          notes=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)
+          printf '> **Withdrawn:** %s\n\n%s\n' "$REASON" "$notes" > notes.md
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease --notes-file notes.md
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease | grep -q true
+          echo "$TAG is withdrawn: installed apps no longer see it. Publish a fixed higher version to update users who installed it."

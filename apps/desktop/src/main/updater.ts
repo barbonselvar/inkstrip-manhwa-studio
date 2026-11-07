@@ -19,7 +19,7 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { AppInfo, DesktopSettings, UpdateState } from "../../../../src/lib/desktop/contract.ts";
-import { isLoopbackFeed, pickRelease, type EligibleRelease } from "./update-feed.ts";
+import { isLoopbackFeed, isNetworkFailure, pickRelease, type EligibleRelease } from "./update-feed.ts";
 import { log } from "./logger.ts";
 
 export const RELEASE_REPO = "barbonselvar/inkstrip-manhwa-studio";
@@ -159,6 +159,8 @@ export class UpdateService {
           `https://api.github.com/repos/${RELEASE_REPO}/releases?per_page=30`,
           {
             headers: { accept: "application/vnd.github+json", "user-agent": "Inkstrip-Desktop-Updater" },
+            // Always ask GitHub (a cached answer could hide a new release or a lost connection).
+            cache: "no-store",
             signal: AbortSignal.timeout(20_000),
           },
         );
@@ -189,13 +191,13 @@ export class UpdateService {
       return this.state;
     } catch (error) {
       const message = (error as Error).message ?? String(error);
-      const offline = !net.isOnline() || /ENOTFOUND|ERR_INTERNET_DISCONNECTED|ERR_NAME_NOT_RESOLVED|timed out|TimeoutError|ECONNREFUSED|ERR_NETWORK/i.test(message);
+      const offline = isNetworkFailure(message, net.isOnline());
       log.warn("[updater] check failed", message);
       this.set({
         status: "error",
         offline,
         message: offline
-          ? "You're offline. Inkstrip works fully offline and will check for updates later."
+          ? "Can't reach GitHub right now (offline or blocked). Inkstrip works fully offline and will check for updates later."
           : `Could not check for updates: ${message}`,
       });
       return this.state;

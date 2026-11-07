@@ -23,7 +23,7 @@ import {
 } from "../src/main/project-files.ts";
 import { ProjectRegistry } from "../src/main/registry.ts";
 import { mergeSettings, sanitizeSettings } from "../src/main/settings.ts";
-import { compareVersions, isLoopbackFeed, pickRelease } from "../src/main/update-feed.ts";
+import { compareVersions, isLoopbackFeed, isNetworkFailure, pickRelease } from "../src/main/update-feed.ts";
 import { readJson, writeJson } from "../src/main/json-store.ts";
 
 const dirs: string[] = [];
@@ -258,6 +258,13 @@ describe("update release selection", () => {
   test("release page links stay on the repository", () => {
     const r = pickRelease([release("desktop-v1.1.0", { html_url: "https://evil.example/x" })], "1.0.0", repo);
     assert.equal(r?.pageUrl, `https://github.com/${repo}/releases/tag/desktop-v1.1.0`);
+  });
+  test("network failures are offline, HTTP/metadata failures are real errors", () => {
+    for (const m of ["net::ERR_INTERNET_DISCONNECTED", "net::ERR_PROXY_CONNECTION_FAILED", "getaddrinfo ENOTFOUND api.github.com", "The operation was aborted due to timeout (TimeoutError)", "connect ECONNREFUSED 1.2.3.4:443"])
+      assert.ok(isNetworkFailure(m, true), m);
+    assert.ok(isNetworkFailure("anything", false));
+    for (const m of ["GitHub answered 403.", "The release metadata does not match the published version.", "sha512 checksum mismatch"])
+      assert.ok(!isNetworkFailure(m, true), m);
   });
   test("version comparison and loopback-only test feeds", () => {
     assert.equal(compareVersions("1.10.0", "1.9.9"), 1);

@@ -91,3 +91,15 @@ export function isLoopbackFeed(url: string) {
     return false;
   }
 }
+
+/**
+ * Network-level failures (no connection, DNS, proxy, timeout, refused) mean "can't reach
+ * the release server": shown calmly as offline. Anything else (HTTP errors, bad metadata)
+ * is a real update error.
+ */
+export function isNetworkFailure(message: string, online: boolean) {
+  return (
+    !online ||
+    /net::ERR_|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENETUNREACH|EHOSTUNREACH|TimeoutError|timed out|Failed to fetch/i.test(message)
+  );
+}
