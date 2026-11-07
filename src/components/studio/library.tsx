@@ -148,9 +148,6 @@ export function Library() {
               <span className="status-dot" />
               On-device studio
             </span>
-            <Link to="/account" className="status-pill focus-ring">
-              Account & cloud
-            </Link>
             <AppearanceButton />
           </div>
         </nav>
