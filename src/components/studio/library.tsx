@@ -158,9 +158,9 @@ export function Library() {
               <span className="mini-line" />A studio for visual storytellers
             </p>
             <h1 className="hero-title">
-              Every frame.
+              InkStrip
               <br />
-              <em>A world.</em>
+              <em>Manhwa Studio</em>
             </h1>
             <p className="hero-description">
               From the first panel to the final scroll.

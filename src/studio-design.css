@@ -2781,3 +2781,16 @@ html[data-studio-motion="quiet"] .depth-surface:hover > .project-shelf-card.proj
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* Brand heading "InkStrip / Manhwa Studio": keep the longer second line on one line. */
+.library-hero .hero-title {
+  font-size: min(clamp(3.6rem, 7vw, 7.25rem), calc((100vw - 2.5rem) / 6.4));
+}
+.library-hero .hero-title em {
+  white-space: nowrap;
+}
+@media (min-width: 1024px) {
+  .library-hero .hero-title {
+    font-size: clamp(3.4rem, 5.75vw, 6.2rem);
+  }
+}

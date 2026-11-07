@@ -22,7 +22,7 @@ const errors = [],
 const gallery = (page) => page.getByRole("region", { name: "Original Inkstrip artwork gallery" });
 const active = (page) => gallery(page).getAttribute("data-active");
 async function loaded(page) {
-  await page.getByRole("heading", { name: "Every frame. A world." }).waitFor();
+  await page.getByRole("heading", { name: "InkStrip Manhwa Studio" }).waitFor();
   if (expected)
     assert.equal(
       await page.locator('meta[name="inkstrip-release"]').getAttribute("content"),
