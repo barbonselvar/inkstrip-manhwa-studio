@@ -135,15 +135,17 @@ export function loadNativeRelease(fetcher: typeof fetch = fetch): Promise<Native
   return cached;
 }
 
-/** True inside the Inkstrip Android (Capacitor) or Windows (Tauri) app. */
+/** True inside the Inkstrip Android (Capacitor) or Windows (Electron) app. */
 export function isInsideNativeApp(): boolean {
   if (typeof window === "undefined") return false;
   const w = window as unknown as {
     __INKSTRIP_DESKTOP__?: unknown;
+    inkstripDesktop?: { isDesktop?: unknown };
     Capacitor?: { isNativePlatform?: () => boolean };
   };
   return (
     Boolean(w.__INKSTRIP_DESKTOP__) ||
+    w.inkstripDesktop?.isDesktop === true ||
     Boolean(w.Capacitor?.isNativePlatform?.()) ||
     /\bInkstripApp\//.test(navigator.userAgent)
   );

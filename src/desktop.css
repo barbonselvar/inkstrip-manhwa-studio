@@ -1,0 +1,265 @@
+/* Desktop-only chrome (loaded with the lazy desktop shell; never on the website). */
+.desktop-statusbar {
+  position: fixed;
+  z-index: 120;
+  left: 50%;
+  bottom: 0.35rem;
+  transform: translateX(-50%);
+  max-width: min(30rem, calc(100vw - 1.5rem));
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0.2rem 0.15rem 0.7rem;
+  font-size: 0.7rem;
+  opacity: 0.88;
+  transition: opacity 120ms ease;
+}
+.desktop-statusbar:hover,
+.desktop-statusbar[data-dirty] {
+  opacity: 1;
+}
+.desktop-statusbar {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-bg-elevated) 92%, transparent);
+  color: var(--color-muted);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.35);
+  pointer-events: auto;
+}
+.desktop-statusbar[data-dirty] {
+  color: var(--color-fg);
+  border-color: color-mix(in oklab, var(--color-accent) 45%, var(--color-border));
+}
+.desktop-statusbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-bg-subtle);
+  color: var(--color-fg);
+  white-space: nowrap;
+}
+.desktop-statusbar button:hover:not(:disabled) {
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+}
+.desktop-statusbar button:disabled {
+  opacity: 0.5;
+}
+.desktop-busy {
+  position: fixed;
+  z-index: 140;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  width: min(24rem, calc(100vw - 2rem));
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.8rem;
+  background: var(--color-bg-elevated);
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.45);
+}
+.desktop-busy > div {
+  flex: 1;
+}
+.desktop-progress {
+  height: 4px;
+  margin-top: 0.45rem;
+  border-radius: 999px;
+  background: var(--color-bg-subtle);
+  overflow: hidden;
+}
+.desktop-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+  transition: width 160ms linear;
+}
+.desktop-toasts {
+  position: fixed;
+  z-index: 150;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(26rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+.desktop-toast {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  background: var(--color-bg-elevated);
+  color: var(--color-fg);
+  font-size: 0.85rem;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.4);
+  pointer-events: auto;
+}
+.desktop-toast-ok svg {
+  color: var(--color-accent);
+}
+.desktop-toast-error {
+  border-color: color-mix(in oklab, var(--color-danger) 55%, var(--color-border));
+}
+.desktop-toast-error svg {
+  color: var(--color-danger);
+}
+.desktop-update {
+  position: fixed;
+  z-index: 145;
+  right: 1rem;
+  top: 1rem;
+  width: min(22rem, calc(100vw - 2rem));
+  padding: 1rem 1rem 0.8rem;
+  border: 1px solid color-mix(in oklab, var(--color-accent) 40%, var(--color-border));
+  border-radius: 0.9rem;
+  background: var(--color-bg-elevated);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.45);
+}
+.desktop-update-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.25rem;
+  border-radius: 0.4rem;
+  color: var(--color-muted);
+}
+.desktop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.desktop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  max-height: 22rem;
+  overflow: auto;
+}
+.desktop-list > li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-bg-subtle);
+}
+.desktop-notes {
+  max-height: 16rem;
+  overflow: auto;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.6rem;
+  background: var(--color-bg-subtle);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+}
+.desktop-settings {
+  display: grid;
+  gap: 1.25rem;
+}
+.desktop-settings h3 {
+  margin-bottom: 0.4rem;
+  color: var(--color-fg);
+  font-weight: 600;
+}
+.desktop-setting {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
+}
+.desktop-setting input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-accent);
+}
+.desktop-about {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  font-size: 0.8rem;
+}
+.desktop-about dt {
+  color: var(--color-muted);
+}
+.desktop-about dd {
+  color: var(--color-fg);
+  overflow-wrap: anywhere;
+}
+.desktop-library {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 1rem 0 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--color-bg-elevated) 80%, transparent);
+}
+.desktop-library-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.desktop-library kbd {
+  margin-left: 0.25rem;
+  font-size: 0.7rem;
+  color: var(--color-muted);
+}
+.desktop-library > div {
+  flex: 1;
+  min-width: min(100%, 20rem);
+}
+.desktop-recent {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.desktop-recent > li {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-bg-subtle);
+  overflow: hidden;
+}
+.desktop-recent > li > button:first-child {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0.5rem 0.7rem;
+  text-align: left;
+}
+.desktop-recent > li > button:first-child:hover:not(:disabled) {
+  background: var(--color-bg-elevated);
+}
+.desktop-recent > li > button:first-child > span {
+  max-width: 100%;
+}
+.desktop-recent-remove {
+  padding: 0 0.6rem;
+  color: var(--color-muted);
+}
+.desktop-recent-remove:hover {
+  color: var(--color-danger);
+}

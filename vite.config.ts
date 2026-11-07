@@ -154,8 +154,21 @@ const releaseSha = (() => {
   }
 })();
 
+/**
+ * `INKSTRIP_TARGET=desktop` builds the Windows desktop renderer: the same app,
+ * routes and editor, emitted as a static single-page app (TanStack Start SPA
+ * mode, no Nitro/Vercel server) into `dist/desktop-renderer/`. The Electron
+ * shell in `apps/desktop` serves it from its own `app://` protocol, so the
+ * installed app never loads the website or needs a dev server.
+ */
+const desktop = process.env.INKSTRIP_TARGET === "desktop";
+
 export default defineConfig(({ command, isPreview }) => ({
-  define: { "import.meta.env.INKSTRIP_RELEASE_SHA": JSON.stringify(releaseSha) },
+  define: {
+    "import.meta.env.INKSTRIP_RELEASE_SHA": JSON.stringify(releaseSha),
+    "import.meta.env.INKSTRIP_DESKTOP": JSON.stringify(desktop),
+  },
+  ...(desktop ? { build: { outDir: "dist/desktop-renderer", emptyOutDir: true } } : {}),
   server: {
     host: "0.0.0.0",
     port: 8080,
@@ -176,8 +189,12 @@ export default defineConfig(({ command, isPreview }) => ({
     // PWA head + ?install=1 tutorial page; runs before Start/Nitro.
     grokPwaPlugin(),
     tailwindcss(),
-    tanstackStart(),
-    ...(command === "build" || isPreview
+    tanstackStart(
+      desktop
+        ? { spa: { enabled: true, prerender: { outputPath: "/index.html", crawlLinks: false } } }
+        : undefined,
+    ),
+    ...(!desktop && (command === "build" || isPreview)
       ? [
           nitro({
             preset: "vercel",

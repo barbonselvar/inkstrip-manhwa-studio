@@ -163,6 +163,16 @@ function withTimestamps(
   };
 }
 
+/** A deleted page's Raster document goes with it; a failure here never blocks the delete. */
+async function dropNativeDrafts(panelIds: string[]) {
+  try {
+    const { deleteNativeDrafts } = await import("./pro/storage");
+    await deleteNativeDrafts(panelIds);
+  } catch (error) {
+    console.warn("Inkstrip could not remove deleted pages' native drafts", error);
+  }
+}
+
 export const useStudio = create<Studio>((set, get) => ({
   ready: false,
   orderBusy: false,
@@ -254,6 +264,7 @@ export const useStudio = create<Studio>((set, get) => ({
       panels: panels.map((panel) => panel.id),
       blobs,
     });
+    await dropNativeDrafts(panels.map((panel) => panel.id));
     set((state) => ({
       projects: state.projects.filter((project) => project.id !== id),
       chapters: state.chapters.filter((chapter) => chapter.projectId !== id),
@@ -320,6 +331,7 @@ export const useStudio = create<Studio>((set, get) => ({
       panels: panels.map((panel) => panel.id),
       blobs,
     });
+    await dropNativeDrafts(panels.map((panel) => panel.id));
     const touched = withTimestamps(get().projects, get().chapters, chapter.projectId);
     const project = touched.projects.find((item) => item.id === chapter.projectId);
     if (project) await putRecords({ projects: [project] });

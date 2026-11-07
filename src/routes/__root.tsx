@@ -2,6 +2,7 @@ import { AppReady } from "@/components/studio/chrome";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { AuthProvider } from "@/lib/auth/provider";
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import { lazy, Suspense, useEffect, useState } from "react";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Inkstrip";
@@ -36,6 +37,7 @@ export const Route = createRootRoute({
         <AuthProvider>
           <AppReady>
             <Outlet />
+            <DesktopChrome />
           </AppReady>
         </AuthProvider>
         <Scripts />
@@ -43,3 +45,17 @@ export const Route = createRootRoute({
     </html>
   ),
 });
+
+/** Windows app only: loaded on demand when the desktop bridge exists (never on the web). */
+const DesktopShell = lazy(() =>
+  import("@/components/desktop/desktop-shell").then((m) => ({ default: m.DesktopShell })),
+);
+function DesktopChrome() {
+  const [desktop, setDesktop] = useState(false);
+  useEffect(() => setDesktop(!!window.inkstripDesktop?.isDesktop), []);
+  return desktop ? (
+    <Suspense fallback={null}>
+      <DesktopShell />
+    </Suspense>
+  ) : null;
+}

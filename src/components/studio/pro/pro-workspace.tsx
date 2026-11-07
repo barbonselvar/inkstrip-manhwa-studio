@@ -179,6 +179,7 @@ import { decodeBlob } from "@/lib/studio/images";
 import { ToolSection } from "../design/tool-section";
 import { needsSplit } from "@/lib/studio/page-split";
 import { RASTER_MAX_SIDE } from "@/lib/studio/raster-limits";
+import { registerEditorFlush } from "@/lib/desktop/bridge";
 import {
   browserBrushStorage,
   loadBrushPresets,
@@ -705,6 +706,18 @@ export default function ProWorkspace({
     }, 500);
     return () => clearTimeout(timer);
   }, [history, persist, busy, saveAcknowledgment]);
+  // Desktop Save / quit / update: write the open document before the project is read.
+  useEffect(
+    () =>
+      registerEditorFlush(async () => {
+        await saveTail.current.catch(() => {});
+        const doc = historyRef.current?.present.doc;
+        if (!doc || !sessionRef.current || closeInProgress.current || busyRef.current) return;
+        if (!isSaved(doc)) await persist(doc);
+      }),
+    // isSaved only reads refs.
+    [persist],
+  );
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
       if (

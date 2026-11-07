@@ -5,6 +5,7 @@ import { DepthSurface } from "./design/depth-surface";
 import { AppearanceButton } from "./design/preferences";
 import { Wordmark } from "./chrome";
 import { DownloadAppButton } from "./download-app";
+import { DesktopLibraryPanel } from "@/components/desktop/desktop-library-panel";
 import { storageMessage } from "@/lib/studio/db";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -208,6 +209,7 @@ export function Library() {
             <CinematicGallery />
           </div>
         </section>
+        <DesktopLibraryPanel />
         <div className="studio-stats library-metrics">
           <div>
             <span className="metric-icon">
