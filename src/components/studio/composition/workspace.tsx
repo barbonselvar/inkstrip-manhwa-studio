@@ -1027,6 +1027,11 @@ export default function CompositionWorkspace({
               <fieldset disabled={session.blocked || session.before || busy}>
                 <CompositionProperties
                   onSaveStyle={saveStyle}
+                  emptyHint={
+                    lettering
+                      ? "Select a bubble or text to edit its words, typography, shape and tails. Shift-click to select several."
+                      : undefined
+                  }
                   controller={controller}
                   session={session}
                   document={d}

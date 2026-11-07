@@ -1144,7 +1144,13 @@ export function CompositionCanvas({
                   <div
                     key={`suggestion-${i}`}
                     className="composition-suggestion"
-                    style={{ left: r.x, top: r.y - origin, width: r.width, height: r.height }}
+                    style={{
+                      left: r.x,
+                      top: r.y - origin,
+                      width: r.width,
+                      height: r.height,
+                      zIndex: 20 - i,
+                    }}
                   >
                     <button
                       style={{ fontSize: 13 / scale, padding: `${4 / scale}px ${8 / scale}px` }}

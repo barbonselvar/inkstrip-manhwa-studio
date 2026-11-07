@@ -16,6 +16,7 @@ const out = "docs/text-bubbles/evidence",
   shots = "docs/text-bubbles/screenshots";
 await mkdir(out, { recursive: true });
 await mkdir(shots, { recursive: true });
+await mkdir("/workspace/screenshots", { recursive: true });
 const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
 const errors = [],
   external = [],
@@ -661,7 +662,7 @@ try {
 } catch (error) {
   for (const [i, ctx] of browser.contexts().entries())
     for (const [j, pg] of ctx.pages().entries())
-      await pg.screenshot({ path: `${shots}/failure-${i}-${j}.png` }).catch(() => {});
+      await pg.screenshot({ path: `/workspace/screenshots/lettering-failure-${i}-${j}.png` }).catch(() => {});
   console.error(JSON.stringify({ results, errors }, null, 2));
   throw error;
 } finally {

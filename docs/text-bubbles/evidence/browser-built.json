@@ -1,0 +1,53 @@
+{
+  "results": [
+    {
+      "step": "panels: toggles, drag reorder, undo"
+    },
+    {
+      "step": "spacing: quick preset applied"
+    },
+    {
+      "step": "fades & transitions: galleries insert real effects"
+    },
+    {
+      "step": "manhwa sfx: tabs, favorite and insert"
+    },
+    {
+      "step": "extractor: asset saved (built)"
+    },
+    {
+      "step": "bubbles inserted and edited"
+    },
+    {
+      "step": "inline canvas text editing"
+    },
+    {
+      "step": "smart placement suggests and places without moving existing art",
+      "suggestionCount": 3
+    },
+    {
+      "step": "UI export download",
+      "file": "Lettering QA-Chapter 1-001-chapter-001.png"
+    },
+    {
+      "step": "composition shares lettering layers"
+    },
+    {
+      "step": "panel dialogue documents still reachable"
+    },
+    {
+      "step": "touch 320px",
+      "overflow": 0,
+      "smallControls": 6
+    },
+    {
+      "step": "touch 390px",
+      "overflow": 0,
+      "smallControls": 6
+    }
+  ],
+  "errors": [],
+  "external": [
+    "https://grok.com/grok-app-builder/extensions.js net::ERR_TUNNEL_CONNECTION_FAILED"
+  ]
+}

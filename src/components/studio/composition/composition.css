@@ -902,10 +902,14 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
+  overflow: hidden;
 }
 .composition-suggestion button {
   pointer-events: auto;
   margin-top: 6px;
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  text-overflow: ellipsis;
   border-radius: 999px;
   background: #38d6e8;
   color: #06202a;

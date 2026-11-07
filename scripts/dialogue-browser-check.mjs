@@ -6,6 +6,9 @@ import { legacyVector } from "./pro-browser-fixtures.mjs";
 
 /** Text & Bubbles opens the chapter lettering editor; per-panel native documents live under Advanced. */
 async function openPanelDocuments(page) {
+  await page
+    .locator("[data-composition=lettering] .composition-left")
+    .waitFor({ state: "attached" });
   const section = page.getByRole("button", { name: "Panel documents", exact: true });
   if (!(await section.isVisible())) {
     const tools = page.locator(".composition-tools-toggle");

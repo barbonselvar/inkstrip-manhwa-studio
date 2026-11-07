@@ -264,7 +264,9 @@ export function CompositionProperties({
   onNative,
   onOverlay,
   onSaveStyle,
+  emptyHint,
 }: {
+  emptyHint?: string;
   onSaveStyle?: (kind: "Bubble style" | "Text style", value: Bubble) => void;
   controller: Controller;
   session: Session;
@@ -1433,7 +1435,7 @@ export function CompositionProperties({
         ) : (
           <>
             <h3>Composition properties</h3>
-            <p>Select a panel, gap, fade or effect to edit it.</p>
+            <p>{emptyHint ?? "Select a panel, gap, fade or effect to edit it."}</p>
             <Color
               label="Chapter background"
               value={d.background}

@@ -41,12 +41,12 @@
       "chapterOffset": {
         "dy": 0.09313573210619547,
         "dx": 0.08214857831238359,
-        "owner": "4802d38f-d5ad-4c64-aba6-0566b260ee00"
+        "owner": "18516cb6-cc22-45bb-9367-3fe95592bda8"
       },
       "focusOffset": {
         "dy": 0.09313573210619547,
         "dx": 0.08214857831238359,
-        "owner": "4802d38f-d5ad-4c64-aba6-0566b260ee00"
+        "owner": "18516cb6-cc22-45bb-9367-3fe95592bda8"
       }
     },
     {
@@ -101,6 +101,7 @@
   ],
   "errors": [],
   "external": [
+    "https://grok.com/grok-app-builder/extensions.js net::ERR_ABORTED",
     "https://grok.com/grok-app-builder/extensions.js net::ERR_TUNNEL_CONNECTION_FAILED"
   ]
 }
