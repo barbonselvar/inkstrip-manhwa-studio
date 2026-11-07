@@ -100,10 +100,16 @@ export function boundaryOffset(b: Boundary, u: number): number {
   }
   return b.amplitude * (b.direction < 0 ? 1 - v : v);
 }
-export function shapedCoverage(f: Fade, x: number, y: number, w: number, h: number) {
+export function shapedCoverage(
+  f: Fade,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  offset = boundaryOffset(f.boundary!, x / w),
+) {
   const b = f.boundary!;
-  const offset = boundaryOffset(b, x / w),
-    length = f.length + f.feather;
+  const length = f.length + f.feather;
   const top = 1 - (y - offset - f.start) / length,
     bottom = 1 - (h - y - offset - f.start) / length;
   return Math.max(
@@ -113,4 +119,22 @@ export function shapedCoverage(f: Fade, x: number, y: number, w: number, h: numb
       b.placement === "Top" ? top : b.placement === "Bottom" ? bottom : Math.max(top, bottom),
     ),
   );
+}
+
+const ranges = new WeakMap<Boundary, { min: number; max: number }>();
+/** Minimum and maximum offset of a boundary profile (cached per boundary object). */
+export function profileRange(b: Boundary) {
+  let r = ranges.get(b);
+  if (!r) {
+    let min = Infinity,
+      max = -Infinity;
+    for (let i = 0; i <= 256; i++) {
+      const v = boundaryOffset(b, i / 256);
+      min = Math.min(min, v);
+      max = Math.max(max, v);
+    }
+    r = { min, max };
+    ranges.set(b, r);
+  }
+  return r;
 }

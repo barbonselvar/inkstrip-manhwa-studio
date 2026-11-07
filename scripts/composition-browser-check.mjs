@@ -129,7 +129,7 @@ try {
   }
   await page.getByRole("button", { name: "Focus panel 3", exact: true }).click();
   await page.getByRole("button", { name: "Add bottom fade", exact: true }).click();
-  assert.equal(await page.getByLabel("Fade length (px)", { exact: true }).inputValue(), "350");
+  assert.equal(await page.getByLabel("Fade depth (px)", { exact: true }).inputValue(), "350");
   await page.getByRole("button", { name: "Return to Chapter", exact: true }).click();
   await saved(page);
   await ready(page);
@@ -338,7 +338,7 @@ try {
     await p.getByLabel("Bottom extension (px)", { exact: true }).fill("500");
     await p.getByLabel("Bottom extension (px)", { exact: true }).press("Tab");
     await p.getByRole("button", { name: "Add bottom fade", exact: true }).click();
-    await p.getByLabel("Fade length (px)", { exact: true }).fill("350");
+    await p.getByLabel("Fade depth (px)", { exact: true }).fill("350");
     await p.getByRole("button", { name: "Close properties", exact: true }).click();
     await p.getByRole("button", { name: "Return to Chapter", exact: true }).click();
     await saved(p);

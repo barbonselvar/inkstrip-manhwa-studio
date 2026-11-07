@@ -40,6 +40,8 @@ export type Session = {
   tool: string;
   mobileProperties: boolean;
   drawBoundary?: boolean;
+  /** Index of the last grabbed point of the selected fade (for removal from the inspector). */
+  fadePoint?: number;
   /** Additional selected creative objects for multi-object move/alignment. */
   multi?: string[];
   /** Snap to chapter, panel and object guides (on unless false). */

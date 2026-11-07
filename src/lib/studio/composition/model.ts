@@ -45,6 +45,14 @@ export const FADE_TYPES = [
 ] as const;
 export type Fade = {
   boundary?: Boundary;
+  /** Left edge of a narrowed fade, in chapter pixels relative to the image (default 0). */
+  x?: number;
+  /** Horizontal extent; undefined = the full image width. */
+  width?: number;
+  /** Mask edge softness: a true blur of the coverage mask, in pixels. */
+  softness?: number;
+  /** Paint the fade band beyond the image into spacing and gutters. */
+  extend?: boolean;
   id: string;
   name: string;
   type: (typeof FADE_TYPES)[number];
@@ -415,7 +423,7 @@ export function validateFade(f: Fade) {
   );
   assert(
     n(f.length, 1, 100000) &&
-      n(f.start, 0, 100000) &&
+      n(f.start, -100000, 100000) &&
       n(f.opacity, 0, 1) &&
       n(f.curve, 0.1, 10) &&
       n(f.feather, 0, 1000) &&
@@ -426,6 +434,13 @@ export function validateFade(f: Fade) {
       typeof f.visible === "boolean" &&
       typeof f.locked === "boolean",
     "fade settings",
+  );
+  assert(
+    (f.x === undefined || n(f.x, -100000, 100000)) &&
+      (f.width === undefined || n(f.width, 1, 100000)) &&
+      (f.softness === undefined || n(f.softness, 0, 1000)) &&
+      (f.extend === undefined || typeof f.extend === "boolean"),
+    "fade extent",
   );
   if (f.boundary) {
     const b = f.boundary;

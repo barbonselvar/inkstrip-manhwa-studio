@@ -1,5 +1,17 @@
 # Inkstrip release changelog
 
+## Freeform fade editor
+
+- Fades move freely up and down (negative positions), extend into chapter spacing and
+  gutters, and resize in depth and width directly on the canvas at any zoom, with mouse,
+  pen or touch.
+- Free boundary points: add, move, remove, smooth; freehand boundaries stay editable.
+- Density, depth, softness (a true mask blur), position and falloff are independent
+  sliders; reset, duplicate, hide/show, lock and delete per fade.
+- Named fade list with selection highlight, visibility, lock, ordering; outlines and
+  click-to-select for overlapping fades. Saved fades render unchanged.
+- [Root cause, changes and validation](FADE_EDITOR.md).
+
 ## Text & Bubbles chapter editor, Composition consolidation, SFX extractor
 
 - Text & Bubbles is now a chapter-level editor on the same scene and history as

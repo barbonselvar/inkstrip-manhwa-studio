@@ -111,7 +111,8 @@
     "test:composition:browser": "node scripts/composition-browser-check.mjs",
     "test:composition:integrity": "node scripts/composition-deep-check.mjs",
     "test:composition:advanced": "node scripts/composition-advanced-browser-check.mjs",
-    "test:lettering:browser": "node scripts/lettering-browser-check.mjs"
+    "test:lettering:browser": "node scripts/lettering-browser-check.mjs",
+    "test:fades:browser": "node scripts/fade-editor-browser-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

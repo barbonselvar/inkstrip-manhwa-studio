@@ -20,3 +20,5 @@ and `npm run check:build`. No deployment command is included in CI.
 [Organic fade boundaries and original Manhwa SFX galleries](docs/ORGANIC_FADES_MANHWA_SFX.md)
 
 [Text & Bubbles chapter editor, consolidated Composition navigation and SFX extractor](docs/TEXT_BUBBLES_SFX_STUDIO.md)
+
+[Freeform fade editor](docs/FADE_EDITOR.md)

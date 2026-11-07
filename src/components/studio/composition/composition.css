@@ -841,10 +841,47 @@
   touch-action: none;
   cursor: crosshair;
 }
-.composition-boundary-editor circle {
+.composition-boundary-editor [data-boundary-handle],
+.composition-fade-handle-svg {
   pointer-events: auto;
   touch-action: none;
   cursor: grab;
+}
+.composition-fade-handle-svg[data-fade-handle="depth"] {
+  cursor: ns-resize;
+}
+.composition-fade-handle-svg.is-side {
+  cursor: ew-resize;
+}
+.composition-fade-band {
+  touch-action: none;
+  cursor: move;
+}
+.composition-fade-line {
+  touch-action: none;
+  cursor: move;
+}
+.composition-fade-outline {
+  position: absolute;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.composition-fade-outline path {
+  pointer-events: stroke;
+  cursor: pointer;
+}
+.composition-fade-chip {
+  position: absolute;
+  z-index: 3;
+  pointer-events: auto;
+  border-radius: 999px;
+  border: 1px solid #38d6e8;
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  color: #38d6e8;
+  white-space: nowrap;
+  min-height: 0;
+  line-height: 1.2;
 }
 .composition-preset-grid:has(.composition-shape-card) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1148,4 +1185,95 @@
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-elevated);
   overflow-x: auto;
+}
+
+/* ── Fade inspector and list ── */
+.composition-slider {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 10px;
+}
+.composition-slider-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.composition-slider-head span {
+  flex: 1;
+}
+.composition-slider-head input {
+  width: 92px;
+  min-height: 36px;
+  padding: 4px 8px;
+  text-align: right;
+}
+.composition-slider input[type="range"] {
+  width: 100%;
+  min-height: 32px;
+  accent-color: var(--color-accent);
+  touch-action: pan-y;
+}
+.composition-fade-list {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.composition-fade-list li {
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+.composition-fade-list li.is-selected {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+.composition-fade-list-name {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  min-height: 40px;
+  padding: 2px 4px;
+}
+.composition-fade-list-name strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.composition-fade-list-name small {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.composition-fade-list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.composition-fade-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.composition-fade-inspector h4 {
+  margin: 14px 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+.composition-selected-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 30%, transparent);
+  vertical-align: middle;
 }

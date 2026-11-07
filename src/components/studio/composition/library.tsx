@@ -45,6 +45,8 @@ import {
   Unlock,
 } from "lucide-react";
 import { FadeTypeGallery, TransitionGallery } from "./fx-galleries";
+import { FadeList } from "./fade-panel";
+import { uniqueFadeName } from "@/lib/studio/composition/fade-edit";
 import { SfxExtractor } from "./extractor";
 import { MANHWA_WORDS, INK_STYLES } from "@/lib/studio/composition/ink-catalog";
 import { inkObject } from "@/lib/studio/composition/ink-presets";
@@ -181,7 +183,7 @@ export function CompositionLibrary({
   };
   const addFade = (type: (typeof FADE_TYPES)[number]) => {
     if (!owner || d.panels[owner]?.locked) return;
-    const f = fade(type);
+    const f = { ...fade(type), name: uniqueFadeName(d.panels[owner].fades, type) };
     controller.change((doc) => ({
       ...doc,
       panels: {
@@ -487,16 +489,24 @@ export function CompositionLibrary({
             Fade the selected artwork into its extension or chapter background.
           </p>
           <FadeTypeGallery disabled={!owner || d.panels[owner]?.locked} onPick={addFade} />
-          {owner &&
-            d.panels[owner]?.fades.map((f) => (
-              <Button
-                key={f.id}
-                variant="secondary"
-                onClick={() => controller.select({ kind: "fade", id: f.id, panelId: owner })}
-              >
-                {f.name} · {f.length} px {f.visible ? "" : "(hidden)"}
-              </Button>
-            ))}
+          {owner && d.panels[owner] && (
+            <>
+              <h4>Fades on {panels.find((x) => x.id === owner)?.name ?? "this panel"}</h4>
+              <FadeList
+                fades={d.panels[owner].fades}
+                selected={session.selection?.kind === "fade" ? session.selection.id : undefined}
+                onSelect={(id) => controller.select({ kind: "fade", id, panelId: owner })}
+                onChange={(fades, selectId) => {
+                  controller.change((doc) => ({
+                    ...doc,
+                    panels: { ...doc.panels, [owner]: { ...doc.panels[owner], fades } },
+                  }));
+                  if (selectId) controller.select({ kind: "fade", id: selectId, panelId: owner });
+                  else if (selectId === null) controller.select({ kind: "panel", id: owner });
+                }}
+              />
+            </>
+          )}
           {presetList(["fade"])}
         </>
       )}

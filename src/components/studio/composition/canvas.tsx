@@ -1,4 +1,5 @@
 import { BoundaryEditor } from "./boundary-editor";
+import { fadeLine, hitFade, parts } from "@/lib/studio/composition/fade-edit";
 import { inkObject } from "@/lib/studio/composition/ink-presets";
 import { MANHWA_WORDS, INK_STYLES } from "@/lib/studio/composition/ink-catalog";
 import type { CompositionPreset, CompositionObject } from "@/lib/studio/composition/model";
@@ -227,6 +228,12 @@ export function CompositionCanvas({
   const fadePanelId = session.selection?.kind === "fade" ? session.selection.panelId : undefined;
   const selectedFade = scene.frames.find((f) => f.panel.id === fadePanelId);
   const fade = selectedFade?.settings.fades.find((f) => f.id === session.selection?.id);
+  /** Panel whose fades show outlines and can be clicked: the selected fade's or panel's. */
+  const activeFrame =
+    selectedFade ??
+    (session.selection?.kind === "panel"
+      ? scene.frames.find((f) => f.panel.id === session.selection?.id)
+      : undefined);
   const updateSpace = (
     id: string,
     slot: "top" | "bottom" | "after" | "opening" | "ending",
@@ -514,6 +521,23 @@ export function CompositionCanvas({
               return;
             }
             if (controller.getState().multi?.length) controller.setState({ multi: [] });
+            if (activeFrame && !activeFrame.settings.locked) {
+              const local = { x: p.x, y: p.y - activeFrame.imageY },
+                hits = activeFrame.settings.fades.filter(
+                  (x) => !!hitFade(x, local, d.width, activeFrame.imageHeight, 8 / scale),
+                );
+              if (hits.length) {
+                // Repeated clicks cycle through overlapping fades, topmost first.
+                const order = [...hits].reverse(),
+                  current = order.findIndex((x) => x.id === session.selection?.id),
+                  next = order[(current + 1) % order.length]!;
+                if (next.id !== session.selection?.id) {
+                  controller.select({ kind: "fade", id: next.id, panelId: activeFrame.panel.id });
+                  drag.current = null;
+                  return;
+                }
+              }
+            }
             const region = scene.spaces.find((s) => p.y >= s.y && p.y < s.y + s.height);
             if (transition && stack.indexOf(`transition:${transition.id}`) === structuralRank) {
               controller.setState({
@@ -781,8 +805,76 @@ export function CompositionCanvas({
                   scale={scale}
                   controller={controller}
                   drawing={!!session.drawBoundary}
+                  coarse={coarse}
                 />
               )}
+            {!session.preview &&
+              !session.before &&
+              !session.drawBoundary &&
+              activeFrame &&
+              activeFrame.settings.fades
+                .filter(
+                  (x) =>
+                    x.boundary &&
+                    x.visible &&
+                    x.id !==
+                      (fade?.boundary && !fade.locked && !activeFrame.settings.locked
+                        ? fade.id
+                        : ""),
+                )
+                .map((x) => {
+                  const line = parts(x).map((part) =>
+                    fadeLine(x, part, 0.5, d.width, activeFrame.imageHeight, 48),
+                  );
+                  const first = line[0]![0]!;
+                  const select = () =>
+                    controller.select({ kind: "fade", id: x.id, panelId: activeFrame.panel.id });
+                  return (
+                    <div key={x.id}>
+                      <svg
+                        className="composition-fade-outline"
+                        style={{
+                          top: activeFrame.imageY - origin,
+                          width: d.width,
+                          height: activeFrame.imageHeight,
+                        }}
+                        viewBox={`0 0 ${d.width} ${activeFrame.imageHeight}`}
+                        aria-hidden="true"
+                      >
+                        {line.map((pts, i) => (
+                          <path
+                            key={i}
+                            d={pts.map((q, j) => `${j ? "L" : "M"}${q.x},${q.y}`).join(" ")}
+                            fill="none"
+                            stroke={x.id === fade?.id ? "var(--color-accent)" : "#38d6e8"}
+                            strokeOpacity={0.75}
+                            strokeWidth={(coarse ? 3 : 1.5) / scale}
+                            strokeDasharray={`${4 / scale} ${4 / scale}`}
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                              select();
+                            }}
+                          />
+                        ))}
+                      </svg>
+                      <button
+                        className="composition-fade-chip"
+                        aria-label={`Select fade ${x.name}`}
+                        style={{
+                          left: Math.max(0, first.x) + 6 / scale,
+                          top: activeFrame.imageY - origin + first.y - (coarse ? 30 : 22) / scale,
+                          fontSize: 11 / scale,
+                          padding: `${(coarse ? 8 : 3) / scale}px ${8 / scale}px`,
+                        }}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={select}
+                      >
+                        {x.name}
+                        {x.locked ? " · locked" : ""}
+                      </button>
+                    </div>
+                  );
+                })}
             {!session.preview && !session.before && (
               <>
                 {scene.frames

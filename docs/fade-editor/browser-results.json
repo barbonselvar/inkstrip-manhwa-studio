@@ -1,0 +1,74 @@
+{
+  "results": [
+    {
+      "step": "1. create a shaped fade (named, editor visible)",
+      "name": "Wave fade"
+    },
+    {
+      "step": "2. free vertical movement far down and above the image",
+      "down": 717.61,
+      "up": -652.38
+    },
+    {
+      "step": "3. fade extends into chapter spacing",
+      "spacingMax": 71,
+      "bandMean": 20.558758333333333
+    },
+    {
+      "step": "4. depth and horizontal resizing",
+      "length": 644,
+      "x": 195.71,
+      "width": 212.87
+    },
+    {
+      "step": "5. density 0% hides, 100% restores",
+      "zero": 0,
+      "full": 14.109445833333334
+    },
+    {
+      "step": "6. depth and softness are independent",
+      "length": 500,
+      "softness": 60
+    },
+    {
+      "step": "7. freehand drawn, reshaped point-by-point, point added, smoothed",
+      "points": 18
+    },
+    {
+      "step": "10. undo/redo of canvas gestures"
+    },
+    {
+      "step": "13. overlapping fades: names, chips, list visibility, canvas selection",
+      "picked": "Straight fade"
+    },
+    {
+      "step": "8. switching panels and focus keeps fades and reselects"
+    },
+    {
+      "step": "9. reload persists every fade property",
+      "fades": 2
+    },
+    {
+      "step": "11. segmented export matches the full preview render",
+      "rows": 1947,
+      "total": 1947,
+      "segments": 6,
+      "mismatch": 0,
+      "max": 2
+    },
+    {
+      "step": "14. legacy fades open unchanged and stay clipped",
+      "below": 0,
+      "inside": 20.7863125
+    },
+    {
+      "step": "12. Android 412px: touch drag, touch-sized handles, properties sheet",
+      "start": -252.63,
+      "grip": 61
+    }
+  ],
+  "errors": [],
+  "external": [
+    "https://grok.com/grok-app-builder/extensions.js net::ERR_TUNNEL_CONNECTION_FAILED"
+  ]
+}
