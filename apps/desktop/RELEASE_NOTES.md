@@ -3,6 +3,23 @@
 Each release has a `## <version>` section. The release workflow publishes exactly that
 section as the GitHub Release notes, which installed apps show before updating.
 
+## 1.1.0 — 2026-11-07
+
+- Five window designs, switchable live in Settings → Window appearance (or View →
+  Window Appearance…): Creative Studio Pro (default), Modern Windows 11 (Mica), Neon
+  Gaming (configurable accent), Developer Compact (command center) and Minimal Borderless.
+  All keep the native Windows minimize / maximize (with Snap layouts) / close buttons,
+  resizing and display scaling.
+- The title bar shows the project and chapter, the save status and a quick Save button;
+  File / Edit / View / Help open the native menus (also Alt+F, Alt+E, Alt+V, Alt+H, F10).
+- Command palette (Ctrl+Shift+P): every command, workspace projects and recent files.
+- F11 full screen; native menus and dialogs now follow the dark studio theme.
+- Updates: a lost connection is shown calmly ("can't reach GitHub"), and manual checks
+  always ask GitHub instead of a cached answer.
+- Hardened binary (Electron fuses: no Node mode, no NODE_OPTIONS, archive integrity).
+- Fixes: the studio could end two pixels short after restoring a maximized window;
+  shortcuts were ignored for a moment right after launch.
+
 ## 1.0.0 — 2026-11-07
 
 First Windows desktop release.

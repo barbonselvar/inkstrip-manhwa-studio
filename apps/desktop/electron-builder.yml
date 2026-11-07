@@ -17,6 +17,16 @@ files:
   - "!**/*.map"
 asar: true
 compression: normal
+# Electron fuses (flipped in the binary at package time). The inspector-argument fuse stays
+# on only because the automated desktop suites drive the packaged app through it.
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableCookieEncryption: true
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false
+  enableNodeCliInspectArguments: true
 electronLanguages: [en-US]
 extraMetadata:
   main: build/main/index.js

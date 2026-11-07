@@ -85,7 +85,7 @@ test("Windows comes from the newest signed desktop release when one exists", () 
     { tag_name: "desktop-v1.2.0", prerelease: true, assets: [desktopAsset("Inkstrip-Manhwa-Studio-Setup-1.2.0.exe")] },
     {
       tag_name: "desktop-v1.1.0",
-      assets: [desktopAsset("latest.yml"), desktopAsset("Inkstrip-Manhwa-Studio-Setup-1.1.0.exe")],
+      assets: [desktopAsset("latest.yml"), desktopAsset("Inkstrip-Manhwa-Studio-Setup-1.1.0.exe"), desktopAsset("WINDOWS-AUTHENTICODE-SIGNED.txt")],
     },
     {
       tag_name: "app-v1.0.0",
@@ -106,4 +106,20 @@ test("Windows comes from the newest signed desktop release when one exists", () 
     ]),
     null,
   );
+});
+
+test("a stable desktop release without Authenticode is labelled truthfully", () => {
+  const base = "https://github.com/barbonselvar/inkstrip-manhwa-studio/releases/download/desktop-v1.2.0/";
+  const release = pickNativeRelease([
+    {
+      tag_name: "desktop-v1.2.0",
+      assets: [
+        asset("Inkstrip-Manhwa-Studio-Setup-1.2.0.exe", { browser_download_url: base + "Inkstrip-Manhwa-Studio-Setup-1.2.0.exe" }),
+        asset("WINDOWS-AUTHENTICODE-UNSIGNED.txt", { browser_download_url: base + "WINDOWS-AUTHENTICODE-UNSIGNED.txt" }),
+      ],
+    },
+  ]);
+  assert.equal(release?.downloads.windows?.signed, false);
+  assert.equal(release?.downloads.windows?.label, "Release · not code-signed");
+  assert.match(release?.downloads.windows?.note ?? "", /SmartScreen/);
 });

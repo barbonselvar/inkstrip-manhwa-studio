@@ -43,7 +43,7 @@ export function compareVersions(a: string, b: string) {
   return 0;
 }
 
-const REQUIRED_ASSETS = [/^latest\.yml$/, /^Inkstrip-Manhwa-Studio-Setup-[\d.]+\.exe$/, /\.exe\.blockmap$/];
+const REQUIRED_ASSETS = [/^latest\.yml$/, /^Inkstrip-Manhwa-Studio-Setup-[\d.]+\.exe$/, /\.exe\.blockmap$/, /\.exe\.sig$/];
 
 export function pickRelease(
   releases: unknown,

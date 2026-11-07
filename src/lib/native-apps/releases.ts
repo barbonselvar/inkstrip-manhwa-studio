@@ -23,6 +23,9 @@ export interface NativeDownload {
   sha256: string | null;
   /** False for clearly labelled development/test builds (debug-signed APK, unsigned EXE). */
   signed: boolean;
+  /** Overrides the badge/note for a stable release that is not code-signed. */
+  label?: string;
+  note?: string;
 }
 
 export interface NativeRelease {
@@ -109,6 +112,8 @@ export function pickDesktopRelease(payload: unknown): NativeRelease | null {
       typeof asset.digest === "string" && /^sha256:[0-9a-f]{64}$/i.test(asset.digest)
         ? asset.digest.slice(7).toLowerCase()
         : null;
+    // The release workflow publishes a marker saying whether Authenticode was applied.
+    const authenticode = (raw.assets as GithubAsset[]).some((a) => a?.name === "WINDOWS-AUTHENTICODE-SIGNED.txt");
     return {
       version,
       tag: raw.tag_name,
@@ -124,7 +129,13 @@ export function pickDesktopRelease(payload: unknown): NativeRelease | null {
           url: asset.browser_download_url,
           bytes: typeof asset.size === "number" && asset.size > 0 ? asset.size : 0,
           sha256: digest,
-          signed: true,
+          signed: authenticode,
+          ...(authenticode
+            ? {}
+            : {
+                label: "Release · not code-signed",
+                note: "No Windows code-signing certificate yet, so SmartScreen may warn: choose More info → Run anyway. Updates inside the app are signature-verified.",
+              }),
         },
       },
       versions: { windows: version },

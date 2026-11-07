@@ -25,6 +25,8 @@ import { ProjectRegistry } from "../src/main/registry.ts";
 import { mergeSettings, sanitizeSettings } from "../src/main/settings.ts";
 import { compareVersions, isLoopbackFeed, isNetworkFailure, pickRelease } from "../src/main/update-feed.ts";
 import { readJson, writeJson } from "../src/main/json-store.ts";
+import { generateKeyPairSync } from "node:crypto";
+import { signInstaller, UpdateSignatureError, verifyInstaller } from "../src/main/update-signature.ts";
 
 const dirs: string[] = [];
 const temp = async () => {
@@ -216,6 +218,7 @@ describe("update release selection", () => {
     { name: "latest.yml", state: "uploaded" },
     { name: `Inkstrip-Manhwa-Studio-Setup-${v}.exe`, state: "uploaded" },
     { name: `Inkstrip-Manhwa-Studio-Setup-${v}.exe.blockmap`, state: "uploaded" },
+    { name: `Inkstrip-Manhwa-Studio-Setup-${v}.exe.sig`, state: "uploaded" },
   ];
   const release = (tag: string, extra: Record<string, unknown> = {}) => ({
     tag_name: tag,
@@ -303,3 +306,40 @@ async function writeAllAndCommit(target: string) {
   const session = await writeAll(target, container("p2"), 100);
   await session.commit();
 }
+
+describe("update signatures (Ed25519, app-pinned key)", () => {
+  const keys = generateKeyPairSync("ed25519");
+  const priv = keys.privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+  const pub = keys.publicKey.export({ type: "spki", format: "pem" }).toString();
+  const other = generateKeyPairSync("ed25519").publicKey.export({ type: "spki", format: "pem" }).toString();
+  const setup = async () => {
+    const dir = await temp();
+    const file = join(dir, "Inkstrip-Manhwa-Studio-Setup-1.2.0.exe");
+    await writeFile(file, Buffer.from("MZ installer bytes"));
+    return { file, sig: await signInstaller(file, "1.2.0", priv) };
+  };
+  const expected = { appVersion: "1.2.0", file: "Inkstrip-Manhwa-Studio-Setup-1.2.0.exe" };
+  test("a correctly signed installer verifies", async () => {
+    const { file, sig } = await setup();
+    assert.equal(await verifyInstaller(file, JSON.parse(JSON.stringify(sig)), expected, pub), true);
+  });
+  test("a modified installer is rejected", async () => {
+    const { file, sig } = await setup();
+    await writeFile(file, Buffer.from("MZ tampered bytes!"));
+    await assert.rejects(verifyInstaller(file, sig, expected, pub), UpdateSignatureError);
+  });
+  test("a signature from another key is rejected", async () => {
+    const { file, sig } = await setup();
+    await assert.rejects(verifyInstaller(file, sig, expected, other), /not from the Inkstrip release key/);
+  });
+  test("an old signed installer cannot be replayed as another version", async () => {
+    const { file, sig } = await setup();
+    await assert.rejects(verifyInstaller(file, sig, { ...expected, appVersion: "1.3.0" }, pub), /different version/);
+    const forged = { ...sig, appVersion: "1.3.0" };
+    await assert.rejects(verifyInstaller(file, forged, { ...expected, appVersion: "1.3.0" }, pub), /not from the Inkstrip release key/);
+  });
+  test("missing or malformed signatures are rejected", async () => {
+    const { file } = await setup();
+    for (const bad of [null, {}, { format: "x" }, "sig"]) await assert.rejects(verifyInstaller(file, bad, expected, pub), UpdateSignatureError);
+  });
+});

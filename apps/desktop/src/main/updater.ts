@@ -16,10 +16,11 @@
 import { app, net } from "electron";
 import { CancellationToken, autoUpdater, type ProgressInfo } from "electron-updater";
 import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile, unlink } from "node:fs/promises";
+import { basename, join } from "node:path";
 import type { AppInfo, DesktopSettings, UpdateState } from "../../../../src/lib/desktop/contract.ts";
 import { isLoopbackFeed, isNetworkFailure, pickRelease, type EligibleRelease } from "./update-feed.ts";
+import { SIGNATURE_SUFFIX, UPDATE_PUBLIC_KEY, verifyInstaller } from "./update-signature.ts";
 import { log } from "./logger.ts";
 
 export const RELEASE_REPO = "barbonselvar/inkstrip-manhwa-studio";
@@ -63,6 +64,9 @@ export class UpdateService {
   private cancel: CancellationToken | null = null;
   private timer: NodeJS.Timeout | null = null;
   private readonly testFeed: string | null;
+  /** Installer file name from the release metadata, and the verified download. */
+  private installerName = "";
+  private verified: { path: string; version: string } | null = null;
 
   constructor(
     private readonly options: {
@@ -109,16 +113,12 @@ export class UpdateService {
       return;
     }
     const signed = await this.options.signature;
-    if (this.testFeed) {
-      this.installable = true;
-      log.warn(`[updater] Using loopback test feed ${this.testFeed}`);
-    } else if (signed === "valid" && (await pinnedPublisher())) {
-      this.installable = true;
-    } else {
-      this.installable = false;
-      this.reason =
-        "This is an unsigned test build, so automatic installation is turned off. You can still check for releases and download them from GitHub.";
-    }
+    // Every download is verified against the pinned Ed25519 update key before it can be
+    // installed (see update-signature.ts); Authenticode, when present, is checked as well.
+    if (this.testFeed) log.warn(`[updater] Using loopback test feed ${this.testFeed}`);
+    this.installable = !!UPDATE_PUBLIC_KEY.trim() || (signed === "valid" && (await pinnedPublisher()));
+    if (!this.installable)
+      this.reason = "Automatic installation is off in this build. You can still check for releases and download them from GitHub.";
     const settings = await this.options.settings();
     if (settings.updates.autoCheck) {
       setTimeout(() => void this.check(false), 8000);
@@ -145,6 +145,7 @@ export class UpdateService {
           this.set({ status: "not-available", lastCheckedAt: Date.now() });
           return this.state;
         }
+        this.installerName = basename(info.path);
         this.release = {
           tag: `desktop-v${info.version}`,
           version: info.version,
@@ -175,6 +176,9 @@ export class UpdateService {
           const result = await autoUpdater.checkForUpdates();
           if (!result?.isUpdateAvailable || result.updateInfo.version !== this.release.version)
             throw new Error("The release metadata does not match the published version.");
+          if (basename(result.updateInfo.path) !== this.release.installer)
+            throw new Error("The release metadata names an unexpected installer.");
+          this.installerName = this.release.installer;
         }
       }
       const release = this.release!;
@@ -210,7 +214,17 @@ export class UpdateService {
     this.set({ status: "downloading", version, notes, percent: 0, transferred: 0, total: 0, bytesPerSecond: 0 });
     this.cancel = new CancellationToken();
     try {
-      await autoUpdater.downloadUpdate(this.cancel);
+      const files = await autoUpdater.downloadUpdate(this.cancel);
+      const path = files.find((f) => basename(f) === this.installerName) ?? files.find((f) => f.toLowerCase().endsWith(".exe"));
+      if (!path) throw new Error("The downloaded update contains no installer.");
+      try {
+        await verifyInstaller(path, await this.fetchSignature(), { appVersion: version, file: this.installerName });
+      } catch (error) {
+        await unlink(path).catch(() => {});
+        throw new Error(`signature check failed — ${(error as Error).message}`);
+      }
+      this.verified = { path, version };
+      log.info(`[updater] ${this.installerName} verified with the Inkstrip update key`);
       this.set({ status: "downloaded", version, notes, releaseDate: this.release.publishedAt });
     } catch (error) {
       const cancelled = this.cancel?.cancelled;
@@ -242,10 +256,29 @@ export class UpdateService {
     return this.state;
   }
 
+  /** The `.sig` document published next to the installer (HTTPS from GitHub, or the loopback test feed). */
+  private async fetchSignature(): Promise<unknown> {
+    const base = this.testFeed ?? this.release?.feedUrl ?? "";
+    const url = new URL(this.installerName + SIGNATURE_SUFFIX, base).href;
+    // The loopback test feed is outside the session's network allow-list; GitHub is fetched
+    // through the session (system proxy, allow-list) like every other update request.
+    const response = this.testFeed
+      ? await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(20_000) })
+      : await net.fetch(url, { cache: "no-store", signal: AbortSignal.timeout(20_000) });
+    if (!response.ok) throw new Error(`no update signature was published (${response.status})`);
+    return response.json();
+  }
+
   /** Only after the renderer confirmed that all work is saved or preserved. */
-  install() {
-    if (this.state.status !== "downloaded") throw new Error("No verified update is ready to install.");
+  async install(beforeQuit: () => void = () => {}) {
+    if (this.state.status !== "downloaded" || !this.verified) throw new Error("No verified update is ready to install.");
+    // Verify again right before handing the file to the installer (nothing swapped it).
+    await verifyInstaller(this.verified.path, await this.fetchSignature(), {
+      appVersion: this.verified.version,
+      file: this.installerName,
+    });
     log.info(`[updater] Installing ${this.state.version}`);
+    beforeQuit();
     // Silent NSIS update (same install mode/folder), then relaunch Inkstrip.
     autoUpdater.quitAndInstall(true, true);
   }

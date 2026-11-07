@@ -359,9 +359,9 @@ export function registerIpc(ctx: IpcContext) {
   handle("update:check", () => ctx.updates.check(true));
   handle("update:download", () => ctx.updates.download());
   handle("update:cancel", () => ctx.updates.cancelDownload());
-  handle("update:install", () => {
-    ctx.allowQuitForUpdate();
-    ctx.updates.install();
+  handle("update:install", async () => {
+    // Quitting without prompts is allowed only once the update re-verified.
+    await ctx.updates.install(() => ctx.allowQuitForUpdate());
   });
 
   handle("lifecycle:close-ready", (id, proceed) => ctx.closeReady(str(id, 64), proceed === true));

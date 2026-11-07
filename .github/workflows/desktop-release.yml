@@ -13,10 +13,14 @@ name: Desktop release (owner-approved)
 #    releases (contents: write), and only to a new `desktop-v<version>` tag at the tested
 #    commit.
 #
-# Production (stable) releases are refused unless the installer carries a valid
-# Authenticode signature; installed apps only auto-install signed updates from the same
-# publisher. Without a certificate, the `test-prerelease` channel publishes a clearly
-# marked prerelease that installed apps ignore (for manual testing only).
+# Update authenticity (free, no certificate purchase): the approved `publish` job signs
+# the installer with the Ed25519 update key stored ONLY as the `DESKTOP_UPDATE_SIGNING_KEY`
+# secret of the protected environment, and checks it against the public key built into the
+# app. Installed apps refuse any update whose signature does not verify. Production
+# releases are refused without that key. Windows Authenticode (WINDOWS_CERTIFICATE) is
+# optional and only removes the SmartScreen warning on first manual installs.
+# The `test-prerelease` channel publishes a clearly marked prerelease that installed apps
+# ignore (for manual testing only).
 # Pushes, merges and tags never publish anything.
 
 on:
@@ -26,7 +30,7 @@ on:
         description: "Version to publish (must equal apps/desktop/package.json, e.g. 1.0.1)"
         required: true
       channel:
-        description: "production = stable update for installed apps (signing required); test-prerelease = manual testing only"
+        description: "production = stable update for installed apps (update signature required); test-prerelease = manual testing only"
         type: choice
         options: [production, test-prerelease]
         default: production
@@ -110,6 +114,7 @@ jobs:
         env:
           VERSION: ${{ steps.guard.outputs.version }}
           CHANNEL: ${{ inputs.channel }}
+          HAS_CERT: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
         run: |
           $exe = "dist/windows/update/Inkstrip-Manhwa-Studio-Setup-$env:VERSION.exe"
           $bytes = [IO.File]::ReadAllBytes($exe)
@@ -120,9 +125,10 @@ jobs:
           "App:       $($app.Status) $($app.SignerCertificate.Subject)"
           $updateYml = Get-Content "dist/windows/electron-builder/win-unpacked/resources/app-update.yml" -Raw
           $signed = ($sig.Status -eq "Valid") -and ($app.Status -eq "Valid") -and ($updateYml -match "publisherName")
-          if ($env:CHANNEL -eq "production" -and -not $signed) {
-            throw "Production updates require a valid Authenticode signature on the app and installer and a pinned publisherName. Add WINDOWS_CERTIFICATE / WINDOWS_CERTIFICATE_PASSWORD, or use the test-prerelease channel."
-          }
+          if ($env:HAS_CERT -eq "true" -and -not $signed) { throw "A signing certificate was configured but the signature did not validate." }
+          # Truthful marker for the website's download dialog (SmartScreen expectations).
+          if ($signed) { Set-Content "dist/windows/update/WINDOWS-AUTHENTICODE-SIGNED.txt" "Installer and app carry a valid Authenticode signature." }
+          else { Set-Content "dist/windows/update/WINDOWS-AUTHENTICODE-UNSIGNED.txt" "No Windows code-signing certificate: SmartScreen warns on first install. In-app updates are verified with the Inkstrip Ed25519 update key." }
           "signed=$($signed.ToString().ToLower())" >> $env:GITHUB_OUTPUT
       - name: Offline end-to-end test of the packaged app
         shell: pwsh
@@ -160,27 +166,41 @@ jobs:
       CHANNEL: ${{ inputs.channel }}
       GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: desktop-release-candidate
           path: release
+      - name: Sign the update with the release key (environment secret)
+        env:
+          INKSTRIP_UPDATE_SIGNING_KEY: ${{ secrets.DESKTOP_UPDATE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          (cd release && sha256sum -c SHA256SUMS.txt)
+          if [[ -z "${INKSTRIP_UPDATE_SIGNING_KEY}" ]]; then
+            if [[ "$CHANNEL" == "production" ]]; then echo "::error::DESKTOP_UPDATE_SIGNING_KEY is not set on the desktop-production environment; production updates must be signed."; exit 1; fi
+            echo "::warning::No update signing key: this test prerelease will not be installable by installed apps."
+          else
+            # Signs, then verifies against the public key compiled into the app.
+            node apps/desktop/scripts/sign-update.mjs "release/Inkstrip-Manhwa-Studio-Setup-$VERSION.exe" "$VERSION"
+            (cd release && sha256sum "Inkstrip-Manhwa-Studio-Setup-$VERSION.exe.sig" >> SHA256SUMS.txt)
+          fi
       - name: Publish desktop-v${{ needs.candidate.outputs.version }}
         run: |
           set -euo pipefail
           cd release
-          sha256sum -c SHA256SUMS.txt
-          if [[ "$CHANNEL" == "production" && "$SIGNED" != "true" ]]; then echo "::error::Refusing to publish an unsigned production update."; exit 1; fi
           flags="--target $GITHUB_SHA"
           title="Inkstrip Manhwa Studio $VERSION"
           if [[ "$CHANNEL" != "production" ]]; then
             flags="$flags --prerelease"
             title="$title (test build — not offered to installed apps)"
           fi
-          gh release create "desktop-v$VERSION" \
-            "Inkstrip-Manhwa-Studio-Setup-$VERSION.exe" \
-            "Inkstrip-Manhwa-Studio-Setup-$VERSION.exe.blockmap" \
-            latest.yml SHA256SUMS.txt \
-            --repo "$GITHUB_REPOSITORY" --title "$title" --notes-file release-notes.md $flags
+          assets=("Inkstrip-Manhwa-Studio-Setup-$VERSION.exe" "Inkstrip-Manhwa-Studio-Setup-$VERSION.exe.blockmap" latest.yml SHA256SUMS.txt WINDOWS-AUTHENTICODE-*.txt)
+          if [[ -f "Inkstrip-Manhwa-Studio-Setup-$VERSION.exe.sig" ]]; then assets+=("Inkstrip-Manhwa-Studio-Setup-$VERSION.exe.sig"); fi
+          gh release create "desktop-v$VERSION" "${assets[@]}"             --repo "$GITHUB_REPOSITORY" --title "$title" --notes-file release-notes.md $flags
       - name: Verify the published release
         run: |
           set -euo pipefail
