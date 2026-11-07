@@ -46,7 +46,7 @@ for (const match of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/scri
   if (!body) continue;
   // The HTML parser replaces U+0000 in script text with U+FFFD before CSP hashing, and
   // TanStack's dehydrated router state contains NUL separators ("__root__\0").
-  const parsed = body.replace(/\u0000/g, "\uFFFD");
+  const parsed = body.replaceAll(String.fromCharCode(0), "\uFFFD");
   scriptHashes.push(`sha256-${createHash("sha256").update(parsed, "utf8").digest("base64")}`);
 }
 writeFileSync(join(out, ".inkstrip-csp.json"), JSON.stringify({ scriptHashes }, null, 2));

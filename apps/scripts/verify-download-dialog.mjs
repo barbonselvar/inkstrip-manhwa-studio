@@ -61,14 +61,12 @@ try {
       await dialog.waitFor({ timeout: 30000 });
       try {
         await dialog.getByRole("link", { name: "Download APK" }).waitFor({ timeout: 20000 });
-        await dialog
-          .getByRole("link", { name: "Download EXE installer" })
-          .waitFor({ timeout: 5000 });
+        // Windows now ships in separate owner-approved desktop-v* releases (offline Electron
+        // app), so the EXE may come from another release or not be published yet.
+        const exe = dialog.getByRole("link", { name: "Download EXE installer" });
         links = {
           apk: await dialog.getByRole("link", { name: "Download APK" }).getAttribute("href"),
-          exe: await dialog
-            .getByRole("link", { name: "Download EXE installer" })
-            .getAttribute("href"),
+          exe: (await exe.count()) ? await exe.getAttribute("href") : null,
           text: await dialog.innerText(),
         };
       } catch {
@@ -80,7 +78,7 @@ try {
     }
     await page.screenshot({ path: join(outDir, `download-dialog-${device.id}.png`) });
     check(
-      `${device.id}: Download App dialog shows Android and Windows downloads`,
+      `${device.id}: Download App dialog shows the Android download`,
       !!links,
       links?.text?.slice(0, 300),
     );
@@ -91,8 +89,12 @@ try {
         links.apk,
       );
       check(
-        `${device.id}: EXE link points at ${tag}`,
-        links.exe?.startsWith(expectedBase) && links.exe.endsWith(".exe"),
+        `${device.id}: EXE link (if offered) points at this repository's releases`,
+        !links.exe ||
+          (/^https:\/\/github\.com\/barbonselvar\/inkstrip-manhwa-studio\/releases\/download\//.test(
+            links.exe,
+          ) &&
+            links.exe.endsWith(".exe")),
         links.exe,
       );
       check(
@@ -109,7 +111,9 @@ try {
     }
     if (device.id === "desktop-windows" && links) {
       for (const url of [links.apk, links.exe]) {
+        if (!url) continue;
         const name = decodeURIComponent(url.split("/").pop());
+        if (!(name in sums)) continue; // the desktop installer is verified by its own workflow
         const response = await fetch(url, { redirect: "follow" });
         const bytes = Buffer.from(await response.arrayBuffer());
         const hash = createHash("sha256").update(bytes).digest("hex");

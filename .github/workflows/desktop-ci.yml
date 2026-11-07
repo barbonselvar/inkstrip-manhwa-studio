@@ -1,0 +1,85 @@
+name: Desktop app (Windows) checks
+
+# Builds the offline Electron desktop app on Windows for every change that can affect
+# it, runs its unit tests and the offline end-to-end suite against the packaged app,
+# and uploads an UNSIGNED test installer as a workflow artifact. Nothing is released
+# here: publishing is only possible through the owner-approved desktop-release.yml.
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "apps/desktop/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
+      - ".github/workflows/desktop-ci.yml"
+      - ".github/workflows/desktop-release.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "apps/desktop/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
+      - ".github/workflows/desktop-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/desktop/package-lock.json
+      - name: Install
+        run: |
+          npm ci --no-audit --no-fund
+          npm ci --no-audit --no-fund --prefix apps/desktop
+      - name: Desktop typecheck and unit tests
+        run: |
+          npm run typecheck --prefix apps/desktop
+          node --experimental-strip-types --test apps/desktop/test/main-modules.test.ts
+      - name: Build renderer, main process and unsigned NSIS installer
+        working-directory: apps/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run dist
+      - name: Assemble dist/windows
+        run: node apps/desktop/scripts/assemble-dist.mjs
+      - name: Offline end-to-end test of the packaged app
+        shell: pwsh
+        run: node apps/desktop/test/e2e-desktop.mjs --exe "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe" --out "$env:RUNNER_TEMP/desktop-e2e"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-e2e-evidence
+          path: |
+            ${{ runner.temp }}/desktop-e2e/*.png
+            ${{ runner.temp }}/desktop-e2e/*.json
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: inkstrip-desktop-unsigned-test-installer
+          path: |
+            dist/windows/Inkstrip-Manhwa-Studio-Setup.exe
+            dist/windows/checksums.txt
+            dist/windows/release-notes.md
+          retention-days: 14
+          if-no-files-found: error

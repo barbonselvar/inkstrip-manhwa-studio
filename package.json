@@ -16,7 +16,7 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit && tsc --project tsconfig.config.json",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test": "node --test \"scripts/**/*.test.mjs\" && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts src/lib/preview-path-prefix.test.ts src/lib/native-apps/releases.test.ts && npm run test:studio && npm run test:audit:probes",
+    "test": "node --test \"scripts/**/*.test.mjs\" && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts src/lib/preview-path-prefix.test.ts src/lib/native-apps/releases.test.ts && npm run test:desktop && npm run test:studio && npm run test:audit:probes",
     "lint": "eslint .",
     "format": "prettier --write .",
     "check:build": "node scripts/check-build.mjs",
@@ -112,7 +112,10 @@
     "test:composition:integrity": "node scripts/composition-deep-check.mjs",
     "test:composition:advanced": "node scripts/composition-advanced-browser-check.mjs",
     "test:lettering:browser": "node scripts/lettering-browser-check.mjs",
-    "test:fades:browser": "node scripts/fade-editor-browser-check.mjs"
+    "test:fades:browser": "node scripts/fade-editor-browser-check.mjs",
+    "test:desktop": "node --experimental-strip-types --test apps/desktop/test/main-modules.test.ts",
+    "test:desktop:e2e": "node apps/desktop/test/e2e-desktop.mjs",
+    "desktop:dist": "npm run dist --prefix apps/desktop && node apps/desktop/scripts/assemble-dist.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

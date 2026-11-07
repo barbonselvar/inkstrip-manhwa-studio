@@ -15,11 +15,13 @@
     "build:main": "node scripts/build-main.mjs",
     "build": "npm run build:renderer && npm run build:main",
     "start": "npm run build:main && electron .",
-    "test": "npm run build:main && node --test \"test/**/*.test.mjs\"",
+    "test": "node --experimental-strip-types --test test/main-modules.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dist": "npm run build && electron-builder --win nsis --x64 --publish never",
     "dist:dir": "npm run build && electron-builder --win dir --x64 --publish never",
-    "release:verify": "node scripts/verify-release.mjs"
+    "test:e2e": "node test/e2e-desktop.mjs",
+    "release:prepare": "node scripts/prepare-release.mjs",
+    "release:assemble": "node scripts/assemble-dist.mjs"
   },
   "dependencies": {
     "electron-updater": "6.8.11"

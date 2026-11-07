@@ -121,7 +121,6 @@ const dumpWorkspace = (page) =>
     return JSON.parse(JSON.stringify(out));
   });
 
-const statusText = (page) => page.locator(".desktop-statusbar").innerText().catch(() => "");
 const waitStatus = (page, re, timeout = 20_000) =>
   page.waitForFunction((src) => new RegExp(src).test(document.querySelector(".desktop-statusbar")?.textContent ?? ""), re.source, { timeout });
 const tilesReady = (page) =>

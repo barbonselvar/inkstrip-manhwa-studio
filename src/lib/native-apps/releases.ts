@@ -9,6 +9,8 @@ export const NATIVE_APPS_RELEASES_PAGE = `https://github.com/${NATIVE_APPS_REPO}
 const RELEASES_API = `https://api.github.com/repos/${NATIVE_APPS_REPO}/releases?per_page=30`;
 /** Native app releases are tagged `app-v<semver>`; other repository releases are ignored. */
 export const NATIVE_APP_TAG_PREFIX = "app-v";
+/** The offline Windows desktop app (Electron) ships in its own owner-approved `desktop-v<semver>` releases. */
+export const DESKTOP_TAG_PREFIX = "desktop-v";
 
 export type NativePlatform = "android" | "windows";
 
@@ -24,11 +26,14 @@ export interface NativeDownload {
 }
 
 export interface NativeRelease {
+  /** Version of the newest release shown (Android `app-v*`, else the desktop release). */
   version: string;
   tag: string;
   pageUrl: string;
   publishedAt: string | null;
   downloads: Partial<Record<NativePlatform, NativeDownload>>;
+  /** Per-platform version when the platforms come from different releases. */
+  versions?: Partial<Record<NativePlatform, string>>;
 }
 
 interface GithubAsset {
@@ -81,8 +86,69 @@ function toDownload(platform: NativePlatform, asset: GithubAsset): NativeDownloa
   };
 }
 
-/** Picks the newest published, non-prerelease `app-v*` release that carries at least one installer. */
+/** Newest published, stable `desktop-v*` release with its versioned NSIS installer. Desktop
+ * releases are only published as stable when they are code-signed (see desktop-release.yml). */
+export function pickDesktopRelease(payload: unknown): NativeRelease | null {
+  if (!Array.isArray(payload)) return null;
+  for (const raw of payload as GithubRelease[]) {
+    if (!raw || typeof raw !== "object" || raw.draft === true || raw.prerelease === true) continue;
+    if (typeof raw.tag_name !== "string" || !raw.tag_name.startsWith(DESKTOP_TAG_PREFIX)) continue;
+    const version = raw.tag_name.slice(DESKTOP_TAG_PREFIX.length);
+    if (!/^\d+\.\d+\.\d+$/.test(version)) continue;
+    const asset = (Array.isArray(raw.assets) ? (raw.assets as GithubAsset[]) : []).find(
+      (a) => a && a.name === `Inkstrip-Manhwa-Studio-Setup-${version}.exe`,
+    );
+    if (
+      !asset ||
+      typeof asset.browser_download_url !== "string" ||
+      (asset.state !== undefined && asset.state !== "uploaded") ||
+      !asset.browser_download_url.startsWith(`${DOWNLOAD_HOST}${NATIVE_APPS_REPO}/releases/download/`)
+    )
+      continue;
+    const digest =
+      typeof asset.digest === "string" && /^sha256:[0-9a-f]{64}$/i.test(asset.digest)
+        ? asset.digest.slice(7).toLowerCase()
+        : null;
+    return {
+      version,
+      tag: raw.tag_name,
+      pageUrl:
+        typeof raw.html_url === "string" && raw.html_url.startsWith(`${DOWNLOAD_HOST}${NATIVE_APPS_REPO}/`)
+          ? raw.html_url
+          : NATIVE_APPS_RELEASES_PAGE,
+      publishedAt: typeof raw.published_at === "string" ? raw.published_at : null,
+      downloads: {
+        windows: {
+          platform: "windows",
+          fileName: asset.name as string,
+          url: asset.browser_download_url,
+          bytes: typeof asset.size === "number" && asset.size > 0 ? asset.size : 0,
+          sha256: digest,
+          signed: true,
+        },
+      },
+      versions: { windows: version },
+    };
+  }
+  return null;
+}
+
+/** Android from the newest `app-v*` release; Windows from the newest desktop release when one
+ * exists (the offline Electron app), otherwise from the `app-v*` release. */
 export function pickNativeRelease(payload: unknown): NativeRelease | null {
+  const app = pickAppRelease(payload);
+  const desktop = pickDesktopRelease(payload);
+  if (!desktop) return app;
+  if (!app) return desktop;
+  return {
+    ...app,
+    downloads: { ...app.downloads, windows: desktop.downloads.windows },
+    versions: { ...(app.downloads.android ? { android: app.version } : {}), windows: desktop.version },
+  };
+}
+
+/** Picks the newest published, non-prerelease `app-v*` release that carries at least one installer. */
+function pickAppRelease(payload: unknown): NativeRelease | null {
   if (!Array.isArray(payload)) return null;
   for (const raw of payload as GithubRelease[]) {
     if (!raw || typeof raw !== "object") continue;
