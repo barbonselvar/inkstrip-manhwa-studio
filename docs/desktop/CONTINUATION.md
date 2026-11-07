@@ -1,5 +1,20 @@
 # Continuation report (2026-11-07, stopped at usage limit)
 
+## Latest independent QA checkpoint
+
+Read [qa-continuation-2026-11-07.md](qa-continuation-2026-11-07.md) first.
+QA fixes pushed at `7ec94e05122ddea2d667f3486cfa87bf0ba4672b`; local full tests
+are 1,258/1,258. All four previously pending workflows passed on c10afca; new
+regular checks also pass on 7ec94e0. Isolated Windows stability run 42416585169
+is in progress.
+No owner's Windows installation/backup was accessed by this Linux session.
+Signing/authentication/production publication work is explicitly deferred.
+
+If interrupted: inspect that run's final JSON/artifacts; inspect current PR-head
+checks; update this report and the PR. Do not mark running or blocked work passed.
+Then finish owner-PC validation only when Windows access is available, with a
+fresh verified backup and explicit permission before replacing the installed app.
+
 ## Codex continuation checkpoint (supersedes the handoff below)
 
 Started from verified clean HEAD `cbf9f51459c98332e78c1bc20ccf2317b9d2ceee`.

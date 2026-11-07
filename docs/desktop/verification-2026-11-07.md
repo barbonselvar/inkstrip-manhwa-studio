@@ -1,5 +1,10 @@
 # Desktop 1.1.0 continuation verification
 
+> Subsequent independent QA, exact Actions evidence, new installer provenance,
+> local 1,258-test results and remaining Windows blockers are recorded in
+> [qa-continuation-2026-11-07.md](qa-continuation-2026-11-07.md).
+> This file retains the earlier Windows-session findings as historical evidence.
+
 This report supersedes the historical 1.0.0 release report. Verification started from
 clean branch `desktop/windows-app` at `cbf9f51459c98332e78c1bc20ccf2317b9d2ceee`.
 PR: https://github.com/barbonselvar/inkstrip-manhwa-studio/pull/41.
