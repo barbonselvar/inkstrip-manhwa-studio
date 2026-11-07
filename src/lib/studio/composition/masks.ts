@@ -20,12 +20,23 @@ export function stopValue(stops: Fade["stops"], t: number) {
   }
   return a.opacity;
 }
-export function fadeCoverage(f: Fade, x: number, y: number, w: number, h: number) {
+/** Horizontal extent of a narrowed fade, or null for the full image width. */
+export function fadeSpan(f: Fade, w: number) {
+  return f.x === undefined && f.width === undefined ? null : { x: f.x ?? 0, width: f.width ?? w };
+}
+/** `offset` may be precomputed per column by callers rendering many rows. */
+export function fadeCoverage(f: Fade, x: number, y: number, w: number, h: number, offset?: number) {
   const length = f.length + f.feather,
     radians = (f.angle * Math.PI) / 180;
+  const span = fadeSpan(f, w);
+  if (span) {
+    if (x < span.x || x > span.x + span.width) return 0;
+    x -= span.x;
+    w = span.width;
+  }
   let t = 0;
   if (f.boundary) {
-    t = shapedCoverage(f, x, y, w, h);
+    t = shapedCoverage(f, x, y, w, h, offset);
   } else if (f.type === "Radial Fade" || f.type === "Elliptical Fade") {
     const rx = f.type === "Radial Fade" ? Math.min(w, h) / 2 : w / 2,
       ry = f.type === "Radial Fade" ? rx : h / 2;

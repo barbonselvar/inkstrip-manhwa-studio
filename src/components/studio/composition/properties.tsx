@@ -1,5 +1,6 @@
 import { inkObject } from "@/lib/studio/composition/ink-presets";
-import { FadeShapeProperties } from "./shape-gallery";
+import { FadeInspector, FadeList } from "./fade-panel";
+import { uniqueFadeName } from "@/lib/studio/composition/fade-edit";
 import { INK_STYLES } from "@/lib/studio/composition/ink-catalog";
 import { inkSupported } from "@/lib/studio/composition/ink";
 import { Button } from "@/components/ui/button";
@@ -569,79 +570,76 @@ export function CompositionProperties({
           </>
         ) : f ? (
           <>
-            <h3>{f.name}</h3>
-            <FadeShapeProperties f={f} update={setFade} controller={controller} />
-            <details open={!f.boundary}>
+            <h3>
+              <span className="composition-selected-dot" aria-hidden="true" />
+              {f.name}
+            </h3>
+            <FadeList
+              fades={p!.fades}
+              selected={f.id}
+              onSelect={(id) => controller.select({ kind: "fade", id, panelId: selectedPanel! })}
+              onChange={(fades, selectId) => {
+                setPanel(selectedPanel!, { fades });
+                if (selectId === null) controller.select({ kind: "panel", id: selectedPanel! });
+                else if (selectId)
+                  controller.select({ kind: "fade", id: selectId, panelId: selectedPanel! });
+              }}
+            />
+            <FadeInspector
+              f={f}
+              imageHeight={
+                layout(d, panels).frames.find((x) => x.panel.id === selectedPanel)?.imageHeight ??
+                1000
+              }
+              imageWidth={d.width}
+              update={setFade}
+              controller={controller}
+            />
+            <div className="composition-actions">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  const copy = {
+                    ...structuredClone(f),
+                    id: crypto.randomUUID(),
+                    name: uniqueFadeName(p!.fades, `${f.name} copy`).slice(0, 200),
+                    locked: false,
+                  };
+                  setPanel(selectedPanel!, { fades: [...p!.fades, copy] });
+                  controller.select({ kind: "fade", id: copy.id, panelId: selectedPanel! });
+                }}
+              >
+                <Copy />
+                Duplicate fade
+              </Button>
+              <Button
+                variant="danger"
+                disabled={f.locked}
+                onClick={() => {
+                  setPanel(selectedPanel!, { fades: p!.fades.filter((x) => x.id !== f.id) });
+                  controller.select({ kind: "panel", id: selectedPanel! });
+                }}
+              >
+                <Trash2 />
+                Delete fade
+              </Button>
+            </div>
+            <details>
               <summary>Advanced fade settings</summary>
-              <label className="editor-field-label">
-                Fade name
-                <input
-                  className="field"
-                  maxLength={200}
-                  value={f.name}
-                  onChange={(e) => setFade({ name: e.target.value })}
-                />
-              </label>
               {!f.boundary && (
-                <>
-                  <Choice
-                    label="Fade type"
-                    value={f.type}
-                    options={FADE_TYPES}
-                    onChange={(type) =>
-                      setFade({
-                        type: type as Fade["type"],
-                        name: f.name === f.type ? type : f.name,
-                        edges: newFade(type as Fade["type"]).edges,
-                      })
-                    }
-                  />
-                </>
+                <Choice
+                  label="Fade type"
+                  value={f.type}
+                  options={FADE_TYPES}
+                  onChange={(type) =>
+                    setFade({
+                      type: type as Fade["type"],
+                      name: f.name === f.type ? type : f.name,
+                      edges: newFade(type as Fade["type"]).edges,
+                    })
+                  }
+                />
               )}
-              <div className="composition-actions">
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    if (selection?.kind !== "fade") return;
-                    setPanel(selection.panelId, {
-                      fades: [
-                        ...p!.fades,
-                        {
-                          ...structuredClone(f),
-                          id: crypto.randomUUID(),
-                          name: `${f.name} copy`.slice(0, 200),
-                        },
-                      ],
-                    });
-                  }}
-                >
-                  Duplicate fade
-                </Button>
-                <Button
-                  variant="ghost"
-                  disabled={p!.fades.at(-1)?.id === f.id}
-                  onClick={() => {
-                    const list = [...p!.fades],
-                      i = list.findIndex((x) => x.id === f.id);
-                    [list[i], list[i + 1]] = [list[i + 1], list[i]];
-                    setPanel(selectedPanel!, { fades: list });
-                  }}
-                >
-                  Raise fade
-                </Button>
-                <Button
-                  variant="ghost"
-                  disabled={p!.fades[0]?.id === f.id}
-                  onClick={() => {
-                    const list = [...p!.fades],
-                      i = list.findIndex((x) => x.id === f.id);
-                    [list[i], list[i - 1]] = [list[i - 1], list[i]];
-                    setPanel(selectedPanel!, { fades: list });
-                  }}
-                >
-                  Lower fade
-                </Button>
-              </div>
               <NumberField
                 label="Fade length (px)"
                 value={f.length}
@@ -652,6 +650,7 @@ export function CompositionProperties({
               <NumberField
                 label="Start position (px)"
                 value={f.start}
+                min={-100000}
                 max={100000}
                 onChange={(start) => setFade({ start })}
               />
@@ -659,32 +658,17 @@ export function CompositionProperties({
                 label="End position (px)"
                 value={f.start + f.length}
                 min={f.start + 1}
-                max={100000}
+                max={200000}
                 onChange={(end) => setFade({ length: end - f.start })}
               />
               <NumberField
-                label="Fade opacity"
-                value={f.opacity}
-                max={1}
-                step={0.01}
-                onChange={(opacity) => setFade({ opacity })}
-              />
-              <NumberField
-                label="Gradient curve"
-                value={f.curve}
-                min={0.1}
-                max={10}
-                step={0.1}
-                onChange={(curve) => setFade({ curve })}
-              />
-              <NumberField
-                label="Feather radius"
+                label="Feather (extends the ramp, eases its start)"
                 value={f.feather}
                 max={1000}
                 onChange={(feather) => setFade({ feather })}
               />
               <NumberField
-                label="Blur intensity"
+                label="Artwork blur under the fade"
                 value={f.blur}
                 max={100}
                 onChange={(blur) => setFade({ blur })}
@@ -698,16 +682,6 @@ export function CompositionProperties({
                   onChange={(angle) => setFade({ angle })}
                 />
               )}
-              <Color
-                label="Fade target color"
-                value={f.color}
-                onChange={(color) => setFade({ color })}
-              />
-              <Check
-                label="Fade to transparency"
-                value={f.color === "transparent"}
-                onChange={(checked) => setFade({ color: checked ? "transparent" : "#ffffff" })}
-              />
               <Choice
                 label="Fade blend mode"
                 value={f.blend}
@@ -737,16 +711,6 @@ export function CompositionProperties({
               {f.type === "Custom Gradient Fade" && (
                 <Masks stops={f.stops} onChange={(stops) => setFade({ stops })} />
               )}
-              <Check
-                label="Fade visible"
-                value={f.visible}
-                onChange={(visible) => setFade({ visible })}
-              />
-              <Check
-                label="Fade locked"
-                value={f.locked}
-                onChange={(locked) => setFade({ locked })}
-              />
               <Button variant="secondary" onClick={() => onPreset("fade", f)}>
                 Save fade preset
               </Button>
@@ -756,18 +720,6 @@ export function CompositionProperties({
                 onClick={batchFade}
               >
                 Copy fade to selected
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => {
-                  setPanel(selection!.kind === "fade" ? selection!.panelId : "", {
-                    fades: p!.fades.filter((x) => x.id !== f.id),
-                  });
-                  controller.select({ kind: "panel", id: selectedPanel! });
-                }}
-              >
-                <Trash2 />
-                Delete fade
               </Button>
             </details>
           </>
@@ -1356,7 +1308,7 @@ export function CompositionProperties({
             <Button
               variant="secondary"
               onClick={() => {
-                const f = newFade();
+                const f = { ...newFade(), name: uniqueFadeName(p.fades, "Bottom fade") };
                 setPanel(selectedPanel!, { fades: [...p.fades, f] });
                 controller.select({ kind: "fade", id: f.id, panelId: selectedPanel! });
                 controller.setState({ tool: "Fades" });
@@ -1364,6 +1316,16 @@ export function CompositionProperties({
             >
               Add bottom fade
             </Button>
+            <h4>Fades on this panel</h4>
+            <FadeList
+              fades={p.fades}
+              onSelect={(id) => controller.select({ kind: "fade", id, panelId: selectedPanel! })}
+              onChange={(fades, selectId) => {
+                setPanel(selectedPanel!, { fades });
+                if (selectId)
+                  controller.select({ kind: "fade", id: selectId, panelId: selectedPanel! });
+              }}
+            />
             <label className="editor-field-label">
               Source layer name
               <input

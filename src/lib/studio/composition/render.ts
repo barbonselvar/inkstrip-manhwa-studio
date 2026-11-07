@@ -24,7 +24,9 @@ const canvas = (w: number, h: number) => {
   c.height = Math.max(1, Math.ceil(h));
   return c;
 };
-import { clamp, noise, fadeCoverage, stopValue } from "./masks";
+import { clamp, noise, fadeCoverage, stopValue, fadeSpan } from "./masks";
+import { boundaryOffset } from "./boundaries";
+import { fadeExtension } from "./fade-edit";
 export class RenderResources {
   private cache = new Map<string, HTMLCanvasElement>();
   private bytes = 0;
@@ -118,6 +120,8 @@ function reset(ctx: CanvasRenderingContext2D, scale: number, y: number) {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 }
+/** Coverage mask on the global output grid. Boundary offsets are computed once per column;
+ * softness blurs a padded mask so segment edges never change the result. */
 function fadeMask(
   f: Fade,
   w: number,
@@ -126,26 +130,84 @@ function fadeMask(
   offsetY: number,
   scale: number,
 ) {
-  const out = canvas(w, h),
-    ctx = out.getContext("2d")!,
-    image = ctx.createImageData(out.width, out.height);
+  const soft = Math.max(0, f.softness ?? 0) * scale,
+    pad = soft ? Math.ceil(soft * 3) : 0;
+  const raw = canvas(w + pad * 2, h + pad * 2),
+    ctx = raw.getContext("2d")!,
+    image = ctx.createImageData(raw.width, raw.height);
   const rgb =
     f.color === "transparent"
       ? [0, 0, 0]
       : [1, 3, 5].map((i) => parseInt(f.color.slice(i, i + 2), 16));
-  for (let py = 0; py < out.height; py++)
-    for (let px = 0; px < out.width; px++) {
-      const i = (py * out.width + px) * 4,
-        x = (px + 0.5) / scale,
-        y = offsetY + (py + 0.5) / scale;
-      const alpha = fadeCoverage(f, x, y, out.width / scale, imageHeight);
+  const chapterWidth = w / scale,
+    extent = fadeSpan(f, chapterWidth) ?? { x: 0, width: chapterWidth };
+  const columns = f.boundary ? new Float64Array(raw.width) : null;
+  if (columns)
+    for (let px = 0; px < raw.width; px++)
+      columns[px] = boundaryOffset(
+        f.boundary!,
+        ((px - pad + 0.5) / scale - extent.x) / extent.width,
+      );
+  for (let py = 0; py < raw.height; py++)
+    for (let px = 0; px < raw.width; px++) {
+      const i = (py * raw.width + px) * 4,
+        x = (px - pad + 0.5) / scale,
+        y = offsetY + (py - pad + 0.5) / scale;
+      const alpha = fadeCoverage(f, x, y, chapterWidth, imageHeight, columns?.[px]);
       image.data[i] = rgb[0];
       image.data[i + 1] = rgb[1];
       image.data[i + 2] = rgb[2];
       image.data[i + 3] = Math.round(clamp(alpha + (noise(x, y, 19) - 0.5) / 255) * 255);
     }
   ctx.putImageData(image, 0, 0);
+  if (!pad) return raw;
+  const out = canvas(w, h),
+    o = out.getContext("2d")!;
+  o.filter = `blur(${soft}px)`;
+  o.drawImage(raw, -pad, -pad);
+  raw.width = raw.height = 0;
   return out;
+}
+/** Paint the part of extending fades that lies outside the image, over spacing and gutters. */
+function paintFadeExtensions(
+  ctx: CanvasRenderingContext2D,
+  frame: PanelFrame,
+  fades: Fade[],
+  d: CompositionDocument,
+  r: Region,
+  scale: number,
+) {
+  for (const f of fades) {
+    const ext = fadeExtension(f, frame.imageHeight);
+    for (const [a, b] of [
+      [frame.imageY - ext.above, frame.imageY],
+      [frame.bottomY, frame.bottomY + ext.below],
+    ] as const) {
+      const start = Math.max(r.y, a),
+        end = Math.min(r.y + r.height, b);
+      if (end <= start) continue;
+      const first = Math.floor(start * scale + 1e-7),
+        last = Math.ceil(end * scale - 1e-7),
+        y = first / scale;
+      const mask = fadeMask(
+        f,
+        Math.ceil(d.width * scale),
+        last - first,
+        frame.imageHeight,
+        y - frame.imageY,
+        scale,
+      );
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, a, d.width, b - a);
+      ctx.clip();
+      ctx.globalAlpha = frame.settings.opacity;
+      ctx.globalCompositeOperation = f.color === "transparent" ? "destination-out" : f.blend;
+      ctx.drawImage(mask, 0, y, d.width, (last - first) / scale);
+      ctx.restore();
+      mask.width = mask.height = 0;
+    }
+  }
 }
 async function paintPanel(
   ctx: CanvasRenderingContext2D,
@@ -162,7 +224,10 @@ async function paintPanel(
   if (!settings.visible || !settings.opacity) return;
   const start = Math.max(r.y, frame.imageY),
     end = Math.min(r.y + r.height, frame.bottomY);
-  if (end <= start) return;
+  if (end <= start) {
+    paintFadeExtensions(ctx, frame, fades, d, r, scale);
+    return;
+  }
   const first = Math.floor(start * scale + 1e-7),
     last = Math.ceil(end * scale - 1e-7),
     y = first / scale;
@@ -197,6 +262,8 @@ async function paintPanel(
       signal?.throwIfAborted();
       const mask = fadeMask(f, c.width, c.height, frame.imageHeight, y - frame.imageY, scale);
       if (f.blur) {
+        const colored = canvas(mask.width, mask.height);
+        colored.getContext("2d")!.drawImage(mask, 0, 0);
         const radius = f.blur * scale,
           blurred = canvas(c.width + Math.ceil(radius * 6), c.height + Math.ceil(radius * 6)),
           b = blurred.getContext("2d")!;
@@ -209,7 +276,6 @@ async function paintPanel(
         p.drawImage(mask, 0, 0);
         blurred.width = blurred.height = 0;
         // Restore the color mask after mixing the softened edge.
-        const colored = fadeMask(f, c.width, c.height, frame.imageHeight, y - frame.imageY, scale);
         p.globalCompositeOperation = f.color === "transparent" ? "destination-out" : f.blend;
         p.drawImage(colored, 0, 0);
         colored.width = colored.height = 0;
@@ -228,6 +294,7 @@ async function paintPanel(
   ctx.drawImage(c, 0, y, d.width, h / scale);
   ctx.restore();
   if (resources.get(key) !== c) c.width = c.height = 0;
+  paintFadeExtensions(ctx, frame, fades, d, r, scale);
 }
 async function paintSpace(
   ctx: CanvasRenderingContext2D,
@@ -1011,7 +1078,7 @@ export function compositionRenderBudget(
     Math.max(
       2,
       ...Object.values(d.panels).flatMap((p) =>
-        p.fades.filter((f) => f.visible).map((f) => f.blur * 3),
+        p.fades.filter((f) => f.visible).map((f) => Math.max(f.blur, f.softness ?? 0) * 3),
       ),
       ...scene.spaces
         .filter((s) => s.settings.visible && s.settings.fill === "blur")

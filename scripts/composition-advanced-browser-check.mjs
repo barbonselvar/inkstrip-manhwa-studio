@@ -86,7 +86,7 @@ try {
   await p
     .getByRole("button", { name: "Wave Editable mask · instant preview", exact: true })
     .click();
-  await p.getByLabel("Boundary amplitude", { exact: true }).fill("140");
+  await p.getByLabel("Shape height (px)", { exact: true }).fill("140");
   await p.getByRole("button", { name: "Fit screen", exact: true }).click();
   await ready(p);
   const beforePosition = await p.locator(".composition-tile").evaluate((c) => {
@@ -346,6 +346,12 @@ try {
     return { outputs, transparentAsset: true, svgSanitized: true, assetPackaged: true };
   });
   results.push(accuracy);
+  // Freehand drawing places the fade where it is drawn, so record the position to persist.
+  const positionBeforeReload = await p.evaluate(() => {
+    const s = window.advanced;
+    return s.controller.getState().history.present.document.panels[s.panels[0].id].fades[0].start;
+  });
+  await saved(p);
   await p.reload();
   await p.getByRole("button", { name: "Composition & FX", exact: true }).click();
   await p.locator("[data-composition=studio]").waitFor();
@@ -364,7 +370,7 @@ try {
     };
   });
   assert.ok(restored.points > 8);
-  assert.equal(restored.position, 60);
+  assert.equal(restored.position, positionBeforeReload);
   assert.equal(restored.ink, 1);
   assert.equal(restored.assets, 3);
   results.push({ restore: restored });

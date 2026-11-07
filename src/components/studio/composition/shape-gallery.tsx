@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { BOUNDARY_SHAPES, boundary, type Boundary } from "@/lib/studio/composition/boundaries";
 import { fade, type Fade } from "@/lib/studio/composition/model";
 import { fadeCoverage } from "@/lib/studio/composition/masks";
+import { uniqueFadeName } from "@/lib/studio/composition/fade-edit";
 import type { Controller } from "@/lib/studio/composition/controller";
 import { Choice, Color } from "./properties";
 import { NumberField } from "../editor/number-field";
@@ -49,7 +50,15 @@ export function FadeShapeGallery({
             disabled={!owner}
             onClick={() => {
               if (!owner) return;
-              const f = { ...fade(), name: `${shape} fade`, boundary: boundary(shape) };
+              const f = {
+                ...fade(),
+                name: uniqueFadeName(
+                  controller.getState().history.present.document.panels[owner]?.fades ?? [],
+                  `${shape} fade`,
+                ),
+                boundary: boundary(shape),
+                extend: true,
+              };
               controller.change((d) => ({
                 ...d,
                 panels: {
