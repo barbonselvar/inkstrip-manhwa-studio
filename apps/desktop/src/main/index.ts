@@ -5,7 +5,7 @@
  * single locked-down window, and provides native project files, autosave/recovery
  * storage, exports, settings and owner-approved updates through a minimal preload API.
  */
-import { app, BrowserWindow, crashReporter, dialog, Menu, screen, session, shell } from "electron";
+import { app, crashReporter, dialog, ipcMain, Menu, nativeTheme, screen, session, shell, type BrowserWindow, type WebContents } from "electron";
 import { randomBytes } from "node:crypto";
 import { existsSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -14,6 +14,8 @@ import {
   DESKTOP_ORIGIN,
   EVENT_CHANNELS,
   PROJECT_EXTENSION,
+  SHELL_CHANNELS,
+  SHELL_PATH,
   WEB_BACKUP_EXTENSION,
   type AppInfo,
   type DesktopEvents,
@@ -33,10 +35,12 @@ import { ProjectRegistry } from "./registry.ts";
 import { Secrets } from "./secrets.ts";
 import { sanitizeSettings } from "./settings.ts";
 import { executableSignature, UpdateService } from "./updater.ts";
+import { WindowShell } from "./window-shell.ts";
 
 declare const __INKSTRIP_COMMIT__: string;
 
 const START_URL = `${SCHEME}://${HOST}/`;
+const SHELL_URL = `${SCHEME}://${HOST}${SHELL_PATH}`;
 const ALLOWED_PERMISSIONS = new Set([
   "clipboard-sanitized-write",
   "clipboard-read",
@@ -95,13 +99,16 @@ async function main() {
   const signature = executableSignature();
 
   let win: BrowserWindow | null = null;
+  let frame: WindowShell | null = null;
+  const studio = (): WebContents | null =>
+    frame && !frame.studio.webContents.isDestroyed() ? frame.studio.webContents : null;
   let pendingOpen: string | null = projectArg(process.argv);
   let allowClose = false;
   let closeWaiter: { id: string; resolve: (proceed: boolean) => void } | null = null;
   let rendererLoaded = false;
 
   const send = <K extends keyof DesktopEvents>(event: K, payload: DesktopEvents[K]) => {
-    if (win && !win.isDestroyed()) win.webContents.send(EVENT_CHANNELS[event], payload);
+    studio()?.send(EVENT_CHANNELS[event], payload);
   };
 
   const updates = new UpdateService({
@@ -120,17 +127,24 @@ async function main() {
           send: (command: MenuCommand, arg?: string) => void menuCommand(command, arg),
           recent,
           devTools: !app.isPackaged || s.developer.devTools,
+          studio,
         }),
       );
     })();
 
   const menuCommand = async (command: MenuCommand, arg?: string) => {
-    if (!win) return;
+    const contents = studio();
+    if (!win || !contents) return;
     if (command === "undo" || command === "redo") {
       // Same path as the keyboard, so each editor's own history handles it.
       const keyCode = command === "undo" ? "Z" : "Y";
-      win.webContents.sendInputEvent({ type: "keyDown", keyCode, modifiers: ["control"] });
-      win.webContents.sendInputEvent({ type: "keyUp", keyCode, modifiers: ["control"] });
+      contents.focus();
+      contents.sendInputEvent({ type: "keyDown", keyCode, modifiers: ["control"] });
+      contents.sendInputEvent({ type: "keyUp", keyCode, modifiers: ["control"] });
+      return;
+    }
+    if (command === "toggle-fullscreen") {
+      frame?.toggleFullScreen();
       return;
     }
     if (command === "open-recent" && arg) {
@@ -173,6 +187,8 @@ async function main() {
 
   registerIpc({
     window: () => win,
+    studio,
+    frame: () => frame,
     paths,
     tokens,
     registry,
@@ -236,6 +252,8 @@ async function main() {
   };
 
   await app.whenReady();
+  // Inkstrip is a dark studio: native menus, dialogs and Mica follow it, not the system light theme.
+  nativeTheme.themeSource = "dark";
   await sweepTemporaryFiles(paths.recovery);
 
   const ses = session.defaultSession;
@@ -281,36 +299,29 @@ async function main() {
 
   const windowState = new JsonDocument(
     join(paths.settings, "window-state.json"),
-    () => ({ width: 1440, height: 900, maximized: true }) as WindowState,
+    () => ({ width: 1440, height: 900, maximized: true }) as SavedBounds,
     sanitizeWindowState,
   );
   const state = visibleBounds(await windowState.get());
-  win = new BrowserWindow({
-    ...state,
-    minWidth: 960,
-    minHeight: 600,
-    show: false,
-    title: "Inkstrip Manhwa Studio",
-    backgroundColor: "#0e0e10",
+  const initial = await settings.get();
+  const devTools = !app.isPackaged || initial.developer.devTools;
+  frame = new WindowShell({
+    bounds: state,
+    window: initial.window,
+    shellPreload: join(app.getAppPath(), "build", "preload", "shell.cjs"),
+    studioPreload: join(app.getAppPath(), "build", "preload", "index.cjs"),
     icon: join(app.getAppPath(), "build", "icon.ico"),
-    autoHideMenuBar: false,
-    webPreferences: {
-      preload: join(app.getAppPath(), "build", "preload", "index.cjs"),
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false,
-      nodeIntegrationInWorker: false,
-      webSecurity: true,
-      allowRunningInsecureContent: false,
-      webviewTag: false,
-      spellcheck: false,
-      devTools: !app.isPackaged || (await settings.get()).developer.devTools,
-    },
+    devTools,
   });
+  win = frame.win;
+  registerShellIpc(() => frame, (command) => void menuCommand(command));
   if (state.maximized) win.maximize();
   refreshMenu();
 
-  const contents = win.webContents;
+  const contents = frame.studio.webContents;
+  // The title-bar page never navigates and never opens windows.
+  win.webContents.on("will-navigate", (event) => event.preventDefault());
+  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   contents.on("will-navigate", (event, url) => {
     if (!url.startsWith(`${DESKTOP_ORIGIN}/`)) {
       event.preventDefault();
@@ -336,7 +347,7 @@ async function main() {
       message: "The editor stopped unexpectedly.",
       detail: `Reason: ${details.reason}. Work that was saved in your workspace is intact, and open editors keep autosaved drafts.`,
     });
-    if (choice.response === 0) void win.loadURL(START_URL);
+    if (choice.response === 0) void contents.loadURL(START_URL);
     else {
       allowClose = true;
       app.quit();
@@ -388,9 +399,11 @@ async function main() {
   });
   win.on("closed", () => {
     win = null;
+    frame = null;
   });
 
-  await win.loadURL(START_URL);
+  await Promise.all([win.webContents.loadURL(SHELL_URL), contents.loadURL(START_URL)]);
+  contents.focus();
   await updates.init();
 
   app.on("window-all-closed", () => app.quit());
@@ -406,9 +419,9 @@ async function main() {
   log.info(`Inkstrip ${app.getVersion()} started (Electron ${process.versions.electron})`);
 }
 
-type WindowState = { x?: number; y?: number; width: number; height: number; maximized: boolean };
+type SavedBounds = { x?: number; y?: number; width: number; height: number; maximized: boolean };
 
-function sanitizeWindowState(v: unknown): WindowState {
+function sanitizeWindowState(v: unknown): SavedBounds {
   const o = (v ?? {}) as Record<string, unknown>;
   const n = (x: unknown, d: number) => (typeof x === "number" && Number.isFinite(x) ? Math.round(x) : d);
   return {
@@ -421,7 +434,7 @@ function sanitizeWindowState(v: unknown): WindowState {
 }
 
 /** Never restore a window onto a monitor that is no longer connected. */
-function visibleBounds(state: WindowState): WindowState {
+function visibleBounds(state: SavedBounds): SavedBounds {
   if (state.x === undefined || state.y === undefined) return { width: state.width, height: state.height, maximized: state.maximized };
   const visible = screen.getAllDisplays().some(({ workArea: a }) => {
     const x = state.x!,
@@ -431,3 +444,40 @@ function visibleBounds(state: WindowState): WindowState {
   return visible ? state : { width: state.width, height: state.height, maximized: state.maximized };
 }
 
+
+/** Title-bar page requests: menus, commands, window state. Only from the shell page. */
+function registerShellIpc(frame: () => WindowShell | null, command: (c: MenuCommand) => void) {
+  const COMMANDS = new Set<MenuCommand>(["save", "save-as", "command-palette", "settings", "window-appearance", "toggle-fullscreen"]);
+  const MENU_NAMES = new Set(["file", "edit", "view", "help", "all"]);
+  const handle = (channel: string, fn: (f: WindowShell, ...args: unknown[]) => unknown) =>
+    ipcMain.handle(channel, (event, ...args) => {
+      const f = frame();
+      if (!f || event.sender !== f.win.webContents || !(event.senderFrame?.url ?? "").startsWith(`${DESKTOP_ORIGIN}/__shell/`))
+        throw new Error("Request rejected.");
+      return fn(f, ...args);
+    });
+  const rect = (v: unknown) => {
+    const r = v as { x?: unknown; y?: unknown; height?: unknown };
+    return typeof r?.x === "number" && typeof r.y === "number" && typeof r.height === "number" && [r.x, r.y, r.height].every(Number.isFinite)
+      ? { x: r.x, y: r.y, height: r.height }
+      : undefined;
+  };
+  handle(SHELL_CHANNELS.ready, (f) => ({ state: f.state, status: f.windowStatus, platform: { mica: f.micaAvailable } }));
+  handle(SHELL_CHANNELS.menu, (f, name, at) => {
+    if (typeof name === "string" && MENU_NAMES.has(name)) f.popupMenu(name as "file", rect(at));
+  });
+  handle(SHELL_CHANNELS.command, (f, c) => {
+    if (typeof c === "string" && COMMANDS.has(c as MenuCommand)) {
+      command(c as MenuCommand);
+      if (!f.studio.webContents.isDestroyed()) f.studio.webContents.focus();
+    }
+  });
+  handle(SHELL_CHANNELS.reportMenus, (f, rects) => {
+    const out: Record<string, { x: number; y: number; height: number }> = {};
+    for (const [k, v] of Object.entries((rects ?? {}) as Record<string, unknown>)) {
+      const r = rect(v);
+      if (MENU_NAMES.has(k) && r) out[k] = r;
+    }
+    f.setMenuRects(out);
+  });
+}

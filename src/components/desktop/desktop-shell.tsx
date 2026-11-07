@@ -18,7 +18,9 @@ import type {
   ProjectLink,
   RecoverySnapshot,
   UpdateState,
+  WindowState,
 } from "@/lib/desktop/contract";
+import { DEFAULT_GX_ACCENT, DEFAULT_WINDOW_DESIGN, WINDOW_DESIGNS } from "@/lib/desktop/contract";
 import {
   fingerprintProject,
   openProjectFile,
@@ -37,7 +39,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 
 type Busy = { label: string; stage: string; fraction: number } | null;
 type Toast = { id: number; tone: "ok" | "error" | "info"; text: string };
-type DialogKind = "settings" | "recovery" | "backups" | "about" | "updates" | null;
+type DialogKind = "settings" | "appearance" | "recovery" | "backups" | "about" | "updates" | "palette" | null;
 type ProjectStatus = { projectId: string; link: ProjectLink | null; fingerprint: string | null; dirty: boolean };
 type Pending = { title: string; projectId: string; linked: boolean }[];
 
@@ -76,6 +78,10 @@ export function DesktopShell() {
   const [settings, setSettings] = useState<DesktopSettings | null>(null);
   const [crashReport, setCrashReport] = useState<{ dirty: Pending; snapshots: RecoverySnapshot[] } | null>(null);
   const [revertConfirm, setRevertConfirm] = useState(false);
+  const [windowState, setWindowState] = useState<WindowState | null>(null);
+  const [saving, setSaving] = useState(false);
+  const chapterId = /^\/p\/[^/]+\/c\/([^/]+)/.exec(pathname)?.[1] ?? null;
+  const chapter = useStudio((s) => (chapterId ? (s.chapters.find((c) => c.id === chapterId) ?? null) : null));
 
   /** Fingerprint of each project when first seen this session: "modified this session". */
   const baseline = useRef(new Map<string, string>());
@@ -125,6 +131,28 @@ export function DesktopShell() {
     return () => clearInterval(timer);
   }, [refresh]);
   useEffect(() => {
+    const link = status?.link ?? null;
+    const missing = !!link && link.file.size === 0 && link.file.modifiedAt === 0;
+    void bridge.setWindowStatus({
+      project: project?.title ?? null,
+      chapter: chapter?.title ?? null,
+      workspace: chapter ? "chapter" : project ? "project" : "library",
+      save: !project || !status
+        ? "none"
+        : saving
+          ? "saving"
+          : missing
+            ? "missing"
+            : !link
+              ? "unlinked"
+              : status.dirty
+                ? "dirty"
+                : "saved",
+      fileName: link && !missing ? link.file.name : null,
+      savedAt: link?.savedAt ?? null,
+    });
+  }, [bridge, chapter, project, saving, status]);
+  useEffect(() => {
     const dirty = !!status?.dirty;
     void bridge.setTitle(project ? `${project.title}${status && !status.link ? " (not saved to a file)" : ""}` : "", dirty);
   }, [bridge, project, status]);
@@ -140,6 +168,7 @@ export function DesktopShell() {
           return false;
         }
         try {
+          setSaving(mode !== "export");
           const outcome = await saveProject(id, mode, progress(mode === "export" ? "Exporting a copy" : "Saving project"));
           if (!outcome) return false;
           if (mode !== "export") baseline.current.set(id, outcome.fingerprint);
@@ -152,6 +181,7 @@ export function DesktopShell() {
           toast(`Not saved: ${storageMessage(error)} Your work is still safe in the Inkstrip workspace.`, "error");
           return false;
         } finally {
+          setSaving(false);
           setBusy(null);
           void refresh();
         }
@@ -275,6 +305,12 @@ export function DesktopShell() {
         case "settings":
         case "about":
           return setDialog(cmd);
+        case "window-appearance":
+          return setDialog("appearance");
+        case "command-palette":
+          return setDialog((d) => (d === "palette" ? null : "palette"));
+        case "toggle-fullscreen":
+          return void (await bridge.toggleFullScreen());
         case "updates":
           setDialog("updates");
           setUpdate(await bridge.checkForUpdates());
@@ -301,6 +337,7 @@ export function DesktopShell() {
       bridge.on("menu-command", ({ command: c }) => void command(c)),
       bridge.on("open-file", (ref) => void open(ref)),
       bridge.on("update-state", (s) => setUpdate(s)),
+      bridge.on("window-state", (s) => setWindowState(s)),
       bridge.on("download", (d: DownloadEvent) => {
         if (d.state === "completed") toast(`Exported ${d.name}`, "ok");
         else if (d.state === "interrupted") toast(`Export of ${d.name} was interrupted.`, "error");
@@ -339,6 +376,7 @@ export function DesktopShell() {
       setInfo(appInfo);
       setSettings(s);
       setUpdate(u);
+      void bridge.windowState().then((w) => w && setWindowState(w));
       await useStudio.getState().hydrate();
       if (!appInfo.lastExitClean) {
         const links = await bridge.listLinks();
@@ -382,8 +420,32 @@ export function DesktopShell() {
   // ---- keyboard shortcuts (bubble phase: editors handle their own keys first) ----
   useEffect(() => {
     const keys = (e: KeyboardEvent) => {
+      // Native menu access from the custom title bar: Alt+F/E/V/H and F10; F11 full screen.
+      if (e.key === "F11" && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        void command("toggle-fullscreen");
+        return;
+      }
+      if (e.key === "F10" && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        void bridge.popupMenu("file");
+        return;
+      }
+      if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        const menu = ({ f: "file", e: "edit", v: "view", h: "help" } as const)[e.key.toLowerCase() as "f"];
+        if (menu && !(e.target as Element)?.closest?.("input,textarea,[contenteditable=true]")) {
+          e.preventDefault();
+          void bridge.popupMenu(menu);
+        }
+        return;
+      }
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
       const k = e.key.toLowerCase();
+      if (k === "p" && e.shiftKey) {
+        e.preventDefault();
+        void command("command-palette");
+        return;
+      }
       const map: Record<string, MenuCommand | undefined> = {
         n: e.shiftKey ? undefined : "new-project",
         o: e.shiftKey ? undefined : "open-project",
@@ -402,7 +464,7 @@ export function DesktopShell() {
     };
     window.addEventListener("keydown", keys);
     return () => window.removeEventListener("keydown", keys);
-  }, [command]);
+  }, [bridge, command]);
 
   // ---- drag and drop .inkstrip files ----
   useEffect(() => {
@@ -445,7 +507,7 @@ export function DesktopShell() {
 
   return (
     <>
-      {project && status ? (
+      {project && status && windowState?.fullscreen ? (
         <DesktopStatusBar
           status={status}
           busy={!!busy}
@@ -592,8 +654,27 @@ export function DesktopShell() {
         </Modal>
       ) : null}
 
-      {dialog === "settings" && settings ? (
+      {dialog === "palette" ? (
+        <CommandPalette
+          onClose={() => setDialog(null)}
+          run={(cmd) => {
+            setDialog(null);
+            void command(cmd);
+          }}
+          openProject={(id) => {
+            setDialog(null);
+            void navigate({ to: "/p/$projectId", params: { projectId: id } });
+          }}
+          openFile={(ref) => {
+            setDialog(null);
+            void open(ref);
+          }}
+        />
+      ) : null}
+      {(dialog === "settings" || dialog === "appearance") && settings ? (
         <SettingsDialog
+          focusAppearance={dialog === "appearance"}
+          windowState={windowState}
           settings={settings}
           onClose={() => setDialog(null)}
           onChange={async (patch) => setSettings(await bridge.setSettings(patch))}
@@ -841,7 +922,11 @@ function SettingsDialog({
   onClose,
   onChange,
   toast,
+  focusAppearance,
+  windowState,
 }: {
+  focusAppearance: boolean;
+  windowState: WindowState | null;
   settings: DesktopSettings;
   onClose: () => void;
   onChange: (patch: Parameters<NonNullable<ReturnType<typeof desktopBridge>>["setSettings"]>[0]) => Promise<void>;
@@ -865,6 +950,12 @@ function SettingsDialog({
   return (
     <Modal open onOpenChange={(o) => !o && onClose()} title="Settings" wide>
       <div className="desktop-settings">
+        <WindowAppearance
+          autoFocus={focusAppearance}
+          value={settings.window}
+          mica={!!windowState?.mica || windowState === null}
+          onChange={(window) => void onChange({ window })}
+        />
         <section>
           <h3>Autosave and recovery</h3>
           {toggle("Autosave", settings.autosave.enabled, (v) => void onChange({ autosave: { enabled: v } }), "Writes a recovery snapshot of the open project when it has unsaved changes.")}
@@ -1075,6 +1166,186 @@ function AboutDialog({ info, onClose }: { info: AppInfo; onClose: () => void }) 
         <dd>{info.locations.backups}</dd>
       </dl>
       <p className="mt-3 text-xs text-muted">Works fully offline. Updates, AI model downloads and cloud AI are optional and need a connection.</p>
+    </Modal>
+  );
+}
+
+/** Live window-design selector: applies immediately and is remembered across restarts. */
+function WindowAppearance({
+  value,
+  onChange,
+  autoFocus,
+}: {
+  value: DesktopSettings["window"];
+  onChange: (window: Partial<DesktopSettings["window"]>) => void;
+  autoFocus: boolean;
+  mica: boolean;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!autoFocus) return;
+    ref.current?.scrollIntoView({ block: "start" });
+    ref.current?.querySelector<HTMLButtonElement>("[aria-checked=true]")?.focus();
+  }, [autoFocus]);
+  return (
+    <section ref={ref} aria-labelledby="window-appearance-heading">
+      <h3 id="window-appearance-heading">Window appearance</h3>
+      <p className="text-xs text-muted">
+        Changes the title bar and window frame only. Applies instantly; minimize, maximize, Snap layouts and resizing stay
+        native in every design.
+      </p>
+      <div className="desktop-designs" role="radiogroup" aria-label="Window design">
+        {WINDOW_DESIGNS.map((d) => (
+          <button
+            key={d.id}
+            type="button"
+            role="radio"
+            aria-checked={value.design === d.id}
+            className="desktop-design focus-ring"
+            data-design={d.id}
+            style={{ ["--accent" as string]: value.accent }}
+            onClick={() => onChange({ design: d.id })}
+          >
+            <span className="desktop-design-preview" aria-hidden="true">
+              <span className="pv-bar">
+                <span className="pv-mark" />
+                <span className="pv-menus">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <span className="pv-center" />
+                <span className="pv-caps">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+              </span>
+              <span className="pv-body">
+                <i />
+                <i />
+              </span>
+            </span>
+            <span className="block text-sm text-fg">
+              {d.name}
+              {d.id === DEFAULT_WINDOW_DESIGN ? <span className="ml-1 text-xs text-muted">· default</span> : null}
+            </span>
+            <span className="block text-xs text-muted">{d.summary}</span>
+          </button>
+        ))}
+      </div>
+      <div className="desktop-setting">
+        <label className="flex items-center gap-2 text-sm text-fg">
+          Neon accent
+          <input
+            type="color"
+            value={value.accent}
+            aria-label="Neon Gaming accent color"
+            onChange={(e) => onChange({ accent: e.target.value })}
+          />
+        </label>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={value.design === DEFAULT_WINDOW_DESIGN && value.accent === DEFAULT_GX_ACCENT}
+          onClick={() => onChange({ design: DEFAULT_WINDOW_DESIGN, accent: DEFAULT_GX_ACCENT })}
+        >
+          Restore default
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+type PaletteItem = { id: string; group: string; label: string; hint?: string; run: () => void };
+
+/** Command palette (Ctrl+Shift+P / Developer Compact command center): commands, projects, recent files. */
+function CommandPalette({
+  onClose,
+  run,
+  openProject,
+  openFile,
+}: {
+  onClose: () => void;
+  run: (cmd: MenuCommand) => void;
+  openProject: (id: string) => void;
+  openFile: (ref: FileRef) => void;
+}) {
+  const bridge = desktopBridge()!;
+  const projects = useStudio((s) => s.projects);
+  const [query, setQuery] = useState("");
+  const [index, setIndex] = useState(0);
+  const [recent, setRecent] = useState<{ file: FileRef; title: string }[]>([]);
+  useEffect(() => {
+    void bridge.recentProjects().then((r) => setRecent(r.filter((x) => x.file).map((x) => ({ file: x.file!, title: x.title || x.path }))));
+  }, [bridge]);
+  const commands: [MenuCommand, string, string?][] = [
+    ["new-project", "New project", "Ctrl+N"],
+    ["open-project", "Open project…", "Ctrl+O"],
+    ["save", "Save", "Ctrl+S"],
+    ["save-as", "Save as…", "Ctrl+Shift+S"],
+    ["export-copy", "Export a copy…"],
+    ["revert", "Revert to saved file…"],
+    ["import-backup", "Import website backup…"],
+    ["recovery", "Recover autosaved work…"],
+    ["backups", "Project backups…"],
+    ["settings", "Settings…", "Ctrl+,"],
+    ["window-appearance", "Window appearance…"],
+    ["toggle-fullscreen", "Toggle full screen", "F11"],
+    ["updates", "Check for updates…"],
+    ["about", "About Inkstrip Manhwa Studio"],
+  ];
+  const items: PaletteItem[] = [
+    ...commands.map(([cmd, label, hint]) => ({ id: `c:${cmd}`, group: "Commands", label, hint, run: () => run(cmd) })),
+    ...projects.map((p) => ({ id: `p:${p.id}`, group: "Projects in workspace", label: p.title, run: () => openProject(p.id) })),
+    ...recent.map((r) => ({ id: `f:${r.file.path}`, group: "Recent files", label: r.title, hint: r.file.name, run: () => openFile(r.file) })),
+  ];
+  const q = query.trim().toLowerCase();
+  const shown = q ? items.filter((i) => `${i.label} ${i.hint ?? ""} ${i.group}`.toLowerCase().includes(q)) : items;
+  const active = Math.min(index, Math.max(0, shown.length - 1));
+  return (
+    <Modal open onOpenChange={(o) => !o && onClose()} title="Command palette" wide>
+      <input
+        autoFocus
+        className="field w-full"
+        placeholder="Type a command or project name"
+        aria-label="Search commands and projects"
+        aria-controls="desktop-palette-list"
+        aria-activedescendant={shown[active] ? `pal-${active}` : undefined}
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setIndex(0);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setIndex((i) => Math.min(shown.length - 1, i + 1));
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setIndex((i) => Math.max(0, i - 1));
+          } else if (e.key === "Enter" && shown[active]) {
+            e.preventDefault();
+            shown[active].run();
+          }
+        }}
+      />
+      <ul id="desktop-palette-list" role="listbox" className="desktop-palette">
+        {shown.slice(0, 60).map((item, i) => (
+          <li
+            key={item.id}
+            id={`pal-${i}`}
+            role="option"
+            aria-selected={i === active}
+            onMouseEnter={() => setIndex(i)}
+            onClick={item.run}
+          >
+            <span className="truncate text-sm text-fg">{item.label}</span>
+            <span className="truncate text-xs text-muted">{item.hint ?? item.group}</span>
+          </li>
+        ))}
+        {shown.length === 0 ? <li className="text-sm text-muted">No matches</li> : null}
+      </ul>
     </Modal>
   );
 }

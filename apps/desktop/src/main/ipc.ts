@@ -3,7 +3,8 @@
  * page in the main window, validates its arguments, and only touches paths it resolved
  * itself (from opaque tokens or its own storage folders).
  */
-import { BrowserWindow, dialog, ipcMain, shell, type IpcMainInvokeEvent } from "electron";
+import { BrowserWindow, dialog, ipcMain, shell, type IpcMainInvokeEvent, type WebContents } from "electron";
+import type { WindowShell } from "./window-shell.ts";
 import { mkdir, readdir, stat } from "node:fs/promises";
 import { extname, join } from "node:path";
 import {
@@ -30,6 +31,9 @@ import { log } from "./logger.ts";
 
 export type IpcContext = {
   window: () => BrowserWindow | null;
+  /** The studio view's web contents: the only sender allowed on these channels. */
+  studio: () => WebContents | null;
+  frame: () => WindowShell | null;
   paths: AppPaths;
   tokens: FileTokens;
   registry: ProjectRegistry;
@@ -58,9 +62,9 @@ export function registerIpc(ctx: IpcContext) {
 
   const handle = (channel: InvokeChannel, fn: (...args: unknown[]) => unknown) =>
     ipcMain.handle(channel, async (event: IpcMainInvokeEvent, ...args: unknown[]) => {
-      const win = ctx.window();
+      const contents = ctx.studio();
       const url = event.senderFrame?.url ?? "";
-      if (!win || event.sender !== win.webContents || !url.startsWith(`${DESKTOP_ORIGIN}/`))
+      if (!contents || event.sender !== contents || !url.startsWith(`${DESKTOP_ORIGIN}/`) || url.startsWith(`${DESKTOP_ORIGIN}/__shell/`))
         throw new Error("Request rejected.");
       try {
         return await fn(...args);
@@ -301,6 +305,7 @@ export function registerIpc(ctx: IpcContext) {
   handle("settings:set", async (patch) => {
     const next = await ctx.settings.update((current) => mergeSettings(current, patch));
     ctx.refreshMenu();
+    ctx.frame()?.apply(next.window);
     return next;
   });
   handle("secret:has", async () => (await ctx.secrets.get()) !== null);
@@ -313,14 +318,35 @@ export function registerIpc(ctx: IpcContext) {
     win.setTitle(`${dirty === true ? "● " : ""}${name ? `${name} — ` : ""}Inkstrip Manhwa Studio`);
     win.setDocumentEdited(dirty === true);
   });
+  handle("window:status", (raw) => {
+    const v = (raw ?? {}) as Record<string, unknown>;
+    const text = (x: unknown) => (typeof x === "string" ? x.slice(0, 200) : null);
+    const SAVE = ["none", "saved", "dirty", "unlinked", "missing", "saving"];
+    const WORK = ["library", "project", "chapter"];
+    ctx.frame()?.setStatus({
+      project: text(v.project),
+      chapter: text(v.chapter),
+      workspace: (WORK.includes(v.workspace as string) ? v.workspace : "library") as "library",
+      save: (SAVE.includes(v.save as string) ? v.save : "none") as "none",
+      fileName: text(v.fileName),
+      savedAt: typeof v.savedAt === "number" ? v.savedAt : null,
+    });
+  });
+  handle("window:popup-menu", (name) => {
+    if (typeof name === "string" && ["file", "edit", "view", "help", "all"].includes(name))
+      ctx.frame()?.popupMenu(name as "file");
+  });
+  handle("window:state", () => ctx.frame()?.state ?? null);
+  handle("window:fullscreen", () => ctx.frame()?.toggleFullScreen());
   handle("window:zoom", (direction) => {
     const win = ctx.window();
-    if (!win) return 1;
-    const current = win.webContents.getZoomFactor();
+    const contents = ctx.studio();
+    if (!win || !contents) return 1;
+    const current = contents.getZoomFactor();
     const next =
       direction === "in" ? current * 1.1 : direction === "out" ? current / 1.1 : direction === "reset" ? 1 : current;
     const clamped = Math.round(Math.min(2, Math.max(0.5, next)) * 100) / 100;
-    win.webContents.setZoomFactor(clamped);
+    contents.setZoomFactor(clamped);
     return clamped;
   });
   handle("shell:external", async (url) => {

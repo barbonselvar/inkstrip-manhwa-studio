@@ -47,9 +47,11 @@ export const Route = createRootRoute({
 });
 
 /** Windows app only: loaded on demand when the desktop bridge exists (never on the web). */
-const DesktopShell = lazy(() =>
-  import("@/components/desktop/desktop-shell").then((m) => ({ default: m.DesktopShell })),
-);
+const loadDesktopShell = () =>
+  import("@/components/desktop/desktop-shell").then((m) => ({ default: m.DesktopShell }));
+// In the desktop app, start fetching the shell at once so its shortcuts are live with the UI.
+if (typeof window !== "undefined" && window.inkstripDesktop?.isDesktop) void loadDesktopShell();
+const DesktopShell = lazy(loadDesktopShell);
 function DesktopChrome() {
   const [desktop, setDesktop] = useState(false);
   useEffect(() => setDesktop(!!window.inkstripDesktop?.isDesktop), []);

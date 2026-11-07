@@ -77,6 +77,46 @@ export type SaveResult = {
   backupCreated: boolean;
 };
 
+/** The five window designs (one shared window shell, see apps/desktop/src/main/window-shell.ts). */
+export type WindowDesign = "studio" | "win11" | "gx" | "vscode" | "minimal";
+export const DEFAULT_WINDOW_DESIGN: WindowDesign = "studio";
+export const DEFAULT_GX_ACCENT = "#ff3d6e";
+
+export type WindowDesignInfo = {
+  id: WindowDesign;
+  name: string;
+  summary: string;
+  /** Title bar height in device-independent pixels (also the caption-button height). */
+  height: number;
+};
+
+export const WINDOW_DESIGNS: readonly WindowDesignInfo[] = [
+  { id: "studio", name: "Creative Studio Pro", summary: "Inkstrip's own look: project path, save status and quick save in the title bar.", height: 42 },
+  { id: "win11", name: "Modern Windows 11", summary: "Native Windows 11 styling with Mica material and system accent border.", height: 38 },
+  { id: "gx", name: "Neon Gaming", summary: "Dark gaming style with a configurable accent glow and colored window border.", height: 40 },
+  { id: "vscode", name: "Developer Compact", summary: "Compact developer-tool bar with a command center (Ctrl+Shift+P).", height: 32 },
+  { id: "minimal", name: "Minimal Borderless", summary: "Maximum workspace: a slim bar whose secondary controls appear on demand.", height: 30 },
+] as const;
+
+/** What the studio reports for the title bar. */
+export type WindowStatus = {
+  project: string | null;
+  chapter: string | null;
+  workspace: "library" | "project" | "chapter";
+  save: "none" | "saved" | "dirty" | "unlinked" | "missing" | "saving";
+  fileName: string | null;
+  savedAt: number | null;
+};
+
+export type WindowState = {
+  design: WindowDesign;
+  accent: string;
+  maximized: boolean;
+  fullscreen: boolean;
+  focused: boolean;
+  mica: boolean;
+};
+
 export type DesktopSettings = {
   autosave: {
     enabled: boolean;
@@ -99,6 +139,11 @@ export type DesktopSettings = {
   };
   developer: {
     devTools: boolean;
+  };
+  window: {
+    design: WindowDesign;
+    /** Accent for the Neon Gaming design (#rrggbb). */
+    accent: string;
   };
 };
 
@@ -151,7 +196,10 @@ export type MenuCommand =
   | "zoom-fit"
   | "undo"
   | "redo"
-  | "open-recent";
+  | "open-recent"
+  | "command-palette"
+  | "window-appearance"
+  | "toggle-fullscreen";
 
 export type DownloadEvent = {
   id: string;
@@ -198,6 +246,12 @@ export interface DesktopBridge {
   setCloudKey(key: string | null): Promise<boolean>;
   // Window
   setTitle(title: string, dirty: boolean): Promise<void>;
+  /** Project, workspace and save state for the custom title bar. */
+  setWindowStatus(status: WindowStatus): Promise<void>;
+  /** Open a native menu from the title bar position (Alt+F/E/V/H, F10). */
+  popupMenu(menu: "file" | "edit" | "view" | "help" | "all"): Promise<void>;
+  windowState(): Promise<WindowState>;
+  toggleFullScreen(): Promise<void>;
   setZoom(direction: "in" | "out" | "reset"): Promise<number>;
   openExternal(url: string): Promise<void>;
   // Updates
@@ -218,6 +272,7 @@ export type DesktopEvents = {
   "update-state": UpdateState;
   download: DownloadEvent;
   "close-request": CloseRequest;
+  "window-state": WindowState;
 };
 
 export type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
@@ -228,6 +283,7 @@ export const DEFAULT_SETTINGS: DesktopSettings = {
   updates: { autoCheck: true, autoDownload: true },
   ai: { cloudEnabled: false },
   developer: { devTools: false },
+  window: { design: DEFAULT_WINDOW_DESIGN, accent: DEFAULT_GX_ACCENT },
 };
 
 /** Every `ipcRenderer.invoke` channel; the preload script and main both use this list. */
@@ -259,6 +315,10 @@ export const INVOKE_CHANNELS = [
   "secret:set",
   "window:title",
   "window:zoom",
+  "window:status",
+  "window:popup-menu",
+  "window:state",
+  "window:fullscreen",
   "shell:external",
   "update:state",
   "update:check",
@@ -276,7 +336,27 @@ export const EVENT_CHANNELS = {
   "update-state": "event:update-state",
   download: "event:download",
   "close-request": "event:close-request",
+  "window-state": "event:window-state",
 } as const satisfies Record<keyof DesktopEvents, string>;
 
 /** Largest single IPC write chunk (the renderer sends 8 MiB). */
 export const MAX_WRITE_CHUNK = 16 * 1024 * 1024;
+
+/** The title-bar page's own, smaller bridge (`window.inkstripShell`). */
+export interface ShellBridge {
+  ready(): Promise<{ state: WindowState; status: WindowStatus | null; platform: { mica: boolean } }>;
+  menu(name: "file" | "edit" | "view" | "help" | "all", rect: { x: number; y: number; height: number }): Promise<void>;
+  command(command: MenuCommand): Promise<void>;
+  reportMenus(rects: Record<string, { x: number; y: number; height: number }>): Promise<void>;
+  onState(listener: (state: WindowState) => void): () => void;
+  onStatus(listener: (status: WindowStatus) => void): () => void;
+}
+export const SHELL_CHANNELS = {
+  ready: "shell:ready",
+  menu: "shell:menu",
+  command: "shell:command",
+  reportMenus: "shell:menus",
+  state: "shell:event:state",
+  status: "shell:event:status",
+} as const;
+export const SHELL_PATH = "/__shell/titlebar.html";

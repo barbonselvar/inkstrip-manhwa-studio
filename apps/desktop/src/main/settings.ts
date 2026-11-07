@@ -1,6 +1,7 @@
 /** Validated desktop preferences. Unknown or out-of-range values fall back to defaults. */
 import {
   DEFAULT_SETTINGS,
+  WINDOW_DESIGNS,
   type DeepPartial,
   type DesktopSettings,
 } from "../../../../src/lib/desktop/contract.ts";
@@ -19,7 +20,8 @@ export function sanitizeSettings(value: unknown, base: DesktopSettings = DEFAULT
     backups = obj(v.backups),
     updates = obj(v.updates),
     ai = obj(v.ai),
-    developer = obj(v.developer);
+    developer = obj(v.developer),
+    win = obj(v.window);
   return {
     autosave: {
       enabled: bool(autosave.enabled, base.autosave.enabled),
@@ -33,6 +35,12 @@ export function sanitizeSettings(value: unknown, base: DesktopSettings = DEFAULT
     },
     ai: { cloudEnabled: bool(ai.cloudEnabled, base.ai.cloudEnabled) },
     developer: { devTools: bool(developer.devTools, base.developer.devTools) },
+    window: {
+      design: WINDOW_DESIGNS.some((d) => d.id === win.design)
+        ? (win.design as DesktopSettings["window"]["design"])
+        : base.window.design,
+      accent: typeof win.accent === "string" && /^#[0-9a-f]{6}$/i.test(win.accent) ? win.accent.toLowerCase() : base.window.accent,
+    },
   };
 }
 

@@ -4,7 +4,7 @@
  * existing editors keep their own Ctrl+S / Ctrl+Z / Ctrl+Y handling, and the
  * renderer's desktop shell adds the file commands on top without conflicts.
  */
-import { Menu, type BrowserWindow, type MenuItemConstructorOptions } from "electron";
+import { Menu, type BrowserWindow, type MenuItemConstructorOptions, type WebContents } from "electron";
 import type { MenuCommand, RecentProject } from "../../../../src/lib/desktop/contract.ts";
 
 export function buildMenu(options: {
@@ -12,6 +12,8 @@ export function buildMenu(options: {
   send: (command: MenuCommand, arg?: string) => void;
   recent: RecentProject[];
   devTools: boolean;
+  /** The studio view (developer Reload / DevTools act on it, not the title bar). */
+  studio: () => WebContents | null;
 }) {
   const cmd = (label: string, command: MenuCommand, accelerator?: string, arg?: string): MenuItemConstructorOptions => ({
     label,
@@ -68,9 +70,15 @@ export function buildMenu(options: {
         cmd("Zoom &Out", "zoom-out", "Ctrl+-"),
         cmd("&Fit to Screen", "zoom-fit", "Ctrl+0"),
         { type: "separator" },
-        { role: "togglefullscreen", accelerator: "F11" },
+        cmd("&Command Palette…", "command-palette", "Ctrl+Shift+P"),
+        cmd("&Window Appearance…", "window-appearance"),
+        cmd("Toggle F&ull Screen", "toggle-fullscreen", "F11"),
         ...(options.devTools
-          ? ([{ type: "separator" }, { role: "reload" }, { role: "toggleDevTools" }] as MenuItemConstructorOptions[])
+          ? ([
+              { type: "separator" },
+              { label: "Reload Studio", click: () => options.studio()?.reload() },
+              { label: "Toggle Developer Tools", click: () => options.studio()?.toggleDevTools() },
+            ] as MenuItemConstructorOptions[])
           : []),
       ],
     },

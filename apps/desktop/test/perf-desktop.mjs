@@ -18,6 +18,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const desktop = resolve(here, "..");
 const root = resolve(desktop, "..", "..");
+import { waitShellStatus, windowPages } from "./window-pages.mjs";
 const { _electron: electron } = await import(pathToFileURL(join(root, "node_modules", "playwright", "index.mjs")).href);
 const arg = (n) => {
   const i = process.argv.indexOf(n);
@@ -37,9 +38,10 @@ async function launch(profile, extra = []) {
     timeout: 60_000,
   });
   await app.evaluate(({ session }) => session.defaultSession.enableNetworkEmulation({ offline: true }));
-  const page = await app.firstWindow();
-  await page.waitForSelector(".hero-title, .desktop-statusbar", { timeout: 120_000 });
-  return { app, page, startupMs: Date.now() - t };
+  const { studio: page, shell } = await windowPages(app, 120_000);
+  await page.waitForSelector(".hero-title, main", { timeout: 120_000 });
+  await page.waitForSelector(".desktop-toasts", { state: "attached", timeout: 60_000 });
+  return { app, page, shell, startupMs: Date.now() - t };
 }
 
 /** Sum of all Electron processes: working set (MB) and CPU %. */
@@ -204,10 +206,11 @@ for (const n of sizes) {
   row.afterWork = await metrics(app);
   await app.evaluate(({ app }) => app.exit(0));
 
-  ({ app, page } = await launch(join(out, `p${n}-b`), [file]));
+  let shell;
+  ({ app, page, shell } = await launch(join(out, `p${n}-b`), [file]));
   row.reopen = await sampleWhile(app, async () => {
     await page.waitForURL(/\/p\/[^/]+$/, { timeout: 20 * 60_000 });
-    await page.getByText(/Saved · perf-/).waitFor({ timeout: 60_000 });
+    await waitShellStatus(shell, /Saved · perf-/, 60_000);
   });
   console.log("reopen", row.reopen);
   await app.evaluate(({ app }) => app.exit(0));

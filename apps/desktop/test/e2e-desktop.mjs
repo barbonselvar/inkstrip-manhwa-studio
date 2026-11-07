@@ -24,6 +24,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const desktop = resolve(here, "..");
 const root = resolve(desktop, "..", "..");
+import { waitShellStatus, windowPages } from "./window-pages.mjs";
 const { _electron: electron } = await import(pathToFileURL(join(root, "node_modules", "playwright", "index.mjs")).href);
 
 const arg = (name) => {
@@ -51,7 +52,8 @@ async function launch(profile, extraArgs = []) {
     timeout: 60_000,
   });
   await app.evaluate(({ session }) => session.defaultSession.enableNetworkEmulation({ offline: true }));
-  const page = await app.firstWindow();
+  const { studio: page, shell } = await windowPages(app);
+  currentShell = shell;
   const errors = [];
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
   page.on("console", (m) => {
@@ -61,7 +63,8 @@ async function launch(profile, extraArgs = []) {
     if (/unsafe-eval/.test(text)) return;
     errors.push(text);
   });
-  await page.waitForSelector(".hero-title, [data-composition], .desktop-statusbar, main", { timeout: 60_000 });
+  await page.waitForSelector(".hero-title, [data-composition], main", { timeout: 60_000 });
+  await page.waitForSelector(".desktop-toasts", { state: "attached", timeout: 60_000 });
   return { app, page, errors, launchMs: Date.now() - started };
 }
 
@@ -121,8 +124,9 @@ const dumpWorkspace = (page) =>
     return JSON.parse(JSON.stringify(out));
   });
 
-const waitStatus = (page, re, timeout = 20_000) =>
-  page.waitForFunction((src) => new RegExp(src).test(document.querySelector(".desktop-statusbar")?.textContent ?? ""), re.source, { timeout });
+/** The title-bar page of the most recently launched app (save status lives there). */
+let currentShell = null;
+const waitStatus = (_page, re, timeout = 20_000) => waitShellStatus(currentShell, re, timeout);
 const tilesReady = (page) =>
   page.waitForFunction(
     () => {
