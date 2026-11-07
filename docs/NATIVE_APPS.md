@@ -1,5 +1,13 @@
 # Inkstrip native apps: Android APK and Windows EXE
 
+> **Windows update (desktop-v releases):** the Windows app is now the offline
+> **Inkstrip Manhwa Studio** Electron desktop application in `apps/desktop`. It bundles
+> the studio (no website needed), saves `.inkstrip` project files and updates itself only
+> from owner-approved, signed `desktop-v*` releases. See
+> [docs/desktop](desktop/final-release-report.md). The Tauri/WebView2 sections below
+> describe the retired Windows shell and are kept for history; the Android sections are
+> current.
+
 Inkstrip ships as two installable apps that wrap the existing production studio
 (`https://inkstrip-manhwa-studio.vercel.app`). Raster Studio, the Chapter
 workspace, AI tools and the rest of the editor are **not reimplemented**. Each
