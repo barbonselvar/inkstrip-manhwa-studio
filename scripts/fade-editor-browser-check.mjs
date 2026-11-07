@@ -62,6 +62,15 @@ async function create(page, title, names) {
     .waitFor({ timeout: 90000 });
   await page.getByRole("button", { name: "Composition & FX", exact: true }).click();
   await page.locator("[data-composition=studio]").waitFor({ timeout: 60000 });
+  await attach(page);
+}
+/** Resolve the app's own module instances (dev URLs can carry HMR/version queries). */
+async function attach(page) {
+  await page.waitForFunction(() =>
+    performance
+      .getEntriesByType("resource")
+      .some((x) => new URL(x.name).pathname === "/src/lib/studio/store.ts"),
+  );
   await page.evaluate(async () => {
     const find = (path) =>
       performance
@@ -451,13 +460,7 @@ try {
   await page.reload();
   await page.getByRole("button", { name: "Composition & FX", exact: true }).click();
   await page.locator("[data-composition=studio]").waitFor({ timeout: 60000 });
-  await page.evaluate(async () => {
-    const state = (await import("/src/lib/studio/store.ts")).useStudio;
-    const chapter = state.getState().chapters.find((c) => location.pathname.endsWith(c.id)),
-      panels = state.getState().panels.filter((p) => p.chapterId === chapter.id);
-    const module = await import("/src/lib/studio/composition/controller.ts");
-    window.__f = { store: state, controller: module.getController(chapter, panels), chapter };
-  });
+  await attach(page);
   assert.deepEqual(await fades(page), snapshot);
   step("9. reload persists every fade property", { fades: snapshot.length });
 
@@ -565,13 +568,7 @@ try {
   await page.reload();
   await page.getByRole("button", { name: "Composition & FX", exact: true }).click();
   await page.locator("[data-composition=studio]").waitFor({ timeout: 60000 });
-  await page.evaluate(async () => {
-    const state = (await import("/src/lib/studio/store.ts")).useStudio;
-    const chapter = state.getState().chapters.find((c) => location.pathname.endsWith(c.id)),
-      panels = state.getState().panels.filter((p) => p.chapterId === chapter.id);
-    const module = await import("/src/lib/studio/composition/controller.ts");
-    window.__f = { store: state, controller: module.getController(chapter, panels), chapter };
-  });
+  await attach(page);
   assert.equal(await page.evaluate(() => window.__f.controller.getState().blocked), false);
   const legacyFade = (await fades(page, 0))[0];
   assert.equal(legacyFade.extend, undefined, "legacy fade is not migrated");
