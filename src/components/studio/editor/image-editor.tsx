@@ -57,6 +57,7 @@ import { mediaReference } from "@/lib/studio/editor/references";
 import { useStudio } from "@/lib/studio/store";
 import type { Panel, PanelMedia } from "@/lib/studio/types";
 import { cn } from "@/lib/utils";
+import { registerEditorFlush } from "@/lib/desktop/bridge";
 
 type Draft = { source: PanelMedia; recipe: EditRecipe };
 type Point = { x: number; y: number };
@@ -230,6 +231,21 @@ export function ImageEditor({
     }, 600);
     return () => clearTimeout(timer);
   }, [draft, dirty, busy, retouchBase, persistDraft, panel.blobId]);
+  // Desktop Save / quit / update: persist the recovery draft now instead of in 600 ms.
+  useEffect(
+    () =>
+      registerEditorFlush(async () => {
+        await Promise.resolve(pendingAutosave.current).catch(() => {});
+        if (busy || retouchBase || draftClosing.current || !dirty) return;
+        await persistDraft({
+          expectedBlobId: panel.blobId,
+          source: draft.source,
+          recipe: draft.recipe,
+          updatedAt: Date.now(),
+        });
+      }),
+    [draft, dirty, busy, retouchBase, persistDraft, panel.blobId],
+  );
 
   const clearDraftAndClose = useCallback(() => {
     draftClosing.current = true;

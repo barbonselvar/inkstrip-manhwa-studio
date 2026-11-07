@@ -104,6 +104,11 @@ export function isMainModule(moduleUrl) {
   }
 }
 
+/** Quote one argument for `cmd.exe` (only when it needs it). */
+export function quoteWindowsArg(arg) {
+  return /^[\w@%+=:,./\\-]+$/.test(arg) ? arg : `"${String(arg).replace(/"/g, '""')}"`;
+}
+
 function main(argv) {
   const [command, ...args] = argv;
   if (!command) {
@@ -111,7 +116,13 @@ function main(argv) {
     process.exit(2);
   }
   const env = mergeAppEnv(readAppEnv(projectRoot()), process.env);
-  const child = spawn(command, args, { stdio: "inherit", env });
+  // Windows: npm puts `vite.cmd` (not `vite`) on PATH, and Node only runs `.cmd`
+  // shims through a shell. Without this, `npm run build` fails on Windows with
+  // `spawn vite ENOENT` before Vite even starts.
+  const child =
+    process.platform === "win32"
+      ? spawn([command, ...args].map(quoteWindowsArg).join(" "), { stdio: "inherit", env, shell: true })
+      : spawn(command, args, { stdio: "inherit", env });
   // The dev server is long-running and is stopped by signalling this wrapper.
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
     process.on(signal, () => child.kill(signal));

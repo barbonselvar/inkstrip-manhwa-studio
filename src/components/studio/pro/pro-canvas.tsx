@@ -514,6 +514,21 @@ export function ProCanvas({
     });
   };
   useEffect(() => {
+    // Desktop View menu / Ctrl+Plus, Ctrl+Minus, Ctrl+0 (fit). Handled here → not UI zoom.
+    const zoom = (event: Event) => {
+      const action = (event as CustomEvent<{ action?: string }>).detail?.action;
+      if (action !== "in" && action !== "out" && action !== "fit") return;
+      event.preventDefault();
+      setView((v) =>
+        action === "fit"
+          ? { ...v, zoom: 1, x: 0, y: 0 }
+          : { ...v, zoom: Math.max(0.1, Math.min(12, v.zoom * (action === "in" ? 1.25 : 0.8))) },
+      );
+    };
+    window.addEventListener("inkstrip:zoom", zoom);
+    return () => window.removeEventListener("inkstrip:zoom", zoom);
+  }, []);
+  useEffect(() => {
     const el = viewport.current;
     if (!el) return;
     const wheel = (e: WheelEvent) => {

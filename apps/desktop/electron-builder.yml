@@ -1,0 +1,80 @@
+# Inkstrip Manhwa Studio — Windows packaging (electron-builder + NSIS assisted installer).
+# Build: `npm run dist` in apps/desktop (after `npm ci` at the repository root).
+# Code signing is configured only by the release workflow through environment
+# variables / secrets; nothing secret is stored here.
+appId: app.inkstrip.studio
+productName: Inkstrip Manhwa Studio
+copyright: Copyright © 2026 Inkstrip Manhwa Studio
+directories:
+  output: ../../dist/windows/electron-builder
+  buildResources: resources
+files:
+  - package.json
+  - build/main/**
+  - build/preload/**
+  - build/renderer/**
+  - build/icon.ico
+  - "!**/*.map"
+asar: true
+compression: normal
+# Electron fuses (flipped in the binary at package time). The inspector-argument fuse stays
+# on only because the automated desktop suites drive the packaged app through it.
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableCookieEncryption: true
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false
+  enableNodeCliInspectArguments: true
+electronLanguages: [en-US]
+extraMetadata:
+  main: build/main/index.js
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: resources/icons/icon.ico
+  executableName: Inkstrip Manhwa Studio
+  requestedExecutionLevel: asInvoker
+  legalTrademarks: Inkstrip Manhwa Studio
+  # Updates are installed only when their Authenticode publisher matches this build's.
+  verifyUpdateCodeSignature: true
+  # signtoolOptions are injected by the release workflow when a certificate exists.
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Inkstrip Manhwa Studio
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+  installerIcon: icons/icon.ico
+  uninstallerIcon: icons/icon.ico
+  installerHeaderIcon: icons/icon.ico
+  uninstallDisplayName: Inkstrip Manhwa Studio
+  artifactName: Inkstrip-Manhwa-Studio-Setup-${version}.${ext}
+  include: resources/installer.nsh
+  unicode: true
+  warningsAsErrors: true
+fileAssociations:
+  - ext: inkstrip
+    name: Inkstrip Project
+    description: Inkstrip Manhwa Studio project
+    icon: resources/icons/icon.ico
+    role: Editor
+  - ext: inkstrip-project
+    name: Inkstrip Website Backup
+    description: Inkstrip website project backup
+    icon: resources/icons/icon.ico
+    role: Viewer
+publish:
+  # Release metadata location for electron-updater (app-update.yml). At runtime the app
+  # resolves the newest owner-approved `desktop-v*` release itself (see src/main/updater.ts).
+  - provider: github
+    owner: barbonselvar
+    repo: inkstrip-manhwa-studio
+    releaseType: release
+    vPrefixedTagName: false

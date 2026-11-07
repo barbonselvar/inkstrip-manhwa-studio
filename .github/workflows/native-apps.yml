@@ -1,25 +1,29 @@
-name: Native apps (Android APK + Windows EXE)
+name: Native apps (Android APK)
 
-# Builds the Android (Capacitor) and Windows (Tauri) shells, installs and smoke-tests
-# each real binary (Android emulator, Windows runner), and — only for an `app-v*` tag —
-# publishes the verified installers to a GitHub Release that the website's
-# "Download App" dialog reads. Pull requests and branch pushes only upload
+# Builds the Android (Capacitor) shell, installs and smoke-tests the real APK on an
+# Android emulator, and — only for an `app-v*` tag — publishes it to a GitHub Release
+# that the website's "Download App" dialog reads. The Windows app is the offline
+# Electron studio in apps/desktop, built by desktop-ci.yml and published only through
+# the owner-approved desktop-release.yml (`desktop-v*` releases). Pull requests and branch pushes only upload
 # downloadable workflow artifacts; nothing is released or deployed from them.
 #
 # Signing secrets are optional (see docs/NATIVE_APPS.md). Without them the
 # workflow produces clearly labelled test builds:
 #   Inkstrip-<v>-android-test.apk                (debug-signed)
-#   Inkstrip-<v>-windows-x64-setup-unsigned.exe  (no Authenticode signature)
 
 on:
   pull_request:
     paths:
-      - "apps/**"
+      - "apps/android/**"
+      - "apps/brand/**"
+      - "apps/scripts/**"
       - ".github/workflows/native-apps.yml"
   push:
     branches: [main]
     paths:
-      - "apps/**"
+      - "apps/android/**"
+      - "apps/brand/**"
+      - "apps/scripts/**"
       - ".github/workflows/native-apps.yml"
     tags: ["app-v*"]
   workflow_dispatch:
@@ -248,105 +252,10 @@ jobs:
           path: native-smoke/
           if-no-files-found: warn
 
-  windows-build:
-    needs: version
-    runs-on: windows-latest
-    timeout-minutes: 45
-    env:
-      VERSION: ${{ needs.version.outputs.version }}
-      HAS_CERT: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: apps/desktop/package-lock.json
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: apps/desktop/src-tauri
-      - name: Install Tauri CLI
-        working-directory: apps/desktop
-        run: npm ci --no-audit --no-fund
-      - name: Unit tests (navigation allow-list)
-        working-directory: apps/desktop/src-tauri
-        run: cargo test --locked
-      - name: Import code-signing certificate
-        if: env.HAS_CERT == 'true'
-        shell: pwsh
-        env:
-          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-        run: |
-          $pfx = Join-Path $env:RUNNER_TEMP "inkstrip-cert.pfx"
-          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
-          $pw = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
-          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $pw
-          Remove-Item $pfx
-          $cfg = @{ bundle = @{ windows = @{ certificateThumbprint = $cert.Thumbprint; digestAlgorithm = "sha256"; timestampUrl = "http://timestamp.digicert.com" } } } | ConvertTo-Json -Depth 5 -Compress
-          Set-Content -Path (Join-Path $env:RUNNER_TEMP "signing.json") -Value $cfg
-      - name: Build NSIS installer
-        working-directory: apps/desktop
-        shell: pwsh
-        run: |
-          $cfg = @{ version = $env:VERSION } | ConvertTo-Json -Compress
-          Set-Content -Path (Join-Path $env:RUNNER_TEMP "version.json") -Value $cfg
-          $configs = @("--config", (Join-Path $env:RUNNER_TEMP "version.json"))
-          if ($env:HAS_CERT -eq "true") { $configs += @("--config", (Join-Path $env:RUNNER_TEMP "signing.json")) }
-          npx tauri build --ci @configs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\dist" | Out-Null
-          $setup = Get-ChildItem "src-tauri\target\release\bundle\nsis\*-setup.exe" | Select-Object -First 1
-          $suffix = if ($env:HAS_CERT -eq "true") { "" } else { "-unsigned" }
-          Copy-Item $setup.FullName "$env:GITHUB_WORKSPACE\dist\Inkstrip-$env:VERSION-windows-x64-setup$suffix.exe"
-      - name: Verify installer (size, PE header, signature)
-        shell: pwsh
-        run: |
-          $exe = Get-ChildItem dist\*.exe | Select-Object -First 1
-          $bytes = [IO.File]::ReadAllBytes($exe.FullName)
-          if ($bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) { throw "Not a PE executable" }
-          "{0}  {1:N1} MB" -f $exe.Name, ($exe.Length / 1MB)
-          $sig = Get-AuthenticodeSignature $exe.FullName
-          "Authenticode: $($sig.Status) $($sig.SignerCertificate.Subject)" | Tee-Object dist\exe-signature.txt
-          if ($env:HAS_CERT -eq "true" -and $sig.Status -ne "Valid") { throw "Installer signature is not valid" }
-          (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower() + "  " + $exe.Name | Tee-Object dist\exe.sha256
-      - uses: actions/upload-artifact@v4
-        with:
-          name: inkstrip-windows
-          path: |
-            dist/*.exe
-            dist/exe-signature.txt
-            dist/exe.sha256
-          if-no-files-found: error
-
-  windows-device-test:
-    needs: windows-build
-    runs-on: windows-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: inkstrip-windows
-          path: dist
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Install silently, launch and smoke-test
-        shell: pwsh
-        run: ./apps/scripts/windows-device-test.ps1
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: inkstrip-windows-device-test
-          path: native-smoke/
-          if-no-files-found: warn
-
   release:
     # Publishes only for an explicit app-v* tag, after both installers passed their device tests.
     if: needs.version.outputs.release == 'true'
-    needs: [version, android-build, android-device-test, windows-build, windows-device-test]
+    needs: [version, android-build, android-device-test]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -361,27 +270,23 @@ jobs:
         run: |
           set -euo pipefail
           mkdir release
-          cp artifacts/inkstrip-android/*.apk artifacts/inkstrip-windows/*.exe release/
+          cp artifacts/inkstrip-android/*.apk release/
           (cd release && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
           android_tests=$(jq -r '.[] | "- \(if .ok then "✅" elif .required then "❌" else "⚠️" end) \(.name)"' artifacts/inkstrip-android-device-test/android-*-results.json)
-          windows_tests=$(jq -r '.[] | "- \(if .ok then "✅" elif .required then "❌" else "⚠️" end) \(.name)"' artifacts/inkstrip-windows-device-test/windows-*-results.json)
-          apk=$(ls release/*.apk); exe=$(ls release/*.exe)
+          apk=$(ls release/*.apk)
           {
-            echo "Installable Inkstrip apps built from \`${GITHUB_SHA::7}\`. Both load the production studio at https://inkstrip-manhwa-studio.vercel.app."
+            echo "Installable Inkstrip Android app built from \`${GITHUB_SHA::7}\`. It loads the production studio at https://inkstrip-manhwa-studio.vercel.app. The offline Windows app ships separately in \`desktop-v*\` releases."
             echo
             echo "| Platform | File | Signing |"
             echo "|---|---|---|"
             if [[ "$apk" == *-test.apk ]]; then s="**Test build** — debug key, not for Play Store"; else s="Release key"; fi
             echo "| Android 7.0+ | \`$(basename "$apk")\` | $s |"
-            if [[ "$exe" == *-unsigned.exe ]]; then s="**Test build** — unsigned, SmartScreen will warn"; else s="Authenticode signed"; fi
-            echo "| Windows 10/11 x64 | \`$(basename "$exe")\` | $s |"
             echo
             echo "### Automated device tests (emulator / CI runner, not physical devices)"
             retries=$(compgen -G "artifacts/inkstrip-android-device-test/infra-attempts/attempt-*" | wc -l || true)
             echo "**Android 14 emulator**"; echo "$android_tests"
             if [ "$retries" -gt 0 ]; then echo "_(passed on a fresh emulator after $retries emulator infrastructure failure(s); evidence in the workflow artifacts)_"; fi
             echo
-            echo "**Windows Server runner (WebView2)**"; echo "$windows_tests"; echo
             echo "Verify downloads with \`SHA256SUMS.txt\`. See docs/NATIVE_APPS.md for install and signing details."
           } > notes.md
       - name: Create GitHub Release
