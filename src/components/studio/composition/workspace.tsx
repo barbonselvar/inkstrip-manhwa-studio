@@ -1,3 +1,4 @@
+import { registerEditorFlush } from "@/lib/desktop/bridge";
 import { AssetImport } from "./asset-import";
 import "@fontsource/noto-sans/400.css";
 import "@fontsource/noto-sans/700.css";
@@ -174,6 +175,7 @@ export default function CompositionWorkspace({
       );
     };
   }, [controller]);
+  useEffect(() => registerEditorFlush(() => controller.flush()), [controller]);
   useEffect(() => {
     const guard = (event: BeforeUnloadEvent) => {
       if (["unsaved", "saving", "error"].includes(controller.getState().status)) {

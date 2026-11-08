@@ -1,0 +1,214 @@
+name: Desktop release (owner-approved)
+
+# The ONLY way a Windows desktop update reaches installed Inkstrip apps.
+#
+# 1. The owner starts it manually (Actions → "Desktop release" → Run workflow) on main
+#    with the version prepared in apps/desktop/package.json + RELEASE_NOTES.md.
+# 2. `candidate` (read-only token) runs every check, builds and signs the installer,
+#    verifies signature + updater metadata, and runs the offline end-to-end suite on the
+#    packaged app. The release candidate is uploaded as a workflow artifact.
+# 3. `publish` targets the protected `desktop-production` environment. Configure it with
+#    the owner as a required reviewer (Settings → Environments): GitHub then pauses here
+#    until the owner reviews the candidate and approves. Only this job can write
+#    releases (contents: write), and only to a new `desktop-v<version>` tag at the tested
+#    commit.
+#
+# Update authenticity (free, no certificate purchase): the approved `publish` job signs
+# the installer with the Ed25519 update key stored ONLY as the `DESKTOP_UPDATE_SIGNING_KEY`
+# secret of the protected environment, and checks it against the public key built into the
+# app. Installed apps refuse any update whose signature does not verify. Production
+# releases are refused without that key. Windows Authenticode (WINDOWS_CERTIFICATE) is
+# optional and only removes the SmartScreen warning on first manual installs.
+# The `test-prerelease` channel publishes a clearly marked prerelease that installed apps
+# ignore (for manual testing only).
+# Pushes, merges and tags never publish anything.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (must equal apps/desktop/package.json, e.g. 1.0.1)"
+        required: true
+      channel:
+        description: "production = stable update for installed apps (update signature required); test-prerelease = manual testing only"
+        type: choice
+        options: [production, test-prerelease]
+        default: production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    outputs:
+      version: ${{ steps.guard.outputs.version }}
+      signed: ${{ steps.verify.outputs.signed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Release guard (branch, version, tag, ordering)
+        id: guard
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then echo "::error::Desktop releases are published from main only."; exit 1; fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then echo "::error::Version must look like 1.2.3"; exit 1; fi
+          pkg=$(node -p "require('./apps/desktop/package.json').version")
+          if [[ "$pkg" != "$VERSION" ]]; then echo "::error::apps/desktop/package.json is $pkg, not $VERSION. Prepare the release candidate first."; exit 1; fi
+          grep -q "^## $VERSION" apps/desktop/RELEASE_NOTES.md || { echo "::error::RELEASE_NOTES.md has no '## $VERSION' section."; exit 1; }
+          if git ls-remote --exit-code --tags origin "refs/tags/desktop-v$VERSION" >/dev/null; then echo "::error::desktop-v$VERSION already exists; published versions are never replaced."; exit 1; fi
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '[.[] | select(.draft==false and .prerelease==false and (.tag_name|startswith("desktop-v"))) | .tag_name | ltrimstr("desktop-v")] | first // ""')
+          if [[ -n "$latest" ]]; then
+            newest=$(printf '%s\n%s\n' "$latest" "$VERSION" | sort -V | tail -1)
+            if [[ "$newest" != "$VERSION" || "$latest" == "$VERSION" ]]; then echo "::error::$VERSION is not newer than the published $latest (no downgrades)."; exit 1; fi
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/desktop/package-lock.json
+      - name: Install
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          npm ci --no-audit --no-fund
+          npm ci --no-audit --no-fund --prefix apps/desktop
+      - name: Website checks (typecheck, lint, unit and integration tests)
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          npm run typecheck
+          npm run lint
+          npm test
+      - name: Desktop typecheck, unit tests and shipped-dependency audit
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          npm audit --omit=dev --audit-level=high --prefix apps/desktop
+          npm run typecheck --prefix apps/desktop
+          npm run test:desktop
+      - name: Build and sign the NSIS installer
+        working-directory: apps/desktop
+        shell: pwsh
+        env:
+          # Optional signing secrets (never stored in the repository). electron-builder signs
+          # the app and installer with SHA-256 + timestamp and pins the publisher name into
+          # app-update.yml so installed apps verify every future update against it.
+          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: |
+          if (-not $env:CSC_LINK) { Remove-Item Env:CSC_LINK; Remove-Item Env:CSC_KEY_PASSWORD -ErrorAction SilentlyContinue }
+          npm run dist
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Assemble dist/windows (installer, update metadata, checksums, notes)
+        run: node apps/desktop/scripts/assemble-dist.mjs
+      - name: Verify installer, signature and updater metadata
+        id: verify
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.guard.outputs.version }}
+          CHANNEL: ${{ inputs.channel }}
+          HAS_CERT: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
+        run: |
+          $exe = "dist/windows/update/Inkstrip-Manhwa-Studio-Setup-$env:VERSION.exe"
+          $bytes = [IO.File]::ReadAllBytes($exe)
+          if ($bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) { throw "Installer is not a PE executable" }
+          $sig = Get-AuthenticodeSignature $exe
+          $app = Get-AuthenticodeSignature "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe"
+          "Installer: $($sig.Status) $($sig.SignerCertificate.Subject)"
+          "App:       $($app.Status) $($app.SignerCertificate.Subject)"
+          $updateYml = Get-Content "dist/windows/electron-builder/win-unpacked/resources/app-update.yml" -Raw
+          $signed = ($sig.Status -eq "Valid") -and ($app.Status -eq "Valid") -and ($updateYml -match "publisherName")
+          if ($env:HAS_CERT -eq "true" -and -not $signed) { throw "A signing certificate was configured but the signature did not validate." }
+          # Truthful marker for the website's download dialog (SmartScreen expectations).
+          if ($signed) { Set-Content "dist/windows/update/WINDOWS-AUTHENTICODE-SIGNED.txt" "Installer and app carry a valid Authenticode signature." }
+          else { Set-Content "dist/windows/update/WINDOWS-AUTHENTICODE-UNSIGNED.txt" "No Windows code-signing certificate: SmartScreen warns on first install. In-app updates are verified with the Inkstrip Ed25519 update key." }
+          "signed=$($signed.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+      - name: Offline end-to-end test of the packaged app
+        shell: pwsh
+        run: node apps/desktop/test/e2e-desktop.mjs --exe "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe" --out "$env:RUNNER_TEMP/desktop-e2e"
+      - name: Window designs (five designs × 100/125/150/200% scaling)
+        shell: pwsh
+        run: node apps/desktop/test/window-designs-e2e.mjs --exe "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe" --out "$env:RUNNER_TEMP/desktop-e2e/windows"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: desktop-e2e-evidence
+          path: |
+            ${{ runner.temp }}/desktop-e2e/**/*.png
+            ${{ runner.temp }}/desktop-e2e/**/*.json
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: desktop-release-candidate
+          path: dist/windows/update/
+          if-no-files-found: error
+
+  publish:
+    needs: candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Protected environment: the owner must approve before anything is published.
+    environment:
+      name: desktop-production
+      url: https://github.com/${{ github.repository }}/releases/tag/desktop-v${{ needs.candidate.outputs.version }}
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.candidate.outputs.version }}
+      SIGNED: ${{ needs.candidate.outputs.signed }}
+      CHANNEL: ${{ inputs.channel }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: desktop-release-candidate
+          path: release
+      - name: Sign the update with the release key (environment secret)
+        env:
+          INKSTRIP_UPDATE_SIGNING_KEY: ${{ secrets.DESKTOP_UPDATE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          (cd release && sha256sum -c SHA256SUMS.txt)
+          if [[ -z "${INKSTRIP_UPDATE_SIGNING_KEY}" ]]; then
+            if [[ "$CHANNEL" == "production" ]]; then echo "::error::DESKTOP_UPDATE_SIGNING_KEY is not set on the desktop-production environment; production updates must be signed."; exit 1; fi
+            echo "::warning::No update signing key: this test prerelease will not be installable by installed apps."
+          else
+            # Signs, then verifies against the public key compiled into the app.
+            node apps/desktop/scripts/sign-update.mjs "release/Inkstrip-Manhwa-Studio-Setup-$VERSION.exe" "$VERSION"
+            (cd release && sha256sum "Inkstrip-Manhwa-Studio-Setup-$VERSION.exe.sig" >> SHA256SUMS.txt)
+          fi
+      - name: Publish desktop-v${{ needs.candidate.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd release
+          flags="--target $GITHUB_SHA"
+          title="Inkstrip Manhwa Studio $VERSION"
+          if [[ "$CHANNEL" != "production" ]]; then
+            flags="$flags --prerelease"
+            title="$title (test build — not offered to installed apps)"
+          fi
+          assets=("Inkstrip-Manhwa-Studio-Setup-$VERSION.exe" "Inkstrip-Manhwa-Studio-Setup-$VERSION.exe.blockmap" latest.yml SHA256SUMS.txt WINDOWS-AUTHENTICODE-*.txt)
+          if [[ -f "Inkstrip-Manhwa-Studio-Setup-$VERSION.exe.sig" ]]; then assets+=("Inkstrip-Manhwa-Studio-Setup-$VERSION.exe.sig"); fi
+          gh release create "desktop-v$VERSION" "${assets[@]}"             --repo "$GITHUB_REPOSITORY" --title "$title" --notes-file release-notes.md $flags
+      - name: Verify the published release
+        run: |
+          set -euo pipefail
+          mkdir check && cd check
+          gh release download "desktop-v$VERSION" --repo "$GITHUB_REPOSITORY" --pattern latest.yml --pattern SHA256SUMS.txt
+          cmp latest.yml ../release/latest.yml
+          grep -q "version: $VERSION" latest.yml
+          echo "Published desktop-v$VERSION ($CHANNEL, signed=$SIGNED)."

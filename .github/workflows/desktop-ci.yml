@@ -1,0 +1,101 @@
+name: Desktop app (Windows) checks
+
+# Builds the offline Electron desktop app on Windows for every change that can affect
+# it, runs its unit tests and the offline end-to-end suite against the packaged app,
+# and uploads an UNSIGNED test installer as a workflow artifact. Nothing is released
+# here: publishing is only possible through the owner-approved desktop-release.yml.
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "apps/desktop/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
+      - ".github/workflows/desktop-ci.yml"
+      - ".github/workflows/desktop-release.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "apps/desktop/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
+      - ".github/workflows/desktop-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/desktop/package-lock.json
+      - name: Install
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          npm ci --no-audit --no-fund
+          npm ci --no-audit --no-fund --prefix apps/desktop
+      - name: Desktop typecheck, unit tests and shipped-dependency audit
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          npm audit --omit=dev --audit-level=high --prefix apps/desktop
+          npm run typecheck --prefix apps/desktop
+          npm run test:desktop
+          node --test scripts/electron-startup-gate.test.mjs
+      - name: Build renderer, main process and unsigned NSIS installer
+        working-directory: apps/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run dist
+      - name: Assemble dist/windows
+        run: node apps/desktop/scripts/assemble-dist.mjs
+      - name: Offline end-to-end test of the packaged app
+        shell: pwsh
+        env:
+          DEBUG: pw:browser
+        run: node apps/desktop/test/e2e-desktop.mjs --exe "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe" --out "$env:RUNNER_TEMP/desktop-e2e"
+      - name: Editing, backup and network-transition workflows
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          node apps/desktop/test/features-e2e.mjs --exe "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe" --out "$env:RUNNER_TEMP/desktop-e2e/features"
+          node apps/desktop/test/network-e2e.mjs --exe "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe" --out "$env:RUNNER_TEMP/desktop-e2e/network"
+      - name: Window designs (five designs × 100/125/150/200% scaling)
+        shell: pwsh
+        run: node apps/desktop/test/window-designs-e2e.mjs --exe "dist/windows/electron-builder/win-unpacked/Inkstrip Manhwa Studio.exe" --out "$env:RUNNER_TEMP/desktop-e2e/windows"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: desktop-e2e-evidence
+          path: |
+            ${{ runner.temp }}/desktop-e2e/**/*.png
+            ${{ runner.temp }}/desktop-e2e/**/*.json
+            ${{ runner.temp }}/desktop-e2e/**/*.log
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: inkstrip-desktop-unsigned-test-installer
+          path: |
+            dist/windows/Inkstrip-Manhwa-Studio-Setup.exe
+            dist/windows/checksums.txt
+            dist/windows/release-notes.md
+          retention-days: 14
+          if-no-files-found: error

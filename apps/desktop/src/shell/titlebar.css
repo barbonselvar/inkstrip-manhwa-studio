@@ -1,0 +1,448 @@
+/*
+ * Inkstrip title bar — five designs on one structure (body[data-design]).
+ * The bar is a drag region; every control is `no-drag`. The native caption buttons are
+ * drawn by Windows in the Window Controls Overlay area to the right, which the
+ * env(titlebar-area-*) variables keep clear.
+ */
+:root {
+  color-scheme: dark;
+  --h: 42px;
+  --bg: #0b0e10;
+  --fg: #eff3f1;
+  --muted: #acb8b7;
+  --hover: rgb(255 255 255 / 0.07);
+  --press: rgb(255 255 255 / 0.11);
+  --line: transparent;
+  --accent: #ff3d6e;
+  --mint: #a4efd6;
+  --radius: 6px;
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --controls: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, calc(100vw - 138px)));
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font: 12px/1 var(--font);
+  color: var(--fg);
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  opacity: 0;
+}
+body.ready {
+  opacity: 1;
+}
+body.fullscreen .bar {
+  display: none;
+}
+.bar {
+  -webkit-app-region: drag;
+  app-region: drag;
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--h);
+  padding-right: var(--controls);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+button,
+.save {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: default;
+}
+button:focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: -2px;
+}
+.left,
+.right,
+.center {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+}
+.left {
+  gap: 2px;
+  padding-left: 12px;
+}
+.right {
+  justify-content: flex-end;
+  padding-right: 8px;
+}
+.center {
+  justify-content: center;
+}
+.mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--mint);
+  flex: none;
+}
+.brand {
+  margin: 0 10px 0 4px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.menus {
+  display: flex;
+  height: 100%;
+  align-items: center;
+}
+.menus button,
+.menu-all {
+  height: calc(var(--h) - 12px);
+  padding: 0 10px;
+  border-radius: var(--radius);
+  color: var(--fg);
+  opacity: 0.88;
+  white-space: nowrap;
+}
+.menus button u {
+  text-decoration: none;
+}
+body.alt .menus button u {
+  text-decoration: underline;
+}
+.menus button:hover,
+.menu-all:hover,
+.command-center:hover {
+  background: var(--hover);
+  opacity: 1;
+}
+.menus button:active,
+.menu-all:active {
+  background: var(--press);
+}
+.menu-all {
+  display: none;
+  padding: 0 8px;
+}
+.crumbs,
+.title,
+.command-center {
+  display: none;
+}
+.crumbs {
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
+}
+.crumbs span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crumbs .current {
+  color: var(--fg);
+  font-weight: 500;
+}
+.crumbs .sep {
+  opacity: 0.5;
+}
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.save {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.save[data-state="none"] {
+  display: none;
+}
+.save-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mint);
+  flex: none;
+}
+.save[data-state="dirty"] .dot,
+.save[data-state="unlinked"] .dot {
+  background: #f2c879;
+}
+.save[data-state="missing"] .dot {
+  background: #f29487;
+}
+.save[data-state="saving"] .dot {
+  background: var(--muted);
+}
+.save[data-state="dirty"] {
+  color: var(--fg);
+}
+.save-button {
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--hover);
+  color: var(--fg);
+}
+.save-button:hover {
+  background: var(--mint);
+  color: #0b2722;
+}
+.save-button[hidden] {
+  display: none;
+}
+body.inactive .bar {
+  color: var(--muted);
+}
+body.inactive .menus button,
+body.inactive .brand,
+body.inactive .mark {
+  opacity: 0.55;
+}
+kbd {
+  font: inherit;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+/* ── 1. Creative Studio Pro (default) ─────────────────────────────── */
+body[data-design="studio"] {
+  --h: 42px;
+  --bg: #0b0e10;
+  --line: #1c2427;
+}
+body[data-design="studio"] .bar {
+  background:
+    linear-gradient(90deg, rgb(164 239 214 / 0.06), transparent 40%) ,
+    #0b0e10;
+  box-shadow: inset 0 -1px 0 rgb(164 239 214 / 0.08);
+}
+body[data-design="studio"] .mark {
+  background: rgb(164 239 214 / 0.1);
+  box-shadow: inset 0 0 0 1px rgb(164 239 214 / 0.18);
+}
+body[data-design="studio"] .crumbs {
+  display: flex;
+}
+body[data-design="studio"] .save {
+  padding: 4px 4px 4px 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.04);
+  box-shadow: inset 0 0 0 1px #1c2427;
+}
+
+/* ── 2. Modern Windows 11 ─────────────────────────────────────────── */
+body[data-design="win11"] {
+  --h: 38px;
+  --bg: #202020;
+  --fg: #ffffff;
+  --muted: rgb(255 255 255 / 0.62);
+  --hover: rgb(255 255 255 / 0.06);
+  --press: rgb(255 255 255 / 0.04);
+  --radius: 4px;
+  --mint: #60cdff;
+}
+body[data-design="win11"].mica .bar {
+  background: transparent;
+}
+body[data-design="win11"] .mark {
+  color: #ffffff;
+}
+body[data-design="win11"] .brand {
+  font-weight: 400;
+}
+body[data-design="win11"] .left {
+  padding-left: 14px;
+}
+body[data-design="win11"] .title {
+  display: block;
+}
+body[data-design="win11"] .save {
+  font-size: 12px;
+}
+
+/* ── 3. Neon Gaming ───────────────────────────────────────────────── */
+body[data-design="gx"] {
+  --h: 40px;
+  --bg: #100d16;
+  --fg: #ece8f5;
+  --muted: #8f88a3;
+  --hover: color-mix(in oklab, var(--accent) 16%, transparent);
+  --press: color-mix(in oklab, var(--accent) 26%, transparent);
+  --mint: var(--accent);
+  --radius: 4px;
+}
+body[data-design="gx"] .bar {
+  background: linear-gradient(180deg, #16111f, #100d16);
+  box-shadow: inset 0 -1px 0 color-mix(in oklab, var(--accent) 45%, transparent);
+}
+body[data-design="gx"] .mark {
+  color: var(--accent);
+  filter: drop-shadow(0 0 4px color-mix(in oklab, var(--accent) 60%, transparent));
+}
+body[data-design="gx"] .brand {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  font-weight: 700;
+}
+body[data-design="gx"] .menus button {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+body[data-design="gx"] .menus button:hover {
+  color: var(--accent);
+}
+body[data-design="gx"] .title {
+  display: block;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+body[data-design="gx"] .dot {
+  box-shadow: 0 0 6px currentColor;
+}
+body[data-design="gx"] .save-button:hover {
+  background: var(--accent);
+  color: #100d16;
+}
+body[data-design="gx"].inactive .bar {
+  box-shadow: inset 0 -1px 0 #2a2433;
+}
+
+/* ── 4. Developer Compact ─────────────────────────────────────────── */
+body[data-design="vscode"] {
+  --h: 32px;
+  --bg: #1f1f1f;
+  --fg: #cccccc;
+  --muted: #9d9d9d;
+  --line: #2b2b2b;
+  --hover: rgb(255 255 255 / 0.08);
+  --radius: 4px;
+  --mint: #0078d4;
+  font-size: 13px;
+}
+body[data-design="vscode"] .bar {
+  gap: 8px;
+}
+body[data-design="vscode"] .left {
+  padding-left: 8px;
+}
+body[data-design="vscode"] .brand {
+  display: none;
+}
+body[data-design="vscode"] .mark {
+  color: #4ec9b0;
+  width: 22px;
+}
+body[data-design="vscode"] .menus button {
+  height: 22px;
+  padding: 0 7px;
+  font-size: 13px;
+}
+body[data-design="vscode"] .command-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(560px, 38vw);
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: #2a2a2a;
+  box-shadow: inset 0 0 0 1px #3c3c3c;
+  color: #cccccc;
+  font-size: 12px;
+}
+body[data-design="vscode"] .command-text {
+  flex: 1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body[data-design="vscode"] .save-text {
+  max-width: 180px;
+}
+body[data-design="vscode"] .save-button {
+  height: 20px;
+  border-radius: 4px;
+}
+
+/* ── 5. Minimal Borderless ────────────────────────────────────────── */
+body[data-design="minimal"] {
+  --h: 30px;
+  --bg: #0b0e10;
+  --muted: #7d8a8a;
+}
+body[data-design="minimal"] .brand,
+body[data-design="minimal"] .menus {
+  display: none;
+}
+body[data-design="minimal"] .menu-all {
+  display: grid;
+  place-items: center;
+  height: 22px;
+}
+body[data-design="minimal"] .mark {
+  width: 20px;
+  opacity: 0.8;
+}
+body[data-design="minimal"] .title {
+  display: block;
+  font-size: 12px;
+}
+/* Secondary controls stay out of the way: the menu button is subtle until pointed at or
+   focused (drag regions never receive :hover on Windows, so it is never fully hidden),
+   and the save text only appears when work is not yet in a file. */
+body[data-design="minimal"] .menu-all {
+  opacity: 0.55;
+  transition: opacity 140ms ease;
+}
+body[data-design="minimal"] .menu-all:hover,
+body[data-design="minimal"] .menu-all:focus-visible {
+  opacity: 1;
+}
+body[data-design="minimal"] .save[data-state="saved"] .save-text,
+body[data-design="minimal"] .save[data-state="saving"] .save-text {
+  display: none;
+}
+body[data-design="minimal"].inactive .bar {
+  color: #5c6666;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

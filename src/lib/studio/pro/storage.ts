@@ -161,3 +161,64 @@ export async function saveSession(
     };
   });
 }
+
+/**
+ * Remove the native (Raster/Pro) documents of deleted pages: the saved session and any
+ * staged restore. Called when the user deletes a project or chapter, or replaces a
+ * workspace project with its saved file. Without it a deleted project's pages kept their
+ * native drafts, and restoring that project again failed ("An existing native draft has
+ * the same page ID").
+ */
+export async function deleteNativeDrafts(panelIds: string[]) {
+  if (!panelIds.length) return;
+  const db = await open();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction("sessions", "readwrite");
+    for (const id of panelIds) tx.objectStore("sessions").delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = tx.onabort = () => reject(tx.error);
+  }).finally(() => db.close());
+  const main = await openDb();
+  if (!main.objectStoreNames.contains("nativeRestores")) return;
+  await new Promise<void>((resolve, reject) => {
+    const tx = main.transaction("nativeRestores", "readwrite");
+    for (const id of panelIds) tx.objectStore("nativeRestores").delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = tx.onabort = () => reject(tx.error);
+  });
+}
+
+/** Revision markers of the native documents of these pages (saved or staged), read in
+ * one transaction per database. Cheap: used for desktop unsaved-change detection. */
+export async function nativeRevisions(panelIds: string[]): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  if (!panelIds.length) return out;
+  const main = await openDb();
+  if (main.objectStoreNames.contains("nativeRestores"))
+    await new Promise<void>((resolve, reject) => {
+      const tx = main.transaction("nativeRestores");
+      for (const id of panelIds) {
+        const r = tx.objectStore("nativeRestores").get(id);
+        r.onsuccess = () => {
+          const s = r.result?.session as ProSession | undefined;
+          if (s) out[id] = `staged:${s.recoveryId}:${s.revision}`;
+        };
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  const db = await open();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction("sessions");
+    for (const id of panelIds) {
+      const r = tx.objectStore("sessions").get(id);
+      r.onsuccess = () => {
+        const s = r.result?.session as ProSession | undefined;
+        if (s) out[id] = `${s.document.id}:${s.recoveryId}:${s.revision}`;
+      };
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  }).finally(() => db.close());
+  return out;
+}

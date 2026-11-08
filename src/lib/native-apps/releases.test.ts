@@ -75,3 +75,51 @@ test("suggests a platform and formats sizes", () => {
   assert.equal(formatBytes(2048), "2 KB");
   assert.equal(formatBytes(0), "");
 });
+
+test("Windows comes from the newest signed desktop release when one exists", () => {
+  const desktopBase =
+    "https://github.com/barbonselvar/inkstrip-manhwa-studio/releases/download/desktop-v1.1.0/";
+  const desktopAsset = (name: string, extra: Record<string, unknown> = {}) =>
+    asset(name, { browser_download_url: desktopBase + name, ...extra });
+  const release = pickNativeRelease([
+    { tag_name: "desktop-v1.2.0", prerelease: true, assets: [desktopAsset("Inkstrip-Manhwa-Studio-Setup-1.2.0.exe")] },
+    {
+      tag_name: "desktop-v1.1.0",
+      assets: [desktopAsset("latest.yml"), desktopAsset("Inkstrip-Manhwa-Studio-Setup-1.1.0.exe"), desktopAsset("WINDOWS-AUTHENTICODE-SIGNED.txt")],
+    },
+    {
+      tag_name: "app-v1.0.0",
+      assets: [asset("Inkstrip-1.0.0-android.apk"), asset("Inkstrip-1.0.0-windows-x64-setup-unsigned.exe")],
+    },
+  ]);
+  assert.equal(release?.downloads.android?.fileName, "Inkstrip-1.0.0-android.apk");
+  assert.equal(release?.downloads.windows?.fileName, "Inkstrip-Manhwa-Studio-Setup-1.1.0.exe");
+  assert.equal(release?.downloads.windows?.signed, true);
+  assert.deepEqual(release?.versions, { android: "1.0.0", windows: "1.1.0" });
+  // Foreign download hosts are never offered.
+  assert.equal(
+    pickNativeRelease([
+      {
+        tag_name: "desktop-v1.3.0",
+        assets: [desktopAsset("Inkstrip-Manhwa-Studio-Setup-1.3.0.exe", { browser_download_url: "https://evil.example/a.exe" })],
+      },
+    ]),
+    null,
+  );
+});
+
+test("a stable desktop release without Authenticode is labelled truthfully", () => {
+  const base = "https://github.com/barbonselvar/inkstrip-manhwa-studio/releases/download/desktop-v1.2.0/";
+  const release = pickNativeRelease([
+    {
+      tag_name: "desktop-v1.2.0",
+      assets: [
+        asset("Inkstrip-Manhwa-Studio-Setup-1.2.0.exe", { browser_download_url: base + "Inkstrip-Manhwa-Studio-Setup-1.2.0.exe" }),
+        asset("WINDOWS-AUTHENTICODE-UNSIGNED.txt", { browser_download_url: base + "WINDOWS-AUTHENTICODE-UNSIGNED.txt" }),
+      ],
+    },
+  ]);
+  assert.equal(release?.downloads.windows?.signed, false);
+  assert.equal(release?.downloads.windows?.label, "Release · not code-signed");
+  assert.match(release?.downloads.windows?.note ?? "", /SmartScreen/);
+});

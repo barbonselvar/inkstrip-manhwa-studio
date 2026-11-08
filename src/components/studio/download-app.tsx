@@ -195,9 +195,9 @@ function PlatformCard({
           <span
             className={download.signed ? "download-app-badge signed" : "download-app-badge test"}
           >
-            {download.signed ? "Signed release" : "Test build · unsigned"}
+            {download.label ?? (download.signed ? "Signed release" : "Test build · unsigned")}
           </span>
-          {!download.signed ? <p className="download-app-note">{info.unsignedNote}</p> : null}
+          {!download.signed ? <p className="download-app-note">{download.note ?? info.unsignedNote}</p> : null}
           <p className="download-app-note">{info.install}</p>
           {download.sha256 ? (
             <details className="download-app-hash">

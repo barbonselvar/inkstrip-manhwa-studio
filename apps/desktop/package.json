@@ -1,15 +1,35 @@
 {
-  "name": "inkstrip-desktop",
+  "name": "inkstrip-manhwa-studio-desktop",
+  "productName": "Inkstrip Manhwa Studio",
+  "version": "1.1.0",
   "private": true,
-  "version": "1.0.0",
-  "description": "Windows desktop shell (Tauri 2) for Inkstrip Manhwa Studio",
+  "description": "Inkstrip Manhwa Studio for Windows: offline manhwa chapter, raster, composition and lettering editor.",
+  "author": {
+    "name": "Inkstrip Manhwa Studio"
+  },
+  "homepage": "https://github.com/barbonselvar/inkstrip-manhwa-studio",
+  "license": "UNLICENSED",
+  "main": "build/main/index.js",
   "scripts": {
-    "tauri": "tauri",
-    "icons": "tauri icon ../brand/inkstrip-icon-1024.png --output src-tauri/icons",
-    "build": "tauri build",
-    "dev": "tauri dev"
+    "build:renderer": "node scripts/build-renderer.mjs",
+    "build:main": "node scripts/build-main.mjs",
+    "build": "npm run build:renderer && npm run build:main",
+    "start": "npm run build:main && electron .",
+    "test": "node --experimental-strip-types --test test/main-modules.test.ts test/stability-outcome.test.mjs test/updater-service.test.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dist": "npm run build && electron-builder --win nsis --x64 --publish never",
+    "dist:dir": "npm run build && electron-builder --win dir --x64 --publish never",
+    "test:e2e": "node test/e2e-desktop.mjs",
+    "release:prepare": "node scripts/prepare-release.mjs",
+    "release:assemble": "node scripts/assemble-dist.mjs"
   },
   "dependencies": {
-    "@tauri-apps/cli": "^2.12.4"
+    "electron-updater": "6.8.11"
+  },
+  "devDependencies": {
+    "@types/node": "^22.16.5",
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0",
+    "typescript": "^5.7.0"
   }
 }

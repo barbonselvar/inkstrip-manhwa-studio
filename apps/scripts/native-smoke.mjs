@@ -22,6 +22,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
+import { rasterDialogSelector, smokeOutcome } from "./native-smoke-outcome.mjs";
 
 // INKSTRIP_SMOKE_ORIGIN lets the script be dry-run against a local dev server.
 const APP_ORIGIN = process.env.INKSTRIP_SMOKE_ORIGIN ?? "https://inkstrip-manhwa-studio.vercel.app";
@@ -601,16 +602,16 @@ async function main() {
     if (platform === "android") {
       const state = () =>
         cdp.eval(
-          `return { path: location.pathname, editor: /Raster Studio/.test(document.body.innerText) };`,
+          `return { path: location.pathname, editor: !!document.querySelector(${JSON.stringify(rasterDialogSelector)}) };`,
         );
       const before = await state();
       await cdp.eval(`document.activeElement?.blur(); return true;`);
       pressBack();
       await sleep(2000);
-      const after = await state().catch(() => ({ path: "(page reloaded)", editor: false }));
+      const after = await state();
       record(
         "Android back leaves Raster Studio and stays in the app",
-        before.editor && (!after.editor || after.path !== before.path),
+        before.editor && !after.editor && after.path === before.path,
         { before, after },
         { required: false },
       );
@@ -654,7 +655,8 @@ try {
 const summaryPath = join(outDir, `${platform}-${args.phase}-results.json`);
 writeFileSync(summaryPath, JSON.stringify(results, null, 2));
 const failed = results.filter((r) => r.required && !r.ok);
+const outcome = smokeOutcome(results);
 console.log(
-  `\n${results.length - failed.length}/${results.length} checks passed (${failed.length} required failures). Results: ${summaryPath}`,
+  `\n${outcome.passed}/${outcome.total} checks passed (${outcome.failed} required failures, ${outcome.warnings} optional warnings). Results: ${summaryPath}`,
 );
 process.exit(failed.length ? 1 : 0);
